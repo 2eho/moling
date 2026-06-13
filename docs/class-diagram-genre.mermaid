@@ -1,0 +1,51 @@
+graph TD
+    subgraph "管线 B：拆书爬虫引擎 (app/genre/)"
+        subgraph "输入"
+            CHAPTERS["热门网文前 3-5 章<br/>（UTF-8, 每章 ≤20000 字）"]
+        end
+
+        subgraph "并行分析层"
+            A1["A1 黄金三章结构提取<br/>a1_opening.py"]
+            A2["A2 角色出场模式聚类<br/>a2_characters.py"]
+            A3["A3 钩子密度量化<br/>a3_hooks.py"]
+        end
+
+        subgraph "串行拟合层"
+            A4["A4 节奏曲线拟合<br/>a4_rhythm.py"]
+        end
+
+        subgraph "归纳输出层"
+            A5["A5 套路归纳 + 去版权化<br/>a5_profile_output.py"]
+        end
+
+        subgraph "输出"
+            PROFILE["Genre Profile<br/>结构模板 / 角色原型 / 世界观<br/>节奏曲线 / 钩子密度 / 卡牌池"]
+        end
+
+        CHAPTERS --> A1
+        CHAPTERS --> A2
+        CHAPTERS --> A3
+
+        A1 --> A4
+        A3 --> A4
+
+        A1 --> A5
+        A2 --> A5
+        A3 --> A5
+        A4 --> A5
+
+        A5 --> PROFILE
+    end
+
+    subgraph "消费方：冷启动加载器"
+        COLD_START["新建项目时加载 Genre Profile<br/>→ 预填 4库 / 动态层 / 卡牌池"]
+    end
+
+    PROFILE -.-> COLD_START
+
+    style A1 fill:#4CAF50,color:#fff
+    style A2 fill:#4CAF50,color:#fff
+    style A3 fill:#4CAF50,color:#fff
+    style A4 fill:#4CAF50,color:#fff
+    style A5 fill:#4CAF50,color:#fff
+    style PROFILE fill:#FF9800,color:#fff

@@ -1,0 +1,21 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.select {
+  padding: var(--spacing-1) var(--spacing-3);
+  background-color: var(--color-bg-hover);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.select:focus {
+  border-color: var(--color-brand-primary);
+}

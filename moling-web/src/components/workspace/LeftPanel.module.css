@@ -1,0 +1,26 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  flex-shrink: 0;
+  flex-grow: 0;
+  background-color: var(--color-bg-card);
+  border-right: 1px solid var(--color-border-default);
+  height: 100%;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-3);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8);
+  color: var(--color-text-disabled);
+  font-size: var(--font-size-sm);
+}

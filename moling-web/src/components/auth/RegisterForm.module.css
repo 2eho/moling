@@ -1,0 +1,48 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.passwordSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.strengthIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.strengthBar {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.strengthSegment {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--color-bg-elevated);
+  transition: var(--transition-fast);
+}
+
+.strengthSegment.active {
+  /* color set via inline style */
+}
+
+.strengthLabel {
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  padding: var(--spacing-2) var(--spacing-3);
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+}

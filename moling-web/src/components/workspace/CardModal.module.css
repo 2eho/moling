@@ -1,0 +1,72 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: var(--spacing-2) var(--spacing-3);
+  background-color: rgba(99, 102, 241, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-4);
+}
+
+.cardWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.modeSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.modeLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.modeOptions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.modeBtn {
+  flex: 1;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-hover);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.modeBtn:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.modeActive {
+  border-color: var(--color-brand-primary);
+  color: var(--color-brand-primary);
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.footer {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: center;
+}

@@ -1,0 +1,180 @@
+/* ============================================
+   通知中心 — page.module.css
+   ============================================ */
+
+/* ── 头部 ── */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-5);
+  height: var(--header-height);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+}
+
+.headerBack {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  margin-right: var(--space-4);
+  cursor: pointer;
+  transition: color var(--duration-fast);
+}
+
+.headerBack:hover {
+  color: var(--color-text-primary);
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.headerActions button {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+
+.headerActions button:hover {
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
+}
+
+/* ── 容器 ── */
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+/* ── 通知列表 ── */
+.notifList {
+  display: flex;
+  flex-direction: column;
+}
+
+.notifItem {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.notifItem:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.notifItem.unread {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+/* ── 类型图标圆 ── */
+.notifIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.notifIcon.warning {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.notifIcon.error {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.notifIcon.success {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.notifIcon.info {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+/* ── 内容 ── */
+.notifContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.notifTitle {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.notifBody {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+}
+
+.notifTime {
+  font-size: 11px;
+  color: var(--color-text-disabled);
+  margin-top: 4px;
+}
+
+/* ── 未读圆点 ── */
+.notifDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.notifDot.unread {
+  background: var(--color-brand-indigo);
+}
+
+.notifDot.read {
+  background: transparent;
+}
+
+/* ── 空状态 ── */
+.emptyState {
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--color-text-tertiary);
+}
+
+.emptyIcon {
+  font-size: 40px;
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.emptyText {
+  font-size: 13px;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 480px) {
+  .container {
+    padding: var(--space-3);
+  }
+
+  .headerTitle {
+    font-size: 14px;
+  }
+}

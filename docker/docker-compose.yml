@@ -1,0 +1,98 @@
+version: "3.8"
+
+services:
+  # ---- FastAPI Application ----
+  app:
+    build:
+      context: ../moling-server
+      dockerfile: Dockerfile
+    container_name: moling-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../moling-server:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://moling:moling@db:5432/moling
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=15
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - LLM_API_BASE=http://host.docker.internal:4000/v1
+      - LLM_API_KEY=sk-dev-key
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - moling-network
+    restart: unless-stopped
+
+  # ---- Celery Worker ----
+  worker:
+    build:
+      context: ../moling-server
+      dockerfile: Dockerfile
+    container_name: moling-worker
+    command: celery -A app.tasks worker --loglevel=info
+    volumes:
+      - ../moling-server:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://moling:moling@db:5432/moling
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - LLM_API_BASE=http://host.docker.internal:4000/v1
+      - LLM_API_KEY=sk-dev-key
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - app
+      - redis
+    networks:
+      - moling-network
+    restart: unless-stopped
+
+  # ---- PostgreSQL 17 + pgvector ----
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: moling-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: moling
+      POSTGRES_PASSWORD: moling
+      POSTGRES_DB: moling
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moling -d moling"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - moling-network
+    restart: unless-stopped
+
+  # ---- Redis 7 ----
+  redis:
+    image: redis:7-alpine
+    container_name: moling-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - moling-network
+    restart: unless-stopped
+
+networks:
+  moling-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local

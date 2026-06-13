@@ -1,0 +1,79 @@
+sequenceDiagram
+    participant U as 用户
+    participant F as 前端工作台
+    participant B as 后端API
+    participant C as Celery Worker
+    participant L as LiteLLM/LLM
+    participant DB as 数据库
+
+    Note over U,DB: ═══ 阶段一：抽卡 ═══
+    U->>F: 点击"抽卡"按钮
+    F->>B: GET /api/v1/projects/:pid/cards/pool?count=3
+    B->>DB: 从卡牌池随机选3张（含权重/新鲜期算法）
+    DB-->>B: 3张候选卡
+    B-->>F: {cards: [{id, name, rarity, direction_text, ...}]}
+    F->>F: 展示3张灵感卡片（稀有度标注⚪🔵🟣🟠）
+    
+    alt 用户不满意
+        U->>F: 点击重抽
+        F->>B: POST /api/v1/projects/:pid/chapters/:id/redraw
+        B->>B: 排除已抽黑名单，重新抽取
+        B-->>F: {cards: [...], remaining_redraws: N}
+    end
+    
+    U->>F: 选择卡牌 + 调整权重(0-100) + 选择编织模式
+    F->>B: POST /api/v1/projects/:pid/cards/draw {keep_card_ids, weights, mode}
+    B->>DB: 保存抽卡记录
+    B-->>F: {cards: [...], draw_round: 1}
+
+    Note over U,DB: ═══ 阶段二：生成 ═══
+    U->>F: 点击"生成"按钮
+    F->>F: 按钮loading状态，防重复提交
+    F->>B: POST /api/v1/projects/:pid/chapters/:id/generate {card_ids, weights, mode}
+    B->>B: 创建 GenerationTask (status=pending)
+    B->>C: 提交异步生成任务
+    B-->>F: {task_id, status: "pending"}
+    loop 前端轮询（每2秒）
+        F->>B: GET /api/v1/generate/:task_id/status
+        B-->>F: {status: "running", stage: "preprocessing", percent: 25}
+        Note over F: 展示"预处理中…"（模糊化3阶段）
+        B-->>F: {status: "running", stage: "generating", percent: 60}
+        Note over F: 展示"生成中…"
+        B-->>F: {status: "running", stage: "validating", percent: 90}
+        Note over F: 展示"校验中…"
+    end
+    C->>L: 调用 LLM 生成章节内容
+    L-->>C: 生成结果
+    C->>DB: 保存生成内容到章节
+    C-->>B: 任务完成
+    B-->>F: {status: "done", data: {content: "..."}}
+    F->>F: 展示生成内容到编辑器
+
+    Note over U,DB: ═══ 阶段三：收纳（用户决策） ═══
+    alt 用户确认收纳
+        U->>F: 点击"确认收纳"
+        F->>B: POST /api/v1/projects/:pid/chapters/:id/confirm {nonce}
+        B->>C: 提交 Phase 4 异步任务
+        B-->>F: {task_id, status: "accepted"}
+        Note over F: 按钮变"收纳中🔄"
+        loop 前端轮询（每3秒）
+            F->>B: GET /api/v1/generate/:task_id/status
+            B-->>F: {status: "running"}
+        end
+        C->>C: 获取分布式锁 (Redis SET NX EX)
+        C->>DB: 读取章节+四库+卡牌池
+        C->>L: LLM 提取变更 → 逐库合并 → 卡牌充实
+        L-->>C: Phase 4 结果
+        C->>DB: 事务写入四库更新 + 卡牌池补充 + 动态层更新
+        C->>C: 释放锁
+        C-->>B: 完成
+        B-->>F: {status: "done"}
+        Note over F: 按钮变"已收纳✅"
+    
+    else 用户拒稿
+        U->>F: 点击"拒稿"
+        F->>B: POST /api/v1/projects/:pid/chapters/:id/revise
+        B->>B: 分析拒稿原因
+        B-->>F: {status: "revised", suggestion: "修改建议..."}
+        F->>F: 回到抽卡状态 或 显示修改建议
+    end

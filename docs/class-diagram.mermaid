@@ -1,0 +1,218 @@
+classDiagram
+    %% ═══════════════════════════════════════════
+    %% 核心基础模型
+    %% ═══════════════════════════════════════════
+    class User {
+        +int id
+        +string email
+        +string username
+        +string password_hash
+        +string avatar_url
+        +string status  "active/disabled"
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class Project {
+        +int id
+        +int user_id
+        +string title
+        +string author
+        +string genre
+        +array~string~ tags
+        +string synopsis
+        +string worldview
+        +string protagonist
+        +array~object~ supporting_chars
+        +int word_count
+        +int target_words
+        +string frequency
+        +string style
+        +string status  "draft/active/archived"
+        +string creation_mode  "from_scratch/from_template"
+        +int template_id
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class Chapter {
+        +int id
+        +int project_id
+        +string title
+        +text content
+        +int chapter_number
+        +string status  "draft/completed"
+        +string phase4_status  "none/pending/running/done/failed"
+        +jsonb dynamic_layer
+        +int word_count
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class GenerationTask {
+        +uuid id
+        +int project_id
+        +int chapter_id
+        +int user_id
+        +string task_type  "generate/phase4"
+        +string status  "pending/running/done/failed/cancelled"
+        +jsonb input_params
+        +jsonb output_data
+        +string progress_stage  "preprocessing/generating/validating"
+        +int progress_percent
+        +string error_message
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    %% ═══════════════════════════════════════════
+    %% 卡牌系统
+    %% ═══════════════════════════════════════════
+    class CardPool {
+        +int id
+        +int project_id
+        +string name
+        +string description
+        +string rarity  "common/rare/epic/legendary"
+        +string direction_type  "稳妥/有趣/惊艳/神之一手"
+        +string direction_text
+        +string status  "active/retired/archived"
+        +int freshness_chapter
+        +int draw_count
+        +int remaining_lifetime
+        +vector~float~ embedding
+        +datetime created_at
+    }
+
+    class DrawRecord {
+        +int id
+        +int project_id
+        +int chapter_id
+        +int user_id
+        +array~int~ card_ids
+        +array~float~ weights
+        +string mode  "none/single/dual/all/hybrid"
+        +int draw_round
+        +int remaining_redraws
+        +datetime drawn_at
+    }
+
+    class CardPoolHistory {
+        +int id
+        +int card_id
+        +int project_id
+        +string action  "draw/retire/replenish"
+        +int chapter_id
+        +jsonb details
+        +datetime created_at
+    }
+
+    %% ═══════════════════════════════════════════
+    %% 四库模型
+    %% ═══════════════════════════════════════════
+    class VaultCharacter {
+        +int id
+        +int project_id
+        +string name
+        +string role  "protagonist/ally/neutral/opponent/antagonist"
+        +string faction
+        +string status  "active/inactive/deceased"
+        +string emotion
+        +array~string~ traits
+        +text description
+        +text background
+        +jsonb relationships
+        +jsonb state_machine
+        +int chapter_count
+        +vector~float~ embedding
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class VaultTimeline {
+        +int id
+        +int project_id
+        +int chapter_number
+        +string event
+        +text description
+        +bool is_key_event
+        +string impact
+        +array~string~ characters_involved
+        +datetime created_at
+    }
+
+    class VaultPlotPromise {
+        +int id
+        +int project_id
+        +string description
+        +string type
+        +string status  "dormant/active/advancing/resolved/abandoned"
+        +int urgency
+        +array~string~ related_characters
+        +int planted_chapter
+        +jsonb advancement_log
+        +string event_type
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class VaultWorld {
+        +int id
+        +int project_id
+        +string term
+        +text description
+        +string category
+        +string change_type
+        +jsonb rules
+        +array~int~ reference_chapters
+        +datetime created_at
+    }
+
+    class DynamicLayer {
+        +int id
+        +int project_id
+        +int chapter_id
+        +text summary
+        +jsonb anchors  "pov/location/time"
+        +jsonb coherence_baseline  "must_hold/must_not"
+        +jsonb unresolved_hooks
+        +jsonb recent_changes
+        +jsonb secret_matrix
+        +float feasibility_score
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    %% ═══════════════════════════════════════════
+    %% 健康告警
+    %% ═══════════════════════════════════════════
+    class HealthAlert {
+        +int id
+        +int project_id
+        +string rule
+        +string title
+        +text detail
+        +string severity  "info/warning/critical"
+        +bool is_active
+        +datetime checked_at
+        +datetime created_at
+    }
+
+    %% ═══════════════════════════════════════════
+    %% 关系定义
+    %% ═══════════════════════════════════════════
+    User "1" --> "*" Project : 拥有
+    Project "1" --> "*" Chapter : 包含
+    Project "1" --> "*" CardPool : 拥有卡牌池
+    Project "1" --> "*" DrawRecord : 抽卡记录
+    Project "1" --> "*" VaultCharacter : 角色库
+    Project "1" --> "*" VaultTimeline : 时间线库
+    Project "1" --> "*" VaultPlotPromise : 剧情承诺库
+    Project "1" --> "*" VaultWorld : 世界观库
+    Project "1" --> "*" DynamicLayer : 动态层
+    Project "1" --> "*" HealthAlert : 健康告警
+    Project "1" --> "*" GenerationTask : 生成任务
+    Chapter "1" --> "*" DrawRecord : 关联抽卡
+    Chapter "1" --> "1" DynamicLayer : 关联动态层
+    CardPoolHistory --> CardPool : 记录操作
+    GenerationTask --> Chapter : 关联章节

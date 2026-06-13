@@ -1,0 +1,54 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-bg-page);
+}
+
+/* Top Bar */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border-default);
+  flex-shrink: 0;
+}
+
+.topLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.projectTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.healthIcon {
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+}
+
+/* Progress Bar */
+.progressBar {
+  padding: var(--spacing-2) var(--spacing-4);
+  flex-shrink: 0;
+}
+
+/* Main Three-column Layout */
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}

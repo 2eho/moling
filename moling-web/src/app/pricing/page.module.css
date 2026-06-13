@@ -1,0 +1,415 @@
+/* ====================================
+   墨灵 · 定价页 CSS Modules
+   基于 moling-pricing.html 原型
+   ==================================== */
+
+/* ── 页面容器 ── */
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 导航 ── */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.navBrand {
+  font-family: var(--font-heading);
+  font-size: 20px;
+}
+
+.navBrand span {
+  color: var(--color-brand-indigo);
+}
+
+.navLinks {
+  display: flex;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.navLinks a {
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color var(--duration-fast);
+}
+
+.navLinks a:hover {
+  color: var(--color-text-primary);
+}
+
+.navLinkActive {
+  color: var(--color-text-primary) !important;
+}
+
+.navBtn {
+  padding: 8px 20px;
+  background: var(--color-brand-indigo);
+  color: #fff;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity var(--duration-fast);
+}
+
+.navBtn:hover {
+  opacity: 0.9;
+}
+
+/* ── 头部 ── */
+.hero {
+  text-align: center;
+  padding: var(--space-10) var(--space-5) var(--space-8);
+}
+
+.hero h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+  font-family: var(--font-heading);
+}
+
+.hero p {
+  color: var(--color-text-tertiary);
+  font-size: 15px;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── 计费切换 ── */
+.billingToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.toggleTrack {
+  width: 44px;
+  height: 24px;
+  background: var(--color-border);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggleTrackActive {
+  background: var(--color-brand-indigo);
+}
+
+.toggleKnob {
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: left 0.2s;
+}
+
+.toggleTrackActive .toggleKnob {
+  left: 23px;
+}
+
+.saveBadge {
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--color-success);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+/* ── 套餐卡片容器 ── */
+.plans {
+  display: flex;
+  gap: var(--space-5);
+  justify-content: center;
+  padding: 0 var(--space-5) var(--space-10);
+  max-width: 960px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+/* ── 套餐卡片 ── */
+.planCard {
+  flex: 1;
+  min-width: 260px;
+  max-width: 320px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s;
+}
+
+.planCard:hover {
+  border-color: var(--color-border);
+}
+
+.planCardPopular {
+  border-color: var(--color-brand-indigo);
+  position: relative;
+}
+
+.planCardPopular::before {
+  content: '最受欢迎';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-brand-indigo);
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 14px;
+  border-radius: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.planName {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.planDesc {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-5);
+}
+
+.planPrice {
+  margin-bottom: var(--space-5);
+}
+
+.amount {
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.period {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.original {
+  font-size: 12px;
+  color: var(--color-text-disabled);
+  text-decoration: line-through;
+  margin-left: 8px;
+}
+
+.planFeatures {
+  flex: 1;
+  list-style: none;
+  margin-bottom: var(--space-6);
+}
+
+.featureItem {
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.featureItem::before {
+  content: '✓';
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.featureDisabled {
+  color: var(--color-text-disabled);
+}
+
+.featureDisabled::before {
+  content: '—';
+  color: var(--color-text-disabled);
+}
+
+.planCta {
+  display: block;
+  text-align: center;
+  padding: 11px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.planCta:hover {
+  border-color: var(--color-text-tertiary);
+}
+
+.planCtaPrimary {
+  background: var(--color-brand-indigo);
+  border-color: var(--color-brand-indigo);
+  color: #fff;
+}
+
+.planCtaPrimary:hover {
+  opacity: 0.9;
+}
+
+.planCtaCurrent {
+  background: transparent;
+  border-color: var(--color-text-disabled);
+  color: var(--color-text-disabled);
+  cursor: default;
+}
+
+/* ── 特性对比表 ── */
+.featuresCompare {
+  max-width: 860px;
+  margin: 0 auto var(--space-10);
+  padding: 0 var(--space-5);
+  width: 100%;
+}
+
+.featuresCompare h2 {
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: var(--space-6);
+  font-family: var(--font-heading);
+}
+
+.fTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fTable th,
+.fTable td {
+  padding: 12px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 13px;
+}
+
+.fTable th:first-child,
+.fTable td:first-child {
+  text-align: left;
+  color: var(--color-text-secondary);
+}
+
+.fTable th {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.fYes {
+  color: var(--color-success);
+}
+
+.fNo {
+  color: var(--color-text-disabled);
+}
+
+/* ── 页脚 ── */
+.footer {
+  text-align: center;
+  padding: var(--space-8);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-disabled);
+  font-size: 12px;
+  margin-top: auto;
+}
+
+.footer a {
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  margin: 0 8px;
+  transition: color var(--duration-fast);
+}
+
+.footer a:hover {
+  color: var(--color-text-primary);
+}
+
+.footerCopy {
+  margin-top: var(--space-3);
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 1000;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.toastVisible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── 响应式 ── */
+@media (max-width: 768px) {
+  .plans {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .planCard {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .hero h1 {
+    font-size: 24px;
+  }
+
+  .navLinks {
+    display: none;
+  }
+
+  .fTable {
+    font-size: 12px;
+  }
+
+  .fTable th,
+  .fTable td {
+    padding: 8px 10px;
+  }
+}

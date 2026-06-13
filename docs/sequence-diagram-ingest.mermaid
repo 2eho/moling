@@ -1,0 +1,49 @@
+sequenceDiagram
+    participant U as 用户/创作者
+    participant F as 前端
+    participant B as 后端API (ingest)
+    participant D as dissector (Phase 0)
+    participant DB as 数据库
+
+    Note over U,DB: ═══ 连载书导入引擎 ═══
+
+    Note over U,DB: ── Phase 0：分章与预览（已实现） ──
+
+    alt 方式A：URL采集
+        U->>F: 输入网文URL
+        F->>B: GET /api/v1/ingest/toc?toc_url=...
+        B->>D: TOCFetcher.fetch_toc()
+        D->>D: 解析目录页HTML → 提取章节链接列表
+        D-->>B: ChapterLink[]
+        B-->>F: {chapters: [{index, title, url}]}
+        F->>F: 展示章节预览列表
+        U->>F: 确认采集
+        F->>B: POST /api/v1/ingest/crawl?toc_url=...
+        B->>D: ChapterBatchCrawler.crawl()
+        loop 逐章采集
+            D->>D: dissect_from_url(chapter_url)
+            D->>D: 反爬延迟 + 章节拆分 + 段落拆分
+        end
+        D-->>B: 合并后的 DissectResult
+        B-->>F: {chapters: [...], total_word_count}
+    else 方式B：粘贴文本
+        U->>F: 粘贴小说全文
+        F->>B: POST /api/v1/ingest/text?text=...
+        B->>D: dissect_text()
+        D->>D: 章节拆分 → 段落拆分
+        D-->>B: DissectResult
+        B-->>F: {chapters: [...], paragraph_count}
+    else 方式C：上传HTML文件
+        U->>F: 上传HTML文件
+        F->>B: POST /api/v1/ingest/html?raw_html=...
+        B->>D: dissect_html()
+        D->>D: 正文提取 → 广告过滤 → 章节拆分
+        D-->>B: DissectResult
+        B-->>F: {chapters: [...], errors: [...]}
+    end
+
+    Note over U,DB: ── Phase 1-3：全量四库分析（待实现） ──
+
+    Note over B,DB: Phase 1: 全量四库分析 (LLM异步)
+    Note over B,DB: Phase 2: 近三章动态层分析
+    Note over B,DB: Phase 3: 冲突校验 → 事物写入
