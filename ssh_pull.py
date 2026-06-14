@@ -4,7 +4,7 @@ import paramiko, os
 IP = "124.222.163.79"
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(IP, username="root", password="tyc13360956216..", timeout=15)
+ssh.connect(IP, username="root", password=os.environ.get("SERVER_PWD", ""), timeout=15)
 
 cmds = [
     "cd /opt/moling && git status",
