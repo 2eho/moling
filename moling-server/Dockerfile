@@ -45,7 +45,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # 安装运行时系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
-    libffi7 \
+    libffi8 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
