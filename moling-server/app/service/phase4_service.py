@@ -112,6 +112,183 @@ class Phase4Service:
             "message": "收纳任务已创建，正在处理中",
         }
 
+    async def analyze_project(self, project_id: int) -> dict:
+        """Phase 4 分析：分析卡池、识别待收纳实体、更新保险库条目。
+
+        在 worker 任务中调用，不依赖外部传入的 db session。
+
+        Returns:
+            dict with analysis results
+        """
+        import asyncio
+        from sqlalchemy.ext.asyncio import (
+            AsyncSession,
+            async_sessionmaker,
+            create_async_engine,
+        )
+
+        settings = get_settings()
+        engine = create_async_engine(settings.DATABASE_URL, echo=False)
+        SessionLocal = async_sessionmaker(
+            engine, expire_on_commit=False, class_=AsyncSession
+        )
+
+        async with SessionLocal() as db:
+            # 1. 验证项目存在
+            project = await project_dao.get(db, project_id)
+            if project is None:
+                raise NotFoundError(
+                    error_code=ErrorCode.PROJECT_NOT_FOUND,
+                    detail="Project not found",
+                )
+
+            # 2. 查询项目卡池
+            cards = await card_dao.get_active_cards(db, project_id)
+
+            # 3. 分析卡牌内容，提取实体
+            entities: Dict[str, List[Dict[str, Any]]] = {
+                "characters": [],
+                "locations": [],
+                "items": [],
+                "events": [],
+            }
+            seen_names: Dict[str, set] = {
+                "characters": set(),
+                "locations": set(),
+                "items": set(),
+                "events": set(),
+            }
+
+            for card in cards:
+                # 从 card.characters 提取角色实体
+                card_chars = card.characters or []
+                for char in card_chars:
+                    name = ""
+                    if isinstance(char, dict):
+                        name = char.get("name", "")
+                    else:
+                        name = str(char)
+                    if name and name not in seen_names["characters"]:
+                        seen_names["characters"].add(name)
+                        entities["characters"].append({
+                            "name": name,
+                            "source_card_id": card.id,
+                            "source_card_name": card.name,
+                            "card_rarity": card.rarity,
+                        })
+
+                # 从 card.direction_text / description 中提取地點和物品
+                text_fields = [
+                    card.direction_text or "",
+                    card.description or "",
+                ]
+                full_text = " ".join(text_fields)
+
+                # 简单关键词匹配提取（基础版本）
+                location_keywords = ["地", "城", "宫", "殿", "塔", "山", "河", "湖",
+                                     "海", "森林", "洞穴", "村", "镇", "市"]
+                item_keywords = ["剑", "刀", "盾", "戒", "书", "卷", "药", "石",
+                                 "符", "阵", "器", "宝", "杖", "镜"]
+
+                for keyword in location_keywords:
+                    idx = full_text.find(keyword)
+                    while idx >= 0:
+                        # 提取关键词前的 2-6 个字符作为地点名
+                        start = max(0, idx - 6)
+                        end = min(len(full_text), idx + len(keyword) + 2)
+                        candidate = full_text[start:end].strip()
+                        if candidate not in seen_names["locations"]:
+                            seen_names["locations"].add(candidate)
+                            entities["locations"].append({
+                                "name": candidate,
+                                "source_card_id": card.id,
+                            })
+                        idx = full_text.find(keyword, idx + 1)
+
+                for keyword in item_keywords:
+                    idx = full_text.find(keyword)
+                    while idx >= 0:
+                        start = max(0, idx - 4)
+                        end = min(len(full_text), idx + len(keyword) + 2)
+                        candidate = full_text[start:end].strip()
+                        if candidate not in seen_names["items"]:
+                            seen_names["items"].add(candidate)
+                            entities["items"].append({
+                                "name": candidate,
+                                "source_card_id": card.id,
+                            })
+                        idx = full_text.find(keyword, idx + 1)
+
+                # 从 card.plot_promises 提取事件实体
+                card_promises = card.plot_promises or []
+                for promise in card_promises:
+                    event_name = ""
+                    if isinstance(promise, dict):
+                        event_name = promise.get("title", "") or promise.get("description", "")
+                    else:
+                        event_name = str(promise)
+                    if event_name and event_name not in seen_names["events"]:
+                        seen_names["events"].add(event_name)
+                        entities["events"].append({
+                            "name": event_name,
+                            "source_card_id": card.id,
+                            "source_card_name": card.name,
+                        })
+
+            # 4. 计算每个实体的置信度评分
+            def _calc_confidence(entity_type: str, entity: dict) -> float:
+                base = 0.5
+                # 来自稀有度高的卡牌 → 更高置信度
+                rarity_map = {"legendary": 0.3, "epic": 0.2, "rare": 0.1, "common": 0.0}
+                base += rarity_map.get(entity.get("card_rarity", ""), 0.0)
+                # 角色名长度合理（2-4 个字）→ 加分
+                if entity_type == "characters":
+                    name_len = len(entity.get("name", ""))
+                    if 2 <= name_len <= 4:
+                        base += 0.1
+                return min(base, 1.0)
+
+            for etype in entities:
+                for entity in entities[etype]:
+                    entity["confidence"] = round(_calc_confidence(etype, entity), 2)
+
+            # 5. 按类型分组并排序（按置信度降序）
+            grouped = {}
+            for etype, items in entities.items():
+                grouped[etype] = sorted(items, key=lambda x: x["confidence"], reverse=True)
+
+            # 6. 更新 Phase4Task 记录（标记分析完成）
+            stmt = select(Phase4Task).where(
+                Phase4Task.project_id == str(project_id),
+                Phase4Task.status == "pending",
+            )
+            result = await db.execute(stmt)
+            pending_tasks = list(result.scalars().all())
+            for task in pending_tasks:
+                task.status = "analyzed"
+            await db.commit()
+
+            total_entities = sum(len(v) for v in entities.values())
+
+            return {
+                "project_id": project_id,
+                "total_cards_analyzed": len(cards),
+                "total_entities_found": total_entities,
+                "entities_by_type": {
+                    etype: len(items)
+                    for etype, items in grouped.items()
+                },
+                "entities": grouped,
+                "summary": (
+                    f"分析完成：扫描 {len(cards)} 张卡牌，"
+                    f"发现 {total_entities} 个实体 "
+                    f"（{len(entities['characters'])} 角色 / "
+                    f"{len(entities['locations'])} 地点 / "
+                    f"{len(entities['items'])} 物品 / "
+                    f"{len(entities['events'])} 事件）"
+                ),
+            }
+
     async def execute_storage(
         self,
         db: AsyncSession,

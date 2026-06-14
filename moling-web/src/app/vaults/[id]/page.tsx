@@ -1,63 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import styles from './Vault.module.css';
-import {
-  getCharacters,
-  createCharacter,
-  updateCharacter,
-  deleteCharacter,
-  getTimelineEvents,
-  createTimelineEvent,
-  updateTimelineEvent,
-  deleteTimelineEvent,
-  getCommitments,
-  createCommitment,
-  updateCommitment,
-  deleteCommitment,
-  getWorldviewEntries,
-  createWorldviewEntry,
-  updateWorldviewEntry,
-  deleteWorldviewEntry,
-} from '@/api';
+import { vaultApi } from '@/lib/api';
 import type {
-  Character,
-  CreateCharacterRequest,
-  TimelineEvent,
-  Commitment,
-  WorldviewEntry,
-} from '@/api';
+  VaultCharacter,
+  VaultTimeline,
+  VaultPlotPromise,
+  VaultWorld,
+} from '@/lib/types';
 
-export default function VaultPage({ params }: { params: { id: string } }) {
-  const projectId = params.id;
+export default function VaultPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: projectId } = use(params);
   const [activeTab, setActiveTab] = useState<'characters' | 'timeline' | 'commitments' | 'worldview'>('characters');
 
   // 角色库
-  const [characters, setCharacters] = useState<Character[]>([]);
+  const [characters, setCharacters] = useState<VaultCharacter[]>([]);
   const [showCharacterForm, setShowCharacterForm] = useState(false);
-  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
-  const [characterForm, setCharacterForm] = useState<CreateCharacterRequest>({
+  const [editingCharacter, setEditingCharacter] = useState<VaultCharacter | null>(null);
+  const [characterForm, setCharacterForm] = useState<Partial<VaultCharacter>>({
     name: '',
     role: 'mc',
   });
 
   // 时间线库
-  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [events, setEvents] = useState<VaultTimeline[]>([]);
   const [showEventForm, setShowEventForm] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
-  const [eventForm, setEventForm] = useState<Partial<TimelineEvent>>({});
+  const [editingEvent, setEditingEvent] = useState<VaultTimeline | null>(null);
+  const [eventForm, setEventForm] = useState<Partial<VaultTimeline>>({});
 
   // 剧情承诺库
-  const [commitments, setCommitments] = useState<Commitment[]>([]);
+  const [commitments, setCommitments] = useState<VaultPlotPromise[]>([]);
   const [showCommitmentForm, setShowCommitmentForm] = useState(false);
-  const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null);
-  const [commitmentForm, setCommitmentForm] = useState<Partial<Commitment>>({});
+  const [editingCommitment, setEditingCommitment] = useState<VaultPlotPromise | null>(null);
+  const [commitmentForm, setCommitmentForm] = useState<Partial<VaultPlotPromise>>({});
 
   // 世界观库
-  const [entries, setEntries] = useState<WorldviewEntry[]>([]);
+  const [entries, setEntries] = useState<VaultWorld[]>([]);
   const [showEntryForm, setShowEntryForm] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<WorldviewEntry | null>(null);
-  const [entryForm, setEntryForm] = useState<Partial<WorldviewEntry>>({});
+  const [editingEntry, setEditingEntry] = useState<VaultWorld | null>(null);
+  const [entryForm, setEntryForm] = useState<Partial<VaultWorld>>({});
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -71,17 +53,17 @@ export default function VaultPage({ params }: { params: { id: string } }) {
     setLoading(true);
     try {
       if (activeTab === 'characters') {
-        const data = await getCharacters(projectId);
-        setCharacters(data);
+        const res = await vaultApi.getCharacters(projectId);
+        setCharacters(res.data as any);
       } else if (activeTab === 'timeline') {
-        const data = await getTimelineEvents(projectId);
-        setEvents(data);
+        const res = await vaultApi.getTimeline(projectId);
+        setEvents(res.data as any);
       } else if (activeTab === 'commitments') {
-        const data = await getCommitments(projectId);
-        setCommitments(data);
+        const res = await vaultApi.getPlotPromises(projectId);
+        setCommitments(res.data as any);
       } else if (activeTab === 'worldview') {
-        const data = await getWorldviewEntries(projectId);
-        setEntries(data);
+        const res = await vaultApi.getWorld(projectId);
+        setEntries(res.data as any);
       }
     } catch (error) {
       console.error('加载数据失败:', error);
@@ -99,7 +81,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   // 角色 CRUD
   const handleCreateCharacter = async () => {
     try {
-      await createCharacter(projectId, characterForm);
+      await vaultApi.createCharacter(projectId, characterForm as any);
       showMessage('success', '角色已创建');
       setShowCharacterForm(false);
       setCharacterForm({ name: '', role: 'mc' });
@@ -113,7 +95,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   const handleUpdateCharacter = async () => {
     if (!editingCharacter) return;
     try {
-      await updateCharacter(editingCharacter.id, characterForm);
+      await vaultApi.updateCharacter(projectId, editingCharacter.id, characterForm as any);
       showMessage('success', '角色已更新');
       setEditingCharacter(null);
       setCharacterForm({ name: '', role: 'mc' });
@@ -127,7 +109,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   const handleDeleteCharacter = async (id: string) => {
     if (!confirm('确定要删除此角色吗？')) return;
     try {
-      await deleteCharacter(id);
+      await vaultApi.deleteCharacter(projectId, id);
       showMessage('success', '角色已删除');
       loadData();
     } catch (error) {
@@ -139,7 +121,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   // 时间线 CRUD
   const handleCreateEvent = async () => {
     try {
-      await createTimelineEvent(projectId, eventForm as any);
+      await vaultApi.createTimelineEvent(projectId, eventForm as any);
       showMessage('success', '时间线事件已创建');
       setShowEventForm(false);
       setEventForm({});
@@ -153,7 +135,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   const handleDeleteEvent = async (id: string) => {
     if (!confirm('确定要删除此事件吗？')) return;
     try {
-      await deleteTimelineEvent(id);
+      await vaultApi.deleteTimelineEvent(projectId, id);
       showMessage('success', '事件已删除');
       loadData();
     } catch (error) {
@@ -165,7 +147,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   // 剧情承诺 CRUD
   const handleCreateCommitment = async () => {
     try {
-      await createCommitment(projectId, commitmentForm as any);
+      await vaultApi.createPlotPromise(projectId, commitmentForm as any);
       showMessage('success', '剧情承诺已创建');
       setShowCommitmentForm(false);
       setCommitmentForm({});
@@ -179,7 +161,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   const handleDeleteCommitment = async (id: string) => {
     if (!confirm('确定要删除此剧情承诺吗？')) return;
     try {
-      await deleteCommitment(id);
+      await vaultApi.deletePlotPromise(projectId, id);
       showMessage('success', '剧情承诺已删除');
       loadData();
     } catch (error) {
@@ -191,7 +173,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   // 世界观 CRUD
   const handleCreateEntry = async () => {
     try {
-      await createWorldviewEntry(projectId, entryForm as any);
+      await vaultApi.createWorldEntry(projectId, entryForm as any);
       showMessage('success', '世界观条目已创建');
       setShowEntryForm(false);
       setEntryForm({});
@@ -205,7 +187,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
   const handleDeleteEntry = async (id: string) => {
     if (!confirm('确定要删除此条目吗？')) return;
     try {
-      await deleteWorldviewEntry(id);
+      await vaultApi.deleteWorldEntry(projectId, id);
       showMessage('success', '条目已删除');
       loadData();
     } catch (error) {
@@ -281,14 +263,6 @@ export default function VaultPage({ params }: { params: { id: string } }) {
                       <option value="neutral">中立</option>
                     </select>
                   </div>
-                  <div className={styles.formGroup}>
-                    <label>状态</label>
-                    <input
-                      type="text"
-                      value={characterForm.status || ''}
-                      onChange={e => setCharacterForm({ ...characterForm, status: e.target.value })}
-                    />
-                  </div>
                   <div className={styles.formActions}>
                     <button
                       className={styles.saveBtn}
@@ -327,9 +301,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
                           </span>
                         </div>
                       </div>
-                      <div className={styles.cardStatus}>
-                        <div>状态：{char.status}</div>
-                        <div>情绪：{char.emotion}</div>
+                      <div className={styles.cardLocation}>
                         <div>位置：{char.location}</div>
                       </div>
                       <div className={styles.cardActions}>
@@ -340,8 +312,6 @@ export default function VaultPage({ params }: { params: { id: string } }) {
                             setCharacterForm({
                               name: char.name,
                               role: char.role,
-                              status: char.status,
-                              emotion: char.emotion,
                               location: char.location,
                             });
                             setShowCharacterForm(true);
@@ -428,7 +398,6 @@ export default function VaultPage({ params }: { params: { id: string } }) {
                     <div key={event.id} className={styles.card}>
                       <div className={styles.cardTitle}>
                         第{event.day}天 · {event.title}
-                        {event.isCurrent && <span className={styles.currentBadge}>当前</span>}
                       </div>
                       <div className={styles.cardDesc}>{event.description}</div>
                       <div className={styles.cardActions}>
@@ -566,11 +535,11 @@ export default function VaultPage({ params }: { params: { id: string } }) {
                     </select>
                   </div>
                   <div className={styles.formGroup}>
-                    <label>标题</label>
+                    <label>名称</label>
                     <input
                       type="text"
-                      value={entryForm.title || ''}
-                      onChange={e => setEntryForm({ ...entryForm, title: e.target.value })}
+                      value={entryForm.name || ''}
+                      onChange={e => setEntryForm({ ...entryForm, name: e.target.value })}
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -605,7 +574,7 @@ export default function VaultPage({ params }: { params: { id: string } }) {
                 ) : (
                   entries.map(entry => (
                     <div key={entry.id} className={styles.card}>
-                      <div className={styles.cardTitle}>{entry.title}</div>
+                      <div className={styles.cardTitle}>{entry.name}</div>
                       <div className={styles.cardType}>
                         {entry.category === 'rule' ? '世界规则' : entry.category === 'location' ? '地点' : entry.category === 'item' ? '重要物品' : '势力关系'}
                       </div>

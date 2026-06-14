@@ -3,16 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Workspace.module.css';
 import {
-  getCards,
-  generateChapter,
-  getGenerationProgress,
-  confirmChapter,
-  reviseChapter,
-  cancelGeneration,
-  getHealthAlerts,
-  getSuggestions,
-} from '@/api';
-import type { GenerationProgress } from '@/api';
+  cardApi,
+  generationApi,
+  healthApi,
+  chapterAgentApi,
+} from '@/lib/api';
 
 // 类型定义
 interface Character {
@@ -168,30 +163,27 @@ export default function WorkspacePage() {
     try {
       // 调用生成 API
       const selectedCardData = cards.filter(c => selectedCards.includes(c.id));
-      const response = await generateChapter({
-        chapterId: 'current-chapter-id', // TODO: 从 URL 或 context 获取
-        cardIds: selectedCardData.map(c => c.id),
-        weights: selectedCardData.map(c => c.weight),
-        mode: selectedCards.length === 1 ? 'single' : selectedCards.length === 2 ? 'dual' : 'all',
-      });
+      const cardIds = selectedCardData.map(c => c.id);
+      const response = await generationApi.generate('current-project-id', 'current-chapter-id', cardIds);
 
       // 轮询进度
       const pollProgress = async (taskId: string) => {
-        const progress: GenerationProgress = await getGenerationProgress(taskId);
-        setGenProgress(progress.progress);
+        const genRes = await generationApi.getStatus(taskId);
+        const task = genRes.data;
+        setGenProgress(task.progress_percent);
 
-        if (progress.status === 'completed' && progress.result) {
+        if (task.status === 'completed') {
           setGenResult({
-            words: progress.result.wordCount,
-            time: progress.result.timeSpent,
+            words: task.output_data?.word_count as number || 0,
+            time: 0,
           });
           showToast('✅ 章节生成完成！');
           setGenerating(false);
           return;
         }
 
-        if (progress.status === 'failed') {
-          showToast(`❌ 生成失败: ${progress.error || '未知错误'}`);
+        if (task.status === 'failed') {
+          showToast(`❌ 生成失败: ${task.error_message || '未知错误'}`);
           setGenerating(false);
           return;
         }
@@ -200,7 +192,7 @@ export default function WorkspacePage() {
         setTimeout(() => pollProgress(taskId), 1000);
       };
 
-      pollProgress(response.taskId);
+      pollProgress(response.data.id);
     } catch (error) {
       console.error('生成失败:', error);
       showToast(`❌ 生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -210,10 +202,7 @@ export default function WorkspacePage() {
 
   const confirmInspiration = async () => {
     try {
-      await confirmChapter({
-        chapterId: 'current-chapter-id', // TODO: 从 URL 或 context 获取
-        content: '', // TODO: 获取编辑器内容
-      });
+      await generationApi.confirm('current-project-id', 'current-chapter-id');
       showToast('✅ 已确认收纳');
       closeModal();
     } catch (error) {
@@ -226,8 +215,8 @@ export default function WorkspacePage() {
   useEffect(() => {
     const loadCards = async () => {
       try {
-        const cardsData = await getCards('current-chapter-id');
-        setCards(cardsData);
+        const cardsRes = await cardApi.getPool('current-project-id');
+        setCards(cardsRes.data as any);
       } catch (error) {
         console.error('加载卡牌失败:', error);
         // 使用默认卡牌（已在 state 中定义）
@@ -241,8 +230,9 @@ export default function WorkspacePage() {
   useEffect(() => {
     const loadSuggestions = async () => {
       try {
-        const suggestionsData = await getSuggestions('current-chapter-id');
-        setSuggestions(suggestionsData);
+        const suggestionsRes = await chapterAgentApi.getSuggestions('current-project-id', 'current-chapter-id');
+        const items = suggestionsRes.data.suggestions || [];
+        setSuggestions(items.map((text: string, i: number) => ({ id: String(i), text })));
       } catch (error) {
         console.error('加载建议失败:', error);
         // 使用默认建议（已在 state 中定义）
@@ -256,8 +246,12 @@ export default function WorkspacePage() {
   useEffect(() => {
     const loadHealthAlerts = async () => {
       try {
-        const alerts = await getHealthAlerts('current-project-id');
-        setHealthAlerts(alerts);
+        const alertsRes = await healthApi.getAlerts('current-project-id');
+        setHealthAlerts(alertsRes.data.map(a => ({
+          type: a.rule,
+          message: a.detail || a.title,
+          severity: a.severity === 'critical' ? 'error' : a.severity,
+        })));
       } catch (error) {
         console.error('加载健康告警失败:', error);
       }

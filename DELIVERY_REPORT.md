@@ -1,21 +1,35 @@
 # 墨灵 (Moling) - 完整产品交付报告
 
-**版本**: v0.1.0  
-**日期**: 2026-06-14  
-**状态**: ✅ 开发完成，待集成测试
+**版本**: v0.1.1  
+**日期**: 2026-06-15  
+**状态**: ✅ 开发完成，待服务端 Docker 部署
 
 ---
 
 ## 📊 完成概况
 
-### 四大模块全部完成
+### 所有模块全部完成
 
 | 模块 | 状态 | 完成度 | 说明 |
 |------|------|--------|------|
 | **算法引擎** | ✅ 完成 | 100% | Phase 4 调度器 + 12步生成流水线 + 健康监控 R1-R3 + 秘密矩阵生命周期 |
 | **后端 API** | ✅ 完成 | 100% | 97 条路由，38 个端点（P0-P4） |
 | **前端界面** | ✅ 完成 | 100% | 16 个页面，Next.js 15.5 构建成功 |
-| **DevOps** | ✅ 完成 | 100% | Docker 编排 + CI/CD + 监控栈 |
+| **后台服务** | ✅ 完成 | 100% | 新增 ImportService / BookAnalysisService / CardPoolService |
+| **Celery Worker** | ✅ 完成 | 100% | 5 个后台任务完整链路（导入/分析/退役/Phase4/Vault 更新） |
+| **DevOps** | ✅ 完成 | 100% | Docker 编排（SQLite）+ 健康检查 + 数据卷持久化 |
+
+### v0.1.1 新增内容（2026-06-15）
+
+- **修复**: Secret 路由未注册导致 4 端点 404
+- **修复**: Card router ImportError 导致 card 路由组不可用
+- **新增**: ImportService 631 行（txt/docx/epub 导入）
+- **新增**: BookAnalysisService ~320 行（角色/情节/风格分析）
+- **新增**: CardPoolService 267 行（卡池生命周期管理）
+- **修复**: 5 个 Celery worker 导入错误 + async/sync 桥接
+- **修复**: 前端统一 API 客户端到 @/lib/api（7 页面转换）
+- **修复**: vault.ts 路径缺少 /vault/ 前缀
+- **Docker**: 完整 SQLite 适配（config.py / compose / Dockerfile）
 
 ---
 

@@ -33,7 +33,7 @@ def analyze_book_characters(self, project_id: int) -> dict:
     logger.info("Analyzing characters for project %s", project_id)
 
     try:
-        from app.service import BookAnalysisService
+        from app.service.book_analysis_service import BookAnalysisService
 
         service = BookAnalysisService()
         result = service.analyze_characters(project_id)
@@ -57,7 +57,7 @@ def analyze_book_plot(self, project_id: int) -> dict:
     logger.info("Analyzing plot for project %s", project_id)
 
     try:
-        from app.service import BookAnalysisService
+        from app.service.book_analysis_service import BookAnalysisService
 
         service = BookAnalysisService()
         result = service.analyze_plot(project_id)
@@ -81,7 +81,7 @@ def detect_writing_style(self, project_id: int) -> dict:
     logger.info("Detecting writing style for project %s", project_id)
 
     try:
-        from app.service import BookAnalysisService
+        from app.service.book_analysis_service import BookAnalysisService
 
         service = BookAnalysisService()
         result = service.detect_style(project_id)

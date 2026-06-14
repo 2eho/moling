@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import styles from './Settings.module.css';
-import {
-  getSettings,
-  updateGlobalSettings,
-  updateProjectSettings,
-  changePassword,
-  updateProfile,
-  getProjectSettings,
-} from '@/api';
+import { settingsApi } from '@/lib/api';
 import type { UserSettings, ChangePasswordRequest, UpdateProfileRequest } from '@/api';
 
 export default function SettingsPage() {
@@ -46,8 +39,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const data = await getSettings();
-        setSettings(data);
+        const data = await settingsApi.getSettings();
         setTheme(data.globalSettings.theme);
         setLanguage(data.globalSettings.language);
         setAutoSave(data.globalSettings.autoSave);
@@ -72,7 +64,7 @@ export default function SettingsPage() {
   const handleSaveGlobalSettings = async () => {
     setSaving(true);
     try {
-      await updateGlobalSettings({
+      await settingsApi.updateGlobalSettings({
         theme,
         language,
         autoSave,
@@ -91,7 +83,7 @@ export default function SettingsPage() {
   const handleSaveProjectSettings = async () => {
     setSaving(true);
     try {
-      await updateProjectSettings(projectId, {
+      await settingsApi.updateProjectSettings(projectId, {
         aiSpeed,
         writingStyle,
         notificationEnabled,
@@ -113,7 +105,7 @@ export default function SettingsPage() {
 
     setSaving(true);
     try {
-      await changePassword({ oldPassword, newPassword });
+      await settingsApi.changePassword(oldPassword, newPassword);
       showMessage('success', '密码已修改');
       setOldPassword('');
       setNewPassword('');
@@ -129,7 +121,7 @@ export default function SettingsPage() {
   const handleUpdateProfile = async () => {
     setSaving(true);
     try {
-      await updateProfile({ username, email, avatar });
+      await settingsApi.updateProfile({ username, email, avatar });
       showMessage('success', '个人资料已更新');
     } catch (error) {
       console.error('更新失败:', error);

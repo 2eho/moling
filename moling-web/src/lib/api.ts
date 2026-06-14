@@ -266,6 +266,72 @@ export const vaultApi = {
       `/projects/${projectId}/vault/summary`,
     );
   },
+
+  // ---- Timeline CRUD ----
+
+  async createTimelineEvent(projectId: string, data: Partial<VaultTimeline>) {
+    return apiClient.post<ApiResponse<VaultTimeline>>(
+      `/projects/${projectId}/vault/timeline`,
+      data,
+    );
+  },
+
+  async updateTimelineEvent(projectId: string, eventId: string, data: Partial<VaultTimeline>) {
+    return apiClient.put<ApiResponse<VaultTimeline>>(
+      `/projects/${projectId}/vault/timeline/${eventId}`,
+      data,
+    );
+  },
+
+  async deleteTimelineEvent(projectId: string, eventId: string) {
+    return apiClient.delete<ApiResponse<null>>(
+      `/projects/${projectId}/vault/timeline/${eventId}`,
+    );
+  },
+
+  // ---- Plot Promise CRUD ----
+
+  async createPlotPromise(projectId: string, data: Partial<VaultPlotPromise>) {
+    return apiClient.post<ApiResponse<VaultPlotPromise>>(
+      `/projects/${projectId}/vault/plot-promises`,
+      data,
+    );
+  },
+
+  async updatePlotPromise(projectId: string, promiseId: string, data: Partial<VaultPlotPromise>) {
+    return apiClient.put<ApiResponse<VaultPlotPromise>>(
+      `/projects/${projectId}/vault/plot-promises/${promiseId}`,
+      data,
+    );
+  },
+
+  async deletePlotPromise(projectId: string, promiseId: string) {
+    return apiClient.delete<ApiResponse<null>>(
+      `/projects/${projectId}/vault/plot-promises/${promiseId}`,
+    );
+  },
+
+  // ---- World CRUD ----
+
+  async createWorldEntry(projectId: string, data: Partial<VaultWorld>) {
+    return apiClient.post<ApiResponse<VaultWorld>>(
+      `/projects/${projectId}/vault/world`,
+      data,
+    );
+  },
+
+  async updateWorldEntry(projectId: string, entryId: string, data: Partial<VaultWorld>) {
+    return apiClient.put<ApiResponse<VaultWorld>>(
+      `/projects/${projectId}/vault/world/${entryId}`,
+      data,
+    );
+  },
+
+  async deleteWorldEntry(projectId: string, entryId: string) {
+    return apiClient.delete<ApiResponse<null>>(
+      `/projects/${projectId}/vault/world/${entryId}`,
+    );
+  },
 };
 
 // ---- Health API ----
@@ -310,6 +376,54 @@ export const settingsApi = {
   async clearCache() {
     return apiClient.post<ApiResponse<{ cleared: boolean }>>("/settings/clear-cache", {});
   },
+
+  async changePassword(oldPassword: string, newPassword: string) {
+    return apiClient.post<ApiResponse<{ success: boolean }>>(
+      "/settings/password",
+      { old_password: oldPassword, new_password: newPassword },
+    );
+  },
+
+  async updateProfile(data: { username?: string; email?: string; avatar?: string }) {
+    return apiClient.put<ApiResponse<User>>("/settings/profile", data);
+  },
+
+  // ---- Compatibility wrappers for old @/api settings interface ----
+
+  async getSettings() {
+    const res = await apiClient.get<ApiResponse<UserSettings>>("/settings");
+    return {
+      globalSettings: {
+        theme: res.data.theme,
+        language: res.data.language,
+        autoSave: true,
+        draftAutoConfirm: res.data.generation_preference?.auto_confirm ?? true,
+        draftAutoConfirmSeconds: res.data.auto_save_interval ?? 6,
+      },
+    };
+  },
+
+  async updateGlobalSettings(globalSettings: Partial<{
+    theme: string;
+    language: string;
+    autoSave: boolean;
+    draftAutoConfirm: boolean;
+    draftAutoConfirmSeconds: number;
+  }>) {
+    return apiClient.put<ApiResponse<UserSettings>>("/settings", globalSettings);
+  },
+
+  async updateProjectSettings(projectId: string, projectSettings: {
+    aiSpeed?: number;
+    writingStyle?: number;
+    notificationEnabled?: boolean;
+  }) {
+    return apiClient.patch<ApiResponse<UserSettings>>(`/settings/project/${projectId}`, projectSettings);
+  },
+
+  async getProjectSettings(projectId: string) {
+    return apiClient.get<ApiResponse<Record<string, unknown>>>(`/settings/project/${projectId}`);
+  },
 };
 
 // ---- Notifications API (D2) ----
@@ -317,6 +431,22 @@ export const settingsApi = {
 export const notificationsApi = {
   async list(params?: { page?: number; page_size?: number; unread_only?: boolean }) {
     return apiClient.get<ApiResponse<Notification[]>>("/notifications", params);
+  },
+
+  async getNotifications(params?: { page?: number; pageSize?: number; isRead?: boolean; type?: string }) {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.pageSize) query.set('pageSize', params.pageSize.toString());
+    if (params?.isRead !== undefined) query.set('isRead', params.isRead.toString());
+    if (params?.type) query.set('type', params.type);
+
+    const qs = query.toString();
+    const path = qs ? `/notifications?${qs}` : '/notifications';
+    return apiClient.get<ApiResponse<Notification[]>>(path).then(res => ({
+      items: res.data,
+      total: res.data.length,
+      unreadCount: res.data.filter(n => !n.is_read).length,
+    }));
   },
 
   async markAsRead(notificationId: string) {
@@ -331,6 +461,18 @@ export const notificationsApi = {
       "/notifications/read-all",
       {},
     );
+  },
+
+  async getUnreadCount() {
+    return apiClient.get<ApiResponse<{ count: number }>>("/notifications/unread-count");
+  },
+
+  async deleteNotification(notificationId: string) {
+    return apiClient.delete<ApiResponse<{ success: boolean }>>(`/notifications/${notificationId}`);
+  },
+
+  async deleteAllRead() {
+    return apiClient.delete<ApiResponse<{ success: boolean }>>("/notifications/delete-read");
   },
 };
 
@@ -439,6 +581,86 @@ export const importApi = {
     return apiClient.get<ApiResponse<{ jobs: unknown[] }>>(
       `/ingest/projects/${projectId}/jobs`,
     );
+  },
+
+  async uploadAndImport(
+    projectId: string,
+    file: File,
+    options?: {
+      analyzeCharacters?: boolean;
+      analyzeTimeline?: boolean;
+      analyzeCommitments?: boolean;
+      analyzeWorldview?: boolean;
+    }
+  ): Promise<{ taskId: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('projectId', projectId);
+
+    if (options) {
+      Object.entries(options).forEach(([key, value]) => {
+        if (value !== undefined) {
+          formData.append(key, value.toString());
+        }
+      });
+    }
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('moling_token') : null;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const response = await fetch(`${baseUrl}/import/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || 'Upload failed');
+    }
+
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getImportResult(projectId: string, taskId: string) {
+    return apiClient.get<ApiResponse<{
+      charactersCreated: number;
+      eventsCreated: number;
+      commitmentsCreated: number;
+      entriesCreated: number;
+    }>>(`/ingest/projects/${projectId}/jobs/${taskId}/result`);
+  },
+
+  async getImportProgress(taskId: string) {
+    const res = await apiClient.get<ApiResponse<{
+      taskId: string;
+      status: string;
+      progress: number;
+      currentPhase?: string;
+      result?: {
+        charactersCreated: number;
+        eventsCreated: number;
+        commitmentsCreated: number;
+        entriesCreated: number;
+      };
+      error?: string;
+    }>>(`/import/${taskId}/progress`);
+    return res.data;
+  },
+
+  async getImportHistory(projectId: string) {
+    const res = await apiClient.get<ApiResponse<Array<{
+      id: string;
+      fileName: string;
+      status: string;
+      createdAt: string;
+    }>>>(`/projects/${projectId}/import-history`);
+    return res.data;
   },
 };
 

@@ -28,7 +28,7 @@ test.describe('墨灵 (Moling) — 项目管理 E2E', () => {
     // 步骤 1：填写项目基本信息
     await page.getByLabel(/书名|Title/i).fill('E2E测试项目');
     await page.getByLabel(/作者|Author/i).fill('E2E作者');
-    await page.getByLabel(/类型|Genre/i).selectOption({ label: /玄幻|Fantasy/i });
+    await page.getByLabel(/类型|Genre/i).selectOption({ label: '玄幻' } as any);
     await page.getByRole('button', { name: /下一步|Next/i }).click();
 
     // 步骤 2：选择创作模式（跳过或选择 from_scratch）
@@ -44,7 +44,7 @@ test.describe('墨灵 (Moling) — 项目管理 E2E', () => {
     await page.getByRole('link', { name: /新建项目|New Project/i }).first().click();
     await page.getByLabel(/书名|Title/i).fill('列表测试项目');
     await page.getByLabel(/作者|Author/i).fill('作者');
-    await page.getByLabel(/类型|Genre/i).selectOption({ label: /玄幻|Fantasy/i });
+    await page.getByLabel(/类型|Genre/i).selectOption({ label: '玄幻' } as any);
     await page.getByRole('button', { name: /下一步|Next/i }).click();
     await page.getByRole('button', { name: /从零开始|From Scratch|下一步|Next/i }).click();
     await page.waitForURL(/.*\/workspace.*/);
@@ -59,7 +59,7 @@ test.describe('墨灵 (Moling) — 项目管理 E2E', () => {
     await page.getByRole('link', { name: /新建项目|New Project/i }).first().click();
     await page.getByLabel(/书名|Title/i).fill('待删除项目');
     await page.getByLabel(/作者|Author/i).fill('作者');
-    await page.getByLabel(/类型|Genre/i).selectOption({ label: /玄幻|Fantasy/i });
+    await page.getByLabel(/类型|Genre/i).selectOption({ label: '玄幻' } as any);
     await page.getByRole('button', { name: /下一步|Next/i }).click();
     await page.getByRole('button', { name: /从零开始|From Scratch|下一步|Next/i }).click();
     await page.waitForURL(/.*\/workspace.*/);

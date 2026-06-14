@@ -33,7 +33,7 @@ def check_card_freshness(self, project_id: int) -> dict:
     logger.info("Checking card freshness for project %s", project_id)
 
     try:
-        from app.service import CardPoolService
+        from app.service.card_pool_service import CardPoolService
 
         service = CardPoolService()
         result = service.check_freshness(project_id)
@@ -57,7 +57,7 @@ def retire_cards(self, project_id: int, card_ids: list[int]) -> dict:
     logger.info("Retiring %d cards for project %s", len(card_ids), project_id)
 
     try:
-        from app.service import CardPoolService
+        from app.service.card_pool_service import CardPoolService
 
         service = CardPoolService()
         result = service.retire_cards(project_id, card_ids)
@@ -81,7 +81,7 @@ def generate_replacement_cards(self, project_id: int, count: int = 5) -> dict:
     logger.info("Generating %d replacement cards for project %s", count, project_id)
 
     try:
-        from app.service import CardPoolService
+        from app.service.card_pool_service import CardPoolService
 
         service = CardPoolService()
         result = service.generate_replacements(project_id, count)

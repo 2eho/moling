@@ -88,3 +88,9 @@ try:
     api_router.include_router(subscription_router, prefix="/subscriptions", tags=["subscriptions"])
 except ImportError:
     pass
+
+try:
+    from app.router.secret import router as secret_router
+    api_router.include_router(secret_router, prefix="/secrets", tags=["secrets"])
+except ImportError:
+    pass

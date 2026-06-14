@@ -33,10 +33,11 @@ def run_phase4_analysis(self, project_id: int) -> dict:
     logger.info("Starting Phase 4 analysis for project %s", project_id)
 
     try:
-        from app.service import Phase4Service
+        import asyncio
+        from app.service.phase4_service import Phase4Service
 
         service = Phase4Service()
-        result = service.analyze_project(project_id)
+        result = asyncio.run(service.analyze_project(project_id))
 
         logger.info("Phase 4 analysis completed for project %s", project_id)
         return {"status": "done", "project_id": project_id, "result": result}
@@ -60,10 +61,11 @@ def update_vault_entries(self, project_id: int, chapter_id: int) -> dict:
     )
 
     try:
-        from app.service import VaultService
+        import asyncio
+        from app.service.vault_service import VaultService
 
         service = VaultService()
-        result = service.update_from_chapter(project_id, chapter_id)
+        result = asyncio.run(service.update_from_chapter(project_id, chapter_id))
 
         return {"status": "done", "project_id": project_id, "chapter_id": chapter_id}
 

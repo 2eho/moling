@@ -2,12 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import styles from './Import.module.css';
-import {
-  uploadAndImport,
-  getImportProgress,
-  getImportResult,
-  getImportHistory,
-} from '@/api';
+import { importApi } from '@/lib/api';
 import type { ImportProgress } from '@/api';
 
 export default function ImportPage() {
@@ -36,7 +31,7 @@ export default function ImportPage() {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const data = await getImportHistory(projectId);
+        const data = await importApi.getImportHistory(projectId);
         setHistory(data);
       } catch (error) {
         console.error('加载导入历史失败:', error);
@@ -52,14 +47,14 @@ export default function ImportPage() {
 
     const pollProgress = async () => {
       try {
-        const data = await getImportProgress(taskId);
-        setProgress(data);
+        const data = await importApi.getImportProgress(taskId);
+        setProgress(data as any);
 
         if (data.status === 'completed' && data.result) {
           setResult(data.result);
           setUploading(false);
           // 刷新历史
-          const historyData = await getImportHistory(projectId);
+          const historyData = await importApi.getImportHistory(projectId);
           setHistory(historyData);
           return;
         }
@@ -88,7 +83,7 @@ export default function ImportPage() {
     setResult(null);
 
     try {
-      const response = await uploadAndImport(projectId, file, options);
+      const response = await importApi.uploadAndImport(projectId, file, options);
       setTaskId(response.taskId);
     } catch (error) {
       console.error('上传失败:', error);

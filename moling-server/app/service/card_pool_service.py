@@ -1,0 +1,267 @@
+"""
+墨灵 (Moling) — Card Pool Service.
+
+Card lifecycle management for background worker (Celery) consumption:
+- Freshness checking and stale card identification
+- Card retirement (deactivation)
+- Replacement card placeholder generation
+
+All methods are synchronous by design, matching the Celery task callers
+in ``app/worker/card_retire_task.py``.
+"""
+
+from __future__ import annotations
+
+import logging
+import platform
+from typing import Any
+
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.config import get_settings
+from app.models.card_pool import CardPool
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Sync engine — Celery workers cannot use async sessions directly
+# ---------------------------------------------------------------------------
+
+def _get_sync_db_url() -> str:
+    """Derive a sync-compatible database URL from settings."""
+    settings = get_settings()
+    url = settings.DATABASE_URL
+    if platform.system() == "Windows" and url.startswith("sqlite"):
+        url = url.replace("sqlite+aiosqlite://", "sqlite://")
+    return url
+
+
+_sync_engine = create_engine(_get_sync_db_url(), echo=False, pool_pre_ping=True)
+_SessionLocal = sessionmaker(bind=_sync_engine, expire_on_commit=False)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# Each draw reduces the freshness score by this amount (capped)
+FRESHNESS_DRAW_PENALTY = 0.12
+# Each chapter since creation reduces the score
+FRESHNESS_AGE_PENALTY_PER_CHAPTER = 0.04
+# Cards with score below this threshold are considered stale
+FRESHNESS_STALE_THRESHOLD = 0.35
+# Max penalty caps so base score always has minimal floor
+MAX_DRAW_PENALTY = 0.6
+MAX_AGE_PENALTY = 0.25
+
+# Replacement generation
+REPLACEMENT_DIRECTIONS = ["stable", "interesting", "stunning", "divine"]
+REPLACEMENT_CATEGORIES = ["character", "plot", "world", "conflict", "theme"]
+
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+
+class CardPoolService:
+    """Service for card pool lifecycle management.
+
+    Operates on the ``CardPool`` model and uses **synchronous** SQLAlchemy
+    sessions so that it can be called from Celery workers without an event
+    loop.
+    """
+
+    # ---------------------------------------------------------------- private
+
+    @staticmethod
+    def _get_session() -> Session:
+        """Return a fresh sync database session."""
+        return _SessionLocal()
+
+    @staticmethod
+    def _calc_freshness_score(card: CardPool) -> float:
+        """Calculate a freshness score in [0.0, 1.0] for a single card.
+
+        Factors (higher score = fresher / should be retained):
+
+        * **Base**: 1.0
+        * **Draw penalty**: each time the card was drawn reduces freshness
+        * **Age penalty**: cards created earlier (lower ``freshness_chapter``)
+          are penalised more heavily
+        """
+        score = 1.0
+
+        # Draw count penalty
+        draws = card.draw_count or 0
+        draw_penalty = min(draws * FRESHNESS_DRAW_PENALTY, MAX_DRAW_PENALTY)
+        score -= draw_penalty
+
+        # Age penalty — older cards are more likely to be stale
+        if card.freshness_chapter is not None:
+            age_penalty = min(
+                card.freshness_chapter * FRESHNESS_AGE_PENALTY_PER_CHAPTER,
+                MAX_AGE_PENALTY,
+            )
+            score -= age_penalty
+
+        # Never-drawn cards get a small bonus
+        if (card.draw_count or 0) == 0:
+            score += 0.1
+
+        return max(0.0, min(1.0, score))
+
+    # ---------------------------------------------------------------- public
+
+    def check_freshness(self, project_id: int) -> dict[str, Any]:
+        """Evaluate freshness of all active cards in *project_id*.
+
+        Returns a dict with:
+          ``project_id``, ``total_cards``, ``fresh_count``, ``stale_count``,
+          ``stale_cards`` (list of card IDs below the freshness threshold).
+        """
+        session = self._get_session()
+        try:
+            stmt = (
+                select(CardPool)
+                .where(
+                    CardPool.project_id == str(project_id),
+                    CardPool.is_active == True,
+                )
+            )
+            cards = list(session.execute(stmt).scalars().all())
+
+            stale_ids: list[int] = []
+            for card in cards:
+                score = self._calc_freshness_score(card)
+                if score < FRESHNESS_STALE_THRESHOLD:
+                    stale_ids.append(card.id)
+
+            return {
+                "project_id": project_id,
+                "total_cards": len(cards),
+                "fresh_count": len(cards) - len(stale_ids),
+                "stale_count": len(stale_ids),
+                "stale_cards": stale_ids,
+            }
+        finally:
+            session.close()
+
+    def retire_cards(
+        self,
+        project_id: int,
+        card_ids: list[int],
+    ) -> dict[str, Any]:
+        """Mark *card_ids* as retired for the given project.
+
+        Sets ``is_active=False`` and ``status='retired'`` on each card.
+        Returns a dict with ``project_id``, ``retired_count``, ``retired_ids``.
+        """
+        session = self._get_session()
+        try:
+            stmt = (
+                select(CardPool)
+                .where(
+                    CardPool.project_id == str(project_id),
+                    CardPool.id.in_(card_ids),
+                )
+            )
+            cards = list(session.execute(stmt).scalars().all())
+
+            now_chapter = 0
+            for card in cards:
+                card.is_active = False
+                card.status = "retired"
+                card.retired_chapter = now_chapter
+
+            session.commit()
+
+            return {
+                "project_id": project_id,
+                "retired_count": len(cards),
+                "retired_ids": [c.id for c in cards],
+            }
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def generate_replacements(
+        self,
+        project_id: int,
+        count: int = 5,
+    ) -> list[dict[str, Any]]:
+        """Generate *count* placeholder cards to fill gaps in the pool.
+
+        Analyses the current pool for under-represented direction types
+        and categories, then produces placeholder card dicts with fields
+        compatible with the ``CardPool`` model.
+
+        Returns a list of card dictionaries (not persisted).
+        """
+        session = self._get_session()
+        try:
+            # Fetch existing cards to analyse coverage
+            stmt = select(CardPool).where(
+                CardPool.project_id == str(project_id),
+            )
+            existing_cards = list(session.execute(stmt).scalars().all())
+
+            # Build direction-type frequency map
+            direction_counts: dict[str, int] = {}
+            for card in existing_cards:
+                dt = card.direction_type
+                direction_counts[dt] = direction_counts.get(dt, 0) + 1
+
+            # Determine which directions are under-represented
+            avg_per_direction = max(
+                1,
+                len(existing_cards) // len(REPLACEMENT_DIRECTIONS),
+            )
+            under_repr_directions = [
+                d
+                for d in REPLACEMENT_DIRECTIONS
+                if direction_counts.get(d, 0) < avg_per_direction
+            ]
+            # Fallback to all directions if none are under-represented
+            pool_directions = (
+                under_repr_directions
+                if under_repr_directions
+                else list(REPLACEMENT_DIRECTIONS)
+            )
+
+            replacements: list[dict[str, Any]] = []
+            for i in range(count):
+                direction = pool_directions[i % len(pool_directions)]
+                category = REPLACEMENT_CATEGORIES[i % len(REPLACEMENT_CATEGORIES)]
+
+                replacements.append(
+                    {
+                        "project_id": str(project_id),
+                        "name": f"替换卡 {i + 1}",
+                        "description": "",
+                        "rarity": "common",
+                        "direction": direction,
+                        "direction_type": direction,
+                        "direction_text": f"参考 {direction} 方向，{category} 类别生成新灵感",
+                        "category": category,
+                        "content": f"替换卡 {i + 1}: 方向={direction}, 类别={category}",
+                        "layer": 0,
+                        "type": "auto_replacement",
+                        "source_label": "卡池替换",
+                        "is_active": True,
+                        "status": "active",
+                        "tags": [category, direction],
+                        "draw_count": 0,
+                        "pick_count": 0,
+                    }
+                )
+
+            return replacements
+        finally:
+            session.close()
+
+
+# Singleton instance
+card_pool_service = CardPoolService()

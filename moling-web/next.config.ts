@@ -2,9 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // 静态导出，用于 Docker Nginx 部署
-  output: "export",
-  // 禁用 Image Optimization（静态导出不支持）
+  // 使用 standalone 模式，支持动态路由
+  output: "standalone",
+  // 子路径部署，配合宿主机 Nginx 的 /moling 反代
+  basePath: "/moling",
+  // 禁用 Image Optimization（standalone 模式可选）
   images: {
     unoptimized: true,
   },

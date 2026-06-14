@@ -49,16 +49,22 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ---- 前端 Nginx ----
+  # ---- 前端 Next.js ----
   web:
     build:
       context: ./moling-web
       target: runner
     ports:
-      - "3000:80"
+      - "3000:3000"
     depends_on:
       - app
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
 volumes:
   app_data:

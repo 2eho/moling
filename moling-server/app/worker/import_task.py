@@ -34,10 +34,11 @@ def import_book_task(self, project_id: int, file_path: str, import_mode: str) ->
     logger.info("Starting book import for project %s from %s", project_id, file_path)
 
     try:
-        from app.service import ImportService
+        import asyncio
+        from app.service.import_service import ImportService
 
         service = ImportService()
-        result = service.import_book(project_id, file_path, import_mode)
+        result = asyncio.run(service.import_book(project_id, file_path, import_mode))
 
         logger.info("Book import completed for project %s", project_id)
         return {"status": "done", "project_id": project_id, "result": result}
@@ -59,10 +60,11 @@ def analyze_import_content(self, project_id: int) -> dict:
     logger.info("Analyzing import content for project %s", project_id)
 
     try:
-        from app.service import ImportService
+        import asyncio
+        from app.service.import_service import ImportService
 
         service = ImportService()
-        result = service.analyze_content(project_id)
+        result = asyncio.run(service.analyze_content(project_id))
 
         return {"status": "done", "project_id": project_id, "analysis": result}
 

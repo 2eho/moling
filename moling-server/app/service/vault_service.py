@@ -8,9 +8,9 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dao import vault_dao, project_dao
+from app.dao import vault_dao, project_dao, chapter_dao
 from app.errors import NotFoundError, ErrorCode, ForbiddenError
-from app.models import VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
+from app.models import VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, Chapter
 from app.schemas.vault import CharacterResp, TimelineResp, PlotPromiseResp, WorldResp
 
 
@@ -604,6 +604,210 @@ class VaultService:
         # Delete entry
         await vault_dao.delete_world_entry(db, entry_id)
         await db.commit()
+
+    async def update_from_chapter(
+        self,
+        project_id: int,
+        chapter_id: int,
+    ) -> dict:
+        """从章节提取实体并更新保险库条目。
+
+        在 worker 任务中调用，不依赖外部传入的 db session。
+
+        Returns:
+            dict with update results (counts of created/updated entries)
+        """
+        import asyncio
+        from datetime import datetime, timezone
+        from sqlalchemy import func, select
+        from sqlalchemy.ext.asyncio import (
+            AsyncSession,
+            async_sessionmaker,
+            create_async_engine,
+        )
+
+        from app.config import get_settings
+
+        settings = get_settings()
+        engine = create_async_engine(settings.DATABASE_URL, echo=False)
+        SessionLocal = async_sessionmaker(
+            engine, expire_on_commit=False, class_=AsyncSession
+        )
+
+        async with SessionLocal() as db:
+            # 1. 验证项目和章节
+            project = await project_dao.get(db, project_id)
+            if project is None:
+                raise NotFoundError(
+                    error_code=ErrorCode.PROJECT_NOT_FOUND,
+                    detail="Project not found",
+                )
+
+            chapter = await chapter_dao.get(db, chapter_id)
+            if chapter is None:
+                raise NotFoundError(
+                    error_code=ErrorCode.CHAPTER_NOT_FOUND,
+                    detail="Chapter not found",
+                )
+
+            content = chapter.content or ""
+            if not content.strip():
+                return {
+                    "project_id": project_id,
+                    "chapter_id": chapter_id,
+                    "created": 0,
+                    "updated": 0,
+                    "entities_found": 0,
+                    "message": "章节内容为空，跳过分析",
+                }
+
+            # 2. 简单的文本实体提取（基于中文命名模式）
+            import re
+
+            entities = {
+                "characters": set(),
+                "locations": set(),
+                "items": set(),
+            }
+
+            # 提取中文姓名模式：2-4 个中文字符，在对话标记或动词附近
+            # 匹配引号内或特殊标记后的连续中文字符
+            lines = content.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+
+                # 匹配中文姓名（2-4 个汉字，出现在对话标记前）
+                name_matches = re.findall(
+                    r'([\u4e00-\u9fff]{2,4})[：:　]',
+                    line,
+                )
+                for name in name_matches:
+                    # 过滤掉常见非姓名词
+                    common_words = {"但是", "然而", "虽然", "因为", "所以",
+                                    "不过", "这个", "那个", "这些", "那些",
+                                    "我们", "你们", "他们", "它们", "她们",
+                                    "没有", "可以", "还是", "不是", "就是",
+                                    "什么", "怎么", "这样", "那样", "如果",
+                                    "已经", "一个", "还有", "之后", "时候",
+                                    "突然", "开始", "最后", "知道", "看到",
+                                    "自己", "只见", "只听"}
+                    if name not in common_words:
+                        entities["characters"].add(name)
+
+                # 提取含"在""到""去""从"等地点的上下文
+                loc_keywords = re.findall(
+                    r'(?:在|到|去|从|进入|来到|前往|返回|离开)([\u4e00-\u9fff]{2,6})(?:[，。,\.!！]|$)',
+                    line,
+                )
+                for loc in loc_keywords:
+                    entities["locations"].add(loc)
+
+                # 提取含"拿起""握着""背着"等物品的上下文
+                item_matches = re.findall(
+                    r'(?:拿起|握着|背着|提着|拎着|戴上|穿着|手中|一把|一根|一个|一本|一卷)'
+                    r'([\u4e00-\u9fff]{2,4})(?:\s|，|。|！|？|\.|,|!|\?|$)',
+                    line,
+                )
+                for item in item_matches:
+                    entities["items"].add(item)
+
+            # 3. 更新保险库条目
+            created_count = 0
+            updated_count = 0
+
+            # 更新角色
+            for char_name in entities["characters"]:
+                stmt = select(VaultCharacter).where(
+                    VaultCharacter.project_id == project_id,
+                    VaultCharacter.name == char_name,
+                )
+                result = await db.execute(stmt)
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    existing.chapter_count = (existing.chapter_count or 0) + 1
+                    updated_count += 1
+                else:
+                    new_char = VaultCharacter(
+                        project_id=project_id,
+                        name=char_name,
+                        role="neutral",
+                        description=f"从第 {chapter.chapter_number} 章自动提取",
+                        traits=[],
+                        chapter_count=1,
+                    )
+                    db.add(new_char)
+                    created_count += 1
+
+            # 更新地点（作为世界观元素存储）
+            for loc_name in entities["locations"]:
+                stmt = select(VaultWorld).where(
+                    VaultWorld.project_id == project_id,
+                    VaultWorld.term == loc_name,
+                )
+                result = await db.execute(stmt)
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    updated_count += 1
+                else:
+                    new_world = VaultWorld(
+                        project_id=project_id,
+                        term=loc_name,
+                        description=f"从第 {chapter.chapter_number} 章自动提取的地点",
+                        category="location",
+                        reference_chapters=[],
+                    )
+                    db.add(new_world)
+                    created_count += 1
+
+            # 更新物品（作为世界观元素存储）
+            for item_name in entities["items"]:
+                stmt = select(VaultWorld).where(
+                    VaultWorld.project_id == project_id,
+                    VaultWorld.term == item_name,
+                )
+                result = await db.execute(stmt)
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    updated_count += 1
+                else:
+                    new_item = VaultWorld(
+                        project_id=project_id,
+                        term=item_name,
+                        description=f"从第 {chapter.chapter_number} 章自动提取的物品",
+                        category="item",
+                        reference_chapters=[],
+                    )
+                    db.add(new_item)
+                    created_count += 1
+
+            await db.commit()
+
+            return {
+                "project_id": project_id,
+                "chapter_id": chapter_id,
+                "chapter_number": chapter.chapter_number,
+                "created": created_count,
+                "updated": updated_count,
+                "entities_found": {
+                    "characters": len(entities["characters"]),
+                    "locations": len(entities["locations"]),
+                    "items": len(entities["items"]),
+                },
+                "total_entities": (
+                    len(entities["characters"])
+                    + len(entities["locations"])
+                    + len(entities["items"])
+                ),
+                "message": (
+                    f"从第 {chapter.chapter_number} 章提取并更新保险库："
+                    f"新增 {created_count} 条，更新 {updated_count} 条"
+                ),
+            }
 
     async def get_summary(
         self,

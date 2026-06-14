@@ -2,15 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import styles from './Notifications.module.css';
-import {
-  getNotifications,
-  getUnreadCount,
-  markAsRead,
-  markAllAsRead,
-  deleteNotification,
-  deleteAllRead,
-} from '@/api';
-import type { Notification } from '@/api';
+import { notificationsApi } from '@/lib/api';
+import type { Notification } from '@/lib/types';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -31,7 +24,7 @@ export default function NotificationsPage() {
       if (filter === 'unread') params.isRead = false;
       if (typeFilter) params.type = typeFilter;
 
-      const result = await getNotifications(params);
+      const result = await notificationsApi.getNotifications(params);
       setNotifications(result.items);
       setTotal(result.total);
     } catch (error) {
@@ -44,8 +37,8 @@ export default function NotificationsPage() {
   // 加载未读计数
   const loadUnreadCount = async () => {
     try {
-      const result = await getUnreadCount();
-      setUnreadCount(result.count);
+      const result = await notificationsApi.getUnreadCount();
+      setUnreadCount(result.data.count);
     } catch (error) {
       console.error('加载未读计数失败:', error);
     }
@@ -65,7 +58,7 @@ export default function NotificationsPage() {
   const handleMarkAsRead = async (id: string) => {
     setActionLoading(id);
     try {
-      await markAsRead(id);
+      await notificationsApi.markAsRead(id);
       await loadNotifications();
       await loadUnreadCount();
     } catch (error) {
@@ -79,7 +72,7 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     setActionLoading('all');
     try {
-      await markAllAsRead();
+      await notificationsApi.markAllAsRead();
       await loadNotifications();
       await loadUnreadCount();
     } catch (error) {
@@ -95,7 +88,7 @@ export default function NotificationsPage() {
 
     setActionLoading(id);
     try {
-      await deleteNotification(id);
+      await notificationsApi.deleteNotification(id);
       await loadNotifications();
       await loadUnreadCount();
     } catch (error) {
@@ -111,7 +104,7 @@ export default function NotificationsPage() {
 
     setActionLoading('delete-all');
     try {
-      await deleteAllRead();
+      await notificationsApi.deleteAllRead();
       await loadNotifications();
     } catch (error) {
       console.error('删除所有已读失败:', error);
@@ -207,7 +200,7 @@ export default function NotificationsPage() {
           notifications.map(notification => (
             <div
               key={notification.id}
-              className={`${styles.item} ${!notification.isRead ? styles.itemUnread : ''}`}
+              className={`${styles.item} ${!notification.is_read ? styles.itemUnread : ''}`}
             >
               <div className={styles.itemIcon}>
                 {getTypeIcon(notification.type)}
@@ -216,11 +209,11 @@ export default function NotificationsPage() {
                 <div className={styles.itemTitle}>{notification.title}</div>
                 <div className={styles.itemMessage}>{notification.message}</div>
                 <div className={styles.itemTime}>
-                  {formatTime(notification.createdAt)}
+                  {formatTime(notification.created_at)}
                 </div>
               </div>
               <div className={styles.itemActions}>
-                {!notification.isRead && (
+                {!notification.is_read && (
                   <button
                     className={styles.itemActionBtn}
                     onClick={() => handleMarkAsRead(notification.id)}
