@@ -1,6 +1,9 @@
 """墨灵 (Moling) — Subscription (订阅) ORM Model."""
 
-from sqlalchemy import Boolean, Float, JSON, String
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -45,3 +48,46 @@ class Plan(BaseModel):
 
     def __repr__(self) -> str:
         return f"<Plan id={self.id} name={self.name!r}>"
+
+
+class UserSubscription(BaseModel):
+    """A user's subscription record."""
+
+    __tablename__ = "user_subscriptions"
+
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="用户 ID",
+    )
+    plan_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("plans.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="方案 ID",
+    )
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="active",
+        comment="状态: active / trialing / canceled / expired",
+    )
+    start_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment="订阅开始时间",
+    )
+    end_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="订阅结束时间",
+    )
+    auto_renew: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        comment="是否自动续费",
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserSubscription id={self.id} user_id={self.user_id}>"
