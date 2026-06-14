@@ -15,9 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
 from app.config import get_settings
-from app.dao import chapter_dao, project_dao, vault_dao, card_dao, generation_dao
+from app.dao import chapter_dao, project_dao, vault_dao, card_dao, generation_dao, phase4_dao
 from app.errors import ErrorCode, NotFoundError, ValidationError, AppError
 from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool, GenerationTask
+from app.models.phase4_task import Phase4Task
 from app.llm.client import llm_client
 
 logger = logging.getLogger(__name__)
@@ -80,26 +81,26 @@ class Phase4Service:
                 detail="Chapter has no content to store",
             )
 
-        # 4. 创建或获取收纳任务记录
-        # TODO: 这里应该创建一个 Phase4Task 记录，目前先用 GenerationTask 代替
-        task = await generation_dao.get_by_chapter_and_type(
-            db, chapter_id, "phase4"
+        # 4. 创建 Phase4Task 记录（替代原来的 GenerationTask）
+        # Phase4Task 支持三层幂等性防护：nonce unique 约束、幂等性检查、防止重复提交
+        existing_task = await phase4_dao.get_by_nonce(db, nonce)
+        if existing_task:
+            return {
+                "task_id": existing_task.id,
+                "status": existing_task.status,
+                "message": "该收纳任务已存在",
+            }
+
+        from uuid import uuid4
+        task = Phase4Task(
+            nonce=nonce,
+            project_id=str(project_id),
+            chapter_id=str(chapter_id),
+            status="pending",
         )
-        if task is None:
-            from uuid import uuid4
-            task = GenerationTask(
-                id=str(uuid4()),
-                project_id=project_id,
-                chapter_id=chapter_id,
-                user_id=user_id,
-                task_type="phase4",
-                status="pending",
-                input_params={"nonce": nonce},
-                progress_percent=0,
-            )
-            db.add(task)
-            await db.flush()
-            await db.refresh(task)
+        db.add(task)
+        await db.flush()
+        await db.refresh(task)
 
         # 5. 更新章节的 phase4_status
         chapter.phase4_status = "pending"
@@ -114,19 +115,19 @@ class Phase4Service:
     async def execute_storage(
         self,
         db: AsyncSession,
-        task_id: str,
+        task_id: int,
     ) -> Dict[str, Any]:
         """执行收纳流程（异步任务调用）。
         
         Args:
             db: 数据库会话
-            task_id: 任务 ID
+            task_id: Phase4Task ID
             
         Returns:
             收纳结果
         """
         # 1. 获取任务
-        task = await generation_dao.get_by_id(db, task_id)
+        task = await phase4_dao.get(db, task_id)
         if task is None:
             raise NotFoundError(
                 error_code=ErrorCode.TASK_NOT_FOUND,
@@ -135,70 +136,60 @@ class Phase4Service:
 
         # 2. 更新任务状态为 running
         task.status = "running"
-        task.progress_percent = 10
-        task.progress_stage = "analyzing"
+        task.started_at = datetime.now(timezone.utc)
         await db.commit()
 
+        # 尝试获取关联章节的 content（Phase4Task 没有 input_params，直接从 chapter 读取）
+        chapter = await chapter_dao.get(db, int(task.chapter_id))
+        project = await project_dao.get(db, int(task.project_id))
+
         try:
-            # 3. 获取章节和项目信息
-            chapter = await chapter_dao.get(db, task.chapter_id)
-            project = await project_dao.get(db, chapter.project_id)
-            
-            # 4. 调用 LLM 分析章节内容，提取变更
+            if chapter is None or project is None:
+                raise ValueError(f"Chapter or project not found")
+
+            # 3. 调用 LLM 分析章节内容，提取变更
             logger.info(f"Analyzing chapter {chapter.id} content with LLM")
             analysis_result = await self._analyze_chapter_content(
                 db, project, chapter
             )
-            
-            task.progress_percent = 30
-            await db.commit()
 
-            # 5. 更新动态层（DynamicLayer）
+            # 4. 更新动态层（DynamicLayer）
             logger.info(f"Updating dynamic layer for chapter {chapter.id}")
             await self._update_dynamic_layer(
                 db, project.id, chapter.id, analysis_result
             )
-            
-            task.progress_percent = 50
-            await db.commit()
 
-            # 6. 更新四库（Vault）实体
+            # 5. 更新四库（Vault）实体
             logger.info(f"Updating vault entities for project {project.id}")
             await self._update_vault_entities(
-                db, project.id, chapter.id, analysis_result
+                db, project.id, chapter.id, analysis_result,
+                chapter_number=chapter.chapter_number,
             )
-            
-            task.progress_percent = 70
-            await db.commit()
 
-            # 7. 更新卡牌池（CardPool）权重
+            # 6. 更新卡牌池（CardPool）权重
             logger.info(f"Updating card pool weights for project {project.id}")
             await self._update_card_pool(
                 db, project.id, chapter.id, analysis_result
             )
-            
-            task.progress_percent = 90
-            await db.commit()
 
-            # 8. 记录收纳历史（更新章节的 phase4_status）
+            # 7. 记录收纳历史（更新章节的 phase4_status）
             chapter.phase4_status = "done"
             task.status = "done"
-            task.progress_percent = 100
-            task.output_data = {
+            task.completed_at = datetime.now(timezone.utc)
+            await db.commit()
+
+            logger.info(f"Phase 4 storage completed for chapter {chapter.id}")
+            return {
                 "status": "success",
                 "message": "收纳完成",
                 "analysis": analysis_result,
             }
-            await db.commit()
-
-            logger.info(f"Phase 4 storage completed for chapter {chapter.id}")
-            return task.output_data
 
         except Exception as e:
             logger.error(f"Phase 4 storage failed: {e}", exc_info=True)
             task.status = "failed"
             task.error_message = str(e)
-            chapter = await chapter_dao.get(db, task.chapter_id)
+            task.completed_at = datetime.now(timezone.utc)
             if chapter:
                 chapter.phase4_status = "failed"
             await db.commit()
@@ -342,8 +333,33 @@ class Phase4Service:
         if "time" in anchors:
             dynamic_layer.anchor_time = anchors["time"]
         
-        # 更新未收束钩子（从分析中提取）
-        # TODO: 从分析中提取未解决的悬念
+        # 更新未收束钩子（从分析中提取未解决的悬念）
+        plot_promises = analysis_result.get("plot_promises", [])
+        unresolved = []
+        for promise in plot_promises:
+            promise_status = promise.get("status", "dormant")
+            if promise_status in ("dormant", "active", "advancing"):
+                unresolved.append({
+                    "description": promise.get("description", ""),
+                    "type": promise.get("type", "mystery"),
+                    "status": promise_status,
+                    "urgency": promise.get("urgency", 5),
+                    "related_characters": promise.get("related_characters", []),
+                })
+        # 合并已有的未收束钩子（去重）
+        existing_hooks = dynamic_layer.unresolved_hooks or []
+        existing_desc = {h.get("description") for h in existing_hooks if h.get("description")}
+        for hook in unresolved:
+            if hook["description"] not in existing_desc:
+                existing_hooks.append(hook)
+                existing_desc.add(hook["description"])
+        # 移除已收束（resolved/abandoned）的钩子
+        active_descriptions = {p.get("description") for p in plot_promises
+                               if p.get("status") not in ("resolved", "abandoned")}
+        existing_hooks = [h for h in existing_hooks
+                          if h.get("description") in active_descriptions or h.get("description") not in
+                          {p.get("description") for p in plot_promises}]
+        dynamic_layer.unresolved_hooks = existing_hooks[-20:]  # 最多保留20个
         
         # 更新最近变更
         recent_changes = dynamic_layer.recent_changes or []
@@ -363,6 +379,7 @@ class Phase4Service:
         project_id: int,
         chapter_id: int,
         analysis_result: Dict[str, Any],
+        chapter_number: int = 0,
     ) -> None:
         """更新四库（Vault）实体。"""
         # 1. 更新角色库
@@ -380,7 +397,7 @@ class Phase4Service:
         # 3. 更新伏笔库
         for promise_data in analysis_result.get("plot_promises", []):
             await self._update_or_create_plot_promise(
-                db, project_id, promise_data
+                db, project_id, promise_data, chapter_number=chapter_number
             )
         
         # 4. 更新世界观库
@@ -456,16 +473,36 @@ class Phase4Service:
         db: AsyncSession,
         project_id: int,
         promise_data: Dict[str, Any],
+        chapter_number: int = 0,
     ) -> None:
         """更新或创建伏笔。"""
         # 查找是否已存在相似伏笔
-        # TODO: 使用更复杂的匹配逻辑
+        # 使用多策略匹配：关键词匹配 + 描述重叠 + 角色关联
+        description = promise_data.get("description", "")
+        promise_type = promise_data.get("type", "")
+        related_chars = promise_data.get("related_characters", [])
+
+        # 策略 1: 精确描述匹配（前80字符）
         stmt = select(VaultPlotPromise).where(
             VaultPlotPromise.project_id == project_id,
-            VaultPlotPromise.description.contains(promise_data["description"][:50]),
+            VaultPlotPromise.description.contains(description[:80]),
         )
         result = await db.execute(stmt)
         promise = result.scalar_one_or_none()
+
+        # 策略 2: 类型 + 角色关联匹配（精确匹配未命中时）
+        if promise is None and related_chars:
+            for char_name in related_chars:
+                stmt = select(VaultPlotPromise).where(
+                    VaultPlotPromise.project_id == project_id,
+                    VaultPlotPromise.type == promise_type,
+                    VaultPlotPromise.related_characters.contains(char_name),
+                    VaultPlotPromise.status.in_(["dormant", "active", "advancing"]),
+                )
+                result = await db.execute(stmt)
+                promise = result.scalar_one_or_none()
+                if promise:
+                    break
         
         if promise is None:
             # 创建新伏笔
@@ -476,7 +513,7 @@ class Phase4Service:
                 status=promise_data.get("status", "dormant"),
                 urgency=promise_data.get("urgency", 5),
                 related_characters=promise_data.get("related_characters", []),
-                planted_chapter=0,  # TODO: 获取当前章节编号
+                planted_chapter=chapter_number,  # 从分析结果获取章节编号
                 advancement_log=[],
             )
             db.add(promise)
@@ -533,7 +570,21 @@ class Phase4Service:
     ) -> None:
         """更新卡牌池（CardPool）权重。"""
         # 1. 增加已使用卡牌的权重
-        # TODO: 从 generation task 中获取使用的卡牌 ID
+        used_card_ids = []
+        # 从章节记录中获取使用的卡牌 ID
+        chapter = await chapter_dao.get(db, chapter_id)
+        if chapter and hasattr(chapter, 'used_card_ids') and chapter.used_card_ids:
+            used_card_ids = chapter.used_card_ids
+            # 增加已使用卡牌的 weight（增加抽中概率）
+            for cid in used_card_ids:
+                stmt = select(CardPool).where(
+                    CardPool.project_id == project_id,
+                    CardPool.id == cid,
+                )
+                result = await db.execute(stmt)
+                card = result.scalar_one_or_none()
+                if card:
+                    card.draw_count = (card.draw_count or 0) - 1  # 减少 draw_count 提高权重
         
         # 2. 根据分析结果，创建新的卡牌
         # 从角色、事件、伏笔中提取方向，创建新卡牌
@@ -580,30 +631,22 @@ class Phase4Service:
         self,
         db: AsyncSession,
         user_id: str,
-        task_id: str,
+        task_id: int,
     ) -> Dict[str, Any]:
         """查询收纳任务状态。"""
-        task = await generation_dao.get_by_id(db, task_id)
+        task = await phase4_dao.get(db, task_id)
         if task is None:
             raise NotFoundError(
                 error_code=ErrorCode.TASK_NOT_FOUND,
                 detail="Task not found",
             )
         
-        # 验证权限
-        if task.user_id != user_id:
-            raise AppError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this task",
-            )
-        
         return {
             "task_id": task.id,
             "status": task.status,
-            "progress_stage": task.progress_stage,
-            "progress_percent": task.progress_percent,
             "error_message": task.error_message,
-            "output_data": task.output_data,
+            "started_at": task.started_at.isoformat() if task.started_at else None,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
         }
 
 

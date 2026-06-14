@@ -947,6 +947,10 @@ registerMock("GET:/projects/{projectId}/vault/summary", (_, params) => {
     worlds_count: worldsState.filter((w) => w.project_id === projectId).length,
     recent_characters: charactersState.filter((c) => c.project_id === projectId).slice(0, 5),
     active_plot_promises: plotPromisesState.filter((p) => p.project_id === projectId && p.status === "pending").slice(0, 5),
-    recent_events: timelinesState.flatMap((t) => t.events).slice(0, 10),
+    recent_events: timelinesState.map((t) => ({
+      chapter_number: t.chapter_number,
+      event: t.event,
+      importance: 1,
+    })).slice(0, 10),
   });
 });

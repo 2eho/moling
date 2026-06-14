@@ -13,7 +13,13 @@ class Project(BaseModel):
 
     __tablename__ = "projects"
 
-    user_id: Mapped[str] = mapped_column(
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="主键 ID",
+    )
+    user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -25,7 +31,7 @@ class Project(BaseModel):
         comment="作品标题",
     )
     author: Mapped[str] = mapped_column(
-        String(200),
+        String(100),
         nullable=False,
         comment="作者署名",
     )
@@ -34,26 +40,30 @@ class Project(BaseModel):
         nullable=False,
         comment="作品类型/题材",
     )
-    cover_url: Mapped[Optional[str]] = mapped_column(
-        String(500),
+    tags: Mapped[Optional[list]] = mapped_column(
+        JSON,
         nullable=True,
-        comment="封面 URL",
+        comment="标签数组",
     )
-    description: Mapped[Optional[str]] = mapped_column(
+    synopsis: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
-        comment="作品描述",
+        comment="作品简介",
     )
-    method: Mapped[Optional[str]] = mapped_column(
-        String(50),
+    worldview: Mapped[Optional[str]] = mapped_column(
+        Text,
         nullable=True,
-        comment="创作方法: 卡牌组合 / 大纲导出 / 自由创作",
+        comment="世界观设定",
     )
-    chapter_count: Mapped[int] = mapped_column(
-        Integer,
-        default=0,
-        nullable=False,
-        comment="章节数量",
+    protagonist: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="主角简介",
+    )
+    supporting_chars: Mapped[Optional[list]] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="配角列表 (JSON)",
     )
     word_count: Mapped[int] = mapped_column(
         Integer,
@@ -88,8 +98,8 @@ class Project(BaseModel):
         nullable=False,
         comment="创建模式: from_scratch / from_template",
     )
-    template_id: Mapped[Optional[str]] = mapped_column(
-        String(36),
+    template_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
         nullable=True,
         comment="使用的模板 ID (预留)",
     )

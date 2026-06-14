@@ -362,11 +362,19 @@ class SecretService:
         )
         result["extracted_secrets"] = extracted
         
-        # 2. TODO: Propagate existing secrets based on chapter events
-        # This requires analyzing the chapter to see which characters interact
+        # 2. 根据章节事件传播现有秘密
+        logger.info(f"Updating secret matrix for chapter {chapter_id}: propagating secrets")
+        propagated = await self._propagate_secrets_from_chapter(
+            db, project_id, chapter_id, chapter_content, characters
+        )
+        result["propagated_secrets"] = propagated
         
-        # 3. TODO: Check for secret exposure conditions
-        # For example, if a character who knows a secret reveals it to others
+        # 3. 检查秘密曝光条件
+        logger.info(f"Updating secret matrix for chapter {chapter_id}: checking exposure")
+        exposed = await self._check_exposure_from_chapter(
+            db, project_id, chapter_id, chapter_content, characters
+        )
+        result["exposed_secrets"] = exposed
         
         # 4. Update secret debt
         logger.info(f"Updating secret matrix for chapter {chapter_id}: calculating debt")
@@ -554,6 +562,214 @@ class SecretService:
             "updated": updated_secrets,
             "message": f"Updated {len(updated_secrets)} secrets",
         }
+
+    async def _propagate_secrets_from_chapter(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_id: int,
+        chapter_content: str,
+        characters: list,
+    ) -> list[dict]:
+        """根据章节内容传播秘密：分析章节中出现的角色互动，将秘密在互动角色间传播。"""
+        if not characters or not chapter_content:
+            return []
+
+        # 获取本章节所有未曝光秘密
+        stmt = select(Secret).where(
+            Secret.project_id == project_id,
+            Secret.secrecy_level.in_(["hidden", "partial"]),
+        )
+        result = await db.execute(stmt)
+        all_secrets = list(result.scalars().all())
+
+        if not all_secrets:
+            return []
+
+        character_names = [c.name for c in characters]
+
+        # 使用 LLM 分析章节中哪些角色在互动
+        prompt = f"""请分析以下章节内容，列出所有出场角色及其之间的互动关系。
+
+章节内容：
+{chapter_content[:2000]}
+
+已知角色：{', '.join(character_names[:30])}
+
+请以 JSON 格式返回角色互动列表（只返回在章节中实际出现的角色）：
+[
+    {{
+        "character": "角色A",
+        "interacted_with": ["角色B", "角色C"],
+        "interaction_type": "dialogue / observation / conflict / cooperation / alone"
+    }}
+]
+
+注意：
+- 只包含在章节中实际出现且有互动的角色
+- 如果角色独自出现没有互动，interacted_with 为空列表
+- interaction_type 描述互动类型
+- 返回纯 JSON，不包含其他文字"""
+
+        try:
+            messages = [
+                {"role": "system", "content": "你是一个专门分析角色互动的助手。"},
+                {"role": "user", "content": prompt},
+            ]
+            response = await llm_client.chat(
+                messages=messages,
+                model=settings.LLM_MODEL,
+                temperature=0.2,
+                max_tokens=1024,
+            )
+            content = response["choices"][0]["message"]["content"]
+            json_start = content.find("[")
+            json_end = content.rfind("]") + 1
+            if json_start < 0 or json_end <= json_start:
+                return []
+
+            interactions = json.loads(content[json_start:json_end])
+        except Exception as e:
+            logger.error(f"Character interaction analysis failed: {e}", exc_info=True)
+            return []
+
+        # 基于互动关系传播秘密
+        propagated = []
+        for interaction in interactions:
+            char_name = interaction.get("character", "")
+            interacted_with = interaction.get("interacted_with", [])
+
+            if not char_name or char_name not in character_names:
+                continue
+
+            # 获取该角色知道的秘密
+            known_secrets = [s for s in all_secrets if char_name in (s.known_by or [])]
+
+            # 向互动对象传播秘密
+            for partner in interacted_with:
+                if partner not in character_names:
+                    continue
+                for secret in known_secrets:
+                    if partner not in (secret.known_by or []) and partner not in (secret.unknown_to or []):
+                        # 传播秘密
+                        known_by = secret.known_by or []
+                        known_by.append(partner)
+                        secret.known_by = known_by
+
+                        # 更新 unknown_to
+                        unknown_to = secret.unknown_to or []
+                        if partner in unknown_to:
+                            unknown_to.remove(partner)
+                            secret.unknown_to = unknown_to
+
+                        # 更新等级
+                        if len(known_by) >= 2:
+                            secret.secrecy_level = "partial"
+
+                        logger.info(
+                            f"Propagated secret {secret.id} from {char_name} to {partner}"
+                        )
+                        propagated.append({
+                            "secret_id": secret.id,
+                            "description": secret.description[:50],
+                            "from": char_name,
+                            "to": partner,
+                        })
+
+        await db.flush()
+        return propagated
+
+    async def _check_exposure_from_chapter(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_id: int,
+        chapter_content: str,
+        characters: list,
+    ) -> list[dict]:
+        """检查章节中是否有秘密被曝光：分析章节内容，判断是否有角色公开了秘密。"""
+        if not chapter_content:
+            return []
+
+        # 获取所有未曝光但部分知晓的秘密（有人知道但未完全公开）
+        stmt = select(Secret).where(
+            Secret.project_id == project_id,
+            Secret.secrecy_level == "partial",
+        )
+        result = await db.execute(stmt)
+        partial_secrets = list(result.scalars().all())
+
+        if not partial_secrets:
+            return []
+
+        # 使用 LLM 检查是否有秘密被公开
+        secrets_desc = "\n".join([
+            f"- 秘密{s.id}: {s.description[:100]} (知道者: {', '.join(s.known_by or [])})"
+            for s in partial_secrets[:10]
+        ])
+
+        prompt = f"""请分析以下章节内容，判断是否有原本隐藏的秘密被角色公开说出。
+
+现有秘密：
+{secrets_desc}
+
+章节内容：
+{chapter_content[:3000]}
+
+请判断是否有任何秘密在本章中被角色公开。如果有，以 JSON 格式返回被曝光的秘密：
+[
+    {{
+        "secret_id": 秘密ID(数字),
+        "description": "秘密描述",
+        "exposed_by": "曝光该秘密的角色名",
+        "confidence": 0.0-1.0
+    }}
+]
+
+如果没有秘密被曝光，返回空数组 []。
+注意：只返回 JSON，不包含其他文字。"""
+
+        try:
+            messages = [
+                {"role": "system", "content": "你是一个专门分析秘密曝光的小说分析助手。"},
+                {"role": "user", "content": prompt},
+            ]
+            response = await llm_client.chat(
+                messages=messages,
+                model=settings.LLM_MODEL,
+                temperature=0.2,
+                max_tokens=1024,
+            )
+            content = response["choices"][0]["message"]["content"]
+            json_start = content.find("[")
+            json_end = content.rfind("]") + 1
+            if json_start < 0 or json_end <= json_start:
+                return []
+
+            exposed_candidates = json.loads(content[json_start:json_end])
+        except Exception as e:
+            logger.error(f"Exposure check failed: {e}", exc_info=True)
+            return []
+
+        # 标记被曝光的秘密
+        exposed = []
+        for candidate in exposed_candidates:
+            secret_id = candidate.get("secret_id")
+            if not secret_id:
+                continue
+
+            secret = next((s for s in partial_secrets if s.id == secret_id), None)
+            if secret and secret.secrecy_level != "revealed":
+                secret.secrecy_level = "revealed"
+                logger.info(f"Exposed secret {secret_id} at chapter {chapter_id}")
+                exposed.append({
+                    "secret_id": secret_id,
+                    "description": secret.description[:50],
+                    "exposed_by": candidate.get("exposed_by", "unknown"),
+                })
+
+        await db.flush()
+        return exposed
 
 
 # Singleton instance

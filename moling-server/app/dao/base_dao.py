@@ -7,6 +7,7 @@ from typing import Any, Generic, Optional, TypeVar
 from pydantic import BaseModel
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session as SyncSession
 
 from app.models.base import BaseModel as MolingModel
 
@@ -56,6 +57,16 @@ class BaseDAO(Generic[ModelT]):
         """Retrieve a single record by primary key."""
         stmt = select(self.model_class).where(self.model_class.id == id)
         result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    def get_sync(
+        self,
+        db: SyncSession,
+        id: Any,
+    ) -> Optional[ModelT]:
+        """Sync retrieve — use with get_sync_db() to avoid Windows greenlet issues."""
+        stmt = select(self.model_class).where(self.model_class.id == id)
+        result = db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_multi(

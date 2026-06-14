@@ -1,0 +1,62 @@
+# Moling Frontend .dockerignore
+# 忽略不需要复制到 Docker 镜像的文件和目录
+
+# Node.js 依赖（会在镜像中重新安装）
+node_modules
+node_modules/**
+
+# 构建产物（会在镜像中重新构建）
+.next
+out
+dist
+build
+
+# 开发环境文件
+.env
+.env.local
+.env.development
+.env.production
+
+# Git 相关
+.git
+.gitignore
+.gitattributes
+
+# 文档和配置
+*.md
+LICENSE
+README.md
+CHANGELOG.md
+
+# 测试文件
+__tests__
+tests
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage
+.vscode
+.idea
+
+# 日志文件
+logs
+*.log
+npm-debug.log*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Next.js 缓存
+.next/cache
+
+# ESLint 和 Prettier 缓存
+.eslintcache
+.prettiercache
+
+# TypeScript 缓存
+*.tsbuildinfo

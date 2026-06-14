@@ -39,7 +39,6 @@ class ProjectService:
             protagonist=req.protagonist,
             supporting_chars=req.supporting_chars,
             word_count=0,
-            chapter_count=0,
             target_words=req.target_words,
             frequency=req.frequency,
             style=req.style,

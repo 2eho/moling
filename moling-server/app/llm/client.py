@@ -325,16 +325,14 @@ class LLMClient:
 
             # Check rate limit
             if not self.rate_limiter.can_make_request(api_key, estimated_tokens):
-                wait_time = self.rate_limiter.get_wait_time(api_key)
-                logger.warning(f"Rate limit reached, waiting {wait_time:.1f}s...")
-                if wait_time > 0:
-                    # TODO: Implement proper wait or switch key
-                    self.key_pool.report_error(api_key, "rate_limit")
-                    last_error = AppError(
-                        ErrorCode.RATE_LIMIT_EXCEEDED,
-                        detail=f"Rate limit reached. Please wait {wait_time:.1f}s"
-                    )
-                    continue
+                logger.warning(f"Rate limit reached for key {api_key[:10]}..., switching key...")
+                self.key_pool.report_error(api_key, "rate_limit")
+                self.key_pool._rotate_index()
+                last_error = AppError(
+                    ErrorCode.RATE_LIMIT_EXCEEDED,
+                    detail=f"Rate limit reached for current key, trying next key"
+                )
+                continue
 
             # Make request
             payload = {
@@ -360,12 +358,12 @@ class LLMClient:
             except AppError as e:
                 last_error = e
                 if "rate_limit" in str(e).lower() or "429" in str(e):
-                    logger.warning(f"Rate limit error with key {api_key[:10]}..., trying next key...")
+                    logger.warning(f"Rate limit error with key {api_key[:10]}..., switching to next key...")
                     self.key_pool.report_error(api_key, "rate_limit")
                 else:
                     logger.error(f"LLM request failed with key {api_key[:10]}...: {e}")
                     self.key_pool.report_error(api_key, "other")
-                # Try next key
+                # 自动轮换到下一个可用密钥（get_key 内部会跳过已禁用的密钥）
                 self.key_pool._rotate_index()
                 continue
 

@@ -35,6 +35,9 @@ class CardService:
     FRESHNESS_BONUS = 2  # Bonus weight for fresh cards
     FRESHNESS_THRESHOLD = 5  # Cards not drawn in last 5 draws get bonus
 
+    # 每次抽牌后的重抽次数上限，可通过构造参数覆盖
+    MAX_DRAW_RETRIES = 3
+
     async def list_cards(
         self,
         db: AsyncSession,
@@ -120,8 +123,17 @@ class CardService:
         user_id: str,
         project_id: int,
         req: DrawCardReq,
+        max_retries: Optional[int] = None,
     ) -> DrawCardResp:
-        """Draw cards from the pool (Phase 4 algorithm with weighted random)."""
+        """Draw cards from the pool (Phase 4 algorithm with weighted random).
+        
+        Args:
+            db: Database session
+            user_id: User ID
+            project_id: Project ID
+            req: Draw card request
+            max_retries: Maximum number of redraws per round (defaults to MAX_DRAW_RETRIES)
+        """
         # Verify project exists and belongs to user
         project = await project_dao.get(db, project_id)
         if project is None:
@@ -229,8 +241,9 @@ class CardService:
         
         await db.commit()
         
-        # Calculate remaining redraws (simplified: 3 redraws per round)
-        remaining_redraws = 3  # TODO: make configurable per project
+        # Calculate remaining redraws (configurable per project, defaults to class constant)
+        retry_limit = max_retries if max_retries is not None else self.MAX_DRAW_RETRIES
+        remaining_redraws = retry_limit
         
         # Recommend top card based on weight
         recommended = [selected[0]] if selected else []

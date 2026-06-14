@@ -28,7 +28,7 @@ from app.errors import AppError
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup / shutdown lifecycle for database and Redis connections."""
-    from app.dependencies import engine, async_session_factory
+    from app.dependencies import engine, async_session_factory, get_redis
     from app.models.base import Base
     from app.config import get_settings
 

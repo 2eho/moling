@@ -17,7 +17,7 @@ from typing import Dict, List, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.dao import project_dao, vault_dao
+from app.dao import project_dao, vault_dao, chapter_dao
 from app.models import Project, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
 
 logger = logging.getLogger(__name__)
@@ -76,8 +76,8 @@ class PromptArchitecture:
 
         # ===== Combine all layers into final prompt =====
         logger.info(f"Building prompt: Combining all layers")
-        final_prompt = self._combine_layers(
-            project, chapter_id, generation_params,
+        final_prompt = await self._combine_layers(
+            db, project, chapter_id, generation_params,
             character_layer, timeline_layer,
             plot_promise_layer, world_layer
         )
@@ -129,8 +129,9 @@ class PromptArchitecture:
         # Get current chapter number
         current_chapter_num = 0
         if current_chapter_id:
-            # TODO: Get chapter number from chapter_id
-            pass
+            chapter = await chapter_dao.get(db, current_chapter_id)
+            if chapter:
+                current_chapter_num = chapter.chapter_number
 
         # Filter events up to current chapter
         relevant_events = events
@@ -222,8 +223,9 @@ class PromptArchitecture:
         layer = "【世界观层】\n" + "\n".join(world_lines)
         return layer
 
-    def _combine_layers(
+    async def _combine_layers(
         self,
+        db: AsyncSession,
         project: Project,
         chapter_id: Optional[int],
         generation_params: Dict[str, Any],
@@ -255,7 +257,20 @@ class PromptArchitecture:
         mode = generation_params.get("mode", "single")
         
         prompt_parts.append(f"编织模式：{mode}")
-        # TODO: Add card direction info
+        # 添加卡牌方向信息
+        if card_ids:
+            from app.dao import card_dao
+            for idx, cid in enumerate(card_ids):
+                card = await card_dao.get(db, cid)
+                if card:
+                    weight_info = f" (权重: {weights[idx]})" if idx < len(weights) else ""
+                    prompt_parts.append(
+                        f"- 方向卡牌{idx + 1}：{card.name}{weight_info}"
+                    )
+                    if card.direction_text:
+                        prompt_parts.append(f"  方向说明：{card.direction_text}")
+                    if card.direction_type:
+                        prompt_parts.append(f"  方向类型：{card.direction_type}")
         prompt_parts.append("")
 
         # ===== Layer 1: Character =====

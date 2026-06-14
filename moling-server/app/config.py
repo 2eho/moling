@@ -1,22 +1,41 @@
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+
+logger = logging.getLogger(__name__)
+
+# Ensure security warnings are visible. Production apps should configure
+# logging properly; this is a minimal setup for the warning validators below.
+if not logging.getLogger().hasHandlers():
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 class Settings(BaseSettings):
-    """Application settings — populated from environment / .env file."""
+    """Application settings — populated from environment / .env file.
+
+    Security notes:
+    - NEVER commit .env files containing real secrets to version control.
+    - For production, set ALL sensitive values via environment variables.
+    - See .env.example for required configuration.
+    """
 
     # ---- Environment ----
     ENVIRONMENT: str = "development"  # development | staging | production
 
     # ---- Database ----
     DATABASE_URL: str = "postgresql+asyncpg://moling:moling@localhost:5432/moling"
+    # ^ WARNING: Default contains a weak password. In production, set DATABASE_URL
+    #   via environment variable with a strong, unique database credential.
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # ---- Auth / JWT ----
     SECRET_KEY: str = "dev-secret-key-change-in-production"
+    # ^ WARNING: Default key is INSECURE. Production MUST set SECRET_KEY via env.
+    #   Generate with: openssl rand -hex 32
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -24,6 +43,7 @@ class Settings(BaseSettings):
     # ---- LLM Service ----
     LLM_API_BASE: str = "https://api.deepseek.com"
     LLM_API_KEY: str = "sk-placeholder"
+    # ^ WARNING: Placeholder key. Production MUST set LLM_API_KEY via env.
 
     # ---- Celery ----
     # 使用不同的 Redis DB 避免混用
@@ -42,12 +62,57 @@ class Settings(BaseSettings):
     # 动态层存档目录
     ARCHIVE_DIR: str = "./archives"
 
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "case_sensitive": True,
-        "extra": "ignore",  # 允许环境变量中存在未定义的字段，避免启动错误
-    }
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+    @field_validator("SECRET_KEY", mode="after")
+    @classmethod
+    def _warn_default_secret_key(cls, v: str) -> str:
+        if v == "dev-secret-key-change-in-production":
+            logger.warning(
+                "SECRET_KEY is still the default value! This is INSECURE for "
+                "any non-development environment. Set SECRET_KEY via environment "
+                "variable or .env file. Generate a strong key with: "
+                "openssl rand -hex 32"
+            )
+        return v
+
+    @field_validator("LLM_API_KEY", mode="after")
+    @classmethod
+    def _warn_placeholder_api_key(cls, v: str) -> str:
+        if v == "sk-placeholder":
+            logger.warning(
+                "LLM_API_KEY is still the placeholder value! LLM features will "
+                "not work until a real API key is set via environment variable "
+                "or .env file."
+            )
+        return v
+
+    @field_validator("DATABASE_URL", mode="after")
+    @classmethod
+    def _warn_default_db_password(cls, v: str) -> str:
+        if "moling:moling@" in v:
+            logger.warning(
+                "DATABASE_URL contains the default weak password ('moling:moling'). "
+                "For production, set DATABASE_URL via environment variable with a "
+                "strong, unique credential."
+            )
+        return v
+
+    @field_validator("ENVIRONMENT", mode="after")
+    @classmethod
+    def _warn_production_defaults(cls, v: str) -> str:
+        if v == "production":
+            # In production mode, verify that critical settings are not defaults.
+            # This validator runs after __init__ so we need to check via cls.
+            # We log a general reminder here; individual field validators above
+            # handle specific warnings.
+            pass
+        return v
 
 
 @lru_cache()

@@ -12,7 +12,7 @@ import {
   getHealthAlerts,
   getSuggestions,
 } from '@/api';
-import type { CardDirection, GenerationProgress } from '@/api';
+import type { GenerationProgress } from '@/api';
 
 // 类型定义
 interface Character {
@@ -41,7 +41,7 @@ interface CardDirection {
   id: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   title: string;
-  desc: string;
+  description: string;
   tags: string[];
   weight: number;
 }
@@ -101,9 +101,9 @@ export default function WorkspacePage() {
   ];
 
   const [cards, setCards] = useState<CardDirection[]>([
-    { id: '1', rarity: 'common', title: '主角隐藏实力暗中观察导师', desc: '林霄决定在考核中隐藏真正实力...', tags: ['伏笔推进', '林霄·观察'], weight: 30 },
-    { id: '2', rarity: 'rare', title: '导师宣布规则时说了和神秘人一样的话', desc: '墨导师在解释考核规则时...', tags: ['伏笔回收', '导师·异常'], weight: 40 },
-    { id: '3', rarity: 'epic', title: '考核突发意外有人偷袭导师', desc: '考核中途，一道黑影突袭墨导师！...', tags: ['伏笔引爆', '第三方入场'], weight: 30 },
+    { id: '1', rarity: 'common', title: '主角隐藏实力暗中观察导师', description: '林霄决定在考核中隐藏真正实力...', tags: ['伏笔推进', '林霄·观察'], weight: 30 },
+    { id: '2', rarity: 'rare', title: '导师宣布规则时说了和神秘人一样的话', description: '墨导师在解释考核规则时...', tags: ['伏笔回收', '导师·异常'], weight: 40 },
+    { id: '3', rarity: 'epic', title: '考核突发意外有人偷袭导师', description: '考核中途，一道黑影突袭墨导师！...', tags: ['伏笔引爆', '第三方入场'], weight: 30 },
   ]);
 
   const [selectedCards, setSelectedCards] = useState<string[]>(['1', '2']);
@@ -499,7 +499,7 @@ export default function WorkspacePage() {
                     {card.rarity === 'common' ? '稳妥方向' : card.rarity === 'rare' ? '有趣方向' : card.rarity === 'epic' ? '惊艳方向' : '传奇方向'}
                   </div>
                   <div className={styles.cardDirectionTitle}>{card.title}</div>
-                  <div className={styles.cardDirectionDesc}>{card.desc}</div>
+                  <div className={styles.cardDirectionDesc}>{card.description}</div>
                   <div className={styles.cardTags}>
                     {card.tags.map((tag, i) => (
                       <span key={i} className={styles.cardTag}>{tag}</span>

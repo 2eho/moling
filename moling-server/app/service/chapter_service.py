@@ -285,9 +285,16 @@ class ChapterService:
         await db.commit()
         await db.refresh(chapter)
         
-        # TODO: Trigger Phase 4 asynchronous processing here
-        # This would typically be done via a background task or message queue
-        # For now, we just mark it as processing
+        # 异步触发 Phase 4 收纳处理：使用 Celery 后台任务，优雅降级
+        try:
+            from app.worker.phase4_task import update_vault_entries
+            update_vault_entries.delay(project_id, chapter_id)
+            logger.info(f"Phase 4 task dispatched for chapter {chapter_id}")
+        except ImportError as e:
+            logger.warning(f"Phase 4 task not available (Celery worker may not be running): {e}")
+        except Exception as e:
+            logger.error(f"Failed to dispatch Phase 4 task for chapter {chapter_id}: {e}", exc_info=True)
+            # 优雅降级：即使 Phase 4 失败，章节确认仍然成功
         
         return ChapterResp.model_validate(chapter)
 

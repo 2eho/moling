@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CreateProjectReq(BaseModel):
@@ -76,6 +76,14 @@ class ProjectResp(BaseModel):
     updated_at: datetime = Field(..., description="更新时间")
 
     model_config = {"from_attributes": True}
+
+    @field_validator("chapters", mode="before")
+    @classmethod
+    def chapters_as_int(cls, v):
+        """chapters can be list (SQLAlchemy relationship) or int (pre-computed)."""
+        if isinstance(v, (list, tuple)):
+            return len(v)
+        return v or 0
 
 
 class ProjectStatsResp(BaseModel):

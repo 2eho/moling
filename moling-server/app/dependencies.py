@@ -77,7 +77,7 @@ if platform.system() == "Windows":
 from typing import AsyncGenerator, Generator, Optional
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -203,13 +203,14 @@ async def get_redis() -> aioredis.Redis:
 _security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
+def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_security),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Extract and validate the JWT, returning the authenticated user.
 
     Raises 401 if the token is missing, expired, or invalid.
+    NOTE: Uses sync DB to avoid Windows + aiosqlite greenlet issues.
     """
     if credentials is None:
         raise HTTPException(
@@ -242,8 +243,9 @@ async def get_current_user(
 
     from app.dao.user_dao import UserDAO
     from app.schemas.auth import UserResp
-    user_dao = UserDAO()
-    user = await user_dao.get(db, user_id)
+    dao = UserDAO()
+    # Use sync get to avoid Windows greenlet+aiosqlite issues
+    user = dao.get_sync(db, user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -254,15 +256,15 @@ async def get_current_user(
     return UserResp.model_validate(user)
 
 
-async def get_optional_user(
+def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_security),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """Like ``get_current_user()`` but returns ``None`` instead of 401."""
     if credentials is None:
         return None
 
     try:
-        return await get_current_user(credentials, db)
+        return get_current_user(credentials, db)
     except HTTPException:
         return None

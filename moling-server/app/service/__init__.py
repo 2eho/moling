@@ -13,6 +13,9 @@ from app.service.chapter_service import chapter_service
 from app.service.generation_service import generation_service
 from app.service.vault_service import vault_service
 from app.service.secret_service import secret_service
+from app.service.prompt_service import prompt_service
+from app.service.algorithm_service import algorithm_service
+from app.service.validation_service import validation_service
 
 __all__ = [
     "auth_service",
@@ -21,4 +24,7 @@ __all__ = [
     "generation_service",
     "vault_service",
     "secret_service",
+    "prompt_service",
+    "algorithm_service",
+    "validation_service",
 ]

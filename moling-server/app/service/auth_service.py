@@ -139,8 +139,14 @@ class AuthService:
         """Request password reset.
         
         Generates a reset token and stores it in the user record.
-        In production, this token would be sent via email.
-        For now, we return it in the response for testing.
+        In production, this token must be sent via email — never returned
+        in the API response body, as doing so exposes the token to:
+        1) Network intermediaries (proxy, CDN logs)
+        2) Browser history / referrer headers
+        3) Server access logs
+        
+        Security requirement: reset_token MUST only be delivered through
+        the out-of-band email channel, not in the API response.
         """
         # Find user by email
         user = await user_dao.get_by_email(db, req.email)
@@ -158,11 +164,15 @@ class AuthService:
         
         await db.commit()
         
-        # TODO: In production, send email with reset link
-        # For now, return token in response (for testing only)
+        # SECURITY: reset_token 不得通过 API 响应返回。
+        # 生产环境中应通过邮件发送重置链接（包含 token），
+        # 防止 token 被中介层（代理、CDN、日志）捕获。
+        # 以下仅保留 token 前 4 位用于测试验证（开发环境临时方案）。
         return {
-            "message": "Password reset requested.",
-            "reset_token": reset_token,  # TODO: Remove in production
+            "message": "If the email exists, a reset link has been sent.",
+            # WARNING: 以下信息仅在开发/测试环境暴露，生产部署前必须删除
+            "reset_token_prefix": reset_token[:4] + "...",
+            "reset_token_expires": reset_expires.isoformat(),
         }
 
     async def reset_password(self, db: AsyncSession, req: PasswordResetReq) -> dict:
@@ -247,7 +257,7 @@ class AuthService:
 
     def register_sync(self, db: SyncSession, req: RegisterReq) -> TokenResp:
         """Sync version — use with get_sync_db()."""
-        dao = user_dao.UserDAO()
+        dao = user_dao
         # Check uniqueness (sync)
         existing_email = dao.get_by_email_sync(db, req.email)
         if existing_email:
@@ -290,7 +300,7 @@ class AuthService:
 
     def login_sync(self, db: SyncSession, req: LoginReq) -> TokenResp:
         """Sync version — use with get_sync_db()."""
-        dao = user_dao.UserDAO()
+        dao = user_dao
         user = dao.get_by_email_sync(db, req.email)
         if user is None:
             from app.errors import AuthError, ErrorCode

@@ -66,5 +66,6 @@ async def get_draw_history(
     current_user=Depends(get_current_user),
 ) -> list:
     """Get draw history for a project."""
-    # TODO: implement get_draw_history in service
-    return []
+    return await card_service.get_draw_history(
+        db, current_user["id"], project_id, chapter_id
+    )

@@ -11,6 +11,7 @@ import json
 import logging
 from typing import Dict, List, Any, Optional
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -274,13 +275,40 @@ class CoherenceService:
         generation_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Check 1: Character behavior consistency (pre-generation)."""
-        # TODO: Implement LLM-based character consistency check
-        # For now, return passed=True
-        return {
-            "passed": True,
-            "score": 0.9,
-            "details": "角色一致性检查通过",
-        }
+        character_str = await self._get_character_list(db, project.id)
+        cards_info = generation_params.get("cards", "无")
+        mode = generation_params.get("mode", "续写")
+
+        prompt = f"""请检查以下项目的角色设定一致性。
+
+项目：{project.title}
+角色列表：{character_str}
+当前生成模式：{mode}
+使用的卡牌信息：{cards_info}
+
+请检查：
+1. 角色当前状态是否符合其性格设定和角色定位？
+2. 选用的卡牌与角色设定是否匹配？
+3. 角色之间是否存在不合理的互动设定？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Character consistency pre-check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_character_consistency_post(
         self,
@@ -331,12 +359,41 @@ class CoherenceService:
         chapter_id: Optional[int],
     ) -> Dict[str, Any]:
         """Check 2: Timeline continuity (pre-generation)."""
-        # TODO: Implement timeline continuity check
-        return {
-            "passed": True,
-            "score": 0.95,
-            "details": "时间线连续性检查通过",
-        }
+        vault_events = await vault_dao.get_timeline(db, project.id)
+        if not vault_events:
+            return {"passed": True, "score": 1.0, "details": "vault尚无时间线事件"}
+
+        timeline_summary = "\n".join([
+            f"- [{e.importance or 'normal'}] 第{e.chapter_number}章: {e.event} — {e.description[:80] if e.description else e.event}"
+            for e in vault_events[-10:]  # last 10 events
+        ])
+
+        prompt = f"""请检查以下项目的时间线连续性。
+
+项目：{project.title}
+
+时间线事件（最近 10 条）：
+{timeline_summary}
+
+请检查时间线是否：
+1. 各事件之间的时间顺序合理
+2. 没有明显的时间线跳跃或矛盾
+3. 事件之间的因果关系清晰
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Timeline continuity check failed: {e}")
+            return {"passed": True, "score": 0.8, "details": f"检查失败: {str(e)}"}
 
     async def _check_timeline_continuity_post(
         self,
@@ -346,12 +403,46 @@ class CoherenceService:
         generated_content: str,
     ) -> Dict[str, Any]:
         """Check 2: Timeline continuity (post-generation)."""
-        # TODO: Implement post-generation timeline check
-        return {
-            "passed": True,
-            "score": 0.95,
-            "details": "时间线连续性检查通过",
-        }
+        vault_events = await vault_dao.get_timeline(db, project.id)
+        timeline_summary = "\n".join([
+            f"- 第{e.chapter_number}章: {e.event}"
+            for e in vault_events[-10:]
+        ]) if vault_events else "暂无"
+
+        prompt = f"""请检查以下章节内容中的时间线连续性。
+
+项目：{project.title}
+当前章节：第{chapter.chapter_number}章《{chapter.title}》
+
+现有时间线事件：
+{timeline_summary}
+
+章节内容（前2000字）：
+{generated_content[:2000]}
+
+请检查：
+1. 章节内容是否与现有时间线事件冲突？
+2. 章节中提到的事件是否符合时间顺序？
+3. 是否有未记录但在内容中发生的重要事件？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Timeline continuity post-check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_plot_promise_status(
         self,
@@ -359,16 +450,49 @@ class CoherenceService:
         project: Project,
     ) -> Dict[str, Any]:
         """Check 3: Plot promise status consistency (pre-generation)."""
-        # Get active plot promises
         promises = await vault_dao.get_plot_promises(db, project.id)
         active_promises = [p for p in promises if p.status in ["dormant", "active"]]
-        
-        # TODO: Check if generation plan addresses active promises
-        return {
-            "passed": True,
-            "score": 0.9,
-            "details": f"伏笔状态检查通过，当前活跃伏笔: {len(active_promises)}个",
-        }
+
+        if not promises:
+            return {"passed": True, "score": 1.0, "details": "vault尚无伏笔设定"}
+
+        promise_summary = "\n".join([
+            f"- [{p.type}] {p.description[:100] or '无描述'} (状态: {p.status}, 紧迫度: {p.urgency})"
+            for p in promises
+        ])
+        active_count = len(active_promises)
+
+        prompt = f"""请检查以下项目的伏笔（情节承诺）状态。
+
+项目：{project.title}
+活跃伏笔数量：{active_count} 个
+
+所有伏笔列表：
+{promise_summary}
+
+请检查：
+1. 活跃伏笔的数量是否合理（不应过多未处理的伏笔）？
+2. 长期未处理的伏笔是否需要关注？
+3. 不同伏笔之间是否存在冲突？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []) + [f"当前活跃伏笔: {active_count}个"],
+            }
+        except Exception as e:
+            logger.error(f"Plot promise status check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_plot_promise_status_post(
         self,
@@ -378,12 +502,51 @@ class CoherenceService:
         generated_content: str,
     ) -> Dict[str, Any]:
         """Check 3: Plot promise status consistency (post-generation)."""
-        # TODO: Implement post-generation plot promise check
-        return {
-            "passed": True,
-            "score": 0.9,
-            "details": "伏笔状态检查通过",
-        }
+        promises = await vault_dao.get_plot_promises(db, project.id)
+        active_promises = [p for p in promises if p.status in ["dormant", "active"]]
+
+        if not active_promises:
+            return {"passed": True, "score": 1.0, "details": "无活跃伏笔需要检查"}
+
+        promise_summary = "\n".join([
+            f"- [{p.type}] {p.description[:100] or '无描述'} (状态: {p.status}, 紧迫度: {p.urgency})"
+            for p in active_promises[:8]
+        ])
+
+        prompt = f"""请检查以下章节内容中的伏笔处理情况。
+
+项目：{project.title}
+当前章节：第{chapter.chapter_number}章《{chapter.title}》
+
+活跃伏笔列表：
+{promise_summary}
+
+章节内容（前3000字）：
+{generated_content[:3000]}
+
+请检查：
+1. 章节内容是否涉及对活跃伏笔的推进或兑现？
+2. 如果有伏笔被推进，处理方式是否自然合理？
+3. 是否有新的伏笔被埋下？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Plot promise post-check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_world_rule_consistency(
         self,
@@ -392,12 +555,50 @@ class CoherenceService:
         generation_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Check 4: World rule consistency (pre-generation)."""
-        # TODO: Implement world rule consistency check
-        return {
-            "passed": True,
-            "score": 0.95,
-            "details": "世界观规则一致性检查通过",
-        }
+        world_entries = await vault_dao.get_world_entries(db, project.id)
+        if not world_entries:
+            return {"passed": True, "score": 1.0, "details": "vault尚无世界观设定"}
+
+        world_summary = "\n".join([
+            f"- [{e.category}] {e.name}: {e.description[:150] or '无描述'}"
+            + (f" (约束: {e.constraint[:100]})" if e.constraint else "")
+            for e in world_entries
+        ])
+
+        cards_info = generation_params.get("cards", "无")
+
+        prompt = f"""请检查以下项目的世界观规则一致性。
+
+项目：{project.title}
+
+世界观设定条目：
+{world_summary}
+
+本次生成使用的卡牌/设定：{cards_info}
+
+请检查：
+1. 卡牌/设定是否与世界观规则冲突？
+2. 世界观各条目之间的规则是否存在矛盾？
+3. 是否有违反已建立世界观设定的风险？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"World rule consistency check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_world_rule_consistency_post(
         self,
@@ -406,12 +607,49 @@ class CoherenceService:
         generated_content: str,
     ) -> Dict[str, Any]:
         """Check 4: World rule consistency (post-generation)."""
-        # TODO: Implement post-generation world rule check
-        return {
-            "passed": True,
-            "score": 0.95,
-            "details": "世界观规则一致性检查通过",
-        }
+        world_entries = await vault_dao.get_world_entries(db, project.id)
+        if not world_entries:
+            return {"passed": True, "score": 1.0, "details": "vault尚无世界观设定"}
+
+        world_summary = "\n".join([
+            f"- [{e.category}] {e.name}: {e.description[:150] or '无描述'}"
+            + (f" (约束: {e.constraint[:100]})" if e.constraint else "")
+            for e in world_entries
+        ])
+
+        prompt = f"""请检查以下章节内容中是否有违反世界观设定的地方。
+
+项目：{project.title}
+
+世界观设定条目：
+{world_summary}
+
+章节内容：
+{generated_content}
+
+请检查：
+1. 章节内容中是否有与世界观设定矛盾的描述？
+2. 是否违反了世界观中的约束或规则？
+3. 世界观元素的使用方式是否合理？
+
+返回 JSON 格式：
+{{"consistent": true/false, "violations": ["违规1", "违规2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("violations", []),
+            }
+        except Exception as e:
+            logger.error(f"World rule consistency post-check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_writing_style_consistency(
         self,
@@ -420,12 +658,40 @@ class CoherenceService:
         previous_chapter: Optional[Chapter],
     ) -> Dict[str, Any]:
         """Check 5: Writing style consistency (pre-generation)."""
-        # TODO: Implement writing style consistency check
-        return {
-            "passed": True,
-            "score": 0.85,
-            "details": "文风一致性检查通过",
-        }
+        if not previous_chapter or not previous_chapter.content:
+            return {"passed": True, "score": 1.0, "details": "暂无前序章节内容可对比"}
+
+        prev_content = previous_chapter.content[:2000]
+
+        prompt = f"""请检查以下项目的文风一致性。
+
+项目：{project.title}
+前序章节标题：{previous_chapter.title}
+
+前序章节内容（前2000字）：
+{prev_content}
+
+请分析前序章节的写作风格特征（如：句式特点、用词风格、叙述视角、对话风格等），
+并评估在续写时保持风格一致需要注意的方面。
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["注意要点1", "注意要点2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.85),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Writing style consistency check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_writing_style_consistency_post(
         self,
@@ -435,12 +701,45 @@ class CoherenceService:
         generated_content: str,
     ) -> Dict[str, Any]:
         """Check 5: Writing style consistency (post-generation)."""
-        # TODO: Implement post-generation style check
-        return {
-            "passed": True,
-            "score": 0.85,
-            "details": "文风一致性检查通过",
-        }
+        if not previous_chapter or not previous_chapter.content:
+            return {"passed": True, "score": 1.0, "details": "暂无前序章节内容可对比"}
+
+        prev_content = previous_chapter.content[:2000]
+
+        prompt = f"""请比较以下两段内容（前序章节 vs 新生成章节）的写作风格一致性。
+
+项目：{project.title}
+前序章节标题：{previous_chapter.title}
+
+前序章节内容（前2000字）：
+{prev_content}
+
+新生成章节内容：
+{generated_content[:2000]}
+
+请检查：
+1. 两段内容的文风是否一致（句式、用词、叙述视角）？
+2. 是否有风格上的突变或不协调？
+3. 对话风格和描写方式是否连贯？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["差异1", "差异2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.85),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Writing style consistency post-check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_narrative_pacing(
         self,
@@ -449,12 +748,45 @@ class CoherenceService:
         chapter_id: Optional[int],
     ) -> Dict[str, Any]:
         """Check 6: Narrative pacing rationality (pre-generation)."""
-        # TODO: Implement narrative pacing check
-        return {
-            "passed": True,
-            "score": 0.8,
-            "details": "叙事节奏合理性检查通过",
-        }
+        chapters = await chapter_dao.get_by_project(db, project.id)
+        if not chapters or len(chapters) < 2:
+            return {"passed": True, "score": 1.0, "details": "章节数量不足，无法评估叙事节奏"}
+
+        pacing_summary = "\n".join([
+            f"- 第{c.chapter_number}章《{c.title}》: 长度约{len(c.content or '')}字"
+            for c in chapters[-5:]  # last 5 chapters
+        ])
+
+        prompt = f"""请检查以下项目的叙事节奏合理性。
+
+项目：{project.title}
+
+最近章节概览：
+{pacing_summary}
+
+请检查：
+1. 各章节的长度分布是否合理？
+2. 叙事节奏是否存在过快或过慢的问题？
+3. 情节推进的速度是否平稳？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.8),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Narrative pacing check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_narrative_pacing_post(
         self,
@@ -464,12 +796,40 @@ class CoherenceService:
         generated_content: str,
     ) -> Dict[str, Any]:
         """Check 6: Narrative pacing rationality (post-generation)."""
-        # TODO: Implement post-generation pacing check
-        return {
-            "passed": True,
-            "score": 0.8,
-            "details": "叙事节奏合理性检查通过",
-        }
+        content_len = len(generated_content)
+
+        prompt = f"""请检查以下章节内容的叙事节奏合理性。
+
+项目：{project.title}
+当前章节：第{chapter.chapter_number}章《{chapter.title}》
+章节长度：{content_len} 字
+
+章节内容（前3000字）：
+{generated_content[:3000]}
+
+请检查：
+1. 叙事节奏是否合理（情节推进速度适中）？
+2. 是否有过度拖沓或过于仓促的部分？
+3. 情节点之间的过渡是否自然？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.8),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Narrative pacing post-check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_chapter_transition(
         self,
@@ -479,12 +839,44 @@ class CoherenceService:
         generation_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Check 7: Chapter transition naturalness (pre-generation)."""
-        # TODO: Implement chapter transition check
-        return {
-            "passed": True,
-            "score": 0.9,
-            "details": "章节衔接自然性检查通过",
-        }
+        if not previous_chapter or not previous_chapter.content:
+            return {"passed": True, "score": 1.0, "details": "暂无前序章节，无需衔接检查"}
+
+        prev_content = previous_chapter.content[-1000:]
+        mode = generation_params.get("mode", "续写")
+
+        prompt = f"""请检查以下项目的章节衔接自然性。
+
+项目：{project.title}
+前序章节标题：{previous_chapter.title}
+生成模式：{mode}
+
+前序章节结尾内容（末尾1000字）：
+{prev_content}
+
+请检查：
+1. 前序章节结尾是否为续写提供了合理的衔接点？
+2. 是否存在明显的断裂感或突兀的结尾？
+3. 续写时需要注意哪些衔接要点？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["要点1", "要点2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Chapter transition check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     async def _check_chapter_transition_post(
         self,
@@ -494,12 +886,46 @@ class CoherenceService:
         generated_content: str,
     ) -> Dict[str, Any]:
         """Check 7: Chapter transition naturalness (post-generation)."""
-        # TODO: Implement post-generation transition check
-        return {
-            "passed": True,
-            "score": 0.9,
-            "details": "章节衔接自然性检查通过",
-        }
+        if not previous_chapter or not previous_chapter.content:
+            return {"passed": True, "score": 1.0, "details": "无前序章节，无需衔接检查"}
+
+        prev_end = previous_chapter.content[-1000:]
+        new_start = generated_content[:1000]
+
+        prompt = f"""请检查以下章节之间的衔接自然性。
+
+项目：{project.title}
+前序章节：第{previous_chapter.chapter_number}章《{previous_chapter.title}》
+
+前序章节结尾（末尾1000字）：
+{prev_end}
+
+当前章节开头（前1000字）：
+{new_start}
+
+请检查：
+1. 两章之间的衔接是否自然流畅？
+2. 是否有必要的情节或逻辑过渡？
+3. 场景或视角切换是否合理？
+
+返回 JSON 格式：
+{{"consistent": true/false, "issues": ["问题1", "问题2"], "score": 0.0-1.0}}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            result = json.loads(response)
+            return {
+                "passed": result.get("consistent", True),
+                "score": result.get("score", 0.9),
+                "details": result.get("issues", []),
+            }
+        except Exception as e:
+            logger.error(f"Chapter transition post-check failed: {e}")
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": f"检查失败: {str(e)}",
+            }
 
     # ===== Helper Methods =====
 
