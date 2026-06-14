@@ -11,6 +11,7 @@ import { mockChapters } from "./chapters";
 import { mockCards } from "./cards";
 import { mockCharacters, mockTimelines, mockPlotPromises, mockWorlds } from "./vault";
 import { mockHealthAlerts } from "./health";
+import { mockSystemHealthy, mockSystemDegraded } from "./system-health";
 import type { ApiResponse, Project, Chapter, VaultCharacterRelationship } from "@/lib/types";
 
 // ---- Helpers ----
@@ -374,6 +375,21 @@ registerMock("GET:/projects/{projectId}/health/alerts", () => {
 registerMock("POST:/projects/{projectId}/health/refresh", () => {
   // Simulate a fresh check — flip alert statuses occasionally
   return ok(healthState.filter((a) => a.is_active));
+});
+
+// ---- System Health Mock ----
+
+// Toggle between healthy and degraded states for demonstration
+let systemHealthToggle = false;
+
+registerMock("GET:/system/health", () => {
+  systemHealthToggle = !systemHealthToggle;
+  // Use the toggle to simulate occasional warnings
+  const now = new Date().toISOString();
+  if (systemHealthToggle) {
+    return ok({ ...mockSystemHealthy, timestamp: now });
+  }
+  return ok({ ...mockSystemDegraded, timestamp: now });
 });
 
 // =========================================

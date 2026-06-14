@@ -379,7 +379,10 @@ export interface AdminStats {
   error_rate: number;
 }
 
+export type UserRole = "user" | "admin" | "vip";
+
 export interface AdminUser extends User {
+  role: UserRole;
   project_count: number;
   total_words: number;
   last_active_at: string;
@@ -400,6 +403,20 @@ export interface HealthAlert {
   detail: string;
   severity: "info" | "warning" | "critical";
   is_active: boolean;
+}
+
+// ---- System Health ----
+
+export type SystemHealthLevel = "R1" | "R2" | "R3";
+
+export interface SystemHealthStatus {
+  level: SystemHealthLevel;
+  title: string;
+  message: string;
+  details?: string[];
+  timestamp: string;
+  // R1: 不可手动消除，R2: 可点击关闭，R3: 自动消失
+  dismissable: boolean;
 }
 
 // ---- API Response Envelopes ----

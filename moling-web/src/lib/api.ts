@@ -18,6 +18,7 @@ import type {
   VaultWorld,
   VaultSummary,
   HealthAlert,
+  SystemHealthStatus,
   User,
   Notification,
   UserSettings,
@@ -347,6 +348,14 @@ export const healthApi = {
     return apiClient.post<ApiResponse<HealthAlert[]>>(
       `/projects/${projectId}/health/refresh`,
     );
+  },
+};
+
+// ---- System Health API ----
+
+export const systemHealthApi = {
+  async getStatus() {
+    return apiClient.get<ApiResponse<SystemHealthStatus>>("/system/health");
   },
 };
 
@@ -754,5 +763,42 @@ export const adminApi = {
 
   async updateUser(userId: string, data: Partial<AdminUser>) {
     return apiClient.put<ApiResponse<AdminUser>>(`/admin/users/${userId}`, data);
+  },
+
+  // ── LLM Config ──
+  async getLlmConfig() {
+    return apiClient.get<ApiResponse<{
+      api_key_configured: boolean;
+      api_base: string;
+      model: string;
+      api_keys: Array<{ id: string; name: string; prefix: string; enabled: boolean; created_at: string }>;
+    }>>("/admin/llm-config");
+  },
+
+  async saveLlmConfig(data: { api_key?: string; api_base?: string; model?: string }) {
+    return apiClient.post<ApiResponse<{ is_configured: boolean }>>("/admin/llm-config", data);
+  },
+
+  async testLlmConnection() {
+    return apiClient.post<ApiResponse<{ success: boolean; message: string }>>("/admin/llm-config/test", {});
+  },
+
+  async getLlmPools() {
+    return apiClient.get<ApiResponse<{
+      pro_pool: { total: number; used: number; available: number; status: "healthy" | "degraded" | "down" };
+      flash_pool: { total: number; used: number; available: number; status: "healthy" | "degraded" | "down" };
+    }>>("/admin/llm-config/pools");
+  },
+
+  async addApiKey(data: { name: string; key: string }) {
+    return apiClient.post<ApiResponse<{ id: string; prefix: string }>>("/admin/llm-config/keys", data);
+  },
+
+  async deleteApiKey(keyId: string) {
+    return apiClient.delete<ApiResponse<{ deleted: boolean }>>(`/admin/llm-config/keys/${keyId}`);
+  },
+
+  async toggleApiKey(keyId: string, enabled: boolean) {
+    return apiClient.patch<ApiResponse<{ enabled: boolean }>>(`/admin/llm-config/keys/${keyId}`, { enabled });
   },
 };

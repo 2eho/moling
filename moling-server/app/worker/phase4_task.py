@@ -72,3 +72,56 @@ def update_vault_entries(self, project_id: int, chapter_id: int) -> dict:
     except Exception as exc:
         logger.exception("Vault update failed")
         raise self.retry(exc=exc) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, default_retry_delay=60)
+def execute_phase4_storage(self, task_id: int) -> dict:
+    """Execute the full Phase 4 storage pipeline for a confirmed chapter.
+
+    Full pipeline:
+    1. Calls LLM to analyze chapter content (角色/时间线/剧情承诺/世界观)
+    2. Updates DynamicLayer (摘要、锚点、未收束钩子)
+    3. Updates four vault databases (角色库/时间线库/伏笔库/世界观库)
+    4. Updates CardPool weights and generates new cards
+    5. Marks Phase4Task and chapter as completed
+
+    Args:
+        task_id: Phase4Task record ID
+    """
+    logger.info("Starting Phase 4 full storage pipeline for task %s", task_id)
+
+    try:
+        import asyncio
+        from app.service.phase4_service import Phase4Service
+
+        service = Phase4Service()
+
+        # 创建独立 DB session 执行异步操作
+        from sqlalchemy.ext.asyncio import (
+            AsyncSession,
+            async_sessionmaker,
+            create_async_engine,
+        )
+
+        settings = get_settings()
+        engine = create_async_engine(settings.DATABASE_URL, echo=False)
+        SessionLocal = async_sessionmaker(
+            engine, expire_on_commit=False, class_=AsyncSession
+        )
+
+        async def _run():
+            async with SessionLocal() as db:
+                return await service.execute_storage(db, task_id)
+
+        result = asyncio.run(_run())
+
+        logger.info("Phase 4 full storage completed for task %s", task_id)
+        return {
+            "status": "done",
+            "task_id": task_id,
+            "result": result,
+        }
+
+    except Exception as exc:
+        logger.exception("Phase 4 full storage failed for task %s", task_id)
+        raise self.retry(exc=exc) from exc

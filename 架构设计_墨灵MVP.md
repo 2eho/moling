@@ -783,7 +783,83 @@ sequenceDiagram
 
 ---
 
-### 6. 待明确事项
+### 6. 部署架构
+
+#### 6.1 部署拓扑
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    用户浏览器                            │
+│           http://服务器IP:8080/moling/                   │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│              Nginx（宿主机，端口 8080）                  │
+│  location /moling       → proxy_pass :3000（前端）       │
+│  location /moling/api/  → proxy_pass :8000（后端）       │
+└────────────────────┬────────────────────────────────────┘
+                     │
+         ┌───────────┴───────────┐
+         ▼                       ▼
+┌─────────────────┐    ┌─────────────────────┐
+│  moling-web     │    │  moling-app          │
+│  Next.js :3000  │    │  FastAPI :8000       │
+│  standalone 模式 │    │  Uvicorn             │
+└────────┬────────┘    └──────────┬──────────┘
+         │                         │
+         └───────────┬───────────┘
+                     ▼
+        ┌─────────────────┐
+        │   moling-redis   │
+        │   Redis :6379    │
+        └─────────────────┘
+```
+
+#### 6.2 容器分工
+
+| 容器名 | 镜像 | 端口 | 说明 |
+|--------|------|------|------|
+| `moling-web` | moling-web:latest | 3000 | 前端，Next.js standalone 模式 |
+| `moling-app` | moling-app:latest | 8000 | 后端 API，FastAPI + Uvicorn |
+| `moling-redis` | redis:7-alpine | 6379 | 缓存 + Celery 消息队列 |
+
+#### 6.3 Next.js 子路径部署要点
+
+`moling-web/next.config.ts` 配置：
+
+```typescript
+const nextConfig: NextConfig = {
+  basePath: "/moling",   // 所有前端路由自动加 /moling 前缀
+  output: "standalone",  // Docker 中直接 node server.js
+};
+```
+
+配置 `basePath` 后：
+- 前端路由变为 `/moling/*`
+- 静态资源路径变为 `/moling/_next/static/*`
+- Nginx 只需将 `/moling` 前缀代理到前端容器，无需额外改写
+
+#### 6.4 Nginx 反代配置要点
+
+- `location /moling`（无末尾斜杠）匹配所有以 `/moling` 开头的路径
+- API 路径 `/moling/api/` 通过 `rewrite` 去掉 `/moling` 前缀后转发到后端
+- `proxy_set_header Host $host` 确保后端收到的 Host 头正确
+- WebSocket 支持（`Upgrade`、`Connection` 头）用于未来实时功能
+
+#### 6.5 Dockerfile 关键修复记录
+
+| 问题 | 文件 | 修复 |
+|------|------|------|
+| Debian Trixie 包名变更 | moling-server/Dockerfile | `libffi7` → `libffi8` |
+| bcrypt 版本约束无效 | moling-server/pyproject.toml | `bcrypt<4.1` → `bcrypt>=4.0,<5.0` |
+| NODE_ENV 顺序错误 | moling-web/Dockerfile | 先 `npm ci` 再设 `NODE_ENV=production` |
+| email-validator 缺失 | moling-server/pyproject.toml | 添加 `email-validator>=2.2.0` |
+| 镜像构建慢 | 两个 Dockerfile | 添加阿里云镜像加速 |
+
+---
+
+### 7. 待明确事项
 
 | # | 问题 | 建议方案 | 影响范围 |
 |:--|:-----|:---------|:---------|

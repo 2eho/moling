@@ -827,5 +827,230 @@ class Phase4Service:
         }
 
 
+    async def get_suggestions(
+        self,
+        db: AsyncSession,
+        chapter_id: int,
+    ) -> Dict[str, Any]:
+        """获取章节的精修建议。
+
+        分析章节内容 + 四库状态，生成针对性精修建议。
+        """
+        # 获取章节
+        chapter = await chapter_dao.get(db, chapter_id)
+        if chapter is None:
+            raise NotFoundError(
+                error_code=ErrorCode.CHAPTER_NOT_FOUND,
+                detail="Chapter not found",
+            )
+
+        suggestions = []
+        details = {}
+
+        # 1. 检查是否有生成的内容
+        if not chapter.content:
+            suggestions.append({
+                "id": "no_content",
+                "type": "warning",
+                "title": "章节内容为空",
+                "description": "当前章节没有正文内容，请先生成内容。",
+                "priority": "high",
+            })
+            return {
+                "chapter_id": chapter_id,
+                "suggestions": suggestions,
+                "overall_score": 0.0,
+                "details": details,
+            }
+
+        # 2. 分析字数
+        word_count = chapter.word_count or len(chapter.content)
+        details["word_count"] = word_count
+        if word_count < 500:
+            suggestions.append({
+                "id": "length_too_short",
+                "type": "length",
+                "title": "章节长度偏短",
+                "description": f"本章 {word_count} 字，建议扩展到 1500-3000 字。",
+                "priority": "medium",
+            })
+
+        # 3. 分析角色出场情况
+        try:
+            characters = await vault_dao.get_characters(db, chapter.project_id)
+            active_chars = [c for c in characters if c.status == "active"]
+            details["character_count"] = len(active_chars)
+            if len(active_chars) > 5:
+                suggestions.append({
+                    "id": "too_many_characters",
+                    "type": "character",
+                    "title": "活跃角色较多",
+                    "description": f"当前有 {len(active_chars)} 个活跃角色，注意避免角色过多导致读者混淆。",
+                    "priority": "low",
+                })
+        except Exception:
+            pass
+
+        # 4. 分析伏笔状态
+        try:
+            promises = await vault_dao.get_plot_promises(db, chapter.project_id)
+            dormant = [p for p in promises if p.status == "dormant"]
+            details["dormant_promises"] = len(dormant)
+            if dormant:
+                suggestions.append({
+                    "id": "dormant_promises",
+                    "type": "plot",
+                    "title": "休眠伏笔提醒",
+                    "description": f"有 {len(dormant)} 个伏笔处于休眠状态，考虑在本章或后续章节回收。",
+                    "priority": "high" if len(dormant) > 3 else "medium",
+                })
+        except Exception:
+            pass
+
+        # 5. 计算总体评分
+        overall_score = 1.0
+        penalty_map = {
+            "no_content": -1.0,
+            "length_too_short": -0.3,
+            "too_many_characters": -0.1,
+        }
+        for s in suggestions:
+            overall_score += penalty_map.get(s["id"], 0.0)
+        overall_score = max(0.0, min(1.0, overall_score))
+        details["overall_score"] = round(overall_score, 2)
+
+        return {
+            "chapter_id": chapter_id,
+            "suggestions": suggestions,
+            "overall_score": round(overall_score, 2),
+            "details": details,
+        }
+
+    async def apply_suggestions(
+        self,
+        db: AsyncSession,
+        req: Any,  # ApplyPhase4Req from schemas
+    ) -> Dict[str, Any]:
+        """应用精修建议到章节。
+
+        根据用户选择的建议类型，执行对应的精修操作。
+        """
+        chapter_id = req.chapter_id
+        suggestion_ids = req.suggestion_ids
+        auto_apply = req.auto_apply
+
+        chapter = await chapter_dao.get(db, chapter_id)
+        if chapter is None:
+            raise NotFoundError(
+                error_code=ErrorCode.CHAPTER_NOT_FOUND,
+                detail="Chapter not found",
+            )
+
+        applied = []
+        skipped = []
+
+        for sid in suggestion_ids:
+            if sid == "no_content":
+                skipped.append({"id": sid, "reason": "无法自动修复，请在生成后重试"})
+            elif sid == "length_too_short":
+                # 标记为需要扩展（具体扩展由 generation 模块处理）
+                chapter.generation_prompt = (
+                    (chapter.generation_prompt or "")
+                    + "\n[Phase4] 建议扩展本文字数至 1500+"
+                )
+                applied.append({"id": sid, "action": "标记为需扩展章节"})
+            elif sid == "too_many_characters":
+                applied.append({"id": sid, "action": "已记录角色密度提醒"})
+            elif sid == "dormant_promises":
+                applied.append({"id": sid, "action": "已标记伏笔回收建议"})
+            else:
+                skipped.append({"id": sid, "reason": "未知建议类型"})
+
+        if auto_apply:
+            chapter.phase4_status = "done"
+        else:
+            chapter.phase4_status = "running"
+
+        await db.commit()
+
+        return {
+            "success": True,
+            "chapter_id": chapter_id,
+            "applied_count": len(applied),
+            "skipped_count": len(skipped),
+            "applied": applied,
+            "skipped": skipped,
+        }
+
+    async def get_task_status(
+        self,
+        db: AsyncSession,
+        task_id: int,
+    ) -> Dict[str, Any]:
+        """查询 Phase 4 任务状态（兼容 Phase4TaskResp schema）。"""
+        task = await phase4_dao.get(db, task_id)
+        if task is None:
+            raise NotFoundError(
+                error_code=ErrorCode.TASK_NOT_FOUND,
+                detail="Task not found",
+            )
+
+        return {
+            "id": task.id,
+            "nonce": task.nonce,
+            "project_id": task.project_id,
+            "chapter_id": task.chapter_id,
+            "status": task.status,
+            "error_message": task.error_message,
+            "started_at": task.started_at.isoformat() if task.started_at else None,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "created_at": task.created_at.isoformat() if hasattr(task, 'created_at') and task.created_at else None,
+        }
+
+    async def list_chapter_tasks(
+        self,
+        db: AsyncSession,
+        chapter_id: int,
+    ) -> list:
+        """查询章节的所有 Phase 4 任务。"""
+        tasks = await phase4_dao.get_by_chapter(db, str(chapter_id))
+        return [
+            {
+                "id": t.id,
+                "nonce": t.nonce,
+                "project_id": t.project_id,
+                "chapter_id": t.chapter_id,
+                "status": t.status,
+                "error_message": t.error_message,
+                "started_at": t.started_at.isoformat() if t.started_at else None,
+                "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+                "created_at": t.created_at.isoformat() if hasattr(t, 'created_at') and t.created_at else None,
+            }
+            for t in tasks
+        ]
+
+    async def list_project_tasks(
+        self,
+        db: AsyncSession,
+        project_id: int,
+    ) -> list:
+        """查询项目的所有 Phase 4 任务。"""
+        tasks = await phase4_dao.get_by_project(db, str(project_id))
+        return [
+            {
+                "id": t.id,
+                "nonce": t.nonce,
+                "project_id": t.project_id,
+                "chapter_id": t.chapter_id,
+                "status": t.status,
+                "error_message": t.error_message,
+                "started_at": t.started_at.isoformat() if t.started_at else None,
+                "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+                "created_at": t.created_at.isoformat() if hasattr(t, 'created_at') and t.created_at else None,
+            }
+            for t in tasks
+        ]
+
+
 # Singleton instance
 phase4_service = Phase4Service()

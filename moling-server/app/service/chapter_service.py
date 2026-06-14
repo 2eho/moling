@@ -281,19 +281,52 @@ class ChapterService:
         chapter.status = "confirmed"
         chapter.confirmed_at = datetime.now(timezone.utc)
         chapter.phase4_status = "processing"
+        await db.flush()
+        
+        # 创建 Phase4Task 记录（带 nonce 实现幂等性保护）
+        from uuid import uuid4
+        from datetime import datetime as dt
+        from app.models.phase4_task import Phase4Task
+        
+        # 生成 nonce: ch${chapter_id}_${timestamp}_${uuid_suffix}
+        nonce = f"ch{chapter_id}_{int(dt.now().timestamp())}_{uuid4().hex[:8]}"
+        phase4_task = Phase4Task(
+            nonce=nonce,
+            project_id=str(project_id),
+            chapter_id=str(chapter_id),
+            status="pending",
+        )
+        db.add(phase4_task)
+        await db.flush()
+        await db.refresh(phase4_task)
         
         await db.commit()
         await db.refresh(chapter)
         
-        # 异步触发 Phase 4 收纳处理：使用 Celery 后台任务，优雅降级
+        # 异步触发 Phase 4 完整收纳管线（Phase4Service 完整流程）
+        # 共 4 步：LLM 分析 → 动态层 → 四库 → 卡牌池
+        # 使用优雅降级：Celery 不可用时走同步快速通路
         try:
-            from app.worker.phase4_task import update_vault_entries
-            update_vault_entries.delay(project_id, chapter_id)
-            logger.info(f"Phase 4 task dispatched for chapter {chapter_id}")
+            from app.worker.phase4_task import execute_phase4_storage
+            execute_phase4_storage.delay(phase4_task.id)
+            logger.info(
+                f"Phase 4 full pipeline dispatched for chapter {chapter_id} "
+                f"(task_id={phase4_task.id}, nonce={nonce})"
+            )
         except ImportError as e:
-            logger.warning(f"Phase 4 task not available (Celery worker may not be running): {e}")
+            logger.warning(
+                f"Phase 4 Celery task not available, falling back to basic vault update: {e}"
+            )
+            try:
+                from app.worker.phase4_task import update_vault_entries
+                update_vault_entries.delay(project_id, chapter_id)
+            except Exception:
+                pass
         except Exception as e:
-            logger.error(f"Failed to dispatch Phase 4 task for chapter {chapter_id}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to dispatch Phase 4 task for chapter {chapter_id}: {e}",
+                exc_info=True,
+            )
             # 优雅降级：即使 Phase 4 失败，章节确认仍然成功
         
         return ChapterResp.model_validate(chapter)
