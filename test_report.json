@@ -1,0 +1,130 @@
+{
+  "summary": {
+    "total": 20,
+    "passed": 4,
+    "failed": 16,
+    "pass_rate": "20.0%"
+  },
+  "details": [
+    {
+      "test": "健康检查",
+      "status": "❌ FAIL",
+      "message": "Status: 404",
+      "timestamp": "00:54:57"
+    },
+    {
+      "test": "用户注册",
+      "status": "✅ PASS",
+      "message": "User ID: af1edbb7-81b0-4a70-ba02-370cb9f7c00b, Email: test_1781369697@moling.com",
+      "timestamp": "00:54:58"
+    },
+    {
+      "test": "用户登录",
+      "status": "✅ PASS",
+      "message": "Token acquired",
+      "timestamp": "00:54:58"
+    },
+    {
+      "test": "获取用户资料",
+      "status": "❌ FAIL",
+      "message": "",
+      "timestamp": "00:54:59"
+    },
+    {
+      "test": "创建项目",
+      "status": "❌ FAIL",
+      "message": "",
+      "timestamp": "00:55:00"
+    },
+    {
+      "test": "获取项目列表",
+      "status": "❌ FAIL",
+      "message": "",
+      "timestamp": "00:55:00"
+    },
+    {
+      "test": "获取项目详情",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:01"
+    },
+    {
+      "test": "更新项目",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:01"
+    },
+    {
+      "test": "创建章节",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:02"
+    },
+    {
+      "test": "获取章节列表",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:02"
+    },
+    {
+      "test": "获取章节详情",
+      "status": "❌ FAIL",
+      "message": "No chapter_id",
+      "timestamp": "00:55:03"
+    },
+    {
+      "test": "更新章节",
+      "status": "❌ FAIL",
+      "message": "No chapter_id",
+      "timestamp": "00:55:03"
+    },
+    {
+      "test": "抽卡",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:04"
+    },
+    {
+      "test": "获取世界观角色列表",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:04"
+    },
+    {
+      "test": "创建世界观角色",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:05"
+    },
+    {
+      "test": "获取健康告警",
+      "status": "❌ FAIL",
+      "message": "No project_id",
+      "timestamp": "00:55:05"
+    },
+    {
+      "test": "刷新Token",
+      "status": "❌ FAIL",
+      "message": "",
+      "timestamp": "00:55:06"
+    },
+    {
+      "test": "未授权访问测试",
+      "status": "✅ PASS",
+      "message": "Correctly rejected",
+      "timestamp": "00:55:06"
+    },
+    {
+      "test": "无效Token测试",
+      "status": "✅ PASS",
+      "message": "Correctly rejected",
+      "timestamp": "00:55:07"
+    },
+    {
+      "test": "删除章节",
+      "status": "❌ FAIL",
+      "message": "No chapter_id",
+      "timestamp": "00:55:07"
+    }
+  ]
+}

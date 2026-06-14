@@ -1,0 +1,22 @@
+# ============================================================
+# novel_dissector — 依赖清单
+# ============================================================
+#
+# 核心模块（标准库）: dataclasses, re, json, logging, time, random
+# = 零额外依赖即可运行基础功能（清洗 + 正则章节拆分）
+#
+# 按需安装（推荐）:
+#   pip install requests          — HTTP 采集
+#   pip install beautifulsoup4    — HTML 解析（正文提取兜底）
+#   pip install trafilatura       — 高质量正文提取
+#
+# 可选增强:
+#   pip install jieba             — NLP 辅助章节判断
+#   pip install pytest            — 运行测试
+#
+# 安装全部推荐:
+#   pip install -r requirements-fancy.txt
+
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+trafilatura>=2.0.0
