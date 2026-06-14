@@ -9,7 +9,7 @@ from jose import JWTError, jwt
 
 from app.config import get_settings
 from app.dependencies import get_db
-from app.schemas.auth import LoginReq, PasswordResetReq, PasswordResetRequestReq, RefreshReq, RegisterReq, TokenResp, UserResp
+from app.schemas.auth import LoginReq, PasswordResetReq, PasswordResetRequestReq, RefreshReq, RegisterReq, TokenResp, UpdateProfileReq, UserResp
 from app.service import auth_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
