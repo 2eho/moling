@@ -29,8 +29,9 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
 # 复制包源码（setuptools build 需要 app/ 目录）
 COPY pyproject.toml .
 COPY app/ ./app/
-RUN pip install --upgrade pip && \
-    pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
+# 先设镜像，再更新 pip，最后装依赖（顺序很重要：镜像设错了国内网络会超时）
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
+    pip install --upgrade pip && \
     pip install --no-cache-dir .
 
 # ---- Runtime Stage ----

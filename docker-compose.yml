@@ -3,9 +3,15 @@ version: "3.9"
 # ==============================================================================
 # 墨灵 Docker Compose — MVP 部署配置
 # ==============================================================================
-# 启动: docker compose up -d --build
-# 日志: docker compose logs -f
-# 停止: docker compose down
+# 一条命令搞定所有：
+#   1. 编辑项目根目录 .env 文件填入服务器 IP 和前端端口
+#   2. 运行: docker compose up -d --build
+# ==============================================================================
+# .env 文件格式（项目根目录，docker-compose 自动加载）:
+#   FRONTEND_PORT=8080
+#   SERVER_IP=123.45.67.89
+#   FRONTEND_URL=http://123.45.67.89:8080
+#   BACKEND_API_URL=http://123.45.67.89:8000/api/v1
 # ==============================================================================
 
 services:
@@ -22,6 +28,10 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:///app/data/moling.db
       # Redis（可选，Celery 任务队列需要）
       - REDIS_URL=redis://redis:6379/0
+      # CORS — 不再需要手改 backend/.env，在这里一次性设置
+      - CORS_ORIGINS=http://localhost:${FRONTEND_PORT:-3000},${FRONTEND_URL:-http://localhost:3000}
+      # 生产环境标记（让后端 CORS 等行为按生产模式运行）
+      - ENVIRONMENT=production
     volumes:
       - app_data:/app/data
     depends_on:
@@ -55,11 +65,13 @@ services:
       context: ./moling-web
       target: runner
       args:
-        # 构建时必须传入正确的前端 API 地址！
-        # 例: docker compose build --build-arg NEXT_PUBLIC_API_BASE_URL=http://123.45.67.89:8000/api/v1 web
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+        # 从根 .env 自动读取，无需手改
+        NEXT_PUBLIC_API_BASE_URL: ${BACKEND_API_URL:-http://localhost:8000/api/v1}
     ports:
-      - "3000:3000"
+      # 外部端口从 .env 读取，默认 8080
+      - "${FRONTEND_PORT:-8080}:3000"
+    environment:
+      - PORT=3000
     depends_on:
       - app
     restart: unless-stopped

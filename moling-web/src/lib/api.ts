@@ -69,6 +69,13 @@ export const authApi = {
       { email },
     );
   },
+
+  async setNewPassword(token: string, newPassword: string) {
+    return apiClient.post<ApiResponse<{ message: string }>>(
+      "/auth/password-reset",
+      { token, new_password: newPassword },
+    );
+  },
 };
 
 // ---- Project API ----
@@ -147,6 +154,12 @@ export const chapterApi = {
 };
 
 // ---- Card API ----
+// 注意：根据接口映射文档 4.4 节，抽卡需要以下参数：
+// - chapter_id: 章节 ID
+// - keep_card_ids[]: 保留的卡牌 ID 数组
+// - draw_count: 抽卡数量（默认 3）
+// - weights[]: 权重数组（可选）
+// - mode: 生成模式（"single"|"dual"|"all"|"hybrid"）
 
 export const cardApi = {
   async getPool(projectId: string) {
@@ -157,30 +170,59 @@ export const cardApi = {
 
   async drawCards(
     projectId: string,
-    cardIds: string[],
-    weights: number[],
-    mode: string,
+    params: {
+      chapter_id: string;
+      keep_card_ids?: string[];
+      draw_count?: number;
+      weights?: number[];
+      mode?: string;
+    }
   ) {
     return apiClient.post<ApiResponse<DrawRecord>>(
       `/projects/${projectId}/cards/draw`,
-      { card_ids: cardIds, weights, mode },
+      params,
     );
   },
 
-  async redraw(projectId: string, chapterId: string) {
+  async redraw(
+    projectId: string,
+    chapterId: string,
+    params?: {
+      keep_card_ids?: string[];
+      draw_count?: number;
+    }
+  ) {
     return apiClient.post<ApiResponse<DrawRecord>>(
       `/projects/${projectId}/chapters/${chapterId}/redraw`,
+      params || {},
     );
   },
 };
 
 // ---- Generation API ----
+// 注意：根据接口映射文档 4.5 节，生成章节需要以下参数：
+// - chapter_id: 章节 ID
+// - card_ids[]: 卡牌 ID 数组
+// - weights[]: 权重数组（可选）
+// - mode: 生成模式（"single"|"dual"|"all"|"hybrid"）
+// - creativity: 创意程度（1-10，可选）
+// - word_count: 目标字数（500-5000，可选）
 
 export const generationApi = {
-  async generate(projectId: string, chapterId: string, cardIds: string[]) {
+  async generate(
+    projectId: string,
+    chapterId: string,
+    params: {
+      card_ids: string[];
+      weights?: number[];
+      mode?: string;
+      creativity?: number;
+      word_count?: number;
+    }
+  ) {
     return apiClient.post<ApiResponse<GenerationTask>>(
       `/projects/${projectId}/chapters/${chapterId}/generate`,
-      { card_ids: cardIds },
+      params,
     );
   },
 
@@ -393,8 +435,8 @@ export const settingsApi = {
     );
   },
 
-  async updateProfile(data: { username?: string; email?: string; avatar?: string }) {
-    return apiClient.put<ApiResponse<User>>("/settings/profile", data);
+  async updateProfile(data: { nickname?: string; bio?: string; avatar_url?: string }) {
+    return apiClient.put<ApiResponse<User>>("/auth/me", data);
   },
 
   // ---- Compatibility wrappers for old @/api settings interface ----
@@ -440,22 +482,6 @@ export const settingsApi = {
 export const notificationsApi = {
   async list(params?: { page?: number; page_size?: number; unread_only?: boolean }) {
     return apiClient.get<ApiResponse<Notification[]>>("/notifications", params);
-  },
-
-  async getNotifications(params?: { page?: number; pageSize?: number; isRead?: boolean; type?: string }) {
-    const query = new URLSearchParams();
-    if (params?.page) query.set('page', params.page.toString());
-    if (params?.pageSize) query.set('pageSize', params.pageSize.toString());
-    if (params?.isRead !== undefined) query.set('isRead', params.isRead.toString());
-    if (params?.type) query.set('type', params.type);
-
-    const qs = query.toString();
-    const path = qs ? `/notifications?${qs}` : '/notifications';
-    return apiClient.get<ApiResponse<Notification[]>>(path).then(res => ({
-      items: res.data,
-      total: res.data.length,
-      unreadCount: res.data.filter(n => !n.is_read).length,
-    }));
   },
 
   async markAsRead(notificationId: string) {
@@ -571,24 +597,13 @@ export const weaveApi = {
 };
 
 // ---- Import API (D9) ----
+// 注意：导入 API 的路径是 /projects/:pid/import，不是 /ingest/
 
 export const importApi = {
-  async createJob(projectId: string, data: { source_type: string; source_url?: string; file_path?: string }) {
+  async createJob(projectId: string, data: { text?: string; source_type?: string }) {
     return apiClient.post<ApiResponse<{ job_id: string; status: string }>>(
-      `/ingest/projects/${projectId}/jobs`,
+      `/projects/${projectId}/import`,
       data,
-    );
-  },
-
-  async getJob(projectId: string, jobId: string) {
-    return apiClient.get<ApiResponse<{ job_id: string; status: string; progress: number }>>(
-      `/ingest/projects/${projectId}/jobs/${jobId}`,
-    );
-  },
-
-  async listJobs(projectId: string) {
-    return apiClient.get<ApiResponse<{ jobs: unknown[] }>>(
-      `/ingest/projects/${projectId}/jobs`,
     );
   },
 
@@ -596,16 +611,15 @@ export const importApi = {
     projectId: string,
     file: File,
     options?: {
-      analyzeCharacters?: boolean;
-      analyzeTimeline?: boolean;
-      analyzeCommitments?: boolean;
-      analyzeWorldview?: boolean;
+      analyze_characters?: boolean;
+      analyze_timeline?: boolean;
+      analyze_commitments?: boolean;
+      analyze_worldview?: boolean;
     }
-  ): Promise<{ taskId: string }> {
+  ): Promise<{ job_id: string; status: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('projectId', projectId);
-
+    
     if (options) {
       Object.entries(options).forEach(([key, value]) => {
         if (value !== undefined) {
@@ -620,12 +634,11 @@ export const importApi = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // 复用 apiClient 的 baseUrl 逻辑，确保与主 API 地址一致
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       ?? process.env.NEXT_PUBLIC_API_URL
       ?? 'http://localhost:8000/api/v1';
-    // upload 不走 JSON，直接 FormData，故不通过 apiClient 调用
-    const response = await fetch(`${baseUrl}/import/upload`, {
+    
+    const response = await fetch(`${baseUrl}/projects/${projectId}/import/upload`, {
       method: 'POST',
       headers,
       body: formData,
@@ -640,38 +653,44 @@ export const importApi = {
     return result.data;
   },
 
-  async getImportResult(projectId: string, taskId: string) {
+  async getJobStatus(projectId: string, jobId: string) {
     return apiClient.get<ApiResponse<{
-      charactersCreated: number;
-      eventsCreated: number;
-      commitmentsCreated: number;
-      entriesCreated: number;
-    }>>(`/ingest/projects/${projectId}/jobs/${taskId}/result`);
-  },
-
-  async getImportProgress(taskId: string) {
-    const res = await apiClient.get<ApiResponse<{
-      taskId: string;
+      job_id: string;
       status: string;
       progress: number;
-      currentPhase?: string;
+      current_phase?: string;
       result?: {
-        charactersCreated: number;
-        eventsCreated: number;
-        commitmentsCreated: number;
-        entriesCreated: number;
+        characters_created: number;
+        events_created: number;
+        commitments_created: number;
+        entries_created: number;
       };
       error?: string;
-    }>>(`/import/${taskId}/progress`);
-    return res.data;
+    }>>(`/projects/${projectId}/import/${jobId}`);
+  },
+
+  async getImportResult(projectId: string, jobId: string) {
+    return apiClient.get<ApiResponse<{
+      characters_created: number;
+      events_created: number;
+      commitments_created: number;
+      entries_created: number;
+    }>>(`/projects/${projectId}/import/${jobId}/result`);
+  },
+
+  async confirmImport(projectId: string, jobId: string) {
+    return apiClient.post<ApiResponse<{ confirmed: boolean; job_id: string }>>(
+      `/projects/${projectId}/import/${jobId}/confirm`,
+      {},
+    );
   },
 
   async getImportHistory(projectId: string) {
     const res = await apiClient.get<ApiResponse<Array<{
       id: string;
-      fileName: string;
+      file_name: string;
       status: string;
-      createdAt: string;
+      created_at: string;
     }>>>(`/projects/${projectId}/import-history`);
     return res.data;
   },
