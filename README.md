@@ -12,7 +12,7 @@
 
 ## ✨ 核心功能
 
-### 1. 🎴 卡牌系统（灵感管理）
+### 1. 🃏 卡牌系统（灵感管理）
 - **卡牌抽取**：基于Phase 4算法智能抽取灵感卡牌
 - **多种抽卡模式**：single（单张）、dual（双张）、all（全部）、hybrid（混合）
 - **权重调整**：用户可调整每张卡牌的权重，影响AI生文风格
@@ -258,14 +258,29 @@ npm run test:e2e
 
 | 模块 | 进度 | 说明 |
 |------|------|------|
-| **后端API** | ~85% | 核心模块已完成（Auth、Project、Chapter、Card、Generation、Vault、Subscription），剩余Notification、Setting、Template、Phase4、Weave由贝洛奇正在实现 |
-| **前端Next.js** | ~90% | 核心页面已完成（Projects、Workspace、Auth、Vaults等），API集成由贾思敏正在完善 |
+| **后端API** | ~90% | 核心模块已完成（Auth、Project、Chapter、Card、Generation、Vault、Subscription、LLM Config），剩余部分测试报告待更新 |
+| **前端Next.js** | ~95% | 核心页面已完成（Projects、Workspace、Auth、Vaults、Admin等），API集成完善中 |
 | **数据库模型** | 100% | 所有模型已定义（User、Project、Chapter、Card、GenerationTask等） |
-| **API文档** | ~60% | Swagger UI自动生成，待补充业务错误码说明 |
-| **测试** | ~30% | E2E和Unit测试文件存在但类型错误，待修复 |
-| **部署** | 0% | Docker和CI/CD配置待完成 |
+| **算法实现** | ~85% | 卡牌组合算法、四库提取、风格指纹已实现，Phase 4异步更新进行中 |
+| **API文档** | ~70% | Swagger UI自动生成，核心端点文档已完善 |
+| **测试** | ~50% | E2E和Unit测试文件存在，部分测试需重新运行 |
+| **部署** | ~30% | Docker配置已完成，CloudBase部署待完善 |
 
-**最后更新：** 2026-06-14 by 郝交付(交付总监)
+**最后更新：** 2026-06-15 by 郝交付(交付总监)
+
+---
+
+## 📚 核心设计文档
+
+| 文档 | 说明 | 最后更新 |
+|------|------|----------|
+| `012_a7c27b64_墨灵后端设计文档.md` | 后端API、Service、数据模型设计 | 2026-06-15 |
+| `009_2b7b5b03_moling-card-combination-algorithm.md` | 卡牌组合算法、四库管理、风格指纹 | 2026-06-15 |
+| `004_79b91a8b_前端设计系统-主文档.md` | 前端页面规格、组件库、Design Tokens | 2026-06-15 |
+| `001_b8542cf6_后台管理-设计系统规范.md` | 后台管理页面设计、响应式规范 | 2026-06-15 |
+| `PRD_墨灵MVP.md` | 产品需求文档 | - |
+| `架构设计_墨灵MVP.md` | 系统架构设计 | - |
+| `墨灵项目介绍-专业技术报告.md` | 项目全面介绍与技术报告 | 2026-06-15 |
 
 ---
 
@@ -304,4 +319,4 @@ npm run test:e2e
 
 ---
 
-**最后更新：** 2026-06-14 by 郝交付(交付总监)
+**最后更新：** 2026-06-15 by 郝交付(交付总监)

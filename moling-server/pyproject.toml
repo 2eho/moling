@@ -22,6 +22,7 @@ dependencies = [
     "bcrypt>=4.0,<5.0",
     "python-multipart>=0.0.18",
     "structlog>=24.4.0",
+    "email-validator>=2.2.0",
     "tenacity>=9.0.0",
     "orjson>=3.10.0",
     # 监控和错误追踪
