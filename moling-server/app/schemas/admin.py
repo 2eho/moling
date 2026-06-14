@@ -43,3 +43,38 @@ class LLMConfigResp(BaseModel):
     model: str = Field(..., description="Default model")
     is_configured: bool = Field(..., description="Whether LLM is configured")
     api_key_masked: str = Field(default="", description="Masked API key for display")
+
+
+class AdminStatsResp(BaseModel):
+    """Admin statistics response."""
+
+    user_count: int = Field(..., description="总用户数")
+    project_count: int = Field(..., description="总项目数")
+    chapter_count: int = Field(..., description="总章节数")
+    task_count: int = Field(..., description="总任务数")
+
+
+class UserManageResp(BaseModel):
+    """User management response."""
+
+    id: int = Field(..., description="用户 ID")
+    email: str = Field(..., description="邮箱")
+    username: str = Field(..., description="用户名")
+    status: str = Field(..., description="状态")
+    created_at: datetime = Field(..., description="创建时间")
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectManageResp(BaseModel):
+    """Project management response."""
+
+    id: int = Field(..., description="项目 ID")
+    title: str = Field(..., description="项目标题")
+    user_id: int = Field(..., description="用户 ID")
+    status: str = Field(..., description="状态")
+    chapter_count: int = Field(default=0, description="章节数")
+    word_count: int = Field(default=0, description="字数")
+    created_at: datetime = Field(..., description="创建时间")
+
+    model_config = {"from_attributes": True}

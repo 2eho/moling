@@ -6,6 +6,7 @@ issuance), token refresh, and current-user retrieval.
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -16,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.dao import user_dao
 from app.errors import AuthError, ConflictError, ErrorCode, NotFoundError
-from app.schemas.auth import LoginReq, RegisterReq, TokenResp, UserResp
+from app.schemas.auth import LoginReq, PasswordResetReq, PasswordResetRequestReq, RegisterReq, TokenResp, UserResp
 
 settings = get_settings()
 
@@ -57,6 +58,16 @@ def _create_refresh_token(user_id: int) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Password reset token helper
+# ---------------------------------------------------------------------------
+
+
+def _generate_reset_token() -> str:
+    """Generate a secure random reset token."""
+    return secrets.token_urlsafe(32)
+
+
+# ---------------------------------------------------------------------------
 # Module-level functions (used by tests and routers)
 # ---------------------------------------------------------------------------
 
@@ -91,8 +102,87 @@ async def get_current_user(db: AsyncSession, user_id: int) -> UserResp:
     return await _get_auth_service().get_current_user(db, user_id)
 
 
+async def request_password_reset(db: AsyncSession, req: PasswordResetRequestReq) -> dict:
+    """Request password reset (generate token)."""
+    return await _get_auth_service().request_password_reset(db, req)
+
+
+async def reset_password(db: AsyncSession, req: PasswordResetReq) -> dict:
+    """Reset password using token."""
+    return await _get_auth_service().reset_password(db, req)
+
+
+async def update_profile(db: AsyncSession, user_id: int, req) -> UserResp:
+    """Update user profile."""
+    return await _get_auth_service().update_profile(db, user_id, req)
+
+
 class AuthService:
     """Service for authentication operations."""
+
+    async def request_password_reset(self, db: AsyncSession, req: PasswordResetRequestReq) -> dict:
+        """Request password reset.
+        
+        Generates a reset token and stores it in the user record.
+        In production, this token would be sent via email.
+        For now, we return it in the response for testing.
+        """
+        # Find user by email
+        user = await user_dao.get_by_email(db, req.email)
+        if user is None:
+            # Don't reveal that email doesn't exist (security)
+            return {"message": "If the email exists, a reset link has been sent."}
+        
+        # Generate reset token
+        reset_token = _generate_reset_token()
+        reset_expires = datetime.now(timezone.utc) + timedelta(hours=24)  # Token valid for 24 hours
+        
+        # Store token in user record
+        user.reset_token = reset_token
+        user.reset_token_expires = reset_expires
+        
+        await db.commit()
+        
+        # TODO: In production, send email with reset link
+        # For now, return token in response (for testing only)
+        return {
+            "message": "Password reset requested.",
+            "reset_token": reset_token,  # TODO: Remove in production
+        }
+
+    async def reset_password(self, db: AsyncSession, req: PasswordResetReq) -> dict:
+        """Reset password using token."""
+        # Find user by reset token
+        from app.models import User
+        from sqlalchemy import select
+        
+        stmt = select(User).where(User.reset_token == req.token)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        
+        if user is None:
+            raise AuthError(
+                error_code=ErrorCode.AUTH_INVALID_TOKEN,
+                detail="Invalid or expired reset token",
+            )
+        
+        # Check if token is expired
+        if user.reset_token_expires is None or user.reset_token_expires < datetime.now(timezone.utc):
+            raise AuthError(
+                error_code=ErrorCode.AUTH_INVALID_TOKEN,
+                detail="Invalid or expired reset token",
+            )
+        
+        # Reset password
+        user.password_hash = _hash_password(req.new_password)
+        
+        # Clear reset token
+        user.reset_token = None
+        user.reset_token_expires = None
+        
+        await db.commit()
+        
+        return {"message": "Password reset successful."}
 
     async def register(self, db: AsyncSession, req: RegisterReq) -> TokenResp:
         """Register a new user and return tokens."""
@@ -215,4 +305,40 @@ class AuthService:
                 error_code=ErrorCode.USER_NOT_FOUND,
                 detail="User not found",
             )
+        return UserResp.model_validate(user)
+
+    async def update_profile(self, db: AsyncSession, user_id: int, req) -> UserResp:
+        """Update user profile (username, avatar_url)."""
+        from app.schemas.auth import UpdateProfileReq
+        
+        user = await user_dao.get(db, user_id)
+        if user is None:
+            raise NotFoundError(
+                error_code=ErrorCode.USER_NOT_FOUND,
+                detail="User not found",
+            )
+
+        # Update fields if provided
+        if isinstance(req, dict):
+            update_data = req
+        else:
+            update_data = req.model_dump(exclude_unset=True)
+
+        if "username" in update_data and update_data["username"] is not None:
+            # Check username uniqueness
+            existing = await user_dao.get_by_username(db, update_data["username"])
+            if existing and existing.id != user_id:
+                from app.errors import ConflictError
+                raise ConflictError(
+                    error_code=ErrorCode.USER_USERNAME_EXISTS,
+                    detail="Username already taken",
+                )
+            user.username = update_data["username"]
+
+        if "avatar_url" in update_data and update_data["avatar_url"] is not None:
+            user.avatar_url = update_data["avatar_url"]
+
+        await db.commit()
+        await db.refresh(user)
+
         return UserResp.model_validate(user)

@@ -256,6 +256,82 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 
 # ---------------------------------------------------------------------------
+# Health Check — 简单健康检查端点（用于 Docker 健康检查）
+# ---------------------------------------------------------------------------
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """健康检查端点，返回服务状态。"""
+    return {
+        "status": "healthy",
+        "version": __version__,
+        "service": "moling-api",
+    }
+
+
+@app.get("/api/v1/health", tags=["Health"])
+async def api_health_check():
+    """API 健康检查端点。"""
+    return {
+        "status": "healthy",
+        "version": __version__,
+        "service": "moling-api",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Prometheus Metrics — 性能指标收集
+# ---------------------------------------------------------------------------
+
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    
+    # 创建 Prometheus instrumentator
+    instrumentator = Instrumentator(
+        should_group_status_codes=True,
+        should_ignore_untemplated=True,
+        should_respect_env_var=True,
+        should_instrument_requests_inprogress=True,
+        excluded_handlers=["/health", "/api/v1/health", "/metrics"],
+        env_var_name="ENABLE_METRICS",
+    )
+    
+    # Instrument the app
+    instrumentator.instrument_app(app)
+    print("[OK] Prometheus metrics enabled at /metrics")
+except ImportError:
+    print("[WARN] prometheus-fastapi-instrumentator not installed, metrics disabled")
+
+
+# ---------------------------------------------------------------------------
+# Sentry — 错误监控
+# ---------------------------------------------------------------------------
+
+try:
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    import sentry_sdk
+    from app.config import get_settings
+    
+    settings = get_settings()
+    sentry_dsn = getattr(settings, 'SENTRY_DSN', None)
+    
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[FastApiIntegration()],
+            environment=settings.ENVIRONMENT,
+            release=__version__,
+            traces_sample_rate=0.1,
+            send_default_pii=False,
+        )
+        print(f"[OK] Sentry initialized (env: {settings.ENVIRONMENT})")
+    else:
+        print("[INFO] Sentry DSN not configured, error tracking disabled")
+except ImportError:
+    print("[WARN] sentry-sdk not installed, error tracking disabled")
+
+
+# ---------------------------------------------------------------------------
 # Route Registration
 # ---------------------------------------------------------------------------
 

@@ -72,3 +72,30 @@ class GenerationDAO(BaseDAO[GenerationTask]):
         )
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_by_chapter_and_type(
+        self,
+        db: AsyncSession,
+        chapter_id: int,
+        task_type: str,
+    ) -> Optional[GenerationTask]:
+        """Get the latest generation task for a chapter with a specific type."""
+        stmt = (
+            select(GenerationTask)
+            .where(
+                GenerationTask.chapter_id == chapter_id,
+                GenerationTask.task_type == task_type,
+            )
+            .order_by(GenerationTask.created_at.desc())
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_id(
+        self,
+        db: AsyncSession,
+        task_id: str,
+    ) -> Optional[GenerationTask]:
+        """Get a generation task by ID."""
+        return await self.get(db, task_id)

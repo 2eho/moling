@@ -1,8 +1,11 @@
 """墨灵 (Moling) — Admin API Router.
 
-Provides admin endpoints for:
-- LLM configuration (GET/POST /admin/llm-config)
-- LLM connection test (POST /admin/llm-config/test)
+提供管理员端点：
+- LLM 配置（GET/POST /admin/llm-config）
+- LLM 连接测试（POST /admin/llm-config/test）
+- 管理员统计（GET /admin/stats）
+- 用户管理（GET /admin/users）
+- 项目管理（GET /admin/projects）
 """
 
 from __future__ import annotations
@@ -11,14 +14,16 @@ import json
 from typing import Any, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import set_override, get_effective_llm_config
 from app.dependencies import get_db
 from app.models.system_config import SystemConfig
-from app.schemas.admin import LLMConfigReq, LLMConfigResp
+from app.models.user import User
+from app.models.project import Project
+from app.schemas.admin import LLMConfigReq, LLMConfigResp, AdminStatsResp, UserManageResp, ProjectManageResp
 
 router = APIRouter(tags=["admin"])
 
@@ -142,3 +147,104 @@ async def test_llm_connection(db: AsyncSession = Depends(get_db)):
                 return {"ok": False, "msg": f"API 错误: {error}"}
     except Exception as e:
         return {"ok": False, "msg": f"连接失败: {str(e)}"}
+
+
+@router.get("/stats", response_model=AdminStatsResp)
+async def get_admin_stats(db: AsyncSession = Depends(get_db)):
+    """Get admin statistics (user count, project count, etc.)."""
+    # Count users
+    stmt = select(func.count()).select_from(User)
+    result = await db.execute(stmt)
+    user_count = result.scalar() or 0
+
+    # Count projects
+    stmt = select(func.count()).select_from(Project)
+    result = await db.execute(stmt)
+    project_count = result.scalar() or 0
+
+    # Count chapters
+    from app.models.chapter import Chapter
+    stmt = select(func.count()).select_from(Chapter)
+    result = await db.execute(stmt)
+    chapter_count = result.scalar() or 0
+
+    # Count generation tasks
+    from app.models.generation_task import GenerationTask
+    stmt = select(func.count()).select_from(GenerationTask)
+    result = await db.execute(stmt)
+    task_count = result.scalar() or 0
+
+    return AdminStatsResp(
+        user_count=user_count,
+        project_count=project_count,
+        chapter_count=chapter_count,
+        task_count=task_count,
+    )
+
+
+@router.get("/users", response_model=dict)
+async def get_users(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Page size"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get user list (admin only)."""
+    # Build query
+    stmt = select(User)
+    if status:
+        stmt = stmt.where(User.status == status)
+
+    # Count total
+    count_stmt = select(func.count()).select_from(User)
+    if status:
+        count_stmt = count_stmt.where(User.status == status)
+    total_result = await db.execute(count_stmt)
+    total = total_result.scalar() or 0
+
+    # Paginate
+    stmt = stmt.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+    result = await db.execute(stmt)
+    users = list(result.scalars().all())
+
+    return {
+        "items": [UserManageResp.model_validate(u) for u in users],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+    }
+
+
+@router.get("/projects", response_model=dict)
+async def get_projects(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Page size"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get project list (admin only)."""
+    # Build query
+    stmt = select(Project)
+    if status:
+        stmt = stmt.where(Project.status == status)
+
+    # Count total
+    count_stmt = select(func.count()).select_from(Project)
+    if status:
+        count_stmt = count_stmt.where(Project.status == status)
+    total_result = await db.execute(count_stmt)
+    total = total_result.scalar() or 0
+
+    # Paginate
+    stmt = stmt.order_by(Project.updated_at.desc()).offset((page - 1) * page_size).limit(page_size)
+    result = await db.execute(stmt)
+    projects = list(result.scalars().all())
+
+    return {
+        "items": [ProjectManageResp.model_validate(p) for p in projects],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+    }

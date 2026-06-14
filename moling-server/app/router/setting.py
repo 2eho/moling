@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.service.setting_service import setting_service
-from app.schemas.setting import UserSettings
+from app.schemas.setting import HealthMonitorReq, UserSettings
 
 router = APIRouter()
 
@@ -101,3 +101,36 @@ async def update_profile(
         avatar_url=req.avatar_url,
     )
     return result
+
+
+@router.patch("/health-monitor", status_code=200)
+async def update_health_monitor(
+    req: HealthMonitorReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """更新健康监控设置。"""
+    # Get current settings
+    current_settings = await setting_service.get_settings(
+        db,
+        int(current_user["id"]),
+    )
+    
+    # Update health monitor settings
+    settings_update = {
+        "health_monitor_enabled": req.enabled,
+        "health_monitor_rules": req.rules,
+    }
+    
+    # Save settings
+    result = await setting_service.update_settings(
+        db,
+        int(current_user["id"]),
+        settings_update,
+    )
+    
+    return {
+        "message": "健康监控设置已更新",
+        "health_monitor_enabled": req.enabled,
+        "rules": req.rules,
+    }

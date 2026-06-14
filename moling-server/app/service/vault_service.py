@@ -133,6 +133,37 @@ class VaultService:
         await vault_dao.delete_character(db, character_id)
         await db.commit()
 
+    async def get_character(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        character_id: int,
+    ) -> CharacterResp:
+        """Get a single character by ID."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get character
+        character = await vault_dao.get_character(db, character_id)
+        if character is None or character.project_id != project_id:
+            raise NotFoundError(
+                error_code=ErrorCode.CHARACTER_NOT_FOUND,
+                detail="Character not found",
+            )
+
+        return CharacterResp.model_validate(character)
+
     # ============ Timeline ============
 
     async def list_timeline(
@@ -186,6 +217,99 @@ class VaultService:
         await db.refresh(event)
 
         return TimelineResp.model_validate(event)
+
+    async def get_timeline_event(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        event_id: int,
+    ) -> TimelineResp:
+        """Get a single timeline event by ID."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get event
+        event = await vault_dao.get_timeline_event(db, event_id)
+        if event is None or event.project_id != project_id:
+            raise NotFoundError(
+                error_code=ErrorCode.TIMELINE_NOT_FOUND,
+                detail="Timeline event not found",
+            )
+
+        return TimelineResp.model_validate(event)
+
+    async def update_timeline_event(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        event_id: int,
+        event_data: dict,
+    ) -> TimelineResp:
+        """Update a timeline event in the vault."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get event
+        event = await vault_dao.get_timeline_event(db, event_id)
+        if event is None or event.project_id != project_id:
+            raise NotFoundError(
+                error_code=ErrorCode.TIMELINE_NOT_FOUND,
+                detail="Timeline event not found",
+            )
+
+        # Update event
+        event = await vault_dao.update_timeline_event(db, event, event_data)
+        await db.commit()
+        await db.refresh(event)
+
+        return TimelineResp.model_validate(event)
+
+    async def delete_timeline_event(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        event_id: int,
+    ) -> None:
+        """Delete a timeline event from the vault."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Delete event
+        await vault_dao.delete_timeline_event(db, event_id)
+        await db.commit()
 
     # ============ Plot Promises ============
 
@@ -241,6 +365,99 @@ class VaultService:
 
         return PlotPromiseResp.model_validate(promise)
 
+    async def get_plot_promise(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        promise_id: int,
+    ) -> PlotPromiseResp:
+        """Get a single plot promise by ID."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get promise
+        promise = await vault_dao.get_plot_promise(db, promise_id)
+        if promise is None or promise.project_id != project_id:
+            raise NotFoundError(
+                error_code=ErrorCode.PLOT_PROMISE_NOT_FOUND,
+                detail="Plot promise not found",
+            )
+
+        return PlotPromiseResp.model_validate(promise)
+
+    async def update_plot_promise(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        promise_id: int,
+        promise_data: dict,
+    ) -> PlotPromiseResp:
+        """Update a plot promise in the vault."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get promise
+        promise = await vault_dao.get_plot_promise(db, promise_id)
+        if promise is None or promise.project_id != project_id:
+            raise NotFoundError(
+                error_code=ErrorCode.PLOT_PROMISE_NOT_FOUND,
+                detail="Plot promise not found",
+            )
+
+        # Update promise
+        promise = await vault_dao.update_plot_promise(db, promise, promise_data)
+        await db.commit()
+        await db.refresh(promise)
+
+        return PlotPromiseResp.model_validate(promise)
+
+    async def delete_plot_promise(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        promise_id: int,
+    ) -> None:
+        """Delete a plot promise from the vault."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Delete promise
+        await vault_dao.delete_plot_promise(db, promise_id)
+        await db.commit()
+
     # ============ World Building ============
 
     async def list_world_entries(
@@ -294,6 +511,172 @@ class VaultService:
         await db.refresh(entry)
 
         return WorldResp.model_validate(entry)
+
+    async def get_world_entry(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        entry_id: int,
+    ) -> WorldResp:
+        """Get a single world-building entry by ID."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get entry
+        entry = await vault_dao.get_world_entry(db, entry_id)
+        if entry is None or entry.project_id != project_id:
+            raise NotFoundError(
+                error_code=ErrorCode.WORLD_NOT_FOUND,
+                detail="World entry not found",
+            )
+
+        return WorldResp.model_validate(entry)
+
+    async def update_world_entry(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        entry_id: int,
+        entry_data: dict,
+    ) -> WorldResp:
+        """Update a world-building entry in the vault."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get entry
+        entry = await vault_dao.get_world_entry(db, entry_id)
+        if entry is None or entry.project_id != project_id:
+            raise NotFoundError(
+                error_code=ErrorCode.WORLD_NOT_FOUND,
+                detail="World entry not found",
+            )
+
+        # Update entry
+        entry = await vault_dao.update_world_entry(db, entry, entry_data)
+        await db.commit()
+        await db.refresh(entry)
+
+        return WorldResp.model_validate(entry)
+
+    async def delete_world_entry(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        entry_id: int,
+    ) -> None:
+        """Delete a world-building entry from the vault."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Delete entry
+        await vault_dao.delete_world_entry(db, entry_id)
+        await db.commit()
+
+    async def get_summary(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+    ) -> dict:
+        """Get four databases summary (characters, timeline, plot promises, world)."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise ForbiddenError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        from sqlalchemy import select, func
+
+        # Count characters
+        stmt = select(func.count()).select_from(VaultCharacter).where(
+            VaultCharacter.project_id == project_id
+        )
+        result = await db.execute(stmt)
+        character_count = result.scalar() or 0
+
+        # Count timeline events
+        stmt = select(func.count()).select_from(VaultTimeline).where(
+            VaultTimeline.project_id == project_id
+        )
+        result = await db.execute(stmt)
+        timeline_count = result.scalar() or 0
+
+        # Count plot promises
+        stmt = select(func.count()).select_from(VaultPlotPromise).where(
+            VaultPlotPromise.project_id == project_id
+        )
+        result = await db.execute(stmt)
+        promise_count = result.scalar() or 0
+
+        # Count world entries
+        stmt = select(func.count()).select_from(VaultWorld).where(
+            VaultWorld.project_id == project_id
+        )
+        result = await db.execute(stmt)
+        world_count = result.scalar() or 0
+
+        # Get recent characters
+        stmt = (
+            select(VaultCharacter)
+            .where(VaultCharacter.project_id == project_id)
+            .order_by(VaultCharacter.updated_at.desc())
+            .limit(5)
+        )
+        result = await db.execute(stmt)
+        recent_characters = list(result.scalars().all())
+
+        return {
+            "success": True,
+            "summary": {
+                "character_count": character_count,
+                "timeline_count": timeline_count,
+                "promise_count": promise_count,
+                "world_count": world_count,
+            },
+            "recent_characters": [
+                CharacterResp.model_validate(c) for c in recent_characters
+            ],
+        }
 
 
 # Singleton instance

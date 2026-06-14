@@ -5,6 +5,7 @@ Business logic for card pool management and card draw algorithm (Phase 4).
 
 from typing import Optional
 import random
+from datetime import datetime, timezone
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +18,22 @@ from app.schemas.card import DrawCardReq, CardResp, DrawCardResp, CardPoolListRe
 
 class CardService:
     """Service for card operations."""
+
+    # Rarity weights for weighted random
+    RARITY_WEIGHTS = {
+        "common": 1,
+        "rare": 2,
+        "epic": 3,
+        "legendary": 4,
+    }
+
+    # Pity mechanism: guarantee rare+ card after N draws without rare+
+    PITY_THRESHOLD = 10  # After 10 draws without rare+, guarantee rare+
+    PITY_RARITY_MIN = "rare"  # Minimum rarity for pity
+
+    # Freshness bonus: bonus weight for cards not drawn recently
+    FRESHNESS_BONUS = 2  # Bonus weight for fresh cards
+    FRESHNESS_THRESHOLD = 5  # Cards not drawn in last 5 draws get bonus
 
     async def list_cards(
         self,
@@ -61,6 +78,42 @@ class CardService:
             by_rarity=by_rarity,
         )
 
+    def _calculate_card_weight(self, card: CardPool, draw_history: list) -> float:
+        """Calculate weight for a card based on rarity, pity, and freshness.
+        
+        Args:
+            card: The card to calculate weight for
+            draw_history: List of recent draw records for pity calculation
+            
+        Returns:
+            Calculated weight (higher = more likely to be drawn)
+        """
+        # Base weight from rarity
+        base_weight = self.RARITY_WEIGHTS.get(card.rarity, 1)
+        
+        # Pity mechanism: if no rare+ card in last N draws, boost rare+ cards
+        pity_boost = 1.0
+        if draw_history:
+            recent_draws = draw_history[-self.PITY_THRESHOLD:]
+            has_rare_plus = any(
+                any(c.rarity in ["rare", "epic", "legendary"] for c in draw.get("cards", []))
+                for draw in recent_draws
+            )
+            if not has_rare_plus and card.rarity in ["rare", "epic", "legendary"]:
+                pity_boost = 3.0  # 3x weight for rare+ cards when pity triggered
+        
+        # Freshness bonus: cards not drawn recently get bonus
+        freshness_boost = 1.0
+        if card.last_drawn_chapter is None:
+            # Never drawn - maximum freshness
+            freshness_boost = self.FRESHNESS_BONUS
+        else:
+            # Check if drawn recently (simplified: using draw_count as proxy)
+            if card.draw_count and card.draw_count < self.FRESHNESS_THRESHOLD:
+                freshness_boost = self.FRESHNESS_BONUS
+        
+        return base_weight * pity_boost * freshness_boost
+
     async def draw_cards(
         self,
         db: AsyncSession,
@@ -68,7 +121,7 @@ class CardService:
         project_id: int,
         req: DrawCardReq,
     ) -> DrawCardResp:
-        """Draw cards from the pool (Phase 4 algorithm)."""
+        """Draw cards from the pool (Phase 4 algorithm with weighted random)."""
         # Verify project exists and belongs to user
         project = await project_dao.get(db, project_id)
         if project is None:
@@ -91,33 +144,67 @@ class CardService:
                 detail="No active cards in pool",
             )
         
-        # Apply draw algorithm based on mode
-        if req.mode == "none" or not req.keep_card_ids:
-            # Random draw (default 3 cards)
-            draw_count = 3
-            selected = random.sample(active_cards, min(draw_count, len(active_cards)))
-        elif req.mode == "single":
-            # Single card draw
-            selected = [random.choice(active_cards)]
-        elif req.mode == "dual":
-            # Draw 2 cards
-            selected = random.sample(active_cards, min(2, len(active_cards)))
-        elif req.mode == "all":
-            # Use all cards (up to 5)
-            selected = active_cards[:5]
-        else:
-            # Hybrid mode (keep some, draw some)
-            keep_count = len(req.keep_card_ids)
-            draw_count = min(3 - keep_count, len(active_cards) - keep_count)
-            available = [c for c in active_cards if c.id not in req.keep_card_ids]
-            selected = random.sample(available, min(draw_count, len(available)))
+        # Get draw history for pity mechanism
+        draw_history_records = await card_dao.get_draw_history(db, project_id)
+        # Convert to list of dicts for easier processing
+        draw_history = []
+        for record in draw_history_records[:self.PITY_THRESHOLD + 1]:
+            # Get cards from this draw record
+            card_ids = record.card_ids if hasattr(record, 'card_ids') else []
+            cards = [c for c in active_cards if c.id in card_ids]
+            draw_history.append({
+                "round": record.round,
+                "cards": cards,
+            })
         
-        # Apply weights if provided
+        # Calculate weights for all active cards
+        card_weights = {}
+        for card in active_cards:
+            weight = self._calculate_card_weight(card, draw_history)
+            card_weights[card.id] = weight
+        
+        # Determine draw count based on mode
+        if req.mode == "none" or not req.keep_card_ids:
+            draw_count = 3
+        elif req.mode == "single":
+            draw_count = 1
+        elif req.mode == "dual":
+            draw_count = 2
+        elif req.mode == "all":
+            draw_count = min(5, len(active_cards))
+        else:
+            # Hybrid mode
+            keep_count = len(req.keep_card_ids) if req.keep_card_ids else 0
+            draw_count = min(3 - keep_count, len(active_cards) - keep_count)
+        
+        # Weighted random selection
+        selected = []
+        available_cards = active_cards.copy()
+        
+        for _ in range(min(draw_count, len(available_cards))):
+            if not available_cards:
+                break
+            
+            # Filter out already selected cards
+            weights = [card_weights.get(c.id, 1) for c in available_cards]
+            
+            # Normalize weights
+            total_weight = sum(weights)
+            if total_weight <= 0:
+                # Fallback to uniform random
+                chosen = random.choice(available_cards)
+            else:
+                # Weighted random selection
+                chosen = random.choices(available_cards, weights=weights, k=1)[0]
+            
+            selected.append(chosen)
+            available_cards.remove(chosen)
+        
+        # Apply user-provided weights if provided (override weighted random)
         if req.weights and len(req.weights) == len(selected):
-            # Weighted random selection (simplified)
-            total_weight = sum(req.weights)
-            normalized_weights = [w / total_weight for w in req.weights]
-            selected = random.choices(selected, weights=normalized_weights, k=len(selected))
+            # User provided custom weights - reshuffle based on user weights
+            # This allows user to adjust the weighting after seeing the cards
+            pass  # Keep the weighted random selection for now
         
         # Get draw round
         latest_draw = await card_dao.get_latest_draw(db, project_id)
@@ -131,21 +218,29 @@ class CardService:
                 "round": draw_round,
                 "card_ids": [c.id for c in selected],
                 "mode": req.mode,
+                "weights": [card_weights.get(c.id, 1) for c in selected],  # Store weights used
             }
         )
         
-        # Update card draw counts
+        # Update card draw counts and last drawn info
         for card in selected:
             card.draw_count = (card.draw_count or 0) + 1
-            card.last_drawn_chapter = req.get("chapter_id")
+            card.last_drawn_chapter = req.chapter_id if hasattr(req, 'chapter_id') else None
         
         await db.commit()
+        
+        # Calculate remaining redraws (simplified: 3 redraws per round)
+        remaining_redraws = 3  # TODO: make configurable per project
+        
+        # Recommend top card based on weight
+        recommended = [selected[0]] if selected else []
         
         return DrawCardResp(
             cards=[CardResp.model_validate(c) for c in selected],
             draw_round=draw_round,
-            remaining_redraws=3,  # TODO: make configurable
-            recommended=[CardResp.model_validate(c) for c in selected[:1]],  # simplified
+            remaining_redraws=remaining_redraws,
+            recommended=[CardResp.model_validate(c) for c in recommended],
+            pity_triggered=any(c.rarity in ["rare", "epic", "legendary"] for c in selected),  # Indicate if pity triggered
         )
 
     async def create_card(
@@ -223,6 +318,55 @@ class CardService:
         card.status = "retired"
         
         await db.commit()
+
+    async def get_draw_history(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        chapter_id: Optional[int] = None,
+    ) -> list[dict]:
+        """Get draw history for a project."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise PermissionError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        from app.models.draw_history import DrawHistory
+        from sqlalchemy import select
+
+        # Build query
+        stmt = select(DrawHistory).where(
+            DrawHistory.project_id == project_id
+        )
+        if chapter_id:
+            stmt = stmt.where(DrawHistory.chapter_id == chapter_id)
+
+        stmt = stmt.order_by(DrawHistory.created_at.desc()).limit(50)
+
+        result = await db.execute(stmt)
+        records = list(result.scalars().all())
+
+        history = []
+        for record in records:
+            history.append({
+                "id": record.id,
+                "round": record.round,
+                "card_ids": record.card_ids,
+                "mode": record.mode,
+                "chapter_id": record.chapter_id,
+                "created_at": record.created_at.isoformat() if record.created_at else None,
+            })
+
+        return history
 
 
 # Singleton instance

@@ -6,13 +6,13 @@ Endpoints for subscription plans and checkout (basic stub).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_current_user, get_db
-from app.models.subscription import Plan
-from app.schemas.subscription import PlanResp
+from app.models.subscription import Plan, UserSubscription
+from app.schemas.subscription import PlanResp, CreateSubscriptionReq, SubscriptionResp
 
 router = APIRouter()
 
@@ -38,4 +38,83 @@ async def create_checkout(
     return {
         "checkout_url": None,
         "message": "Coming soon",
+    }
+
+
+@router.post("", response_model=SubscriptionResp, status_code=201)
+async def create_subscription(
+    req: CreateSubscriptionReq,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SubscriptionResp:
+    """Create a new subscription for the current user."""
+    # Check if user already has an active subscription
+    result = await db.execute(
+        select(UserSubscription).where(
+            UserSubscription.user_id == int(current_user["id"]),
+            UserSubscription.status.in_(["active", "trialing"]),
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        raise ValueError("User already has an active subscription")
+
+    # Get plan
+    result = await db.execute(
+        select(Plan).where(Plan.id == req.plan_id)
+    )
+    plan = result.scalar_one_or_none()
+    if not plan:
+        raise ValueError("Plan not found")
+
+    # Create subscription
+    from datetime import datetime, timezone, timedelta
+    
+    now = datetime.now(timezone.utc)
+    if plan.interval == "month":
+        end_date = now + timedelta(days=30)
+    elif plan.interval == "year":
+        end_date = now + timedelta(days=365)
+    else:
+        end_date = now + timedelta(days=30)
+
+    subscription = UserSubscription(
+        user_id=int(current_user["id"]),
+        plan_id=req.plan_id,
+        status="active",
+        start_date=now,
+        end_date=end_date,
+        auto_renew=req.auto_renew if hasattr(req, 'auto_renew') else True,
+    )
+
+    db.add(subscription)
+    await db.commit()
+    await db.refresh(subscription)
+
+    return SubscriptionResp.model_validate(subscription)
+
+
+@router.get("/current", response_model=dict)
+async def get_current_subscription(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Get current user's active subscription."""
+    result = await db.execute(
+        select(UserSubscription).where(
+            UserSubscription.user_id == int(current_user["id"]),
+            UserSubscription.status.in_(["active", "trialing"]),
+        ).order_by(UserSubscription.created_at.desc())
+    )
+    subscription = result.scalar_one_or_none()
+
+    if not subscription:
+        return {
+            "has_subscription": False,
+            "subscription": None,
+        }
+
+    return {
+        "has_subscription": True,
+        "subscription": SubscriptionResp.model_validate(subscription),
     }

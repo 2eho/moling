@@ -47,3 +47,17 @@ async def cancel_task(
 ) -> None:
     """Cancel a generation task."""
     await generation_service.cancel_task(db, current_user["id"], task_id)
+
+
+@router.get("/history", response_model=list[dict])
+async def get_generation_history(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Page size"),
+) -> list[dict]:
+    """Get generation task history."""
+    history = await generation_service.get_history(
+        db, current_user["id"], page, page_size
+    )
+    return history

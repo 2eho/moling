@@ -1,4 +1,7 @@
-"""Minimal health.py - auto-generated."""
+"""墨灵 (Moling) — Health API Router.
+
+提供健康检查端点（系统级）。
+"""
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -9,7 +12,7 @@ router = APIRouter()
 
 @router.get("")
 async def health_check(request: Request):
-    """Health check endpoint."""
+    """系统健康检查端点。"""
     return JSONResponse(
         status_code=200,
         content={

@@ -28,6 +28,17 @@ async def list_characters(
     return await vault_service.list_characters(db, current_user["id"], project_id)
 
 
+@router.get("/characters/{character_id}", response_model=CharacterResp)
+async def get_character(
+    project_id: int = Query(..., description="Project ID"),
+    character_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> CharacterResp:
+    """Get a single character by ID."""
+    return await vault_service.get_character(db, current_user["id"], project_id, character_id)
+
+
 @router.post("/characters", response_model=CharacterResp, status_code=201)
 async def create_character(
     project_id: int = Query(..., description="Project ID"),
@@ -77,6 +88,17 @@ async def list_timeline(
     return await vault_service.list_timeline(db, current_user["id"], project_id)
 
 
+@router.get("/timeline/{event_id}", response_model=TimelineResp)
+async def get_timeline_event(
+    project_id: int = Query(..., description="Project ID"),
+    event_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> TimelineResp:
+    """Get a single timeline event by ID."""
+    return await vault_service.get_timeline_event(db, current_user["id"], project_id, event_id)
+
+
 @router.post("/timeline", response_model=TimelineResp, status_code=201)
 async def create_timeline_event(
     project_id: int = Query(..., description="Project ID"),
@@ -86,6 +108,31 @@ async def create_timeline_event(
 ) -> TimelineResp:
     """Create a new timeline event in the vault."""
     return await vault_service.create_timeline_event(db, current_user["id"], project_id, event_data)
+
+
+@router.put("/timeline/{event_id}", response_model=TimelineResp)
+async def update_timeline_event(
+    project_id: int = Query(..., description="Project ID"),
+    event_id: int = ...,
+    event_data: dict = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> TimelineResp:
+    """Update a timeline event in the vault."""
+    return await vault_service.update_timeline_event(
+        db, current_user["id"], project_id, event_id, event_data
+    )
+
+
+@router.delete("/timeline/{event_id}", status_code=204)
+async def delete_timeline_event(
+    project_id: int = Query(..., description="Project ID"),
+    event_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> None:
+    """Delete a timeline event from the vault."""
+    await vault_service.delete_timeline_event(db, current_user["id"], project_id, event_id)
 
 
 # =========== Plot Promises ===========
@@ -101,6 +148,17 @@ async def list_plot_promises(
     return await vault_service.list_plot_promises(db, current_user["id"], project_id)
 
 
+@router.get("/plot-promises/{promise_id}", response_model=PlotPromiseResp)
+async def get_plot_promise(
+    project_id: int = Query(..., description="Project ID"),
+    promise_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> PlotPromiseResp:
+    """Get a single plot promise by ID."""
+    return await vault_service.get_plot_promise(db, current_user["id"], project_id, promise_id)
+
+
 @router.post("/plot-promises", response_model=PlotPromiseResp, status_code=201)
 async def create_plot_promise(
     project_id: int = Query(..., description="Project ID"),
@@ -110,6 +168,31 @@ async def create_plot_promise(
 ) -> PlotPromiseResp:
     """Create a new plot promise in the vault."""
     return await vault_service.create_plot_promise(db, current_user["id"], project_id, promise_data)
+
+
+@router.put("/plot-promises/{promise_id}", response_model=PlotPromiseResp)
+async def update_plot_promise(
+    project_id: int = Query(..., description="Project ID"),
+    promise_id: int = ...,
+    promise_data: dict = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> PlotPromiseResp:
+    """Update a plot promise in the vault."""
+    return await vault_service.update_plot_promise(
+        db, current_user["id"], project_id, promise_id, promise_data
+    )
+
+
+@router.delete("/plot-promises/{promise_id}", status_code=204)
+async def delete_plot_promise(
+    project_id: int = Query(..., description="Project ID"),
+    promise_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> None:
+    """Delete a plot promise from the vault."""
+    await vault_service.delete_plot_promise(db, current_user["id"], project_id, promise_id)
 
 
 # =========== World Building ===========
@@ -125,6 +208,17 @@ async def list_world_entries(
     return await vault_service.list_world_entries(db, current_user["id"], project_id)
 
 
+@router.get("/world/{entry_id}", response_model=WorldResp)
+async def get_world_entry(
+    project_id: int = Query(..., description="Project ID"),
+    entry_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> WorldResp:
+    """Get a single world-building entry by ID."""
+    return await vault_service.get_world_entry(db, current_user["id"], project_id, entry_id)
+
+
 @router.post("/world", response_model=WorldResp, status_code=201)
 async def create_world_entry(
     project_id: int = Query(..., description="Project ID"),
@@ -134,3 +228,39 @@ async def create_world_entry(
 ) -> WorldResp:
     """Create a new world-building entry in the vault."""
     return await vault_service.create_world_entry(db, current_user["id"], project_id, entry_data)
+
+
+@router.put("/world/{entry_id}", response_model=WorldResp)
+async def update_world_entry(
+    project_id: int = Query(..., description="Project ID"),
+    entry_id: int = ...,
+    entry_data: dict = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> WorldResp:
+    """Update a world-building entry in the vault."""
+    return await vault_service.update_world_entry(
+        db, current_user["id"], project_id, entry_id, entry_data
+    )
+
+
+@router.delete("/world/{entry_id}", status_code=204)
+async def delete_world_entry(
+    project_id: int = Query(..., description="Project ID"),
+    entry_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> None:
+    """Delete a world-building entry from the vault."""
+    await vault_service.delete_world_entry(db, current_user["id"], project_id, entry_id)
+
+
+@router.get("/summary", response_model=dict)
+async def get_vault_summary(
+    project_id: int = Query(..., description="Project ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """获取四库总览（角色、时间线、伏笔、世界观的统计数据）。"""
+    summary = await vault_service.get_summary(db, current_user["id"], project_id)
+    return summary

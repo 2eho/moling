@@ -79,3 +79,60 @@ async def reorder_chapters(
 ) -> list[ChapterResp]:
     """Reorder chapters by providing new chapter numbers."""
     return await chapter_service.reorder_chapters(db, current_user["id"], project_id, chapter_numbers)
+
+
+@router.post("/{chapter_id}/confirm", response_model=ChapterResp)
+async def confirm_chapter(
+    project_id: int = Query(..., description="Project ID"),
+    chapter_id: int = ...,
+    confirm_data: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> ChapterResp:
+    """Confirm a chapter and trigger Phase 4 processing."""
+    return await chapter_service.confirm_chapter(
+        db, current_user["id"], project_id, chapter_id, confirm_data
+    )
+
+
+@router.post("/{chapter_id}/revise", response_model=ChapterResp)
+async def revise_chapter(
+    project_id: int = Query(..., description="Project ID"),
+    chapter_id: int = ...,
+    revise_data: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> ChapterResp:
+    """Mark a chapter for revision (reject/revise)."""
+    return await chapter_service.revise_chapter(
+        db, current_user["id"], project_id, chapter_id, revise_data
+    )
+
+
+@router.get("/{chapter_id}/suggestions", response_model=dict)
+async def get_chapter_suggestions(
+    project_id: int = Query(..., description="Project ID"),
+    chapter_id: int = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """获取章节的创作建议。"""
+    suggestions = await chapter_service.get_suggestions(
+        db, current_user["id"], project_id, chapter_id
+    )
+    return suggestions
+
+
+@router.post("/{chapter_id}/agent", response_model=dict)
+async def send_agent_instruction(
+    project_id: int = Query(..., description="Project ID"),
+    chapter_id: int = ...,
+    instruction: dict = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """向 AI 发送指令（用于章节生成过程中的干预）。"""
+    result = await chapter_service.send_agent_instruction(
+        db, current_user["id"], project_id, chapter_id, instruction
+    )
+    return result

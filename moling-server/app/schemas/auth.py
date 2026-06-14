@@ -62,3 +62,16 @@ class UpdateProfileReq(BaseModel):
 
     username: str | None = Field(default=None, min_length=2, max_length=50, description="用户昵称")
     avatar_url: str | None = Field(default=None, max_length=500, description="头像 URL")
+
+
+class PasswordResetRequestReq(BaseModel):
+    """Password reset request body (step 1: request reset)."""
+
+    email: EmailStr = Field(..., description="注册邮箱")
+
+
+class PasswordResetReq(BaseModel):
+    """Password reset request body (step 2: actually reset)."""
+
+    token: str = Field(..., min_length=32, max_length=128, description="重置令牌")
+    new_password: str = Field(..., min_length=8, max_length=128, description="新密码 (至少 8 位)")

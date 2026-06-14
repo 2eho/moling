@@ -1,84 +1,221 @@
-"""墨灵 (Moling) — Auth API 端点测试。
-
-覆盖注册、登录、刷新令牌、获取当前用户、未授权访问。
-Windows 兼容版：使用同步 TestClient。
-"""
+"""墨灵 (Moling) — 认证 API 端点测试。"""
 
 import pytest
+from httpx import AsyncClient
+
+pytestmark = pytest.mark.asyncio
 
 API_PREFIX = "/api/v1/auth"
 
-# 辅助函数：从响应中提取数据（适应响应包装格式）
-def _get_data(response):
-    """从响应中提取数据，处理响应包装格式。"""
-    json_data = response.json()
-    # 如果响应是包装格式 {code, message, data, meta}，提取 data
-    if "data" in json_data and "code" in json_data:
-        return json_data["data"]
-    return json_data
 
+class TestAuthRegister:
+    """测试用户注册端点 POST /api/v1/auth/register。"""
 
-class TestAuthAPI:
-    def test_register(self, client):
-        """注册新用户应返回 201 以及 access_token / refresh_token / user。"""
+    async def test_register_success(self, async_client: AsyncClient):
+        """注册成功应返回 201 及 TokenResp。"""
+        # Arrange
         payload = {
             "email": "newuser@example.com",
-            "nickname": "新注册用户",
-            "password": "password123",
+            "username": "新用户",
+            "password": "Password123!"
         }
-        resp = client.post(f"{API_PREFIX}/register", json=payload)
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/register", json=payload)
+
+        # Assert
         assert resp.status_code == 201
-        data = _get_data(resp)
+        data = resp.json()
         assert "access_token" in data
         assert "refresh_token" in data
+        assert data["token_type"] == "bearer"
+        assert "user" in data
         assert data["user"]["email"] == "newuser@example.com"
+        assert data["user"]["username"] == "新用户"
 
-    def test_login(self, client, test_user):
-        """已注册用户登录应返回 200 及 tokens。"""
-        payload = {"email": "test@moling.com", "password": "password123"}
-        resp = client.post(f"{API_PREFIX}/login", json=payload)
+    async def test_register_duplicate_email(self, async_client: AsyncClient, test_user):
+        """重复注册相同邮箱应返回 400。"""
+        # Arrange
+        payload = {
+            "email": test_user["user"]["email"],
+            "username": "重复用户",
+            "password": "Password123!"
+        }
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/register", json=payload)
+
+        # Assert
+        assert resp.status_code == 400
+
+    async def test_register_invalid_email(self, async_client: AsyncClient):
+        """无效邮箱应返回 422（验证错误）。"""
+        # Arrange
+        payload = {
+            "email": "invalid-email",
+            "username": "测试",
+            "password": "Password123!"
+        }
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/register", json=payload)
+
+        # Assert
+        assert resp.status_code == 422
+
+    async def test_register_short_password(self, async_client: AsyncClient):
+        """密码太短应返回 422（验证错误）。"""
+        # Arrange
+        payload = {
+            "email": "short@example.com",
+            "username": "测试",
+            "password": "123"
+        }
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/register", json=payload)
+
+        # Assert
+        assert resp.status_code == 422
+
+
+class TestAuthLogin:
+    """测试用户登录端点 POST /api/v1/auth/login。"""
+
+    async def test_login_success(self, async_client: AsyncClient, test_user):
+        """登录成功应返回 200 及 TokenResp。"""
+        # Arrange
+        payload = {
+            "email": test_user["user"]["email"],
+            "password": "TestPassword123!"
+        }
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/login", json=payload)
+
+        # Assert
         assert resp.status_code == 200
-        data = _get_data(resp)
+        data = resp.json()
         assert "access_token" in data
-        assert data["user"]["email"] == "test@moling.com"
+        assert "refresh_token" in data
+        assert data["token_type"] == "bearer"
+        assert data["user"]["email"] == test_user["user"]["email"]
 
-    def test_login_wrong_credentials(self, client):
-        """错误凭据登录应返回 401。"""
-        payload = {"email": "test@moling.com", "password": "wrongpassword"}
-        resp = client.post(f"{API_PREFIX}/login", json=payload)
+    async def test_login_wrong_password(self, async_client: AsyncClient, test_user):
+        """错误密码应返回 401。"""
+        # Arrange
+        payload = {
+            "email": test_user["user"]["email"],
+            "password": "WrongPassword123!"
+        }
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/login", json=payload)
+
+        # Assert
         assert resp.status_code == 401
 
-    def test_refresh_token(self, client, test_user):
-        """使用正确的 refresh_token 应返回新的令牌对。"""
-        # 先登录获取 token
-        login_resp = client.post(
-            f"{API_PREFIX}/login",
-            json={"email": "test@moling.com", "password": "password123"},
-        )
-        login_data = _get_data(login_resp)
-        refresh_token = login_data["refresh_token"]
+    async def test_login_nonexistent_email(self, async_client: AsyncClient):
+        """不存在的邮箱应返回 401。"""
+        # Arrange
+        payload = {
+            "email": "nonexistent@example.com",
+            "password": "Password123!"
+        }
 
-        resp = client.post(
-            f"{API_PREFIX}/refresh",
-            json={"refresh_token": refresh_token},
-        )
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/login", json=payload)
+
+        # Assert
+        assert resp.status_code == 401
+
+    async def test_login_invalid_credentials(self, async_client: AsyncClient):
+        """无效凭据应返回 422。"""
+        # Arrange
+        payload = {
+            "email": "not-an-email",
+            "password": ""
+        }
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/login", json=payload)
+
+        # Assert
+        assert resp.status_code == 422
+
+
+class TestAuthRefresh:
+    """测试刷新令牌端点 POST /api/v1/auth/refresh。"""
+
+    async def test_refresh_success(self, async_client: AsyncClient, test_user):
+        """使用有效刷新令牌应返回新 TokenResp。"""
+        # Arrange
+        payload = {"refresh_token": test_user["refresh_token"]}
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/refresh", json=payload)
+
+        # Assert
         assert resp.status_code == 200
-        data = _get_data(resp)
+        data = resp.json()
         assert "access_token" in data
         assert "refresh_token" in data
-        assert data["user"]["email"] == "test@moling.com"
+        # 新 access_token 应该不同
+        assert data["access_token"] != test_user["access_token"]
 
-    def test_get_current_user(self, client, auth_headers):
-        """获取当前用户信息应返回登录用户的 UserResp。"""
-        resp = client.get(f"{API_PREFIX}/me", headers=auth_headers)
+    async def test_refresh_invalid_token(self, async_client: AsyncClient):
+        """无效刷新令牌应返回 401。"""
+        # Arrange
+        payload = {"refresh_token": "invalid.token.here"}
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/refresh", json=payload)
+
+        # Assert
+        assert resp.status_code == 401
+
+    async def test_refresh_empty_token(self, async_client: AsyncClient):
+        """空刷新令牌应返回 422。"""
+        # Arrange
+        payload = {"refresh_token": ""}
+
+        # Act
+        resp = await async_client.post(f"{API_PREFIX}/refresh", json=payload)
+
+        # Assert
+        assert resp.status_code == 422
+
+
+class TestAuthGetMe:
+    """测试获取当前用户信息端点 GET /api/v1/auth/me。"""
+
+    async def test_get_me_success(self, async_client: AsyncClient, auth_headers, test_user):
+        """使用有效令牌应返回用户信息。"""
+        # Act
+        resp = await async_client.get(f"{API_PREFIX}/me", headers=auth_headers)
+
+        # Assert
         assert resp.status_code == 200
-        data = _get_data(resp)
-        assert data["email"] == "test@moling.com"
-        # UserResp 使用 nickname 字段（validation_alias="username"）
-        assert data["nickname"] == "测试用户"
+        data = resp.json()
+        assert data["email"] == test_user["user"]["email"]
+        assert data["username"] == test_user["user"]["username"]
+        assert "id" in data
 
-    def test_unauthorized_access(self, client):
-        """未携带 token 访问 /me 应返回 401。"""
-        resp = client.get(f"{API_PREFIX}/me")
-        # FastAPI HTTPBearer(auto_error=True) 默认返回 403，但实际经过依赖链后返回 401
+    async def test_get_me_no_token(self, async_client: AsyncClient):
+        """无令牌请求应返回 403（未认证）。"""
+        # Act
+        resp = await async_client.get(f"{API_PREFIX}/me")
+
+        # Assert
+        assert resp.status_code == 403
+
+    async def test_get_me_invalid_token(self, async_client: AsyncClient):
+        """无效令牌应返回 401。"""
+        # Arrange
+        headers = {"Authorization": "Bearer invalid.token"}
+
+        # Act
+        resp = await async_client.get(f"{API_PREFIX}/me", headers=headers)
+
+        # Assert
         assert resp.status_code == 401

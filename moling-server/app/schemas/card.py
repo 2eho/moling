@@ -45,6 +45,7 @@ class DrawCardResp(BaseModel):
     draw_round: int = Field(..., description="当前抽卡轮次")
     remaining_redraws: int = Field(..., description="剩余重抽次数")
     recommended: list[CardResp] = Field(default=[], description="推荐保留的卡片")
+    pity_triggered: bool = Field(default=False, description="是否触发保底机制")
 
 
 class CardPoolListResp(BaseModel):

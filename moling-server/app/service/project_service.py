@@ -196,6 +196,102 @@ class ProjectService:
         stats = await project_dao.get_stats(db, user_id)
         return ProjectStatsResp(**stats)
 
+    async def get_suggestions(
+        self,
+        db: AsyncSession,
+        user_id: int,
+        project_id: int,
+    ) -> dict:
+        """Get AI-powered writing suggestions for a project."""
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise PermissionError(
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
+                detail="Not authorized to access this project",
+            )
+
+        from sqlalchemy import select, func
+        from app.models.chapter import Chapter
+        from app.models.vault_character import VaultCharacter
+        from app.models.vault_plot_promise import VaultPlotPromise
+
+        suggestions = []
+
+        # Suggestion type 1: Chapter completion status
+        stmt = (
+            select(func.count())
+            .select_from(Chapter)
+            .where(
+                Chapter.project_id == project_id,
+                Chapter.status == "completed",
+            )
+        )
+        result = await db.execute(stmt)
+        completed_count = result.scalar() or 0
+
+        stmt = (
+            select(func.count())
+            .select_from(Chapter)
+            .where(Chapter.project_id == project_id)
+        )
+        result = await db.execute(stmt)
+        total_chapters = result.scalar() or 0
+
+        if total_chapters > 0:
+            completion_rate = (completed_count / total_chapters) * 100
+            if completion_rate < 50:
+                suggestions.append({
+                    "type": "completion",
+                    "title": "章节完成率较低",
+                    "content": f"当前完成率 {completion_rate:.1f}%（{completed_count}/{total_chapters}），建议优先完成草稿章节。",
+                    "priority": "high",
+                })
+
+        # Suggestion type 2: Character participation
+        stmt = select(func.count()).select_from(VaultCharacter).where(
+            VaultCharacter.project_id == project_id,
+            VaultCharacter.status == "active",
+        )
+        result = await db.execute(stmt)
+        active_characters = result.scalar() or 0
+
+        if active_characters > 5 and total_chapters > 0:
+            suggestions.append({
+                "type": "character_balance",
+                "title": "角色数量较多",
+                "content": f"当前有 {active_characters} 个活跃角色，注意平衡各角色的出场时间和戏份。",
+                "priority": "medium",
+            })
+
+        # Suggestion type 3: Plot promise recycling
+        stmt = select(func.count()).select_from(VaultPlotPromise).where(
+            VaultPlotPromise.project_id == project_id,
+            VaultPlotPromise.status == "dormant",
+        )
+        result = await db.execute(stmt)
+        dormant_promises = result.scalar() or 0
+
+        if dormant_promises > 3:
+            suggestions.append({
+                "type": "plot_promise",
+                "title": "伏笔待回收",
+                "content": f"有 {dormant_promises} 个伏笔处于休眠状态，建议适时回收以推进剧情。",
+                "priority": "medium",
+            })
+
+        return {
+            "success": True,
+            "project_id": project_id,
+            "suggestion_count": len(suggestions),
+            "suggestions": suggestions,
+        }
+
 
 # Singleton instance
 project_service = ProjectService()

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.project import CreateProjectReq, ProjectResp, ProjectStatsResp, UpdateProjectReq
+from app.schemas.health import HealthAlertResp
 from app.service import project_service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -75,3 +76,99 @@ async def delete_project(
 ) -> None:
     """Delete project by ID."""
     await project_service.delete_project(db, current_user["id"], project_id)
+
+
+@router.get("/{project_id}/suggestions", response_model=dict)
+async def get_project_suggestions(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """获取项目的创作建议（基于四库分析）。"""
+    suggestions = await project_service.get_suggestions(
+        db, current_user["id"], project_id
+    )
+    return suggestions
+
+
+# ============ Project Secrets ============
+
+@router.get("/{project_id}/secrets", response_model=list[dict])
+async def list_project_secrets(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> list[dict]:
+    """获取项目的秘密矩阵列表。"""
+    from app.service.secret_service import secret_service
+    return await secret_service.list_secrets(db, project_id)
+
+
+@router.get("/{project_id}/secrets/{role}", response_model=dict)
+async def get_project_secrets_by_role(
+    project_id: int,
+    role: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """按角色查询秘密。"""
+    from app.service.secret_service import secret_service
+    return await secret_service.get_secrets_by_role(db, project_id, role)
+
+
+@router.put("/{project_id}/secrets/{secret_id}", response_model=dict)
+async def update_project_secret(
+    project_id: int,
+    secret_id: int,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """更新项目的秘密。"""
+    from app.service.secret_service import secret_service
+    return await secret_service.update_secret(db, project_id, secret_id, data)
+
+
+# ============ Project Cards History ============
+
+@router.get("/{project_id}/cards/history", response_model=list[dict])
+async def get_project_card_history(
+    project_id: int,
+    chapter_id: Optional[int] = Query(None, description="按章节过滤"),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> list[dict]:
+    """获取项目的抽卡历史。"""
+    from app.service.card_service import card_service
+    return await card_service.get_draw_history(db, current_user["id"], project_id, chapter_id)
+
+
+# ============ Project Health ============
+
+@router.get("/{project_id}/health", response_model=dict)
+async def get_project_health(
+    project_id: int,
+    active_only: bool = Query(default=True, description="仅返回活跃告警"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """获取项目的健康告警列表。"""
+    from app.service.health_service import health_service
+    alerts = await health_service.get_alerts(db, project_id, active_only)
+    from app.schemas.health import HealthAlertResp
+    return {
+        "success": True,
+        "alerts": [HealthAlertResp.model_validate(a) for a in alerts],
+    }
+
+
+@router.post("/{project_id}/health/refresh", response_model=dict)
+async def refresh_project_health(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """手动触发项目的健康检查。"""
+    from app.service.health_service import health_service
+    result = await health_service.run_check(db, project_id)
+    return result
