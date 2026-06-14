@@ -105,8 +105,8 @@ class TestRegisterAPI:
     @patch("app.router.auth.auth_service")
     def test_register_success(self, mock_auth_service, pseudo_client):
         """测试注册成功场景。"""
-        # 模拟 auth_service.register 返回成功响应
-        mock_auth_service.register = AsyncMock(
+        # 模拟 auth_service.register_sync 返回成功响应
+        mock_auth_service.register_sync = MagicMock(
             return_value=TokenResp(
                 access_token=MOCK_ACCESS_TOKEN,
                 refresh_token=MOCK_REFRESH_TOKEN,
@@ -137,8 +137,8 @@ class TestRegisterAPI:
         """测试注册失败 - 重复邮箱。"""
         from app.errors import ConflictError, ErrorCode
 
-        # 模拟 auth_service.register 抛出冲突异常
-        mock_auth_service.register = AsyncMock(
+        # 模拟 auth_service.register_sync 抛出冲突异常
+        mock_auth_service.register_sync = MagicMock(
             side_effect=ConflictError(
                 error_code=ErrorCode.USER_EMAIL_EXISTS,
                 detail="Email already registered",
@@ -154,8 +154,8 @@ class TestRegisterAPI:
         """测试注册失败 - 重复用户名。"""
         from app.errors import ConflictError, ErrorCode
 
-        # 模拟 auth_service.register 抛出用户名冲突异常
-        mock_auth_service.register = AsyncMock(
+        # 模拟 auth_service.register_sync 抛出用户名冲突异常
+        mock_auth_service.register_sync = MagicMock(
             side_effect=ConflictError(
                 error_code=ErrorCode.USER_USERNAME_EXISTS,
                 detail="Username already taken",
@@ -196,8 +196,8 @@ class TestLoginAPI:
     @patch("app.router.auth.auth_service")
     def test_login_success(self, mock_auth_service, pseudo_client):
         """测试登录成功场景。"""
-        # 模拟 auth_service.login 返回成功响应
-        mock_auth_service.login = AsyncMock(
+        # 模拟 auth_service.login_sync 返回成功响应
+        mock_auth_service.login_sync = MagicMock(
             return_value=TokenResp(
                 access_token=MOCK_ACCESS_TOKEN,
                 refresh_token=MOCK_REFRESH_TOKEN,
@@ -227,8 +227,8 @@ class TestLoginAPI:
         """测试登录失败 - 错误密码。"""
         from app.errors import AuthError, ErrorCode
 
-        # 模拟 auth_service.login 抛出认证异常
-        mock_auth_service.login = AsyncMock(
+        # 模拟 auth_service.login_sync 抛出认证异常
+        mock_auth_service.login_sync = MagicMock(
             side_effect=AuthError(
                 error_code=ErrorCode.AUTH_INVALID_CREDENTIALS,
                 detail="Invalid email or password",
@@ -244,8 +244,8 @@ class TestLoginAPI:
         """测试登录失败 - 用户不存在。"""
         from app.errors import AuthError, ErrorCode
 
-        # 模拟 auth_service.login 抛出认证异常（用户不存在）
-        mock_auth_service.login = AsyncMock(
+        # 模拟 auth_service.login_sync 抛出认证异常（用户不存在）
+        mock_auth_service.login_sync = MagicMock(
             side_effect=AuthError(
                 error_code=ErrorCode.AUTH_INVALID_CREDENTIALS,
                 detail="Invalid email or password",
@@ -270,8 +270,8 @@ class TestLoginAPI:
         """测试登录失败 - 用户账户禁用。"""
         from app.errors import AuthError, ErrorCode
 
-        # 模拟 auth_service.login 抛出权限异常（账户禁用）
-        mock_auth_service.login = AsyncMock(
+        # 模拟 auth_service.login_sync 抛出权限异常（账户禁用）
+        mock_auth_service.login_sync = MagicMock(
             side_effect=AuthError(
                 error_code=ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS,
                 detail="Account is disabled",
@@ -352,69 +352,60 @@ class TestRefreshAPI:
 class TestGetMeAPI:
     """获取当前用户 API 端点测试。"""
 
-    @patch("app.router.auth.jwt.decode")
-    @patch("app.router.auth.auth_service")
-    def test_get_me_success(self, mock_auth_service, mock_jwt_decode, pseudo_client):
+    def test_get_me_success(self, pseudo_client):
         """测试获取当前用户信息成功。"""
-        # 模拟 JWT decode 返回有效 payload
-        mock_jwt_decode.return_value = {"sub": MOCK_USER_ID, "type": "access"}
-        
-        # 模拟 auth_service.get_current_user 返回用户信息
-        mock_auth_service.get_current_user = AsyncMock(
-            return_value=UserResp(
-                id=MOCK_USER_ID,
-                email="test@example.com",
-                username="testuser",
-                avatar_url=None,
-                status="active",
-                created_at="2024-01-01T00:00:00",
-                updated_at="2024-01-01T00:00:00",
-            )
+        from app.dependencies import get_current_user
+
+        app.dependency_overrides[get_current_user] = lambda: UserResp(
+            id=MOCK_USER_ID,
+            email="test@example.com",
+            username="testuser",
+            avatar_url=None,
+            status="active",
+            created_at="2024-01-01T00:00:00",
+            updated_at="2024-01-01T00:00:00",
         )
 
-        headers = {"Authorization": f"Bearer {MOCK_ACCESS_TOKEN}"}
-        response = pseudo_client.get("/api/v1/auth/me", headers=headers)
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["email"] == "test@example.com"
-        assert data["nickname"] == "testuser"
+        try:
+            headers = {"Authorization": f"Bearer {MOCK_ACCESS_TOKEN}"}
+            response = pseudo_client.get("/api/v1/auth/me", headers=headers)
+            assert response.status_code == 200
+            data = response.json()
+            assert data["email"] == "test@example.com"
+            assert data["nickname"] == "testuser"
+        finally:
+            app.dependency_overrides.clear()
 
     def test_get_me_unauthorized(self, pseudo_client):
         """测试获取当前用户失败 - 未提供令牌。"""
         response = pseudo_client.get("/api/v1/auth/me")
+        assert response.status_code == 401
 
-        assert response.status_code == 401  # HTTPBearer auto_error=True 返回 401
-
-    @patch("app.router.auth.auth_service")
-    def test_get_me_invalid_token(self, mock_auth_service, pseudo_client):
+    def test_get_me_invalid_token(self, pseudo_client):
         """测试获取当前用户失败 - 无效令牌。"""
         headers = {"Authorization": "Bearer invalid-token"}
         response = pseudo_client.get("/api/v1/auth/me", headers=headers)
-
         assert response.status_code == 401
 
-    @patch("app.router.auth.jwt.decode")
-    @patch("app.router.auth.auth_service")
-    def test_get_me_user_not_found(self, mock_auth_service, mock_jwt_decode, pseudo_client):
+    def test_get_me_user_not_found(self, pseudo_client):
         """测试获取当前用户失败 - 用户不存在。"""
-        from app.errors import NotFoundError, ErrorCode
+        from app.dependencies import get_current_user
+        from fastapi import HTTPException, status
 
-        # 模拟 JWT decode 返回有效 payload
-        mock_jwt_decode.return_value = {"sub": MOCK_USER_ID, "type": "access"}
-        
-        # 模拟 auth_service.get_current_user 抛出未找到异常
-        mock_auth_service.get_current_user = AsyncMock(
-            side_effect=NotFoundError(
-                error_code=ErrorCode.USER_NOT_FOUND,
+        def _raise_not_found():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
-        )
 
-        headers = {"Authorization": f"Bearer {MOCK_ACCESS_TOKEN}"}
-        response = pseudo_client.get("/api/v1/auth/me", headers=headers)
+        app.dependency_overrides[get_current_user] = _raise_not_found
 
-        assert response.status_code == 404
+        try:
+            headers = {"Authorization": f"Bearer {MOCK_ACCESS_TOKEN}"}
+            response = pseudo_client.get("/api/v1/auth/me", headers=headers)
+            assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -429,7 +420,7 @@ class TestAuthIntegration:
     def test_register_then_login(self, mock_auth_service, pseudo_client):
         """测试注册后登录的完整流程。"""
         # 模拟注册成功
-        mock_auth_service.register = AsyncMock(
+        mock_auth_service.register_sync = MagicMock(
             return_value=TokenResp(
                 access_token=MOCK_ACCESS_TOKEN,
                 refresh_token=MOCK_REFRESH_TOKEN,
@@ -448,7 +439,7 @@ class TestAuthIntegration:
         )
 
         # 模拟登录成功
-        mock_auth_service.login = AsyncMock(
+        mock_auth_service.login_sync = MagicMock(
             return_value=TokenResp(
                 access_token="new-access-token",
                 refresh_token="new-refresh-token",
@@ -480,7 +471,7 @@ class TestAuthIntegration:
     def test_login_then_refresh(self, mock_auth_service, pseudo_client):
         """测试登录后刷新令牌的完整流程。"""
         # 模拟登录成功
-        mock_auth_service.login = AsyncMock(
+        mock_auth_service.login_sync = MagicMock(
             return_value=TokenResp(
                 access_token=MOCK_ACCESS_TOKEN,
                 refresh_token=MOCK_REFRESH_TOKEN,
@@ -532,15 +523,24 @@ class TestAuthIntegration:
         refresh_data = refresh_resp.json()
         assert refresh_data["access_token"] == "refreshed-access-token"
 
-    @patch("app.router.auth.jwt.decode")
     @patch("app.router.auth.auth_service")
-    def test_login_then_get_me(self, mock_auth_service, mock_jwt_decode, pseudo_client):
+    def test_login_then_get_me(self, mock_auth_service, pseudo_client):
         """测试登录后获取当前用户的完整流程。"""
-        # 模拟 JWT decode 返回有效 payload
-        mock_jwt_decode.return_value = {"sub": MOCK_USER_ID, "type": "access"}
-        
+        from app.dependencies import get_current_user
+
+        # 模拟获取当前用户成功
+        app.dependency_overrides[get_current_user] = lambda: UserResp(
+            id=MOCK_USER_ID,
+            email="test@example.com",
+            username="testuser",
+            avatar_url=None,
+            status="active",
+            created_at="2024-01-01T00:00:00",
+            updated_at="2024-01-01T00:00:00",
+        )
+
         # 模拟登录成功
-        mock_auth_service.login = AsyncMock(
+        mock_auth_service.login_sync = MagicMock(
             return_value=TokenResp(
                 access_token=MOCK_ACCESS_TOKEN,
                 refresh_token=MOCK_REFRESH_TOKEN,
@@ -558,28 +558,18 @@ class TestAuthIntegration:
             )
         )
 
-        # 模拟获取当前用户成功
-        mock_auth_service.get_current_user = AsyncMock(
-            return_value=UserResp(
-                id=MOCK_USER_ID,
-                email="test@example.com",
-                username="testuser",
-                avatar_url=None,
-                status="active",
-                created_at="2024-01-01T00:00:00",
-                updated_at="2024-01-01T00:00:00",
-            )
-        )
+        try:
+            # 1. 登录
+            login_resp = pseudo_client.post("/api/v1/auth/login", json=LOGIN_DATA)
+            assert login_resp.status_code == 200
+            login_data = login_resp.json()
+            access_token = login_data["access_token"]
 
-        # 1. 登录
-        login_resp = pseudo_client.post("/api/v1/auth/login", json=LOGIN_DATA)
-        assert login_resp.status_code == 200
-        login_data = login_resp.json()
-        access_token = login_data["access_token"]
-
-        # 2. 获取当前用户
-        headers = {"Authorization": f"Bearer {access_token}"}
-        me_resp = pseudo_client.get("/api/v1/auth/me", headers=headers)
-        assert me_resp.status_code == 200
-        me_data = me_resp.json()
-        assert me_data["email"] == "test@example.com"
+            # 2. 获取当前用户
+            headers = {"Authorization": f"Bearer {access_token}"}
+            me_resp = pseudo_client.get("/api/v1/auth/me", headers=headers)
+            assert me_resp.status_code == 200
+            me_data = me_resp.json()
+            assert me_data["email"] == "test@example.com"
+        finally:
+            app.dependency_overrides.clear()
