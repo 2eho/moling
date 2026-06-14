@@ -13,7 +13,7 @@ from app.schemas.project import CreateProjectReq, ProjectResp, ProjectStatsResp,
 from app.schemas.health import HealthAlertResp
 from app.service import project_service
 
-router = APIRouter(prefix="/projects", tags=["projects"])
+router = APIRouter(tags=["projects"])
 
 
 @router.post("", response_model=ProjectResp, status_code=201)
@@ -23,7 +23,7 @@ async def create_project(
     current_user=Depends(get_current_user),
 ) -> ProjectResp:
     """Create a new project."""
-    return await project_service.create_project(db, current_user["id"], req)
+    return await project_service.create_project(db, current_user.id, req)
 
 
 @router.get("", response_model=dict)
@@ -35,7 +35,7 @@ async def list_projects(
     current_user=Depends(get_current_user),
 ) -> dict:
     """List projects with pagination."""
-    return await project_service.list_projects(db, current_user["id"], page, page_size, status)
+    return await project_service.list_projects(db, current_user.id, page, page_size, status)
 
 
 @router.get("/stats", response_model=ProjectStatsResp)
@@ -44,7 +44,7 @@ async def get_project_stats(
     current_user=Depends(get_current_user),
 ) -> ProjectStatsResp:
     """Get project statistics for current user."""
-    return await project_service.get_project_stats(db, current_user["id"])
+    return await project_service.get_project_stats(db, current_user.id)
 
 
 @router.get("/{project_id}", response_model=ProjectResp)
@@ -54,7 +54,7 @@ async def get_project(
     current_user=Depends(get_current_user),
 ) -> ProjectResp:
     """Get single project by ID."""
-    return await project_service.get_project(db, current_user["id"], project_id)
+    return await project_service.get_project(db, current_user.id, project_id)
 
 
 @router.put("/{project_id}", response_model=ProjectResp)
@@ -65,7 +65,7 @@ async def update_project(
     current_user=Depends(get_current_user),
 ) -> ProjectResp:
     """Update project by ID."""
-    return await project_service.update_project(db, current_user["id"], project_id, req)
+    return await project_service.update_project(db, current_user.id, project_id, req)
 
 
 @router.delete("/{project_id}", status_code=204)
@@ -75,7 +75,7 @@ async def delete_project(
     current_user=Depends(get_current_user),
 ) -> None:
     """Delete project by ID."""
-    await project_service.delete_project(db, current_user["id"], project_id)
+    await project_service.delete_project(db, current_user.id, project_id)
 
 
 @router.get("/{project_id}/suggestions", response_model=dict)
@@ -86,7 +86,7 @@ async def get_project_suggestions(
 ) -> dict:
     """获取项目的创作建议（基于四库分析）。"""
     suggestions = await project_service.get_suggestions(
-        db, current_user["id"], project_id
+        db, current_user.id, project_id
     )
     return suggestions
 
@@ -140,7 +140,7 @@ async def get_project_card_history(
 ) -> list[dict]:
     """获取项目的抽卡历史。"""
     from app.service.card_service import card_service
-    return await card_service.get_draw_history(db, current_user["id"], project_id, chapter_id)
+    return await card_service.get_draw_history(db, current_user.id, project_id, chapter_id)
 
 
 # ============ Project Health ============

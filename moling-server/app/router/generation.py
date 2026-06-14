@@ -1,4 +1,4 @@
-"""墨灵 (Moling) — Generation API Router.
+﻿"""澧ㄧ伒 (Moling) 鈥?Generation API Router.
 
 Provides endpoints for AI text generation tasks.
 """
@@ -12,7 +12,7 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.generation import GenerateReq, GenerationResp, TaskStatusResp
 from app.service import generation_service
 
-router = APIRouter(prefix="/generation", tags=["generation"])
+router = APIRouter(tags=["generation"])
 
 
 @router.post("", response_model=GenerationResp, status_code=201)

@@ -12,7 +12,7 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.vault import CharacterResp, TimelineResp, PlotPromiseResp, WorldResp
 from app.service import vault_service
 
-router = APIRouter(prefix="/vault", tags=["vault"])
+router = APIRouter(tags=["vault"])
 
 
 # =========== Characters ===========

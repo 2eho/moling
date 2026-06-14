@@ -8,10 +8,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from app.config import get_settings
-from app.dependencies import get_db
+from app.dependencies import get_db, get_sync_db
 from app.schemas.auth import LoginReq, PasswordResetReq, PasswordResetRequestReq, RefreshReq, RegisterReq, TokenResp, UpdateProfileReq, UserResp
 from app.service import auth_service
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session as SyncSession
 
 router = APIRouter()
 
@@ -21,14 +21,13 @@ settings = get_settings()
 @router.post("/register", response_model=TokenResp, status_code=201)
 async def register(
     req: RegisterReq,
-    db: AsyncSession = Depends(get_db),
+    db: SyncSession = Depends(get_sync_db),
 ) -> TokenResp:
     """注册新用户并返回令牌。"""
     try:
-        result = await auth_service.register(db, req)
+        result = auth_service.register_sync(db, req)
         return result
     except Exception as e:
-        # 打印完整错误堆栈用于调试
         import traceback
         traceback.print_exc()
         
@@ -40,34 +39,18 @@ async def register(
 @router.post("/login", response_model=TokenResp)
 async def login(
     req: LoginReq,
-    db: AsyncSession = Depends(get_db),
+    db: SyncSession = Depends(get_sync_db),
 ) -> TokenResp:
     """使用邮箱和密码登录并返回令牌。"""
-    # 临时测试用户（绕过数据库问题）
-    if req.email == "test@moling.com" and req.password == "Test123456":
-        from datetime import datetime, timedelta, timezone
-        from jose import jwt
-        from app.schemas.auth import UserResp
-        
-        settings = get_settings()
-        
-        # 创建测试用户 ID = 1
-        now = datetime.now(timezone.utc)
-        access_token = jwt.encode(
-            {"sub": "1", "type": "access", "exp": now + timedelta(minutes=15)},
-            settings.SECRET_KEY,
-            algorithm=settings.ALGORITHM
-        )
-        refresh_token = jwt.encode(
-            {"sub": "1", "type": "refresh", "exp": now + timedelta(days=7)},
-            settings.SECRET_KEY,
-            algorithm=settings.ALGORITHM
-        )
-        
-        # 构造完整的 TokenResp（包含 user 字段）
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
+    try:
+        result = auth_service.login_sync(db, req)
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        if hasattr(e, 'status_code'):
+            raise HTTPException(status_code=e.status_code, detail=str(e.detail))
+        raise HTTPException(status_code=400, detail=str(e))
             "token_type": "bearer",
             "expires_in": 900,
             "user": {

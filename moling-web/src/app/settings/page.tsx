@@ -1,325 +1,414 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { showToast } from "@/components/ui/Toast";
-import { settingsApi } from "@/lib/api";
-import type { UserSettings } from "@/lib/types";
-import styles from "./settings.module.css";
-
-type SettingsTab = "general" | "ai" | "cards" | "data" | "about";
-
-const NAV_ITEMS: { id: SettingsTab; label: string; icon: string }[] = [
-  { id: "general", label: "通用设置", icon: "⚙" },
-  { id: "ai", label: "AI创作", icon: "🤖" },
-  { id: "cards", label: "卡牌管理", icon: "🃏" },
-  { id: "data", label: "数据管理", icon: "📊" },
-  { id: "about", label: "关于墨灵", icon: "ℹ" },
-];
-
-const MODEL_OPTIONS = [
-  { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash" },
-  { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
-  { value: "deepseek-chat", label: "DeepSeek Chat (即将弃用)" },
-  { value: "deepseek-reasoner", label: "DeepSeek Reasoner (即将弃用)" },
-];
+import { useState, useEffect } from 'react';
+import styles from './Settings.module.css';
+import {
+  getSettings,
+  updateGlobalSettings,
+  updateProjectSettings,
+  changePassword,
+  updateProfile,
+  getProjectSettings,
+} from '@/api';
+import type { UserSettings, ChangePasswordRequest, UpdateProfileRequest } from '@/api';
 
 export default function SettingsPage() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'global' | 'project' | 'password' | 'profile'>('global');
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // ── Settings state ──
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [model, setModel] = useState("deepseek-chat");
-  const [temperature, setTemperature] = useState(0.7);
-  const [apiKeyConfigured] = useState(true); // 后端 .env 中配置，前端不可见
+  // 全局设置表单
+  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark');
+  const [language, setLanguage] = useState('zh-CN');
+  const [autoSave, setAutoSave] = useState(true);
+  const [draftAutoConfirm, setDraftAutoConfirm] = useState(true);
+  const [draftAutoConfirmSeconds, setDraftAutoConfirmSeconds] = useState(6);
 
-  // Load settings
+  // 项目设置表单
+  const [projectId, setProjectId] = useState('current-project-id');
+  const [aiSpeed, setAiSpeed] = useState(3);
+  const [writingStyle, setWritingStyle] = useState(2);
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
+
+  // 修改密码表单
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // 个人资料表单
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [avatar, setAvatar] = useState('');
+
+  // 加载设置
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const res = await settingsApi.get();
-        const settings = res.data;
-        setUsername(settings.theme || ""); // 临时：使用 theme 字段存储昵称
-        setEmail("author@moling.ai"); // 临时：从 user 对象获取
-        setModel("deepseek-chat"); // 临时：从 settings 获取
-        setTemperature(settings.editor_font_size / 14 || 0.7); // 临时：使用字体大小计算
+        const data = await getSettings();
+        setSettings(data);
+        setTheme(data.globalSettings.theme);
+        setLanguage(data.globalSettings.language);
+        setAutoSave(data.globalSettings.autoSave);
+        setDraftAutoConfirm(data.globalSettings.draftAutoConfirm);
+        setDraftAutoConfirmSeconds(data.globalSettings.draftAutoConfirmSeconds);
       } catch (error) {
-        showToast("error", "加载设置失败");
-        console.error(error);
+        console.error('加载设置失败:', error);
+        showMessage('error', '加载设置失败');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     loadSettings();
   }, []);
 
-  const handleSave = useCallback(async () => {
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleSaveGlobalSettings = async () => {
+    setSaving(true);
     try {
-      setIsSaving(true);
-      await settingsApi.update({
-        theme: username, // 临时：使用 theme 字段存储昵称
-        editor_font_size: Math.round(temperature * 14), // 临时：使用字体大小存储
+      await updateGlobalSettings({
+        theme,
+        language,
+        autoSave,
+        draftAutoConfirm,
+        draftAutoConfirmSeconds,
       });
-      showToast("success", "设置已保存");
+      showMessage('success', '全局设置已保存');
     } catch (error) {
-      showToast("error", "保存失败");
-      console.error(error);
+      console.error('保存失败:', error);
+      showMessage('error', `保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
-      setIsSaving(false);
-    }
-  }, [username, temperature]);
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case "general":
-        return (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>通用设置</h2>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>昵称</span>
-                <span className={styles.fieldDesc}>你的显示名称</span>
-              </div>
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="输入昵称"
-                className={styles.fieldInput}
-              />
-            </div>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>邮箱</span>
-                <span className={styles.fieldDesc}>登录邮箱，不可修改</span>
-              </div>
-              <Input
-                value={email}
-                readOnly
-                className={styles.fieldInput}
-              />
-            </div>
-
-            <div className={styles.actions}>
-              <Button onClick={handleSave}>保存修改</Button>
-            </div>
-          </section>
-        );
-
-      case "ai":
-        return (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>AI 创作设置</h2>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>LLM API Key</span>
-                <span className={styles.fieldDesc}>由管理员在服务器端配置，前端不可见</span>
-              </div>
-              <div className={styles.apiKeyRow}>
-                <span className={styles.apiKeyStatus}>
-                  ✅ 已配置（服务器端）
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>AI 模型</span>
-                <span className={styles.fieldDesc}>选择生成使用的模型</span>
-              </div>
-              <select
-                className={styles.select}
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-              >
-                {MODEL_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>生成温度</span>
-                <span className={styles.fieldDesc}>
-                  控制输出的创造性（0=保守，1=创意）
-                </span>
-              </div>
-              <div className={styles.sliderWrap}>
-                <input
-                  type="range"
-                  className={styles.slider}
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={temperature}
-                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                />
-                <span className={styles.sliderValue}>
-                  {temperature.toFixed(1)}
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.actions}>
-              <Button onClick={handleSave}>保存 AI 设置</Button>
-            </div>
-          </section>
-        );
-
-      case "cards":
-        return (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>卡牌管理</h2>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>每日免费抽卡</span>
-                <span className={styles.fieldDesc}>每天可免费抽取的卡牌次数</span>
-              </div>
-              <select className={styles.select} defaultValue="3">
-                <option value="1">1 次</option>
-                <option value="3">3 次</option>
-                <option value="5">5 次</option>
-                <option value="10">10 次</option>
-              </select>
-            </div>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>卡牌动画</span>
-                <span className={styles.fieldDesc}>抽卡时展示动画效果</span>
-              </div>
-              <label className={`${styles.toggle} ${styles.toggleOn}`}>
-                <span className={styles.toggleKnob} />
-              </label>
-            </div>
-
-            <div className={styles.actions}>
-              <Button variant="secondary">重置为默认</Button>
-            </div>
-          </section>
-        );
-
-      case "data":
-        return (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>数据管理</h2>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>导出所有项目</span>
-                <span className={styles.fieldDesc}>将所有项目导出为 JSON 格式</span>
-              </div>
-              <Button
-                variant="secondary"
-                onClick={() => showToast("info", "数据导出功能开发中")}
-              >
-                导出数据
-              </Button>
-            </div>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel}>导入项目</span>
-                <span className={styles.fieldDesc}>从 JSON 文件导入项目数据</span>
-              </div>
-              <Button
-                variant="secondary"
-                onClick={() => showToast("info", "数据导入功能开发中")}
-              >
-                选择文件
-              </Button>
-            </div>
-
-            <div className={styles.fieldRow} style={{ borderBottom: "none" }}>
-              <div className={styles.fieldInfo}>
-                <span className={styles.fieldLabel} style={{ color: "var(--color-danger)" }}>
-                  危险操作
-                </span>
-                <span className={styles.fieldDesc}>删除所有项目数据，不可恢复</span>
-              </div>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  if (confirm("确定要删除所有数据吗？此操作不可恢复！")) {
-                    showToast("error", "功能开发中");
-                  }
-                }}
-              >
-                删除所有数据
-              </Button>
-            </div>
-          </section>
-        );
-
-      case "about":
-        return (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>关于墨灵</h2>
-            <div className={styles.aboutCard}>
-              <div className={styles.aboutVersion}>v1.0.0</div>
-              <p className={styles.aboutDesc}>
-                墨灵是一款 AI 辅助创作平台，帮助你更高效地进行小说创作。灵感如墨，灵性如泉。
-              </p>
-            </div>
-          </section>
-        );
+      setSaving(false);
     }
   };
 
+  const handleSaveProjectSettings = async () => {
+    setSaving(true);
+    try {
+      await updateProjectSettings(projectId, {
+        aiSpeed,
+        writingStyle,
+        notificationEnabled,
+      });
+      showMessage('success', '项目设置已保存');
+    } catch (error) {
+      console.error('保存失败:', error);
+      showMessage('error', `保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      showMessage('error', '新密码和确认密码不一致');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await changePassword({ oldPassword, newPassword });
+      showMessage('success', '密码已修改');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error('修改密码失败:', error);
+      showMessage('error', `修改密码失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({ username, email, avatar });
+      showMessage('success', '个人资料已更新');
+    } catch (error) {
+      console.error('更新失败:', error);
+      showMessage('error', `更新失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className={styles.loading}>加载中...</div>;
+  }
+
   return (
-    <div className={styles.page}>
-      {/* Header Shell */}
-      <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => router.back()}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>设置</h1>
+      </div>
+
+      <div className={styles.content}>
+        {/* 侧边栏 */}
+        <div className={styles.sidebar}>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'global' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveTab('global')}
           >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          <span>返回</span>
-        </button>
-        <h1 className={styles.headerTitle}>设置</h1>
-        <div className={styles.headerSpacer} />
-        <Button size="sm" onClick={handleSave}>
-          保存
-        </Button>
-      </header>
+            ⚙️ 全局设置
+          </button>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'project' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveTab('project')}
+          >
+            📁 项目设置
+          </button>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'password' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveTab('password')}
+          >
+            🔒 修改密码
+          </button>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'profile' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            👤 个人资料
+          </button>
+        </div>
 
-      {/* Body: Left Nav + Content */}
-      <div className={styles.body}>
-        <nav className={styles.nav}>
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={`${styles.navItem} ${
-                activeTab === item.id ? styles.navItemActive : ""
-              }`}
-              onClick={() => setActiveTab(item.id)}
-            >
-              <span className={styles.navIcon}>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
+        {/* 主内容区 */}
+        <div className={styles.main}>
+          {message && (
+            <div className={`${styles.message} ${styles[`message${message.type.charAt(0).toUpperCase() + message.type.slice(1)}`]}`}>
+              {message.text}
+            </div>
+          )}
 
-        <main className={styles.content}>{renderContent()}</main>
+          {/* 全局设置 */}
+          {activeTab === 'global' && (
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>全局设置</h2>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>主题</label>
+                <select
+                  className={styles.select}
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as any)}
+                >
+                  <option value="dark">深色</option>
+                  <option value="light">浅色</option>
+                  <option value="system">跟随系统</option>
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>语言</label>
+                <select
+                  className={styles.select}
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                >
+                  <option value="zh-CN">简体中文</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={autoSave}
+                    onChange={(e) => setAutoSave(e.target.checked)}
+                  />
+                  <span>自动保存</span>
+                </label>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={draftAutoConfirm}
+                    onChange={(e) => setDraftAutoConfirm(e.target.checked)}
+                  />
+                  <span>草稿自动确认</span>
+                </label>
+                {draftAutoConfirm && (
+                  <input
+                    type="number"
+                    className={styles.input}
+                    value={draftAutoConfirmSeconds}
+                    onChange={(e) => setDraftAutoConfirmSeconds(parseInt(e.target.value))}
+                    min={1}
+                    max={30}
+                    style={{ width: 80, marginLeft: 12 }}
+                  />
+                )}
+              </div>
+
+              <button
+                className={styles.saveBtn}
+                onClick={handleSaveGlobalSettings}
+                disabled={saving}
+              >
+                {saving ? '保存中...' : '保存设置'}
+              </button>
+            </div>
+          )}
+
+          {/* 项目设置 */}
+          {activeTab === 'project' && (
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>项目设置</h2>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>项目 ID</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>AI 速度 ({aiSpeed})</label>
+                <input
+                  type="range"
+                  className={styles.range}
+                  min={1}
+                  max={5}
+                  value={aiSpeed}
+                  onChange={(e) => setAiSpeed(parseInt(e.target.value))}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>写作风格 ({writingStyle})</label>
+                <input
+                  type="range"
+                  className={styles.range}
+                  min={1}
+                  max={5}
+                  value={writingStyle}
+                  onChange={(e) => setWritingStyle(parseInt(e.target.value))}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={notificationEnabled}
+                    onChange={(e) => setNotificationEnabled(e.target.checked)}
+                  />
+                  <span>启用通知</span>
+                </label>
+              </div>
+
+              <button
+                className={styles.saveBtn}
+                onClick={handleSaveProjectSettings}
+                disabled={saving}
+              >
+                {saving ? '保存中...' : '保存设置'}
+              </button>
+            </div>
+          )}
+
+          {/* 修改密码 */}
+          {activeTab === 'password' && (
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>修改密码</h2>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>当前密码</label>
+                <input
+                  type="password"
+                  className={styles.input}
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>新密码</label>
+                <input
+                  type="password"
+                  className={styles.input}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>确认新密码</label>
+                <input
+                  type="password"
+                  className={styles.input}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+
+              <button
+                className={styles.saveBtn}
+                onClick={handleChangePassword}
+                disabled={saving}
+              >
+                {saving ? '修改中...' : '修改密码'}
+              </button>
+            </div>
+          )}
+
+          {/* 个人资料 */}
+          {activeTab === 'profile' && (
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>个人资料</h2>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>用户名</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>邮箱</label>
+                <input
+                  type="email"
+                  className={styles.input}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>头像 URL</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={avatar}
+                  onChange={(e) => setAvatar(e.target.value)}
+                />
+              </div>
+
+              <button
+                className={styles.saveBtn}
+                onClick={handleUpdateProfile}
+                disabled={saving}
+              >
+                {saving ? '更新中...' : '更新资料'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

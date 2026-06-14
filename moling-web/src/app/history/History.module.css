@@ -1,0 +1,246 @@
+/* Generation 历史页面样式 */
+.container {
+  min-height: 100vh;
+  background: #0d0f1a;
+  color: #e8e9f0;
+  padding: 32px;
+}
+
+.header {
+  margin-bottom: 48px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #e8e9f0;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: #9ca3c4;
+  line-height: 1.8;
+}
+
+.content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 48px;
+  text-align: center;
+  color: #6b7199;
+  font-size: 15px;
+}
+
+.empty {
+  padding: 48px;
+  text-align: center;
+  color: #6b7199;
+  font-size: 15px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recordCard {
+  padding: 24px;
+  background: #151829;
+  border: 1px solid #2a2d45;
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+
+.recordCard:hover {
+  border-color: #6366f1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.recordHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.recordTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e8e9f0;
+}
+
+.recordStatus {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recordMeta {
+  display: flex;
+  gap: 24px;
+  font-size: 13px;
+  color: #9ca3c4;
+  margin-bottom: 16px;
+}
+
+.recordActions {
+  display: flex;
+  gap: 8px;
+}
+
+.viewBtn {
+  padding: 8px 16px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  color: #6366f1;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewBtn:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.regenerateBtn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #d4a843, #c49030);
+  color: #1a1400;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.regenerateBtn:hover {
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  background: #151829;
+  border: 1px solid #2a2d45;
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modalHeader h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #e8e9f0;
+}
+
+.modalClose {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid #2a2d45;
+  border-radius: 8px;
+  color: #9ca3c4;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modalClose:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.modalBody {
+  margin-bottom: 24px;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #2a2d45;
+  font-size: 14px;
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.detailRow span:first-child {
+  color: #9ca3c4;
+}
+
+.detailRow span:last-child {
+  color: #e8e9f0;
+  font-weight: 500;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.closeBtn {
+  padding: 10px 20px;
+  background: none;
+  border: 1px solid #2a2d45;
+  border-radius: 8px;
+  color: #9ca3c4;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.closeBtn:hover {
+  border-color: #6366f1;
+  color: #e8e9f0;
+}
+
+.modalRegenerateBtn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #d4a843, #c49030);
+  color: #1a1400;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modalRegenerateBtn:hover {
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.3);
+}

@@ -1,0 +1,60 @@
+/* Workspace 页面简化样式 */
+.appLayout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.appHeader { height: 52px; background: #151829; border-bottom: 1px solid #2a2d45; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; z-index: 100; }
+.headerBrand { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 700; color: #6366f1; letter-spacing: 2px; }
+.appBody { display: flex; flex: 1; overflow: hidden; }
+.leftPanel { width: 280px; background: #151829; border-right: 1px solid #2a2d45; display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+.centerPanel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0d0f1a; min-width: 0; }
+.rightPanel { width: 260px; background: #151829; border-left: 1px solid #2a2d45; display: flex; flex-direction: column; flex-shrink: 0; }
+.editorScroll { flex: 1; overflow-y: auto; padding: 24px 32px; max-width: 780px; width: 100%; margin: 0 auto; }
+.editorToolbar { flex-shrink: 0; background: #151829; border-top: 1px solid #2a2d45; padding: 12px 16px; }
+.toolbarInputRow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.toolbarInput { flex: 1; background: #0d0f1a; border: 1px solid #2a2d45; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #e8e9f0; }
+.btnDraw { display: flex; align-items: center; gap: 4px; padding: 8px 16px; background: linear-gradient(135deg, #d4a843, #c49030); color: #1a1400; font-weight: 700; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; }
+.btnConfirm { padding: 8px 12px; background: rgba(52,211,153,0.12); color: #34d399; font-size: 13px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; }
+.btnReject { padding: 8px 12px; background: rgba(239,68,68,0.1); color: #ef4444; font-size: 13px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; }
+.panelTabs { display: flex; border-bottom: 1px solid #2a2d45; flex-shrink: 0; }
+.panelTabBtn { flex: 1; padding: 8px 4px; font-size: 11px; color: #6b7199; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; cursor: pointer; }
+.panelTabBtnActive { color: #6366f1; border-bottom-color: #6366f1; }
+.panelContent { display: none; padding: 12px; overflow-y: auto; height: 100%; }
+.panelContentActive { display: block; }
+.agentStatus { padding: 16px; border-bottom: 1px solid #2a2d45; display: flex; align-items: center; gap: 12px; }
+.agentName { font-size: 13px; font-weight: 600; }
+.agentState { font-size: 11px; color: #6366f1; }
+.suggestionCard { background: #0d0f1a; border: 1px solid #2a2d45; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.suggestionText { font-size: 12px; color: #9ca3c4; line-height: 1.6; }
+.suggestionAdopt { margin-top: 8px; font-size: 11px; color: #6366f1; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(99,102,241,0.3); background: none; cursor: pointer; }
+.commitmentLink { font-size: 11px; color: #3d4166; margin-top: 4px; }
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modalCard { background: #151829; border: 1px solid #2a2d45; border-radius: 20px; padding: 32px; max-width: 900px; width: 100%; box-shadow: 0 8px 16px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+.modalHeader { text-align: center; margin-bottom: 24px; }
+.modalTitle { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; }
+.modalSubtitle { font-size: 13px; color: #6b7199; margin-top: 4px; }
+.modalCards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.inspirationCard { background: #0d0f1a; border: 2px solid #2a2d45; border-radius: 16px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; }
+.inspirationCard:hover { border-color: #9ca3c4; transform: translateY(-4px); }
+.inspirationCardSelected { border-color: #d4a843; box-shadow: 0 0 20px rgba(212,168,67,0.2); }
+.cardRarity { font-size: 24px; margin-bottom: 8px; }
+.cardRarityLabel { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.cardRarityLabelCommon { color: #9ca3af; }
+.cardRarityLabelRare { color: #67e8f9; }
+.cardRarityLabelEpic { color: #a855f7; }
+.cardRarityLabelLegendary { color: #d4a843; }
+.cardDirectionTitle { font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 700; margin-bottom: 8px; line-height: 1.4; }
+.cardDirectionDesc { font-size: 12px; color: #6b7199; line-height: 1.6; margin-bottom: 12px; }
+.cardTags { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-bottom: 12px; }
+.cardTag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(99,102,241,0.1); color: #6b7199; }
+.weightSlider { width: 100%; margin: 8px 0; }
+.weightValue { font-size: 12px; font-weight: 600; color: #d4a843; }
+.modalFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.modalBtnSecondary { padding: 8px 16px; border-radius: 8px; font-size: 13px; color: #9ca3c4; border: 1px solid #2a2d45; background: none; cursor: pointer; }
+.modalBtnPrimary { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; cursor: pointer; }
+.genProgress { padding: 16px; margin-top: 12px; background: #0d0f1a; border: 1px solid #2a2d45; border-radius: 12px; }
+.genProgressTitle { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #d4a843; }
+.genProgressBar { height: 4px; background: #2a2d45; border-radius: 2px; overflow: hidden; }
+.genProgressFill { height: 100%; background: linear-gradient(90deg, #6366f1, #d4a843); border-radius: 2px; transition: width 0.5s ease; }
+.genResult { padding: 16px; margin-top: 12px; background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.2); border-radius: 12px; }
+.genResultHeader { font-size: 14px; font-weight: 600; color: #34d399; margin-bottom: 8px; }
+.genResultStats { display: flex; gap: 12px; font-size: 11px; color: #6b7199; margin-bottom: 12px; }
+.genResultActions { display: flex; gap: 8px; }
+.rightPanelOpen { display: block; }

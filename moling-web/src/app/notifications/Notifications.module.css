@@ -1,0 +1,219 @@
+/* Notifications 页面样式 */
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0d0f1a;
+  color: #e8e9f0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #2a2d45;
+}
+
+.title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.actionBtn {
+  padding: 8px 16px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  color: #6366f1;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionBtn:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.unreadBadge {
+  padding: 12px 24px;
+  font-size: 14px;
+  color: #9ca3c4;
+  border-bottom: 1px solid #2a2d45;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #2a2d45;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  padding: 6px 12px;
+  background: #151829;
+  border: 1px solid #2a2d45;
+  border-radius: 8px;
+  color: #6b7199;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filterBtn:hover {
+  border-color: #6366f1;
+  color: #9ca3c4;
+}
+
+.filterBtnActive {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.item {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #151829;
+  border: 1px solid #2a2d45;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.item:hover {
+  border-color: #3d4166;
+}
+
+.itemUnread {
+  border-left: 3px solid #6366f1;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.itemIcon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.itemContent {
+  flex: 1;
+}
+
+.itemTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #e8e9f0;
+}
+
+.itemMessage {
+  font-size: 13px;
+  color: #9ca3c4;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.itemTime {
+  font-size: 11px;
+  color: #6b7199;
+}
+
+.itemActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.itemActionBtn {
+  padding: 4px 8px;
+  background: none;
+  border: 1px solid #2a2d45;
+  border-radius: 4px;
+  color: #9ca3c4;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.itemActionBtn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.itemActionBtnDanger:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: #6b7199;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  color: #6b7199;
+  font-size: 16px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #2a2d45;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  background: #151829;
+  border: 1px solid #2a2d45;
+  border-radius: 8px;
+  color: #9ca3c4;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #e8e9f0;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  font-size: 14px;
+  color: #6b7199;
+}

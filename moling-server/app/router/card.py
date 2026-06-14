@@ -1,4 +1,4 @@
-"""墨灵 (Moling) — Card API Router.
+﻿"""澧ㄧ伒 (Moling) 鈥?Card API Router.
 
 Provides endpoints for card pool management and card draw operations.
 """
@@ -12,7 +12,7 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.card import DrawCardReq, CardResp, DrawCardResp, CardPoolListResp
 from app.service import card_service
 
-router = APIRouter(prefix="/cards", tags=["cards"])
+router = APIRouter(tags=["cards"])
 
 
 @router.get("", response_model=CardPoolListResp)

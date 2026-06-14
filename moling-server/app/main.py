@@ -21,23 +21,6 @@ from app.errors import AppError
 
 
 # ---------------------------------------------------------------------------
-# Global exception handler — prevent silent crashes
-# ---------------------------------------------------------------------------
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Catch all unhandled exceptions and log them."""
-    import traceback
-    error_detail = traceback.format_exc()
-    print(f"[ERROR] Unhandled exception: {exc}")
-    print(f"[ERROR] Traceback:\n{error_detail}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error", "type": str(type(exc).__name__)},
-    )
-
-
-# ---------------------------------------------------------------------------
 # Lifespan — manage connection pools
 # ---------------------------------------------------------------------------
 
@@ -45,32 +28,33 @@ async def global_exception_handler(request: Request, exc: Exception):
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup / shutdown lifecycle for database and Redis connections."""
-    from app.dependencies import engine, get_redis
+    from app.dependencies import engine, async_session_factory
     from app.models.base import Base
     from app.config import get_settings
 
     settings = get_settings()
 
-    # --- 自动创建数据库表（开发环境）---
-    try:
-        if settings.DATABASE_URL.startswith("sqlite"):
-            # SQLite：用同步引擎建表，避免 Windows 上 greenlet DLL 问题
-            from sqlalchemy import create_engine as create_sync_engine
-            sync_url = settings.DATABASE_URL.replace(
-                "sqlite+aiosqlite://", "sqlite:///", 1
-            )
-            sync_engine = create_sync_engine(sync_url)
-            Base.metadata.create_all(sync_engine)
+    # --- 自动创建数据库表（开发环境，Windows 用同步引擎避免 greenlet 问题）---
+    if platform.system() == "Windows":
+        # Windows：用同步引擎创建表，完全避开 greenlet
+        try:
+            from sqlalchemy import create_engine
+            sync_url = settings.DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://")
+            sync_engine = create_engine(sync_url, echo=False)
+            Base.metadata.create_all(bind=sync_engine)
             sync_engine.dispose()
-            print("[OK] Database tables verified (sqlite sync)")
-        else:
-            # PostgreSQL：用异步引擎
+            print("[OK] Database tables created (Windows sync engine)")
+        except Exception as e:
+            print(f"[ERROR] Database initialization failed: {e}")
+            raise
+    else:
+        try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-            print("[OK] Database tables verified (postgres async)")
-    except Exception as e:
-        print(f"[ERROR] Database initialization failed: {e}")
-        raise
+            print("[OK] Database tables created (async run_sync)")
+        except Exception as e:
+            print(f"[ERROR] Database initialization failed: {e}")
+            raise
 
     # --- Redis 连接（失败时优雅降级）---
     try:

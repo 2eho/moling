@@ -12,7 +12,8 @@ from typing import Any, Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import Session as SyncSession
 
 from app.config import get_settings
 from app.dao import user_dao
@@ -115,6 +116,20 @@ async def reset_password(db: AsyncSession, req: PasswordResetReq) -> dict:
 async def update_profile(db: AsyncSession, user_id: int, req) -> UserResp:
     """Update user profile."""
     return await _get_auth_service().update_profile(db, user_id, req)
+
+
+# ---------------------------------------------------------------------------
+# Sync versions (for Windows + aiosslite workaround)
+# ---------------------------------------------------------------------------
+
+def register_sync(db: SyncSession, req: RegisterReq) -> TokenResp:
+    """Register a new user and return tokens (sync version)."""
+    return _get_auth_service().register_sync(db, req)
+
+
+def login_sync(db: SyncSession, req: LoginReq) -> TokenResp:
+    """Login with email + password, return tokens (sync version)."""
+    return _get_auth_service().login_sync(db, req)
 
 
 class AuthService:
@@ -222,6 +237,87 @@ class AuthService:
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",  # nosec B106
+            expires_in=15 * 60,
+            user=UserResp.model_validate(user),
+        )
+
+    # ------------------------------------------------------------------
+    # Sync versions (for Windows + aiosslite workaround)
+    # ------------------------------------------------------------------
+
+    def register_sync(self, db: SyncSession, req: RegisterReq) -> TokenResp:
+        """Sync version — use with get_sync_db()."""
+        dao = user_dao.UserDAO()
+        # Check uniqueness (sync)
+        existing_email = dao.get_by_email_sync(db, req.email)
+        if existing_email:
+            from app.errors import ConflictError, ErrorCode
+            raise ConflictError(
+                error_code=ErrorCode.USER_EMAIL_EXISTS,
+                detail="Email already registered",
+            )
+        existing_username = dao.get_by_username_sync(db, req.nickname)
+        if existing_username:
+            from app.errors import ConflictError, ErrorCode
+            raise ConflictError(
+                error_code=ErrorCode.USER_USERNAME_EXISTS,
+                detail="Username already taken",
+            )
+
+        # Create user (sync)
+        from app.models.user import User
+        user = User(
+            email=req.email,
+            username=req.nickname,
+            password_hash=_hash_password(req.password),
+            status="active",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        # Create tokens
+        access_token = _create_access_token(user.id)
+        refresh_token = _create_refresh_token(user.id)
+
+        return TokenResp(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=15 * 60,
+            user=UserResp.model_validate(user),
+        )
+
+    def login_sync(self, db: SyncSession, req: LoginReq) -> TokenResp:
+        """Sync version — use with get_sync_db()."""
+        dao = user_dao.UserDAO()
+        user = dao.get_by_email_sync(db, req.email)
+        if user is None:
+            from app.errors import AuthError, ErrorCode
+            raise AuthError(
+                error_code=ErrorCode.AUTH_INVALID_CREDENTIALS,
+                detail="Invalid email or password",
+            )
+        if not _verify_password(req.password, user.password_hash):
+            from app.errors import AuthError, ErrorCode
+            raise AuthError(
+                error_code=ErrorCode.AUTH_INVALID_CREDENTIALS,
+                detail="Invalid email or password",
+            )
+        if user.status != "active":
+            from app.errors import AuthError, ErrorCode
+            raise AuthError(
+                error_code=ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS,
+                detail="Account is disabled",
+            )
+
+        access_token = _create_access_token(user.id)
+        refresh_token = _create_refresh_token(user.id)
+
+        return TokenResp(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
             expires_in=15 * 60,
             user=UserResp.model_validate(user),
         )

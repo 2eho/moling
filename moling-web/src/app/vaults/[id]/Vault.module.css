@@ -1,0 +1,338 @@
+/* Vault 四库管理页面样式 */
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0d0f1a;
+  color: #e8e9f0;
+}
+
+.header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #2a2d45;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.projectId {
+  font-size: 13px;
+  color: #6b7199;
+}
+
+.message {
+  padding: 12px 24px;
+  font-size: 14px;
+}
+
+.messageSuccess {
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+}
+
+.messageError {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tabs {
+  width: 200px;
+  border-right: 1px solid #2a2d45;
+  padding: 16px 0;
+  overflow-y: auto;
+}
+
+.tab {
+  display: block;
+  width: 100%;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: #6b7199;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.tab:hover {
+  background: rgba(99, 102, 241, 0.05);
+  color: #9ca3c4;
+}
+
+.tabActive {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border-left-color: #6366f1;
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+.tabContent {
+  max-width: 900px;
+}
+
+.toolbar {
+  margin-bottom: 16px;
+}
+
+.createBtn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.createBtn:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.formCard {
+  padding: 20px;
+  background: #151829;
+  border: 1px solid #2a2d45;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.formCard h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #e8e9f0;
+}
+
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 13px;
+  color: #9ca3c4;
+  margin-bottom: 6px;
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0d0f1a;
+  border: 1px solid #2a2d45;
+  border-radius: 8px;
+  color: #e8e9f0;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.formGroup textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  border-color: #6366f1;
+  outline: none;
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.saveBtn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.saveBtn:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.cancelBtn {
+  padding: 10px 20px;
+  background: none;
+  border: 1px solid #2a2d45;
+  border-radius: 8px;
+  color: #9ca3c4;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn:hover {
+  border-color: #6366f1;
+  color: #e8e9f0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: #6b7199;
+  font-size: 14px;
+}
+
+.empty {
+  padding: 48px 32px;
+  text-align: center;
+  color: #6b7199;
+  font-size: 15px;
+}
+
+.card {
+  padding: 16px;
+  background: #151829;
+  border: 1px solid #2a2d45;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.card:hover {
+  border-color: #3d4166;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cardAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+}
+
+.cardName {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e8e9f0;
+}
+
+.cardBadge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.cardStatus {
+  font-size: 12px;
+  color: #6b7199;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8e9f0;
+  margin-bottom: 8px;
+}
+
+.cardType {
+  font-size: 12px;
+  color: #9ca3c4;
+  margin-bottom: 8px;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: #6b7199;
+  line-height: 1.6;
+}
+
+.currentBadge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(212, 168, 67, 0.15);
+  color: #d4a843;
+  margin-left: 8px;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.editBtn {
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid #2a2d45;
+  border-radius: 6px;
+  color: #9ca3c4;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.editBtn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.deleteBtn {
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}

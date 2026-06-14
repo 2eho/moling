@@ -1,342 +1,274 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { subscriptionApi } from '@/lib/api';
-import { showToast } from '@/components/ui/Toast';
-import styles from './page.module.css';
-
-/* ============================================
-   定价数据
-   ============================================ */
-
-interface PlanFeature {
-  label: string;
-  free: boolean | string;
-  pro: boolean | string;
-  team: boolean | string;
-}
-
-interface PriceData {
-  monthly: string;
-  yearly: string;
-  periodMonthly: string;
-  periodYearly: string;
-  originalYearly: string;
-}
-
-interface Plan {
-  name: string;
-  desc: string;
-  price: PriceData;
-  features: { label: string; enabled: boolean }[];
-  ctaLabel: string;
-  ctaHref: string;
-  ctaVariant: 'default' | 'primary' | 'current';
-  popular: boolean;
-}
-
-const plans: Plan[] = [
-  {
-    name: '免费版',
-    desc: '适合初次体验墨灵的创作者',
-    price: {
-      monthly: '¥0',
-      yearly: '¥0',
-      periodMonthly: '/ 月',
-      periodYearly: '/ 月',
-      originalYearly: '',
-    },
-    features: [
-      { label: '最多 3 个项目', enabled: true },
-      { label: '每月 50 章', enabled: true },
-      { label: '基础写作 + 卡牌池', enabled: true },
-      { label: '四库管理', enabled: true },
-      { label: '优先生成队列', enabled: false },
-      { label: '全量重新分析', enabled: false },
-      { label: '团队协作', enabled: false },
-    ],
-    ctaLabel: '当前方案',
-    ctaHref: '/auth',
-    ctaVariant: 'current',
-    popular: false,
-  },
-  {
-    name: 'Pro',
-    desc: '专业作者的首选',
-    price: {
-      monthly: '¥29.9',
-      yearly: '¥299',
-      periodMonthly: '/ 月',
-      periodYearly: '/ 年',
-      originalYearly: '¥358.8',
-    },
-    features: [
-      { label: '无限项目', enabled: true },
-      { label: '无限章节', enabled: true },
-      { label: '优先生成队列', enabled: true },
-      { label: '全量重新分析', enabled: true },
-      { label: '专属技术支持', enabled: true },
-      { label: '团队协作', enabled: false },
-    ],
-    ctaLabel: '立即订阅',
-    ctaHref: '/api/v1/subscriptions/create-checkout?plan=pro',
-    ctaVariant: 'primary',
-    popular: true,
-  },
-  {
-    name: '团队版',
-    desc: '工作室和创作团队',
-    price: {
-      monthly: '¥99.9',
-      yearly: '¥999',
-      periodMonthly: '/ 月',
-      periodYearly: '/ 年',
-      originalYearly: '¥1,198.8',
-    },
-    features: [
-      { label: 'Pro 全部功能', enabled: true },
-      { label: '多人实时协作', enabled: true },
-      { label: '权限管理', enabled: true },
-      { label: '共享四库和卡牌池', enabled: true },
-      { label: '专属客户经理', enabled: true },
-      { label: '99.9% SLA', enabled: true },
-    ],
-    ctaLabel: '联系销售',
-    ctaHref: '/auth',
-    ctaVariant: 'default',
-    popular: false,
-  },
-];
-
-/* ── 特性对比表 ── */
-
-const compareFeatures: PlanFeature[] = [
-  { label: '项目数', free: '3 个', pro: '无限', team: '无限' },
-  { label: '月章节上限', free: '50 章', pro: '无限', team: '无限' },
-  { label: 'AI 写作', free: true, pro: true, team: true },
-  { label: '卡牌池 + 抽卡', free: true, pro: true, team: true },
-  { label: '四库管理', free: true, pro: true, team: true },
-  { label: '优先生成', free: false, pro: true, team: true },
-  { label: '全量重新分析', free: false, pro: true, team: true },
-  { label: '多人协作', free: false, pro: false, team: true },
-  { label: 'API 访问', free: false, pro: false, team: true },
-  { label: '专属支持', free: false, pro: true, team: true },
-];
-
-function renderFeatureValue(value: boolean | string): { text: string; isYes: boolean } {
-  if (value === true) return { text: '✓', isYes: true };
-  if (value === false) return { text: '—', isYes: false };
-  return { text: String(value), isYes: false };
-}
-
-/* ============================================
-   页面组件
-   ============================================ */
+import { useState } from 'react';
+import styles from './Pricing.module.css';
 
 export default function PricingPage() {
-  const [yearly, setYearly] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
-  const [toastVisible, setToastVisible] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
-  const toggleBilling = useCallback(() => {
-    setYearly((prev) => !prev);
-  }, []);
-
-  const showToast = useCallback((msg: string) => {
-    setToastMsg(msg);
-    setToastVisible(true);
-    setTimeout(() => {
-      setToastVisible(false);
-    }, 2500);
-  }, []);
-
-  const handleSubscribe = useCallback(
-    async (e: React.MouseEvent<HTMLAnchorElement>, planName: string) => {
-      e.preventDefault();
-      
-      // Check auth status (from closure)
-      if (!isAuthenticated) {
-        // Redirect to login
-        window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
-        return;
-      }
-
-      try {
-        showToast('info', '跳转支付中...');
-        const response = await subscriptionApi.createCheckout(
-          planName.toLowerCase(),
-          window.location.origin + '/pricing?success=true',
-          window.location.origin + '/pricing?cancel=true'
-        );
-        // Redirect to checkout URL
-        window.location.href = response.data.checkout_url;
-      } catch (error) {
-        showToast('error', '创建订阅失败，请重试');
-        console.error('Subscription checkout failed:', error);
-      }
+  const plans = [
+    {
+      id: 'free',
+      name: '免费版',
+      price: { monthly: 0, yearly: 0 },
+      description: '适合新手创作者，体验基础功能',
+      features: [
+        '每月 5 次生成',
+        '基础灵感卡牌',
+        '四库管理（最多 20 条）',
+        '社区支持',
+      ],
+      notIncluded: [
+        '高级灵感卡牌',
+        '优先生成速度',
+        '导入分析',
+        'API 访问',
+      ],
+      cta: '免费开始',
+      popular: false,
     },
-    [showToast, isAuthenticated],
-  );
+    {
+      id: 'pro',
+      name: '专业版',
+      price: { monthly: 49, yearly: 390 },
+      description: '适合活跃创作者，解锁全部功能',
+      features: [
+        '无限次生成',
+        '全部灵感卡牌',
+        '四库管理（无限）',
+        '优先生成速度',
+        '导入分析',
+        '邮件支持',
+      ],
+      notIncluded: [
+        'API 访问',
+        '团队协作',
+      ],
+      cta: '立即订阅',
+      popular: true,
+    },
+    {
+      id: 'enterprise',
+      name: '企业版',
+      price: { monthly: 199, yearly: 1590 },
+      description: '适合团队使用，高级功能全开',
+      features: [
+        '专业版全部功能',
+        'API 访问',
+        '团队协作（最多 10 人）',
+        '自定义 AI 模型',
+        '优先技术支持',
+        '专属客户经理',
+      ],
+      notIncluded: [],
+      cta: '联系销售',
+      popular: false,
+    },
+  ];
+
+  const handleSubscribe = (planId: string) => {
+    if (planId === 'free') {
+      window.location.href = '/auth/register';
+      return;
+    }
+
+    if (planId === 'enterprise') {
+      alert('感谢您的兴趣！我们的销售团队将在 24 小时内联系您。');
+      return;
+    }
+
+    setSelectedPlan(planId);
+    setShowPaymentModal(true);
+  };
+
+  const handlePayment = async () => {
+    // Mock 支付处理
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    alert('支付成功！感谢订阅。');
+    setShowPaymentModal(false);
+    setSelectedPlan(null);
+  };
 
   return (
     <div className={styles.container}>
-      {/* 导航 */}
-      <nav className={styles.nav}>
-        <div className={styles.navBrand}>
-          <span>墨</span>灵
-        </div>
-        <div className={styles.navLinks}>
-          <a href="/">首页</a>
-          <a href="/pricing" className={styles.navLinkActive}>
-            定价
-          </a>
-          <a href="/auth">登录</a>
-          <a href="/auth" className={styles.navBtn}>
-            开始创作
-          </a>
-        </div>
-      </nav>
-
-      {/* 头部 */}
-      <section className={styles.hero}>
-        <h1>选择适合你的创作方案</h1>
-        <p>
-          免费版让你体验核心功能，Pro 版释放全部创作力，团队版支持多人协作。
+      <div className={styles.header}>
+        <h1 className={styles.title}>选择适合您的方案</h1>
+        <p className={styles.subtitle}>
+          从免费开始，随着创作需求升级。所有方案均含核心 AI 功能。
         </p>
-      </section>
+      </div>
 
-      {/* 计费切换 */}
+      {/* Billing Toggle */}
       <div className={styles.billingToggle}>
-        <span>月付</span>
-        <div
-          className={`${styles.toggleTrack} ${yearly ? styles.toggleTrackActive : ''}`}
-          onClick={toggleBilling}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              toggleBilling();
-            }
-          }}
-          aria-label="切换年付/月付"
+        <span className={`${styles.toggleLabel} ${billingCycle === 'monthly' ? styles.toggleLabelActive : ''}`}>
+          月付
+        </span>
+        <button
+          className={styles.toggleBtn}
+          onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
         >
-          <div className={styles.toggleKnob} />
-        </div>
-        <span>年付</span>
-        <span className={styles.saveBadge}>省 2 个月</span>
+          <div
+            className={`${styles.toggleCircle} ${billingCycle === 'yearly' ? styles.toggleCircleYearly : ''}`}
+          />
+        </button>
+        <span className={`${styles.toggleLabel} ${billingCycle === 'yearly' ? styles.toggleLabelActive : ''}`}>
+          年付
+          <span className={styles.saveBadge}>省 34%</span>
+        </span>
       </div>
 
-      {/* 套餐卡片 */}
-      <div className={styles.plans}>
-        {plans.map((plan) => {
-          const amount = yearly ? plan.price.yearly : plan.price.monthly;
-          const period = yearly ? plan.price.periodYearly : plan.price.periodMonthly;
-          const showOriginal = yearly && !!plan.price.originalYearly;
+      {/* Pricing Cards */}
+      <div className={styles.cards}>
+        {plans.map(plan => (
+          <div
+            key={plan.id}
+            className={`${styles.card} ${plan.popular ? styles.cardPopular : ''}`}
+          >
+            {plan.popular && (
+              <div className={styles.popularBadge}>最受欢迎</div>
+            )}
 
-          const ctaClass = [
-            styles.planCta,
-            plan.ctaVariant === 'primary' ? styles.planCtaPrimary : '',
-            plan.ctaVariant === 'current' ? styles.planCtaCurrent : '',
-          ]
-            .filter(Boolean)
-            .join(' ');
-
-          return (
-            <div
-              key={plan.name}
-              className={`${styles.planCard} ${plan.popular ? styles.planCardPopular : ''}`}
-            >
-              <div className={styles.planName}>{plan.name}</div>
-              <div className={styles.planDesc}>{plan.desc}</div>
-              <div className={styles.planPrice}>
-                <span className={styles.amount}>{amount}</span>{' '}
-                <span className={styles.period}>{period}</span>
-                {showOriginal && (
-                  <span className={styles.original}>{plan.price.originalYearly}</span>
-                )}
-              </div>
-              <ul className={styles.planFeatures}>
-                {plan.features.map((feat) => (
-                  <li
-                    key={feat.label}
-                    className={`${styles.featureItem} ${!feat.enabled ? styles.featureDisabled : ''}`}
-                  >
-                    {feat.label}
-                  </li>
-                ))}
-              </ul>
-              <a
-                className={ctaClass}
-                href={plan.ctaHref}
-                onClick={(e) => handleSubscribe(e, plan.name)}
-              >
-                {plan.ctaLabel}
-              </a>
+            <h3 className={styles.planName}>{plan.name}</h3>
+            <div className={styles.planPrice}>
+              <span className={styles.priceCurrency}>¥</span>
+              <span className={styles.priceAmount}>
+                {plan.price[billingCycle]}
+              </span>
+              {plan.price[billingCycle] > 0 && (
+                <span className={styles.pricePeriod}>
+                  /{billingCycle === 'monthly' ? '月' : '年'}
+                </span>
+              )}
             </div>
-          );
-        })}
+            <p className={styles.planDesc}>{plan.description}</p>
+
+            <ul className={styles.features}>
+              {plan.features.map((feature, index) => (
+                <li key={index} className={styles.featureIncluded}>
+                  <span className={styles.featureIcon}>✓</span>
+                  {feature}
+                </li>
+              ))}
+              {plan.notIncluded.map((feature, index) => (
+                <li key={index} className={styles.featureNotIncluded}>
+                  <span className={styles.featureIcon}>✗</span>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <button
+              className={`${styles.planCta} ${plan.popular ? styles.planCtaPopular : ''}`}
+              onClick={() => handleSubscribe(plan.id)}
+            >
+              {plan.cta}
+            </button>
+          </div>
+        ))}
       </div>
 
-      {/* 完整功能对比 */}
-      <section className={styles.featuresCompare}>
-        <h2>完整功能对比</h2>
-        <table className={styles.fTable}>
-          <thead>
-            <tr>
-              <th>功能</th>
-              <th>免费版</th>
-              <th>Pro</th>
-              <th>团队版</th>
-            </tr>
-          </thead>
-          <tbody>
-            {compareFeatures.map((feat) => {
-              const free = renderFeatureValue(feat.free);
-              const pro = renderFeatureValue(feat.pro);
-              const team = renderFeatureValue(feat.team);
-              return (
-                <tr key={feat.label}>
-                  <td>{feat.label}</td>
-                  <td className={free.isYes ? styles.fYes : styles.fNo}>
-                    {free.text}
-                  </td>
-                  <td className={pro.isYes ? styles.fYes : styles.fNo}>
-                    {pro.text}
-                  </td>
-                  <td className={team.isYes ? styles.fYes : styles.fNo}>
-                    {team.text}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+      {/* FAQ */}
+      <div className={styles.faq}>
+        <h2 className={styles.faqTitle}>常见问题</h2>
 
-      {/* 页脚 */}
-      <footer className={styles.footer}>
-        <div>
-          <a href="/">首页</a>
-          <a href="/pricing">定价</a>
-          <a href="/help">帮助</a>
-          <a href="#">服务协议</a>
-          <a href="#">隐私政策</a>
-        </div>
-        <div className={styles.footerCopy}>
-          © 2026 墨灵 · AI 驱动创作平台
-        </div>
-      </footer>
+        <div className={styles.faqList}>
+          <div className={styles.faqItem}>
+            <h4 className={styles.faqQuestion}>可以随时取消订阅吗？</h4>
+            <p className={styles.faqAnswer}>
+              是的，您可以随时取消订阅。取消后，您将继续享受当前订阅周期的服务，到期后自动降级到免费版。
+            </p>
+          </div>
 
-      {/* Toast */}
-      <div
-        className={`${styles.toast} ${toastVisible ? styles.toastVisible : ''}`}
-        id="toast"
-      >
-        {toastMsg}
+          <div className={styles.faqItem}>
+            <h4 className={styles.faqQuestion}>生成次数用完了怎么办？</h4>
+            <p className={styles.faqAnswer}>
+              免费版每月重置生成次数。如需更多次数，可以升级到专业版或企业版，享受无限次生成。
+            </p>
+          </div>
+
+          <div className={styles.faqItem}>
+            <h4 className={styles.faqQuestion}>支持哪些支付方式？</h4>
+            <p className={styles.faqAnswer}>
+              我们支持支付宝、微信支付、银联和信用卡支付。所有支付均通过加密通道处理，确保安全。
+            </p>
+          </div>
+
+          <div className={styles.faqItem}>
+            <h4 className={styles.faqQuestion}>有学生优惠吗？</h4>
+            <p className={styles.faqAnswer}>
+              有的！在校学生可享受 5 折优惠。请使用教育邮箱注册，或联系客服验证学生身份。
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Payment Modal (Mock) */}
+      {showPaymentModal && (
+        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setShowPaymentModal(false)}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h3>确认订阅</h3>
+              <button
+                className={styles.modalClose}
+                onClick={() => setShowPaymentModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.orderSummary}>
+                <div className={styles.orderItem}>
+                  <span>方案</span>
+                  <span>{plans.find(p => p.id === selectedPlan)?.name}</span>
+                </div>
+                <div className={styles.orderItem}>
+                  <span>计费周期</span>
+                  <span>{billingCycle === 'monthly' ? '月付' : '年付'}</span>
+                </div>
+                <div className={styles.orderTotal}>
+                  <span>总计</span>
+                  <span>¥{plans.find(p => p.id === selectedPlan)?.price[billingCycle]}/{billingCycle === 'monthly' ? '月' : '年'}</span>
+                </div>
+              </div>
+
+              <div className={styles.paymentMethods}>
+                <h4>选择支付方式</h4>
+                <button className={styles.paymentMethod}>
+                  💰 支付宝
+                </button>
+                <button className={styles.paymentMethod}>
+                  💳 微信支付
+                </button>
+                <button className={styles.paymentMethod}>
+                  🏦 银联/信用卡
+                </button>
+              </div>
+
+              <div className={styles.mockWarning}>
+                ⚠️ 这是演示环境，不会实际扣款
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.modalCancel}
+                onClick={() => setShowPaymentModal(false)}
+              >
+                取消
+              </button>
+              <button
+                className={styles.modalConfirm}
+                onClick={handlePayment}
+              >
+                确认支付（Mock）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

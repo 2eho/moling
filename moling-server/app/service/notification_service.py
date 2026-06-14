@@ -20,7 +20,7 @@ class NotificationService:
     async def list_notifications(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
         *,
         page: int = 1,
         page_size: int = 20,
@@ -48,7 +48,7 @@ class NotificationService:
     async def get_notification(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
         notification_id: int,
     ) -> NotificationResp:
         """Get a single notification (with ownership check)."""
@@ -71,7 +71,7 @@ class NotificationService:
     async def mark_as_read(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
         notification_id: int,
     ) -> NotificationResp:
         """Mark a notification as read."""
@@ -88,7 +88,7 @@ class NotificationService:
     async def mark_all_as_read(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
     ) -> dict:
         """Mark all notifications as read for a user."""
         updated_count = await notification_dao.mark_all_as_read(db, user_id)
@@ -102,7 +102,7 @@ class NotificationService:
     async def delete_notification(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
         notification_id: int,
     ) -> None:
         """Delete a notification (with ownership check)."""
@@ -119,7 +119,7 @@ class NotificationService:
     async def get_unread_count(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
     ) -> dict:
         """Get unread notification count for a user."""
         count = await notification_dao.count_by_user(db, user_id, is_read=False)

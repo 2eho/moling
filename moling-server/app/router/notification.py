@@ -24,7 +24,7 @@ async def list_notifications(
     """获取当前用户的通知列表。"""
     result = await notification_service.list_notifications(
         db,
-        int(current_user["id"]),
+        current_user.id,
         page=page,
         page_size=page_size,
         is_read=is_read,
@@ -40,7 +40,7 @@ async def get_unread_count(
     """获取未读通知数量。"""
     result = await notification_service.get_unread_count(
         db,
-        int(current_user["id"]),
+        current_user.id,
     )
     return result
 
@@ -54,7 +54,7 @@ async def mark_as_read(
     """标记通知为已读。"""
     result = await notification_service.mark_as_read(
         db,
-        int(current_user["id"]),
+        current_user.id,
         notification_id,
     )
     return result
@@ -68,7 +68,7 @@ async def mark_all_as_read(
     """标记所有通知为已读。"""
     result = await notification_service.mark_all_as_read(
         db,
-        int(current_user["id"]),
+        current_user.id,
     )
     return result
 
@@ -82,6 +82,6 @@ async def delete_notification(
     """删除通知。"""
     await notification_service.delete_notification(
         db,
-        int(current_user["id"]),
+        current_user.id,
         notification_id,
     )

@@ -1,0 +1,505 @@
+# ==============================================================================
+# Moling CI/CD 管道
+# ==============================================================================
+# 功能:
+#   1. 代码检查（Lint）
+#   2. 单元测试（Pytest）
+#   3. 构建 Docker 镜像
+#   4. 推送到镜像仓库
+#   5. 自动部署到测试环境
+#   6. 自动部署到生产环境（需要手动批准）
+#
+# 使用方法:
+#   - 推送到 main/master 分支触发完整 CI/CD
+#   - 创建 Pull Request 触发 CI 检查
+#   - 部署到生产环境需要手动批准
+# ==============================================================================
+
+name: Moling CI/CD
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  # 允许手动触发
+  workflow_dispatch:
+
+# 环境变量
+env:
+  # Docker 镜像仓库（需要配置 GitHub Secrets）
+  DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}  # 例如: docker.io/username
+  IMAGE_NAME_BACKEND: moling-backend
+  IMAGE_NAME_FRONTEND: moling-frontend
+  # 镜像标签（使用 Git SHA）
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # ==========================================================================
+  # Job 1: 代码检查（Lint）
+  # ==========================================================================
+  lint:
+    name: 代码检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: $-pip-lint-$
+          restore-keys: |
+            $-pip-lint-
+            $-pip-
+
+      - name: 安装依赖
+        run: |
+          cd moling-server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 bandit safety black isort mypy
+
+      - name: 运行 flake8（代码风格检查）
+        run: |
+          cd moling-server
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
+          flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: 运行 Black（代码格式化检查）
+        run: |
+          cd moling-server
+          black --check --diff app/ || true
+
+      - name: 运行 Bandit（安全扫描）
+        run: |
+          cd moling-server
+          bandit -r app/ -f json -o bandit-report.json || true
+          bandit -r app/ -f screen || true
+
+      - name: 运行 Safety（依赖漏洞检查）
+        run: |
+          cd moling-server
+          safety check --json --output safety-report.json || true
+          safety check || true
+
+      - name: 上传 Bandit 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: moling-server/bandit-report.json
+
+      - name: 上传 Safety 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: moling-server/safety-report.json
+
+  # ==========================================================================
+  # Job 2: 单元测试
+  # ==========================================================================
+  test:
+    name: 单元测试
+    runs-on: ubuntu-latest
+
+    services:
+      # PostgreSQL 服务
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: moling_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Redis 服务
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: $-pip-test-$
+          restore-keys: |
+            $-pip-test-
+            $-pip-
+
+      - name: 安装依赖
+        run: |
+          cd moling-server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx pytest-cov
+
+      - name: 运行后端测试
+        env:
+          DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          ALGORITHM: HS256
+          LOG_LEVEL: WARNING
+        run: |
+          cd moling-server
+          python -m pytest tests/ -v --tb=short --cov=app --cov-report=xml --junitxml=report.xml
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: |
+            moling-server/report.xml
+            moling-server/coverage.xml
+
+      - name: 上传覆盖率到 Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          file: moling-server/coverage.xml
+          fail_ci_if_error: false
+
+  # ==========================================================================
+  # Job 3: E2E 测试
+  # ==========================================================================
+  e2e:
+    name: E2E 测试
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: moling-web/package-lock.json
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 安装前端依赖
+        run: |
+          cd moling-web
+          npm install
+
+      - name: 安装后端依赖
+        run: |
+          cd moling-server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install uvicorn
+
+      - name: 安装 Playwright 浏览器
+        run: |
+          cd moling-web
+          npx playwright install --with-deps chromium
+
+      - name: 启动后端服务
+        env:
+          DATABASE_URL: sqlite+aiosqlite://
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          ALGORITHM: HS256
+        run: |
+          cd moling-server
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+
+      - name: 启动前端服务
+        run: |
+          cd moling-web
+          npm run build
+          npm run start &
+          sleep 5
+
+      - name: 运行 Playwright 测试
+        run: |
+          cd moling-web
+          npx playwright test
+
+      - name: 上传 Playwright 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: moling-web/playwright-report/
+
+  # ==========================================================================
+  # Job 4: 构建 Docker 镜像
+  # ==========================================================================
+  build:
+    name: 构建 Docker 镜像
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    outputs:
+      image_tag: $
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录到 Docker 镜像仓库
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: $
+          username: $
+          password: $
+
+      - name: 提取元数据（后端）
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: $/$
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: 提取元数据（前端）
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: $/$
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: 构建并推送后端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./moling-server
+          file: ./moling-server/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: $
+          labels: $
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 构建并推送前端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./moling-web
+          file: ./moling-web/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: $
+          labels: $
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 扫描镜像漏洞（后端）
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: $/:sha-$
+          format: 'sarif'
+          output: 'trivy-backend.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: 扫描镜像漏洞（前端）
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: $/:sha-$
+          format: 'sarif'
+          output: 'trivy-frontend.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: 上传 Trivy 扫描结果
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-backend.sarif'
+          category: 'backend'
+
+  # ==========================================================================
+  # Job 5: 部署到测试环境
+  # ==========================================================================
+  deploy-staging:
+    name: 部署到测试环境
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop' && github.event_name != 'pull_request'
+    environment:
+      name: staging
+      url: https://staging.moling.example.com
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 SSH 密钥
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: $
+
+      - name: 部署到测试服务器
+        run: |
+          # 这里需要配置你的测试服务器部署脚本
+          # 示例：通过 SSH 连接到服务器并执行部署脚本
+
+          ssh -o StrictHostKeyChecking=no user@staging-server << 'EOF'
+            cd /opt/moling
+            git pull origin develop
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+            docker-compose ps
+          EOF
+
+          echo "部署到测试环境完成"
+
+      - name: 健康检查
+        run: |
+          # 等待服务启动
+          sleep 30
+
+          # 检查健康检查端点
+          curl -f https://staging.moling.example.com/health || exit 1
+          curl -f https://staging.moling.example.com/api/v1/health || exit 1
+
+          echo "健康检查通过"
+
+      - name: 通知部署结果
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: $
+          text: "测试环境部署${{ job.status == 'success' && '成功' || '失败' }}"
+          webhook_url: $
+        env:
+          SLACK_WEBHOOK_URL: $
+
+  # ==========================================================================
+  # Job 6: 部署到生产环境（需要手动批准）
+  # ==========================================================================
+  deploy-production:
+    name: 部署到生产环境
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    environment:
+      name: production
+      url: https://moling.example.com
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 SSH 密钥
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: $
+
+      - name: 备份生产数据库
+        run: |
+          ssh -o StrictHostKeyChecking=no user@production-server << 'EOF'
+            cd /opt/moling
+            ./docker/deploy.sh --backup
+          EOF
+
+          echo "生产数据库备份完成"
+
+      - name: 部署到生产服务器
+        run: |
+          ssh -o StrictHostKeyChecking=no user@production-server << 'EOF'
+            cd /opt/moling
+            git pull origin main
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+            docker-compose ps
+          EOF
+
+          echo "部署到生产环境完成"
+
+      - name: 健康检查
+        run: |
+          # 等待服务启动
+          sleep 30
+
+          # 检查健康检查端点
+          curl -f https://moling.example.com/health || exit 1
+          curl -f https://moling.example.com/api/v1/health || exit 1
+
+          echo "健康检查通过"
+
+      - name: 通知部署结果
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: $
+          text: "生产环境部署${{ job.status == 'success' && '成功' || '失败' }}"
+          webhook_url: $
+        env:
+          SLACK_WEBHOOK_URL: $
+
+      - name: 回滚（如果健康检查失败）
+        if: failure()
+        run: |
+          echo "健康检查失败，开始回滚..."
+
+          ssh -o StrictHostKeyChecking=no user@production-server << 'EOF'
+            cd /opt/moling
+            git checkout HEAD^
+            docker-compose up -d --remove-orphans
+            ./docker/deploy.sh --rollback
+          EOF
+
+          echo "回滚完成"
+
+# ==============================================================================
+# 注意事项:
+#   1. 需要在 GitHub 仓库 Settings -> Secrets and variables -> Actions 中配置以下 Secrets:
+#      - DOCKER_USERNAME: Docker 镜像仓库用户名
+#      - DOCKER_PASSWORD: Docker 镜像仓库密码
+#      - SSH_PRIVATE_KEY: 服务器 SSH 私钥
+#      - SLACK_WEBHOOK_URL: Slack 通知 Webhook URL（可选）
+#
+#   2. 需要在 GitHub 仓库 Settings -> Environments 中创建以下环境:
+#      - staging: 测试环境
+#      - production: 生产环境（配置手动批准）
+#
+#   3. 镜像标签说明:
+#      - branch 名称: 例如 main, develop
+#      - PR 编号: 例如 pr-123
+#      - semantic version: 例如 v1.0.0
+#      - Git SHA: 例如 sha-abc1234
+# ==============================================================================

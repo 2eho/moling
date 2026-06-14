@@ -1,21 +1,23 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "@/components/Providers";
+import type { Metadata } from 'next';
+import './globals.css';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
-  title: "墨灵 - AI 小说创作平台",
-  description: "AI 驱动的创意写作平台，让灵感自由流淌",
+  title: '墨灵 - AI 创作工作台',
+  description: '墨灵 · 智能创作引擎，15秒完成整章生成',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="zh-CN">
       <body>
-        <Providers>{children}</Providers>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -38,7 +38,7 @@ class SettingService:
     async def get_settings(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
     ) -> UserSettings:
         """Get current user settings."""
         user = await user_dao.get(db, user_id)
@@ -56,7 +56,7 @@ class SettingService:
     async def update_settings(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
         settings_update: dict,
     ) -> UserSettings:
         """Update user settings (partial update)."""
@@ -84,7 +84,7 @@ class SettingService:
     async def change_password(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
         old_password: str,
         new_password: str,
     ) -> dict:
@@ -120,7 +120,7 @@ class SettingService:
     async def get_profile(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
     ) -> dict:
         """Get user profile information."""
         user = await user_dao.get(db, user_id)
@@ -144,7 +144,7 @@ class SettingService:
     async def update_profile(
         self,
         db: AsyncSession,
-        user_id: int,
+        user_id: str,
         *,
         username: str | None = None,
         bio: str | None = None,

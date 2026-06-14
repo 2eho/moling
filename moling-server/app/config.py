@@ -1,9 +1,3 @@
-"""墨灵 (Moling) — Application Configuration.
-
-Uses Pydantic Settings to read from environment variables (with optional .env file).
-Supports database overrides for runtime-administered settings.
-"""
-
 from __future__ import annotations
 
 from functools import lru_cache
@@ -52,6 +46,7 @@ class Settings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": True,
+        "extra": "ignore",  # 允许环境变量中存在未定义的字段，避免启动错误
     }
 
 

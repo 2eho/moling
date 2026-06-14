@@ -37,7 +37,7 @@ async def get_settings(
     """获取当前用户的设置。"""
     result = await setting_service.get_settings(
         db,
-        int(current_user["id"]),
+        current_user.id,
     )
     return result
 
@@ -51,7 +51,7 @@ async def update_settings(
     """更新当前用户的设置（部分更新）。"""
     result = await setting_service.update_settings(
         db,
-        int(current_user["id"]),
+        current_user.id,
         settings_update,
     )
     return result
@@ -66,7 +66,7 @@ async def change_password(
     """修改密码（需要验证旧密码）。"""
     result = await setting_service.change_password(
         db,
-        int(current_user["id"]),
+        current_user.id,
         req.old_password,
         req.new_password,
     )
@@ -81,7 +81,7 @@ async def get_profile(
     """获取当前用户的个人资料。"""
     result = await setting_service.get_profile(
         db,
-        int(current_user["id"]),
+        current_user.id,
     )
     return result
 
@@ -95,7 +95,7 @@ async def update_profile(
     """更新当前用户的个人资料。"""
     result = await setting_service.update_profile(
         db,
-        int(current_user["id"]),
+        current_user.id,
         username=req.username,
         bio=req.bio,
         avatar_url=req.avatar_url,
@@ -113,7 +113,7 @@ async def update_health_monitor(
     # Get current settings
     current_settings = await setting_service.get_settings(
         db,
-        int(current_user["id"]),
+        current_user.id,
     )
     
     # Update health monitor settings
@@ -125,7 +125,7 @@ async def update_health_monitor(
     # Save settings
     result = await setting_service.update_settings(
         db,
-        int(current_user["id"]),
+        current_user.id,
         settings_update,
     )
     

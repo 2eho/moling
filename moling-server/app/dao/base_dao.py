@@ -1,7 +1,4 @@
-"""澧ㄧ伒 (Moling) 鈥?Generic Base DAO with CRUD operations.
-
-Uses SQLAlchemy 2.0 ``Mapped`` style and async sessions.
-"""
+"""墨灵 (Moling) — Generic Base DAO with CRUD operations (async)."""
 
 from __future__ import annotations
 
@@ -19,7 +16,7 @@ UpdateSchemaT = TypeVar("UpdateSchemaT", bound=BaseModel)
 
 
 class BaseDAO(Generic[ModelT]):
-    """Generic CRUD data access object.
+    """Generic CRUD data access object (async).
 
     Usage::
 
@@ -40,7 +37,7 @@ class BaseDAO(Generic[ModelT]):
     ) -> Select:
         """Apply WHERE conditions from a filter dict.
 
-        Supports: ``{"field": value}`` 鈫?``WHERE field = value``
+        Supports: ``{"field": value}`` → ``WHERE field = value``
         """
         if filters:
             for field, value in filters.items():
@@ -80,7 +77,6 @@ class BaseDAO(Generic[ModelT]):
             if column is not None:
                 stmt = stmt.order_by(column.desc() if descending else column.asc())
         else:
-            # UUID 主键不支持 desc() 排序，改用 created_at
             if hasattr(self.model_class, 'created_at'):
                 stmt = stmt.order_by(self.model_class.created_at.desc())
             else:

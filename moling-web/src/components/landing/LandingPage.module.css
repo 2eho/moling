@@ -1,292 +1,798 @@
-.container {
-  min-height: 100vh;
-  background: #0d0f1a;
-  color: #e0e0e0;
+/* ========================================
+   墨灵 Landing Page Styles
+   设计系统 v1.0
+   ======================================== */
+
+/* ========================================
+   §3 Dual-Shell 架构切换
+   ======================================== */
+.desktop-shell {
+  display: none;
 }
 
-/* Navigation */
-.nav {
+.mobile-shell {
+  display: block;
+}
+
+@media (min-width: 769px) {
+  .desktop-shell {
+    display: block;
+  }
+  .mobile-shell {
+    display: none;
+  }
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ========================================
+   §4 Desktop 样式
+   ======================================== */
+
+/* --- Desktop Nav --- */
+.d-nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 100;
-  background: rgba(13, 15, 26, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  height: 60px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background var(--duration-slow) var(--ease-default),
+              backdrop-filter var(--duration-slow) var(--ease-default),
+              box-shadow var(--duration-slow) var(--ease-default);
 }
 
-.navContent {
+.d-nav.scrolled {
+  background: rgba(13, 15, 26, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom-color: var(--color-border-subtle);
+  box-shadow: 0 1px 0 rgba(99, 102, 241, 0.08);
+}
+
+.d-nav-inner {
+  width: 100%;
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 16px 24px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
-.logo {
+.d-nav-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
+  cursor: pointer;
 }
 
-.logoIcon {
+.d-nav-logo-icon {
   font-size: 24px;
 }
 
-.logoText {
+.d-nav-logo-text {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
   font-size: 20px;
   font-weight: 700;
-  background: linear-gradient(135deg, #6e8efb, #a777e3);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.navActions {
+.d-nav-links {
   display: flex;
-  gap: 12px;
+  gap: var(--space-6);
+  margin-left: auto;
+  margin-right: var(--space-6);
 }
 
-.loginBtn {
-  padding: 8px 20px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  color: #e0e0e0;
+.d-nav-links a {
   font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: var(--color-text-secondary);
+  position: relative;
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
-.loginBtn:hover {
-  border-color: rgba(110, 142, 251, 0.5);
-  color: #6e8efb;
+.d-nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--color-brand-amber);
+  transition: width var(--duration-normal) var(--ease-default);
 }
 
-.signupBtn {
+.d-nav-links a:hover {
+  color: var(--color-text-primary);
+}
+
+.d-nav-links a:hover::after {
+  width: 100%;
+}
+
+.d-nav-login {
   padding: 8px 20px;
-  background: linear-gradient(135deg, #6e8efb, #a777e3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.d-nav-login:hover {
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
+}
+
+.d-nav-cta {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, var(--color-brand-amber), #b8942e);
   border: none;
-  border-radius: 8px;
-  color: #fff;
+  border-radius: var(--radius-md);
+  color: #1a1a2e;
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+  margin-left: var(--space-3);
+  transition: transform var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
 }
 
-.signupBtn:hover {
+.d-nav-cta:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(110, 142, 251, 0.4);
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.3);
 }
 
-/* Hero Section */
-.hero {
-  padding: 160px 24px 80px;
+/* --- Desktop Hero --- */
+.d-hero {
+  min-height: calc(100vh - 60px);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 80vh;
-  background: radial-gradient(ellipse at top, rgba(110, 142, 251, 0.1), transparent 60%),
-              radial-gradient(ellipse at bottom, rgba(167, 119, 227, 0.08), transparent 60%);
-}
-
-.heroContent {
-  max-width: 800px;
   text-align: center;
+  padding: 80px 40px;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(99, 102, 241, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 60%, rgba(212, 168, 67, 0.04) 0%, transparent 50%),
+    linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
 }
 
-.heroTitle {
-  font-size: 56px;
-  font-weight: 800;
+/* 浮动画 */
+.d-float-card {
+  position: absolute;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.d-float-card-inner {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.fc1 { top: 15%; left: 10%; animation: dFloatCard 22s ease-in-out infinite; animation-delay: -5s; }
+.fc2 { top: 25%; right: 15%; animation: dFloatCard 25s ease-in-out infinite; animation-delay: -8s; }
+.fc3 { bottom: 30%; left: 20%; animation: dFloatCard 20s ease-in-out infinite; animation-delay: -12s; }
+.fc4 { top: 40%; right: 25%; animation: dFloatCard 23s ease-in-out infinite; animation-delay: -3s; }
+.fc5 { bottom: 20%; right: 10%; animation: dFloatCard 18s ease-in-out infinite; animation-delay: -15s; }
+.fc6 { top: 60%; left: 5%; animation: dFloatCard 24s ease-in-out infinite; animation-delay: -10s; }
+
+@keyframes dFloatCard {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-20px) rotate(3deg); }
+  50% { transform: translateY(-10px) rotate(-2deg); }
+  75% { transform: translateY(-25px) rotate(4deg); }
+}
+
+.d-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.d-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 14px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-5);
+  animation: dFadeInUp 0.8s ease both 0.1s;
+}
+
+.d-hero-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  animation: dPulse 2s infinite;
+}
+
+@keyframes dPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.d-hero-h1 {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 48px;
+  font-weight: 700;
   line-height: 1.2;
-  margin-bottom: 24px;
-  color: #ffffff;
+  margin-bottom: var(--space-4);
+  animation: dFadeInUp 0.8s ease both 0.2s;
 }
 
-.gradient {
-  background: linear-gradient(135deg, #6e8efb, #a777e3, #6e8efb);
+.d-highlight {
+  background: linear-gradient(135deg, var(--color-brand-amber), #f0d070);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  position: relative;
 }
 
-.heroSubtitle {
+.d-hero-subtitle {
   font-size: 18px;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-4);
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
   line-height: 1.6;
-  color: #a0a0a0;
-  margin-bottom: 40px;
+  animation: dFadeInUp 0.8s ease both 0.35s;
 }
 
-.heroActions {
+.d-hero-subtags {
   display: flex;
-  gap: 16px;
+  gap: var(--space-2);
   justify-content: center;
-  margin-bottom: 60px;
+  margin-top: var(--space-5);
+  animation: dFadeInUp 0.8s ease both 0.45s;
 }
 
-.primaryBtn {
+.d-hero-subtag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--color-brand-indigo-dim);
+  color: var(--color-brand-indigo);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.d-hero-actions {
+  margin-top: var(--space-8);
+  animation: dFadeInUp 0.8s ease both 0.55s;
+}
+
+.d-hero-cta {
+  position: relative;
   padding: 14px 32px;
-  background: linear-gradient(135deg, #6e8efb, #a777e3);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   color: #fff;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  overflow: hidden;
+  transition: transform var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
 }
 
-.primaryBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(110, 142, 251, 0.4);
+.d-hero-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.secondaryBtn {
-  padding: 14px 32px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: #e0e0e0;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+.d-hero-cta:hover .d-cta-glow {
+  left: 100%;
 }
 
-.secondaryBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+.d-cta-glow {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 2s ease;
 }
 
-.heroStats {
+@keyframes dFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   §5 Desktop Stats
+   ======================================== */
+.d-stats {
+  padding: var(--space-8) 40px;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.d-stats-inner {
+  max-width: 800px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 40px;
+  justify-content: space-around;
 }
 
-.statItem {
+.d-stat-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: var(--space-1);
 }
 
-.statNumber {
+.d-stat-value {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   font-size: 28px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-brand-amber);
 }
 
-.statLabel {
+.d-stat-label {
   font-size: 14px;
-  color: #a0a0a0;
+  color: var(--color-text-tertiary);
 }
 
-.statDivider {
+.d-stat-divider {
   width: 1px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-border);
 }
 
-/* Features Section */
-.features {
-  padding: 80px 24px;
-  max-width: 1200px;
-  margin: 0 auto;
+/* ========================================
+   §7 Desktop Features
+   ======================================== */
+.d-features {
+  padding: 80px 40px;
 }
 
-.sectionHeader {
+.d-features-header {
   text-align: center;
   margin-bottom: 60px;
 }
 
-.sectionTitle {
+.d-features-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
   font-size: 36px;
   font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 12px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
 }
 
-.sectionSubtitle {
+.d-features-subtitle {
   font-size: 16px;
-  color: #a0a0a0;
+  color: var(--color-text-secondary);
 }
 
-.featureGrid {
+.d-features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-.featureCard {
-  padding: 32px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  transition: all 0.3s;
+@media (max-width: 1024px) {
+  .d-features-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
 }
 
-.featureCard:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(110, 142, 251, 0.3);
+.d-feature-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  transition: transform var(--duration-normal) var(--ease-default),
+              border-color var(--duration-normal) var(--ease-default),
+              box-shadow var(--duration-normal) var(--ease-default);
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.d-feature-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.8s ease, transform 0.8s ease,
+              transform var(--duration-normal) var(--ease-default),
+              border-color var(--duration-normal) var(--ease-default),
+              box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.d-feature-card:hover {
   transform: translateY(-4px);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-lg);
 }
 
-.featureIcon {
-  font-size: 40px;
-  margin-bottom: 16px;
+.d-feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--color-brand-indigo-dim);
+  color: var(--color-brand-indigo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: var(--space-4);
 }
 
-.featureTitle {
+.d-feature-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
   font-size: 20px;
   font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 12px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
 }
 
-.featureDesc {
+.d-feature-desc {
   font-size: 14px;
   line-height: 1.6;
-  color: #a0a0a0;
+  color: var(--color-text-secondary);
 }
 
-/* CTA Section */
-.cta {
-  padding: 80px 24px;
-  background: linear-gradient(135deg, rgba(110, 142, 251, 0.1), rgba(167, 119, 227, 0.1));
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+/* ========================================
+   §8 Desktop Gacha Cards
+   ======================================== */
+.d-gacha {
+  padding: 80px 40px;
+  background: var(--color-surface);
 }
 
-.ctaContent {
-  max-width: 600px;
-  margin: 0 auto;
+.d-gacha-header {
   text-align: center;
+  margin-bottom: 60px;
 }
 
-.ctaTitle {
+.d-gacha-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
   font-size: 36px;
   font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 16px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
 }
 
-.ctaSubtitle {
+.d-gacha-subtitle {
   font-size: 16px;
-  color: #a0a0a0;
-  margin-bottom: 32px;
+  color: var(--color-text-secondary);
 }
 
-/* Footer */
-.footer {
-  padding: 40px 24px;
-  background: rgba(0, 0, 0, 0.3);
+.d-gacha-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+  max-width: 1100px;
+  margin: 0 auto 40px;
 }
 
-.footerContent {
+@media (max-width: 1024px) {
+  .d-gacha-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.d-gacha-card {
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+.d-gacha-card-inner {
+  position: relative;
+  width: 100%;
+  padding-bottom: 140%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.d-gacha-card.flipped .d-gacha-card-inner {
+  transform: rotateY(180deg);
+}
+
+.d-gacha-card-front,
+.d-gacha-card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backface-visibility: hidden;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.d-gacha-card-front {
+  background: var(--color-surface);
+  border: 2px solid;
+  transform: rotateY(180deg);
+}
+
+.d-gacha-card-back {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  align-items: center;
+  justify-content: center;
+}
+
+.d-gacha-back-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-4);
+  opacity: 0.3;
+}
+
+.d-gacha-back-text {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 18px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 4px;
+}
+
+/* 稀有度样式 */
+.d-gacha-card.rarity-common .d-gacha-card-front {
+  border-color: var(--rarity-common);
+}
+.d-gacha-card.rarity-rare .d-gacha-card-front {
+  border-color: var(--rarity-rare);
+  box-shadow: 0 0 20px rgba(103, 232, 249, 0.15);
+}
+.d-gacha-card.rarity-epic .d-gacha-card-front {
+  border-color: var(--rarity-epic);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
+}
+.d-gacha-card.rarity-legendary .d-gacha-card-front {
+  border-color: var(--rarity-legendary);
+  box-shadow: 0 0 30px rgba(212, 168, 67, 0.2);
+  animation: dLegendaryGlow 2s infinite alternate;
+}
+
+@keyframes dLegendaryGlow {
+  from { box-shadow: 0 0 12px rgba(212, 168, 67, 0.2); }
+  to { box-shadow: 0 0 24px rgba(212, 168, 67, 0.4); }
+}
+
+.d-gacha-rarity {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: var(--space-3);
+}
+
+.rarity-common .d-gacha-rarity { color: var(--rarity-common); }
+.rarity-rare .d-gacha-rarity { color: var(--rarity-rare); }
+.rarity-epic .d-gacha-rarity { color: var(--rarity-epic); }
+.rarity-legendary .d-gacha-rarity { color: var(--rarity-legendary); }
+
+.d-gacha-type {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.d-gacha-name {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.d-gacha-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.d-gacha-try-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 12px 32px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.d-gacha-try-btn:hover {
+  border-color: var(--color-brand-indigo);
+  color: var(--color-brand-indigo);
+}
+
+/* ========================================
+   §9 Desktop Testimonials
+   ======================================== */
+.d-testimonials {
+  padding: 80px 40px;
+}
+
+.d-testimonials-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.d-testimonials-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.d-testimonials-subtitle {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+}
+
+.d-testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .d-testimonials-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+}
+
+.d-testimonial-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.d-testimonial-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.d-testimonial-quote {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-5);
+  font-style: italic;
+}
+
+.d-testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.d-testimonial-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-brand-indigo);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.d-testimonial-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.d-testimonial-role {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* ========================================
+   §10 Desktop CTA
+   ======================================== */
+.d-cta {
+  padding: 80px 40px;
+}
+
+.d-cta-card {
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  padding: 48px 40px;
+  text-align: center;
+  border-top: 3px solid var(--color-brand-amber);
+}
+
+.d-cta-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.d-cta-subtitle {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+.d-cta-btn {
+  position: relative;
+  padding: 14px 40px;
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+}
+
+.d-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.d-cta-btn:hover .d-cta-glow {
+  left: 100%;
+}
+
+/* ========================================
+   §11 Desktop Footer
+   ======================================== */
+.d-footer {
+  padding: var(--space-8) 40px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.d-footer-inner {
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
@@ -294,51 +800,509 @@
   justify-content: space-between;
 }
 
-.footerLogo {
+.d-footer-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.footerText {
+.d-footer-logo-icon {
+  font-size: 20px;
+}
+
+.d-footer-logo-text {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-brand-indigo);
+}
+
+.d-footer-links {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.d-footer-links a {
   font-size: 14px;
-  color: #666666;
+  color: var(--color-text-secondary);
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .heroTitle {
+.d-footer-links a:hover {
+  color: var(--color-text-primary);
+}
+
+.d-footer-copyright {
+  font-size: 12px;
+  color: var(--color-text-disabled);
+}
+
+/* ========================================
+   §12 Mobile 样式
+   ======================================== */
+.mobile-shell {
+  background: var(--color-bg);
+  min-height: 100vh;
+}
+
+/* --- Mobile Status Bar --- */
+.m-status-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.m-status-time {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-weight: 600;
+}
+
+.m-status-icons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* --- Mobile Phone Shell --- */
+.m-phone-shell {
+  width: 100%;
+  max-width: 428px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: var(--mobile-bottom-nav-height);
+}
+
+@media (min-width: 429px) and (max-width: 768px) {
+  .m-phone-shell {
+    height: 926px;
+    min-height: auto;
+    border-radius: 44px;
+    box-shadow:
+      0 0 0 1px var(--color-border),
+      0 20px 60px rgba(0, 0, 0, 0.5);
+    padding-top: 40px;
+    margin: 40px auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .m-phone-shell::before {
+    content: '';
+    display: block;
+    width: 126px;
+    height: 34px;
+    background: var(--color-bg);
+    border-radius: 20px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 10;
+  }
+}
+
+/* --- Mobile Hero --- */
+.m-hero {
+  padding: var(--space-10) var(--space-5) var(--space-8);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.m-hero-floaters {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.m-floater {
+  position: absolute;
+  font-size: 24px;
+  opacity: 0.2;
+}
+
+.mf1 { top: 20%; left: 10%; }
+.mf2 { top: 30%; right: 15%; }
+.mf3 { bottom: 40%; left: 15%; }
+.mf4 { top: 50%; right: 10%; }
+
+.m-hero-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.m-highlight {
+  color: var(--color-brand-amber);
+}
+
+.m-hero-subtitle {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+.m-cta-btn {
+  display: inline-block;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+
+.m-cta-btn:active {
+  transform: scale(0.98);
+}
+
+/* --- Mobile Stats --- */
+.m-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: var(--space-6) var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.m-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.m-stat-value {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-brand-amber);
+}
+
+.m-stat-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* --- Mobile Features Slider --- */
+.m-features {
+  padding: var(--space-8) var(--space-4);
+}
+
+.m-section-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-5);
+  text-align: center;
+}
+
+.m-features-slider {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.m-features-slider::-webkit-scrollbar {
+  display: none;
+}
+
+.m-feature-card {
+  flex: 0 0 calc(100% - 56px);
+  scroll-snap-align: start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+
+.m-feature-card:active {
+  transform: scale(0.98);
+}
+
+.m-feature-icon {
+  font-size: 32px;
+  margin-bottom: var(--space-3);
+}
+
+.m-feature-title {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.m-feature-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.m-slider-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.m-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border);
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.m-dot.active {
+  width: 20px;
+  border-radius: 3px;
+  background: var(--color-brand-indigo);
+}
+
+/* --- Mobile Flip Cards --- */
+.m-flip-cards {
+  padding: var(--space-8) var(--space-4);
+}
+
+.m-flip-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.m-flip-card {
+  perspective: 1000px;
+  cursor: pointer;
+  height: 180px;
+}
+
+.m-flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.m-flip-card.flipped .m-flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.m-flip-card-front,
+.m-flip-card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backface-visibility: hidden;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.m-flip-card-front {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.m-flip-card-back {
+  background: var(--color-elevated);
+  border: 1px solid var(--color-brand-indigo);
+  transform: rotateY(180deg);
+}
+
+.m-flip-icon {
+  font-size: 36px;
+}
+
+.m-flip-name {
+  font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.m-flip-hint {
+  font-size: 11px;
+  color: var(--color-text-disabled);
+  margin-top: var(--space-2);
+}
+
+.m-flip-back-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-brand-indigo);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.m-flip-back-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* --- Mobile CTA --- */
+.m-cta {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+
+.m-cta-full {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+
+.m-cta-full:active {
+  transform: scale(0.98);
+}
+
+.m-cta-hint {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-3);
+}
+
+/* --- Mobile Bottom Nav --- */
+.m-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-bottom-nav-height);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  z-index: 100;
+}
+
+.m-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.m-nav-item.active {
+  color: var(--color-brand-indigo);
+}
+
+.m-nav-item .nav-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.m-nav-item svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.7;
+}
+
+.m-nav-item.active svg {
+  opacity: 1;
+}
+
+/* --- Mobile Home Indicator --- */
+.m-home-indicator {
+  width: 134px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  margin: var(--space-8) auto 0;
+}
+
+/* ========================================
+   §13 动画 & 过渡
+   ======================================== */
+
+/* Scroll fade-in */
+.m-fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.m-fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ========================================
+   §14 响应式微调
+   ======================================== */
+
+/* 小屏手机 */
+@media (max-width: 374px) {
+  .m-hero-title {
+    font-size: 24px;
+  }
+
+  .m-stat-value {
+    font-size: 18px;
+  }
+
+  .m-feature-card {
+    padding: var(--space-4);
+  }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .d-hero-h1 {
     font-size: 36px;
   }
 
-  .heroSubtitle {
-    font-size: 16px;
-  }
-
-  .heroStats {
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .statDivider {
-    width: 40px;
-    height: 1px;
-  }
-
-  .featureGrid {
+  .d-features-grid,
+  .d-testimonials-grid {
     grid-template-columns: 1fr;
+    max-width: 480px;
   }
 
-  .sectionTitle {
-    font-size: 28px;
-  }
-
-  .ctaTitle {
-    font-size: 28px;
-  }
-
-  .footerContent {
-    flex-direction: column;
-    gap: 16px;
+  .d-gacha-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
+
+

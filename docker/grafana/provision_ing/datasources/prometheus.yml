@@ -1,0 +1,29 @@
+# ==============================================================================
+# Grafana 数据源配置 - Prometheus
+# ==============================================================================
+# 此文件由 Grafana provision_ing 自动加载
+# 访问: http://localhost:3001 (默认 admin/admin)
+# ==============================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      # 抓取超时时间
+      timeInterval: "15s"
+      # 查询超时时间
+      queryTimeout: "30s"
+      # 保留标签大小写
+      keepCookies: []
+    secureJsonData:
+      # 如果 Prometheus 需要认证，在这里配置
+      # basicAuthPassword: ""
+      # tlsCACert: ""
+      # tlsClientCert: ""
+      # tlsClientKey: ""

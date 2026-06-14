@@ -12,7 +12,7 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.chapter import CreateChapterReq, ChapterResp, UpdateChapterReq
 from app.service import chapter_service
 
-router = APIRouter(prefix="/chapters", tags=["chapters"])
+router = APIRouter(tags=["chapters"])
 
 
 @router.post("", response_model=ChapterResp, status_code=201)
