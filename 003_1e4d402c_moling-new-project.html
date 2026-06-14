@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>墨灵 · 新建作品</title>
+<style>
+/* ═══════════════════════════════════════════════════════
+   设计令牌 · Design Tokens
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --color-bg: #0d0f1a;
+  --color-surface: #151829;
+  --color-elevated: #111327;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #9ca3c4;
+  --color-text-tertiary: #6b7199;
+  --color-text-disabled: #3d4166;
+  --color-brand-indigo: #6366f1;
+  --color-brand-amber: #d4a843;
+  --color-border: #2a2d45;
+  --color-border-subtle: #1e2138;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --rarity-common: #9ca3af;
+  --rarity-rare: #67e8f9;
+  --rarity-epic: #a855f7;
+  --rarity-legendary: #d4a843;
+  --font-heading: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-ui: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(99,102,241,0.08);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.25), 0 2px 4px rgba(99,102,241,0.1);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.3), 0 4px 8px rgba(99,102,241,0.12);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+}
+
+/* ═══════════════════════════════════════════════════════
+   共享重置 · Shared Reset
+   ═══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+button { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
+input, textarea { font-family: inherit; border: none; outline: none; background: none; color: inherit; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
+
+/* ═══════════════════════════════════════════════════════
+   Shell 显示控制 · Shell Visibility
+   ═══════════════════════════════════════════════════════ */
+#desktop-shell { display: none; }
+#mobile-shell { display: block; }
+
+@media (min-width: 769px) {
+  #desktop-shell { display: block; }
+  #mobile-shell { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════
+   桌面端样式 · Desktop Styles (min-width: 769px)
+   ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════ */
+@media (min-width: 769px) {
+
+  /* ── 布局 ── */
+  .d-page-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── 顶部导航 ── */
+  .d-top-nav {
+    height: 56px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-6);
+    gap: var(--space-4);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .d-nav-back-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    transition: all var(--duration-normal) var(--ease-default);
+  }
+  .d-nav-back-btn:hover {
+    background: var(--color-border-subtle);
+    color: var(--color-text-secondary);
+  }
+  .d-nav-back-btn svg { width: 16px; height: 16px; }
+  .d-nav-title {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    letter-spacing: 1px;
+  }
+  .d-nav-spacer { flex: 1; }
+  .d-nav-save-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all var(--duration-normal) var(--ease-default);
+  }
+  .d-nav-save-btn:hover {
+    border-color: var(--color-brand-indigo);
+    color: var(--color-brand-indigo);
+    background: rgba(99,102,241,0.06);
+  }
+
+  /* ── 主区域 ── */
+  .d-main-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── 左列 · 基本信息 ── */
+  .d-left-column {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6) var(--space-8);
+    max-width: 660px;
+  }
+
+  /* ── Step 折叠卡片 ── */
+  .d-step-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+    overflow: hidden;
+    transition: border-color var(--duration-normal);
+  }
+  .d-step-card:hover { border-color: var(--color-border); }
+  .d-step-card.active { border-color: rgba(99,102,241,0.3); }
+  .d-step-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--duration-normal);
+  }
+  .d-step-header:hover { background: rgba(99,102,241,0.03); }
+  .d-step-number {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+    transition: all var(--duration-normal);
+    background: var(--color-border-subtle);
+    color: var(--color-text-tertiary);
+  }
+  .d-step-card.active .d-step-number {
+    background: var(--color-brand-indigo);
+    color: #fff;
+  }
+  .d-step-card.completed .d-step-number {
+    background: rgba(52,211,153,0.15);
+    color: var(--color-success);
+  }
+  .d-step-title {
+    font-size: 15px; font-weight: 600;
+    color: var(--color-text-primary);
+  }
+  .d-step-subtitle {
+    font-size: 12px; color: var(--color-text-tertiary);
+    margin-top: 1px;
+  }
+  .d-step-toggle {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--color-text-disabled);
+    transition: transform var(--duration-normal);
+  }
+  .d-step-card.collapsed .d-step-toggle { transform: rotate(-90deg); }
+  .d-step-body {
+    padding: 0 var(--space-5) var(--space-5);
+    max-height: 800px;
+    overflow: hidden;
+    transition: max-height var(--duration-slow) var(--ease-default),
+                padding var(--duration-slow) var(--ease-default),
+                opacity var(--duration-normal);
+    opacity: 1;
+  }
+  .d-step-card.collapsed .d-step-body {
+    max-height: 0;
+    padding-top: 0; padding-bottom: 0;
+    opacity: 0;
+  }
+
+  /* ── 桌面表单元素 ── */
+  .d-form-group { margin-bottom: var(--space-4); }
+  .d-form-label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-2);
+    letter-spacing: 0.3px;
+  }
+  .d-form-label .optional {
+    color: var(--color-text-disabled);
+    font-weight: 400; font-size: 11px;
+    margin-left: var(--space-1);
+  }
+  .d-form-input {
+    width: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    font-size: 14px; color: var(--color-text-primary);
+    transition: border-color var(--duration-normal), box-shadow var(--duration-normal);
+  }
+  .d-form-input::placeholder { color: var(--color-text-disabled); }
+  .d-form-input:focus {
+    border-color: var(--color-brand-indigo);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  }
+  .d-form-textarea {
+    width: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    font-size: 14px; color: var(--color-text-primary);
+    line-height: 1.7; resize: vertical; min-height: 80px;
+    transition: border-color var(--duration-normal), box-shadow var(--duration-normal);
+  }
+  .d-form-textarea::placeholder { color: var(--color-text-disabled); }
+  .d-form-textarea:focus {
+    border-color: var(--color-brand-indigo);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  }
+
+  /* ── 类型 Chips ── */
+  .d-chips-wrap {
+    display: flex; flex-wrap: wrap; gap: var(--space-2);
+  }
+  .d-chip {
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 20px;
+    font-size: 13px; color: var(--color-text-tertiary);
+    transition: all var(--duration-normal) var(--ease-default);
+    user-select: none; cursor: pointer;
+  }
+  .d-chip:hover {
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+  }
+  .d-chip.selected {
+    background: rgba(99,102,241,0.15);
+    border-color: var(--color-brand-indigo);
+    color: var(--color-brand-indigo);
+    font-weight: 500;
+  }
+
+  /* ── 选项按钮组 ── */
+  .d-option-group {
+    display: flex; flex-wrap: wrap; gap: var(--space-2);
+  }
+  .d-option-btn {
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 13px; color: var(--color-text-tertiary);
+    transition: all var(--duration-normal) var(--ease-default);
+    cursor: pointer;
+  }
+  .d-option-btn:hover {
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+  }
+  .d-option-btn.selected {
+    background: rgba(99,102,241,0.12);
+    border-color: var(--color-brand-indigo);
+    color: var(--color-brand-indigo);
+    font-weight: 500;
+  }
+
+  /* ── 配角列表 ── */
+  .d-supporting-list {
+    display: flex; flex-direction: column; gap: var(--space-2);
+  }
+  .d-supporting-item {
+    display: flex; align-items: center; gap: var(--space-2);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    transition: border-color var(--duration-normal);
+  }
+  .d-supporting-item:hover { border-color: var(--color-border); }
+  .d-supporting-item .d-form-input {
+    border: none; background: transparent;
+    padding: var(--space-1) var(--space-2); flex: 1;
+  }
+  .d-supporting-item .d-form-input:focus { box-shadow: none; }
+  .d-supporting-item .d-sep {
+    color: var(--color-text-disabled); font-size: 12px;
+  }
+  .d-supporting-remove-btn {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-disabled); font-size: 14px;
+    transition: all var(--duration-normal); flex-shrink: 0;
+  }
+  .d-supporting-remove-btn:hover {
+    background: rgba(239,68,68,0.1);
+    color: var(--color-danger);
+  }
+  .d-add-supporting-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-tertiary); font-size: 12px;
+    transition: all var(--duration-normal);
+    margin-top: var(--space-2);
+  }
+  .d-add-supporting-btn:hover {
+    border-color: var(--color-brand-indigo);
+    color: var(--color-brand-indigo);
+    background: rgba(99,102,241,0.04);
+  }
+
+  /* ── 右列 ── */
+  .d-right-column {
+    width: 320px; flex-shrink: 0;
+    overflow-y: auto;
+    padding: var(--space-6) var(--space-5);
+    border-left: 1px solid var(--color-border-subtle);
+    background: var(--color-surface);
+  }
+
+  /* ── Section Title ── */
+  .d-section-title {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--color-text-disabled);
+    margin-bottom: var(--space-3);
+    display: flex; align-items: center; gap: var(--space-1);
+  }
+
+  /* ── 新建方式卡片 ── */
+  .d-creation-mode-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-2);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-default);
+    position: relative;
+  }
+  .d-creation-mode-card:hover { border-color: var(--color-border); }
+  .d-creation-mode-card.selected {
+    border-color: var(--color-brand-indigo);
+    background: rgba(99,102,241,0.04);
+  }
+  .d-creation-mode-card.selected::after {
+    content: '';
+    position: absolute; top: var(--space-3); right: var(--space-3);
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--color-brand-indigo);
+    box-shadow: 0 0 8px rgba(99,102,241,0.4);
+  }
+  .d-mode-icon { font-size: 20px; margin-bottom: var(--space-2); }
+  .d-mode-title {
+    font-size: 14px; font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-1);
+  }
+  .d-mode-desc {
+    font-size: 12px; color: var(--color-text-tertiary); line-height: 1.5;
+  }
+  .d-mode-tag {
+    display: inline-block;
+    font-size: 10px; padding: 1px 6px;
+    border-radius: 10px; margin-top: var(--space-2);
+    font-weight: 500;
+  }
+  .d-mode-tag.default {
+    background: rgba(99,102,241,0.12);
+    color: var(--color-brand-indigo);
+  }
+  .d-mode-tag.hot {
+    background: rgba(212,168,67,0.12);
+    color: var(--color-brand-amber);
+  }
+  .d-mode-tag.link {
+    background: rgba(103,232,249,0.1);
+    color: var(--rarity-rare);
+  }
+
+  /* ── 拆书建书模板展开区 ── */
+  .d-template-section {
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height var(--duration-slower) var(--ease-default),
+                opacity var(--duration-normal) var(--ease-default),
+                margin var(--duration-normal);
+    margin-top: 0;
+  }
+  .d-template-section.visible {
+    max-height: 600px; opacity: 1;
+    margin-top: var(--space-4);
+  }
+  .d-template-grid {
+    display: flex; flex-direction: column; gap: var(--space-2);
+  }
+  .d-template-item {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    cursor: pointer;
+    transition: all var(--duration-normal);
+  }
+  .d-template-item:hover { border-color: var(--color-border); }
+  .d-template-item.selected {
+    border-color: var(--color-brand-amber);
+    background: rgba(212,168,67,0.04);
+  }
+  .d-template-item-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .d-template-name {
+    font-size: 13px; font-weight: 600;
+    color: var(--color-text-primary);
+  }
+  .d-template-badge {
+    font-size: 10px; padding: 1px 6px;
+    border-radius: 10px; font-weight: 500;
+  }
+  .d-template-badge.hot {
+    background: rgba(239,68,68,0.1); color: #f87171;
+  }
+  .d-template-badge.classic {
+    background: rgba(168,85,247,0.12); color: var(--rarity-epic);
+  }
+  .d-template-badge.trend {
+    background: rgba(103,232,249,0.1); color: var(--rarity-rare);
+  }
+  .d-template-sub {
+    font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px;
+  }
+  .d-template-desc {
+    font-size: 11px; color: var(--color-text-disabled);
+    margin-top: var(--space-1); line-height: 1.5;
+  }
+
+  /* ── 创作建议 ── */
+  .d-suggestion-section {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border-subtle);
+  }
+  .d-suggestion-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    transition: border-color var(--duration-normal);
+  }
+  .d-suggestion-card:hover { border-color: var(--color-border); }
+  .d-suggestion-icon { font-size: 14px; margin-right: var(--space-1); }
+  .d-suggestion-text {
+    font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;
+  }
+  .d-suggestion-text .highlight {
+    color: var(--color-brand-indigo); font-weight: 500;
+  }
+  .d-suggestion-text .amber {
+    color: var(--color-brand-amber); font-weight: 500;
+  }
+
+  /* ── 底部操作栏 ── */
+  .d-bottom-bar {
+    height: 64px;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border-subtle);
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 var(--space-8); gap: var(--space-3);
+    flex-shrink: 0;
+  }
+  .d-btn-cancel {
+    padding: var(--space-2) var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: 14px; font-weight: 500;
+    transition: all var(--duration-normal);
+  }
+  .d-btn-cancel:hover {
+    border-color: var(--color-text-tertiary);
+    color: var(--color-text-primary);
+  }
+  .d-btn-create {
+    padding: var(--space-3) var(--space-8);
+    background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+    border-radius: var(--radius-md);
+    color: #fff; font-size: 15px; font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: all var(--duration-normal) var(--ease-default);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+  }
+  .d-btn-create:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+  }
+  .d-btn-create:active { transform: translateY(0); }
+
+  /* ── 响应式折叠 ── */
+  @media (max-width: 1100px) {
+    .d-main-area { flex-direction: column; }
+    .d-left-column { max-width: 100%; padding: var(--space-4); }
+    .d-right-column {
+      width: 100%; border-left: none;
+      border-top: 1px solid var(--color-border-subtle);
+      padding: var(--space-4);
+    }
+  }
+
+} /* end @media (min-width: 769px) desktop */
+
+/* ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════
+   移动端样式 · Mobile Styles (default)
+   ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════ */
+
+#mobile-shell {
+  max-width: 428px;
+  margin: 0 auto;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ── Status Bar ── */
+.m-status-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 24px 6px;
+  font-size: 14px; font-weight: 600;
+  background: var(--color-surface);
+  position: sticky; top: 0; z-index: 100;
+}
+.m-status-bar .m-time { letter-spacing: 0.5px; }
+.m-status-icons { display: flex; gap: 6px; align-items: center; }
+.m-status-icons svg { width: 18px; height: 18px; fill: var(--color-text-primary); }
+
+/* ── Top Nav ── */
+.m-top-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky; top: 36px; z-index: 100;
+}
+.m-back-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none;
+  color: var(--color-text-primary); font-size: 22px;
+  cursor: pointer; border-radius: 10px;
+  transition: background 0.2s;
+}
+.m-back-btn:active { background: var(--color-elevated); }
+.m-nav-title {
+  font-family: var(--font-heading);
+  font-size: 18px; font-weight: 600;
+}
+.m-save-btn {
+  background: none; border: none;
+  color: var(--color-brand-indigo);
+  font-size: 16px; font-weight: 600;
+  cursor: pointer; padding: 6px 12px;
+  border-radius: 8px; transition: background 0.2s;
+}
+.m-save-btn:active { background: rgba(99,102,241,0.15); }
+
+/* ── Main Content ── */
+.m-main-content {
+  padding: 16px 16px 120px;
+  overflow-y: auto;
+}
+
+/* ── Creation Method Cards ── */
+.m-method-scroll {
+  display: flex; gap: 10px;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  padding: 4px 0 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.m-method-scroll::-webkit-scrollbar { display: none; }
+.m-method-card {
+  flex: 0 0 calc((100% - 20px) / 3);
+  scroll-snap-align: center;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  padding: 16px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+.m-method-card.active {
+  border-color: var(--color-brand-indigo);
+  background: rgba(99,102,241,0.08);
+  box-shadow: 0 0 20px rgba(99,102,241,0.12);
+}
+.m-method-card .m-icon { font-size: 28px; margin-bottom: 8px; display: block; }
+.m-method-card .m-label { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
+.m-method-card.active .m-label { color: var(--color-brand-indigo); }
+
+/* ── Template Tags ── */
+.m-template-section {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.35s ease, margin 0.35s ease, opacity 0.25s ease;
+  opacity: 0; margin-top: 0;
+}
+.m-template-section.open {
+  max-height: 200px; opacity: 1; margin-top: 12px;
+}
+.m-template-tags {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.m-template-tag {
+  padding: 6px 14px; border-radius: 20px;
+  background: var(--color-elevated); border: 1px solid var(--color-border);
+  font-size: 13px; color: var(--color-text-secondary);
+  cursor: pointer; transition: all 0.2s;
+}
+.m-template-tag.active {
+  background: rgba(212,168,67,0.12);
+  border-color: var(--color-brand-amber);
+  color: var(--color-brand-amber);
+}
+
+/* ── Import Hint ── */
+.m-import-hint {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.35s ease, margin 0.35s ease, opacity 0.25s ease;
+  opacity: 0; margin-top: 0;
+}
+.m-import-hint.open {
+  max-height: 100px; opacity: 1; margin-top: 12px;
+}
+.m-import-hint-inner {
+  padding: 16px; border-radius: 14px;
+  background: var(--color-elevated); border: 1px dashed var(--color-border);
+  text-align: center; color: var(--color-text-secondary); font-size: 14px;
+}
+.m-import-hint-inner a {
+  color: var(--color-brand-indigo);
+  text-decoration: none; font-weight: 600;
+}
+
+/* ── Section Title ── */
+.m-section-title {
+  font-family: var(--font-heading);
+  font-size: 16px; font-weight: 600;
+  margin: 24px 0 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.m-section-title::before {
+  content: ''; width: 3px; height: 16px;
+  background: linear-gradient(180deg, var(--color-brand-indigo), var(--color-brand-amber));
+  border-radius: 2px;
+}
+
+/* ── Mobile Form Elements ── */
+.m-form-group { margin-bottom: 14px; }
+.m-form-label {
+  display: block; font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 6px; font-weight: 500;
+}
+.m-form-input, .m-form-textarea {
+  width: 100%; background: var(--color-elevated);
+  border: 1px solid var(--color-border); border-radius: 10px;
+  padding: 12px 14px; color: var(--color-text-primary);
+  font-size: 15px; outline: none;
+  transition: border-color 0.2s; font-family: inherit;
+}
+.m-form-input::placeholder, .m-form-textarea::placeholder { color: var(--color-text-tertiary); }
+.m-form-input:focus, .m-form-textarea:focus { border-color: var(--color-brand-indigo); }
+.m-form-textarea { resize: none; min-height: 80px; line-height: 1.5; }
+
+/* ── Mobile Chips ── */
+.m-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.m-chip {
+  padding: 7px 16px; border-radius: 20px;
+  background: var(--color-elevated); border: 1px solid var(--color-border);
+  font-size: 13px; color: var(--color-text-secondary);
+  cursor: pointer; transition: all 0.2s; user-select: none;
+}
+.m-chip.active {
+  background: rgba(99,102,241,0.12);
+  border-color: var(--color-brand-indigo);
+  color: var(--color-brand-indigo);
+}
+
+/* ── Collapsible Card ── */
+.m-collapse-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  margin-bottom: 14px; overflow: hidden;
+}
+.m-collapse-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; cursor: pointer;
+  transition: background 0.2s;
+}
+.m-collapse-header:active { background: rgba(99,102,241,0.05); }
+.m-collapse-header .m-ctitle {
+  font-size: 15px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.m-collapse-header .m-ctitle .m-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--color-brand-amber);
+}
+.m-collapse-arrow {
+  font-size: 12px; color: var(--color-text-tertiary);
+  transition: transform 0.3s;
+}
+.m-collapse-card.open .m-collapse-arrow { transform: rotate(180deg); }
+.m-collapse-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+.m-collapse-card.open .m-collapse-body { max-height: 800px; }
+.m-collapse-body-inner { padding: 0 16px 16px; }
+
+/* ── Radio Group ── */
+.m-radio-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.m-radio-item {
+  padding: 8px 18px; border-radius: 10px;
+  background: var(--color-elevated); border: 1px solid var(--color-border);
+  font-size: 14px; color: var(--color-text-secondary);
+  cursor: pointer; transition: all 0.2s; user-select: none;
+}
+.m-radio-item.active {
+  background: rgba(99,102,241,0.12);
+  border-color: var(--color-brand-indigo);
+  color: var(--color-brand-indigo);
+}
+
+/* ── Supporting Character List ── */
+.m-char-list { display: flex; flex-direction: column; gap: 8px; }
+.m-char-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.m-char-row .m-form-input { flex: 1; }
+.m-char-row .m-form-input.m-char-name { flex: 0 0 80px; }
+.m-char-remove {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(239,68,68,0.1); border: none;
+  color: var(--color-danger); font-size: 16px;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: background 0.2s;
+}
+.m-char-remove:active { background: rgba(239,68,68,0.2); }
+.m-add-char-btn {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px; padding: 10px; border-radius: 10px;
+  background: none; border: 1px dashed var(--color-border);
+  color: var(--color-text-tertiary); font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+  margin-top: 8px; width: 100%;
+}
+.m-add-char-btn:active {
+  background: var(--color-elevated);
+  border-color: var(--color-brand-indigo);
+  color: var(--color-brand-indigo);
+}
+
+/* ── Bottom CTA ── */
+.m-bottom-cta {
+  position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 428px; padding: 12px 16px;
+  background: linear-gradient(transparent, var(--color-bg) 30%);
+  z-index: 50;
+}
+.m-cta-btn {
+  width: 100%; padding: 16px; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff; font-size: 17px; font-weight: 700;
+  cursor: pointer; letter-spacing: 1px;
+  box-shadow: 0 4px 24px rgba(99,102,241,0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.m-cta-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 12px rgba(99,102,241,0.2);
+}
+
+/* ── Bottom Nav ── */
+.m-bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 428px;
+  display: flex; background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: 6px 0 env(safe-area-inset-bottom, 8px);
+  z-index: 100;
+}
+.m-nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 6px 0; cursor: pointer;
+  transition: color 0.2s; color: var(--color-text-tertiary);
+}
+.m-nav-item.active { color: var(--color-brand-indigo); }
+.m-nav-item svg { width: 22px; height: 22px; margin-bottom: 2px; fill: currentColor; }
+.m-nav-item span { font-size: 10px; font-weight: 500; }
+
+/* ── Mobile fade-in animation ── */
+@keyframes mFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.m-form-group { animation: mFadeIn 0.3s ease backwards; }
+.m-form-group:nth-child(2) { animation-delay: 0.05s; }
+.m-form-group:nth-child(3) { animation-delay: 0.1s; }
+.m-form-group:nth-child(4) { animation-delay: 0.15s; }
+
+/* ═══════════════════════════════════════════════════════
+   共享 Toast
+   ═══════════════════════════════════════════════════════ */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-5);
+  font-size: 13px; color: var(--color-text-secondary);
+  box-shadow: var(--shadow-lg);
+  opacity: 0; pointer-events: none;
+  transition: all var(--duration-slow) var(--ease-spring);
+  z-index: 2000;
+  white-space: nowrap;
+}
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     桌面端 Shell · Desktop Shell
+     ═══════════════════════════════════════════════════════════ -->
+<div id="desktop-shell">
+  <div class="d-page-layout">
+
+    <!-- ── 顶部导航 ── -->
+    <nav class="d-top-nav">
+      <button class="d-nav-back-btn" onclick="showToast('返回「我的作品」')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        我的作品
+      </button>
+      <span class="d-nav-title">新建作品</span>
+      <div class="d-nav-spacer"></div>
+      <button class="d-nav-save-btn" onclick="showToast('草稿已保存')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        保存草稿
+      </button>
+    </nav>
+
+    <!-- ── 主区域 ── -->
+    <div class="d-main-area">
+
+      <!-- ──── 左列 · 基本信息 ──── -->
+      <div class="d-left-column">
+
+        <!-- Step 1: 作品信息 -->
+        <div class="d-step-card active" id="d-step1">
+          <div class="d-step-header" onclick="dToggleStep('d-step1')">
+            <div class="d-step-number">1</div>
+            <div>
+              <div class="d-step-title">作品信息</div>
+              <div class="d-step-subtitle">小说名、类型、简介</div>
+            </div>
+            <span class="d-step-toggle">▼</span>
+          </div>
+          <div class="d-step-body">
+            <div class="d-form-group">
+              <label class="d-form-label">小说名</label>
+              <input type="text" class="d-form-input" id="dNovelName" placeholder="星穹之下" oninput="dUpdateSuggestions()">
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">作者名</label>
+              <input type="text" class="d-form-input" id="dAuthorName" placeholder="输入你的笔名" value="墨灵作者">
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">类型 <span class="optional">可多选</span></label>
+              <div class="d-chips-wrap" id="dGenreChips">
+                <span class="d-chip selected" data-genre="玄幻">玄幻</span>
+                <span class="d-chip" data-genre="仙侠">仙侠</span>
+                <span class="d-chip" data-genre="言情">言情</span>
+                <span class="d-chip" data-genre="都市">都市</span>
+                <span class="d-chip" data-genre="科幻">科幻</span>
+                <span class="d-chip" data-genre="悬疑">悬疑</span>
+                <span class="d-chip" data-genre="历史">历史</span>
+                <span class="d-chip" data-genre="轻小说">轻小说</span>
+              </div>
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">标签 <span class="optional">用逗号分隔</span></label>
+              <input type="text" class="d-form-input" id="dTagsInput" placeholder="修仙, 逆袭, 热血" oninput="dUpdateSuggestions()">
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">简介</label>
+              <textarea class="d-form-textarea" id="dSynopsis" rows="3" placeholder="用一句话概括你的故事…" oninput="dUpdateSuggestions()"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: 创作设置 -->
+        <div class="d-step-card active" id="d-step2">
+          <div class="d-step-header" onclick="dToggleStep('d-step2')">
+            <div class="d-step-number">2</div>
+            <div>
+              <div class="d-step-title">创作设置</div>
+              <div class="d-step-subtitle">字数目标、更新频率、风格</div>
+            </div>
+            <span class="d-step-toggle">▼</span>
+          </div>
+          <div class="d-step-body">
+            <div class="d-form-group">
+              <label class="d-form-label">目标字数</label>
+              <div class="d-option-group" id="dWordCountGroup">
+                <button class="d-option-btn" data-count="30">30万</button>
+                <button class="d-option-btn" data-count="50">50万</button>
+                <button class="d-option-btn selected" data-count="100">100万</button>
+                <button class="d-option-btn" data-count="200">200万+</button>
+              </div>
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">更新频率</label>
+              <div class="d-option-group" id="dFrequencyGroup">
+                <button class="d-option-btn selected" data-freq="daily">日更</button>
+                <button class="d-option-btn" data-freq="weekly">周更</button>
+                <button class="d-option-btn" data-freq="irregular">不定</button>
+              </div>
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">风格偏好</label>
+              <div class="d-option-group" id="dStyleGroup">
+                <button class="d-option-btn" data-style="light">轻快</button>
+                <button class="d-option-btn" data-style="deep">深沉</button>
+                <button class="d-option-btn selected" data-style="hot">热血</button>
+                <button class="d-option-btn" data-style="mystery">悬疑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: 核心设定（可选） -->
+        <div class="d-step-card" id="d-step3">
+          <div class="d-step-header" onclick="dToggleStep('d-step3')">
+            <div class="d-step-number">3</div>
+            <div>
+              <div class="d-step-title">核心设定 <span class="optional" style="font-size:12px;color:var(--color-text-disabled);font-weight:400">可选</span></div>
+              <div class="d-step-subtitle">世界观、主角、配角</div>
+            </div>
+            <span class="d-step-toggle">▼</span>
+          </div>
+          <div class="d-step-body">
+            <div class="d-form-group">
+              <label class="d-form-label">世界观描述 <span class="optional">可选</span></label>
+              <textarea class="d-form-textarea" id="dWorldview" rows="3" placeholder="描述故事发生的世界…"></textarea>
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">主角设定 <span class="optional">可选</span></label>
+              <textarea class="d-form-textarea" id="dProtagonist" rows="3" placeholder="姓名、性格、目标…"></textarea>
+            </div>
+            <div class="d-form-group">
+              <label class="d-form-label">关键配角 <span class="optional">可选</span></label>
+              <div class="d-supporting-list" id="dSupportingList">
+                <div class="d-supporting-item">
+                  <input type="text" class="d-form-input" placeholder="角色名" value="苏婉清">
+                  <span class="d-sep">—</span>
+                  <input type="text" class="d-form-input" placeholder="一句话描述" value="温柔医师，暗中守护主角">
+                  <button class="d-supporting-remove-btn" onclick="dRemoveSupporting(this)">×</button>
+                </div>
+                <div class="d-supporting-item">
+                  <input type="text" class="d-form-input" placeholder="角色名" value="铁山">
+                  <span class="d-sep">—</span>
+                  <input type="text" class="d-form-input" placeholder="一句话描述" value="忠厚师兄，武力担当">
+                  <button class="d-supporting-remove-btn" onclick="dRemoveSupporting(this)">×</button>
+                </div>
+              </div>
+              <button class="d-add-supporting-btn" onclick="dAddSupporting()">+ 添加配角</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /d-left-column -->
+
+      <!-- ──── 右列 · 预览 + 辅助 ──── -->
+      <div class="d-right-column">
+
+        <!-- 新建方式选择 -->
+        <div class="d-section-title">👤 新建方式</div>
+
+        <div class="d-creation-mode-card selected" data-mode="scratch" onclick="dSelectMode('scratch')">
+          <div class="d-mode-icon">📝</div>
+          <div class="d-mode-title">从零创作</div>
+          <div class="d-mode-desc">手动填写所有信息，自由度最高</div>
+          <span class="d-mode-tag default">默认</span>
+        </div>
+
+        <div class="d-creation-mode-card" data-mode="template" onclick="dSelectMode('template')">
+          <div class="d-mode-icon">📖</div>
+          <div class="d-mode-title">拆书建书</div>
+          <div class="d-mode-desc">基于热门小说模板快速启动</div>
+          <span class="d-mode-tag hot">热门</span>
+        </div>
+
+        <div class="d-creation-mode-card" data-mode="import" onclick="dSelectMode('import')">
+          <div class="d-mode-icon">📥</div>
+          <div class="d-mode-title">导入已有小说</div>
+          <div class="d-mode-desc">已写了一半的作品，导入继续创作</div>
+          <span class="d-mode-tag link">跳转</span>
+        </div>
+
+        <!-- 拆书建书模板展开区 -->
+        <div class="d-template-section" id="dTemplateSection">
+          <div class="d-section-title" style="margin-top:0">🔥 热门爆款模板</div>
+          <div class="d-template-grid">
+            <div class="d-template-item" data-template="underdog" onclick="dSelectTemplate(this)">
+              <div class="d-template-item-header">
+                <span class="d-template-name">废材逆袭</span>
+                <span class="d-template-badge hot">最热</span>
+              </div>
+              <div class="d-template-sub">玄幻 / 热血</div>
+              <div class="d-template-desc">天赋为零的少年觉醒隐藏血脉，一路碾压天才</div>
+            </div>
+            <div class="d-template-item" data-template="rebirth" onclick="dSelectTemplate(this)">
+              <div class="d-template-item-header">
+                <span class="d-template-name">重生复仇</span>
+                <span class="d-template-badge hot">热门</span>
+              </div>
+              <div class="d-template-sub">都市 / 仙侠</div>
+              <div class="d-template-desc">前世惨死重生归来，带着记忆改写命运</div>
+            </div>
+            <div class="d-template-item" data-template="genius" onclick="dSelectTemplate(this)">
+              <div class="d-template-item-header">
+                <span class="d-template-name">天才流</span>
+                <span class="d-template-badge classic">经典</span>
+              </div>
+              <div class="d-template-sub">玄幻 / 轻小说</div>
+              <div class="d-template-desc">开局满级天赋，以碾压姿态横扫一切</div>
+            </div>
+            <div class="d-template-item" data-template="system" onclick="dSelectTemplate(this)">
+              <div class="d-template-item-header">
+                <span class="d-template-name">系统流</span>
+                <span class="d-template-badge trend">潮流</span>
+              </div>
+              <div class="d-template-sub">都市 / 科幻</div>
+              <div class="d-template-desc">绑定金手指系统，完成任务获取逆天奖励</div>
+            </div>
+            <div class="d-template-item" data-template="traverse" onclick="dSelectTemplate(this)">
+              <div class="d-template-item-header">
+                <span class="d-template-name">穿越</span>
+                <span class="d-template-badge classic">经典</span>
+              </div>
+              <div class="d-template-sub">历史 / 玄幻</div>
+              <div class="d-template-desc">现代人穿越异世界，用现代知识降维打击</div>
+            </div>
+            <div class="d-template-item" data-template="divorce" onclick="dSelectTemplate(this)">
+              <div class="d-template-item-header">
+                <span class="d-template-name">退婚流</span>
+                <span class="d-template-badge trend">潮流</span>
+              </div>
+              <div class="d-template-sub">玄幻 / 言情</div>
+              <div class="d-template-desc">被退婚后觉醒，三十年河东三十年河西</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 创作建议 -->
+        <div class="d-suggestion-section">
+          <div class="d-section-title">📊 创作建议</div>
+          <div id="dSuggestionCards">
+            <div class="d-suggestion-card">
+              <div class="d-suggestion-text">
+                <span class="d-suggestion-icon">💡</span>
+                <span class="highlight">玄幻</span> + <span class="amber">热血</span> 推荐选择 <span class="amber">「废材逆袭」</span> 模板，这是该组合下最热门的叙事框架
+              </div>
+            </div>
+            <div class="d-suggestion-card">
+              <div class="d-suggestion-text">
+                <span class="d-suggestion-icon">📝</span>
+                100万字目标建议规划 <span class="highlight">3-4个</span> 大卷，每卷25-30万字，确保节奏紧凑
+              </div>
+            </div>
+            <div class="d-suggestion-card">
+              <div class="d-suggestion-text">
+                <span class="d-suggestion-icon">🎯</span>
+                日更模式需要提前储备 <span class="highlight">至少5万字</span> 存稿，避免断更
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /d-right-column -->
+
+    </div><!-- /d-main-area -->
+
+    <!-- ── 底部操作栏 ── -->
+    <div class="d-bottom-bar">
+      <button class="d-btn-cancel" onclick="showToast('已取消，返回我的作品')">取消</button>
+      <button class="d-btn-create" onclick="showToast('开始创作！正在初始化项目…')">开始创作</button>
+    </div>
+
+  </div><!-- /d-page-layout -->
+</div><!-- /desktop-shell -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     移动端 Shell · Mobile Shell
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mobile-shell">
+
+  <!-- Status Bar -->
+  <div class="m-status-bar">
+    <span class="m-time" id="mTimeDisplay">9:41</span>
+    <div class="m-status-icons">
+      <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.24 4.24 0 0 0-6 0zm-4-4l2 2a7.07 7.07 0 0 1 10 0l2-2C15.68 9.68 8.32 9.68 5 13z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <!-- Top Nav -->
+  <div class="m-top-nav">
+    <button class="m-back-btn" onclick="showToast('返回「我的作品」')">←</button>
+    <span class="m-nav-title">新建作品</span>
+    <button class="m-save-btn" onclick="showToast('草稿已保存')">保存</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="m-main-content">
+
+    <!-- Creation Method -->
+    <div class="m-method-scroll" id="mMethodScroll">
+      <div class="m-method-card active" data-method="create" onclick="mSelectMethod(this)">
+        <span class="m-icon">📝</span>
+        <span class="m-label">从零创作</span>
+      </div>
+      <div class="m-method-card" data-method="split" onclick="mSelectMethod(this)">
+        <span class="m-icon">📖</span>
+        <span class="m-label">拆书建书</span>
+      </div>
+      <div class="m-method-card" data-method="import" onclick="mSelectMethod(this)">
+        <span class="m-icon">📥</span>
+        <span class="m-label">导入已有</span>
+      </div>
+    </div>
+
+    <!-- Split Book Templates -->
+    <div class="m-template-section" id="mTemplateSection">
+      <div class="m-template-tags" id="mTemplateTags">
+        <span class="m-template-tag" onclick="mToggleTemplate(this)">废材逆袭</span>
+        <span class="m-template-tag" onclick="mToggleTemplate(this)">重生复仇</span>
+        <span class="m-template-tag" onclick="mToggleTemplate(this)">天才流</span>
+        <span class="m-template-tag" onclick="mToggleTemplate(this)">系统流</span>
+        <span class="m-template-tag" onclick="mToggleTemplate(this)">穿越</span>
+        <span class="m-template-tag" onclick="mToggleTemplate(this)">退婚流</span>
+      </div>
+    </div>
+
+    <!-- Import Hint -->
+    <div class="m-import-hint" id="mImportHint">
+      <div class="m-import-hint-inner">
+        从其他平台导入你的作品<br>
+        <a href="javascript:void(0)" onclick="showToast('即将跳转到导入页面…')">前往导入页面 →</a>
+      </div>
+    </div>
+
+    <!-- Basic Info -->
+    <div class="m-section-title">基本信息</div>
+
+    <div class="m-form-group">
+      <input class="m-form-input" type="text" placeholder="给你的故事取个名字">
+    </div>
+
+    <div class="m-form-group">
+      <label class="m-form-label">作者名</label>
+      <input class="m-form-input" type="text" placeholder="输入你的笔名" value="墨灵作者">
+    </div>
+
+    <div class="m-form-group">
+      <label class="m-form-label">类型</label>
+      <div class="m-chips" id="mGenreChips">
+        <span class="m-chip" onclick="mToggleChip(this)">玄幻</span>
+        <span class="m-chip" onclick="mToggleChip(this)">仙侠</span>
+        <span class="m-chip" onclick="mToggleChip(this)">言情</span>
+        <span class="m-chip" onclick="mToggleChip(this)">都市</span>
+        <span class="m-chip" onclick="mToggleChip(this)">科幻</span>
+        <span class="m-chip" onclick="mToggleChip(this)">悬疑</span>
+        <span class="m-chip" onclick="mToggleChip(this)">历史</span>
+        <span class="m-chip" onclick="mToggleChip(this)">轻小说</span>
+      </div>
+    </div>
+
+    <div class="m-form-group">
+      <label class="m-form-label">简介</label>
+      <textarea class="m-form-textarea" rows="3" placeholder="用几句话概括你的故事…"></textarea>
+    </div>
+
+    <!-- Creative Settings (default open) -->
+    <div class="m-section-title">创作设置</div>
+    <div class="m-collapse-card open" id="mSettingsCard">
+      <div class="m-collapse-header" onclick="mToggleCollapse('mSettingsCard')">
+        <span class="m-ctitle"><span class="m-dot"></span>创作参数</span>
+        <span class="m-collapse-arrow">▼</span>
+      </div>
+      <div class="m-collapse-body">
+        <div class="m-collapse-body-inner">
+          <div class="m-form-group">
+            <label class="m-form-label">目标字数</label>
+            <div class="m-radio-group" data-name="wordCount">
+              <span class="m-radio-item active" onclick="mSelectRadio(this)">30万</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">50万</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">100万</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">200万+</span>
+            </div>
+          </div>
+          <div class="m-form-group">
+            <label class="m-form-label">更新频率</label>
+            <div class="m-radio-group" data-name="frequency">
+              <span class="m-radio-item active" onclick="mSelectRadio(this)">日更</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">周更</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">不定</span>
+            </div>
+          </div>
+          <div class="m-form-group">
+            <label class="m-form-label">风格偏好</label>
+            <div class="m-radio-group" data-name="style">
+              <span class="m-radio-item active" onclick="mSelectRadio(this)">轻快</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">深沉</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">热血</span>
+              <span class="m-radio-item" onclick="mSelectRadio(this)">悬疑</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Core Settings (default closed) -->
+    <div class="m-section-title">核心设定</div>
+    <div class="m-collapse-card" id="mCoreCard">
+      <div class="m-collapse-header" onclick="mToggleCollapse('mCoreCard')">
+        <span class="m-ctitle"><span class="m-dot"></span>世界观与角色</span>
+        <span class="m-collapse-arrow">▼</span>
+      </div>
+      <div class="m-collapse-body">
+        <div class="m-collapse-body-inner">
+          <div class="m-form-group">
+            <label class="m-form-label">世界观描述</label>
+            <textarea class="m-form-textarea" rows="3" placeholder="描述故事发生的世界…"></textarea>
+          </div>
+          <div class="m-form-group">
+            <label class="m-form-label">主角设定</label>
+            <textarea class="m-form-textarea" rows="3" placeholder="姓名、性格、背景…"></textarea>
+          </div>
+          <div class="m-form-group">
+            <label class="m-form-label">配角列表</label>
+            <div class="m-char-list" id="mCharList">
+              <div class="m-char-row">
+                <input class="m-form-input m-char-name" type="text" placeholder="姓名">
+                <input class="m-form-input" type="text" placeholder="一句话描述">
+                <button class="m-char-remove" onclick="mRemoveChar(this)">✕</button>
+              </div>
+            </div>
+            <button class="m-add-char-btn" onclick="mAddChar()">+ 添加配角</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /m-main-content -->
+
+  <!-- Bottom CTA -->
+  <div class="m-bottom-cta">
+    <button class="m-cta-btn" onclick="showToast('开始创作！正在初始化项目…')">开始创作</button>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="m-bottom-nav">
+    <div class="m-nav-item" onclick="mSwitchNav(this)">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>首页</span>
+    </div>
+    <div class="m-nav-item" onclick="mSwitchNav(this)">
+      <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+      <span>作品</span>
+    </div>
+    <div class="m-nav-item active" onclick="mSwitchNav(this)">
+      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      <span>创作</span>
+    </div>
+    <div class="m-nav-item" onclick="mSwitchNav(this)">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span>我的</span>
+    </div>
+  </div>
+
+</div><!-- /mobile-shell -->
+
+
+<!-- 共享 Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   共享 · Toast
+   ═══════════════════════════════════════════════════════ */
+let toastTimer = null;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 2500);
+}
+
+/* ═══════════════════════════════════════════════════════
+   移动端 · Mobile Status Bar Time
+   ═══════════════════════════════════════════════════════ */
+(function updateMobileTime() {
+  const el = document.getElementById('mTimeDisplay');
+  if (el) {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes().toString().padStart(2, '0');
+    el.textContent = h + ':' + m;
+  }
+  setTimeout(updateMobileTime, 30000);
+})();
+
+/* ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════
+   桌面端交互逻辑 · Desktop Interaction Logic
+   ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════ */
+
+// ── Step 折叠 ──
+function dToggleStep(stepId) {
+  const card = document.getElementById(stepId);
+  card.classList.toggle('collapsed');
+  card.classList.toggle('active');
+}
+
+// ── 类型 Chips ──
+document.getElementById('dGenreChips').addEventListener('click', function(e) {
+  const chip = e.target.closest('.d-chip');
+  if (!chip) return;
+  chip.classList.toggle('selected');
+  dUpdateSuggestions();
+});
+
+// ── 选项按钮组 ──
+function dSetupOptionGroup(groupId) {
+  const group = document.getElementById(groupId);
+  group.addEventListener('click', function(e) {
+    const btn = e.target.closest('.d-option-btn');
+    if (!btn) return;
+    group.querySelectorAll('.d-option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    dUpdateSuggestions();
+  });
+}
+dSetupOptionGroup('dWordCountGroup');
+dSetupOptionGroup('dFrequencyGroup');
+dSetupOptionGroup('dStyleGroup');
+
+// ── 新建方式 ──
+let dCurrentMode = 'scratch';
+function dSelectMode(mode) {
+  dCurrentMode = mode;
+  document.querySelectorAll('.d-creation-mode-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.mode === mode);
+  });
+
+  const templateSection = document.getElementById('dTemplateSection');
+  if (mode === 'template') {
+    templateSection.classList.add('visible');
+  } else {
+    templateSection.classList.remove('visible');
+    document.querySelectorAll('.d-template-item').forEach(t => t.classList.remove('selected'));
+  }
+
+  if (mode === 'import') {
+    showToast('即将跳转到导入页面…');
+  }
+
+  dUpdateSuggestions();
+}
+
+// ── 模板选择 ──
+function dSelectTemplate(el) {
+  const wasSelected = el.classList.contains('selected');
+  document.querySelectorAll('.d-template-item').forEach(t => t.classList.remove('selected'));
+  if (!wasSelected) {
+    el.classList.add('selected');
+  }
+  dUpdateSuggestions();
+}
+
+// ── 配角操作 ──
+function dAddSupporting() {
+  const list = document.getElementById('dSupportingList');
+  const item = document.createElement('div');
+  item.className = 'd-supporting-item';
+  item.innerHTML = `
+    <input type="text" class="d-form-input" placeholder="角色名">
+    <span class="d-sep">—</span>
+    <input type="text" class="d-form-input" placeholder="一句话描述">
+    <button class="d-supporting-remove-btn" onclick="dRemoveSupporting(this)">×</button>
+  `;
+  list.appendChild(item);
+}
+
+function dRemoveSupporting(btn) {
+  const item = btn.closest('.d-supporting-item');
+  item.style.opacity = '0';
+  item.style.transform = 'translateX(20px)';
+  item.style.transition = 'all 200ms ease';
+  setTimeout(() => item.remove(), 200);
+}
+
+// ── 创作建议 ──
+function dUpdateSuggestions() {
+  const selectedGenres = Array.from(document.querySelectorAll('#dGenreChips .d-chip.selected'))
+    .map(c => c.dataset.genre);
+  const selectedStyle = document.querySelector('#dStyleGroup .d-option-btn.selected')?.dataset.style || '';
+  const selectedTemplate = document.querySelector('.d-template-item.selected');
+  const name = document.getElementById('dNovelName')?.value?.trim() || '';
+
+  const suggestions = [];
+
+  // Suggestion 1: genre + style -> template
+  if (selectedGenres.includes('玄幻') && selectedStyle === 'hot') {
+    suggestions.push({
+      icon: '💡',
+      html: '<span class="highlight">玄幻</span> + <span class="amber">热血</span> 推荐选择 <span class="amber">「废材逆袭」</span> 模板，这是该组合下最热门的叙事框架'
+    });
+  } else if (selectedGenres.includes('仙侠') && selectedStyle === 'deep') {
+    suggestions.push({
+      icon: '💡',
+      html: '<span class="highlight">仙侠</span> + <span class="amber">深沉</span> 适合走 <span class="amber">「重生复仇」</span> 路线，修仙世界的恩怨情仇最有代入感'
+    });
+  } else if (selectedGenres.includes('都市') && selectedStyle === 'light') {
+    suggestions.push({
+      icon: '💡',
+      html: '<span class="highlight">都市</span> + <span class="amber">轻快</span> 推荐 <span class="amber">「系统流」</span> 模板，轻松搞笑+开挂的都市爽文最受读者欢迎'
+    });
+  } else if (selectedGenres.includes('科幻') && selectedStyle === 'mystery') {
+    suggestions.push({
+      icon: '💡',
+      html: '<span class="highlight">科幻</span> + <span class="amber">悬疑</span> 适合构建立体宇宙谜局，建议从一个小事件层层递进揭示大世界观'
+    });
+  } else if (selectedGenres.length > 0) {
+    suggestions.push({
+      icon: '💡',
+      html: '已选 <span class="highlight">' + selectedGenres.join('、') + '</span>，建议在「拆书建书」中查找匹配模板以快速搭建框架'
+    });
+  } else {
+    suggestions.push({
+      icon: '💡',
+      html: '选择类型和风格后，将为你推荐最匹配的创作模板'
+    });
+  }
+
+  // Suggestion 2: word count
+  const selectedCount = document.querySelector('#dWordCountGroup .d-option-btn.selected')?.dataset.count;
+  if (selectedCount === '100') {
+    suggestions.push({
+      icon: '📝',
+      html: '100万字目标建议规划 <span class="highlight">3-4个</span> 大卷，每卷25-30万字，确保节奏紧凑'
+    });
+  } else if (selectedCount === '200') {
+    suggestions.push({
+      icon: '📝',
+      html: '200万+长篇需要 <span class="highlight">5个以上</span> 大卷，建议设计多线叙事和阶段性BOSS来维持读者粘性'
+    });
+  } else if (selectedCount === '30') {
+    suggestions.push({
+      icon: '📝',
+      html: '30万字中篇建议 <span class="highlight">1-2个</span> 大卷，聚焦核心冲突，避免支线过多分散注意力'
+    });
+  } else if (selectedCount === '50') {
+    suggestions.push({
+      icon: '📝',
+      html: '50万字建议分 <span class="highlight">2-3个</span> 大卷，每卷15-20万字，保证每个高潮都有足够的铺垫'
+    });
+  }
+
+  // Suggestion 3: frequency
+  const selectedFreq = document.querySelector('#dFrequencyGroup .d-option-btn.selected')?.dataset.freq;
+  if (selectedFreq === 'daily') {
+    suggestions.push({
+      icon: '🎯',
+      html: '日更模式需要提前储备 <span class="highlight">至少5万字</span> 存稿，避免断更'
+    });
+  } else if (selectedFreq === 'weekly') {
+    suggestions.push({
+      icon: '🎯',
+      html: '周更模式可以每章 <span class="highlight">4000-6000字</span>，保证章节信息量充足'
+    });
+  } else {
+    suggestions.push({
+      icon: '🎯',
+      html: '不定更新建议设定 <span class="highlight">最低周更1章</span>，维持读者追更习惯'
+    });
+  }
+
+  // Suggestion 4: template-specific
+  if (selectedTemplate) {
+    const tplName = selectedTemplate.querySelector('.d-template-name').textContent;
+    suggestions.push({
+      icon: '📖',
+      html: '已选「<span class="amber">' + tplName + '</span>」模板，系统将自动生成世界观骨架和角色模板，你可以在创作中自由调整'
+    });
+  }
+
+  // Render
+  const container = document.getElementById('dSuggestionCards');
+  if (container) {
+    container.innerHTML = suggestions.map(s => `
+      <div class="d-suggestion-card">
+        <div class="d-suggestion-text">
+          <span class="d-suggestion-icon">${s.icon}</span>
+          ${s.html}
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// ── 桌面端初始化建议 ──
+dUpdateSuggestions();
+
+
+/* ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════
+   移动端交互逻辑 · Mobile Interaction Logic
+   ═══════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════ */
+
+// ── Method selection ──
+function mSelectMethod(el) {
+  document.querySelectorAll('.m-method-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const method = el.dataset.method;
+  const ts = document.getElementById('mTemplateSection');
+  const ih = document.getElementById('mImportHint');
+  ts.classList.toggle('open', method === 'split');
+  ih.classList.toggle('open', method === 'import');
+}
+
+// ── Template tag toggle (single select) ──
+function mToggleTemplate(el) {
+  document.querySelectorAll('.m-template-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Genre chips (multi-select) ──
+function mToggleChip(el) {
+  el.classList.toggle('active');
+}
+
+// ── Radio selection (within same group) ──
+function mSelectRadio(el) {
+  const group = el.parentElement;
+  group.querySelectorAll('.m-radio-item').forEach(r => r.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Collapse toggle ──
+function mToggleCollapse(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ── Supporting characters ──
+function mAddChar() {
+  const list = document.getElementById('mCharList');
+  const row = document.createElement('div');
+  row.className = 'm-char-row';
+  row.innerHTML = `
+    <input class="m-form-input m-char-name" type="text" placeholder="姓名">
+    <input class="m-form-input" type="text" placeholder="一句话描述">
+    <button class="m-char-remove" onclick="mRemoveChar(this)">✕</button>
+  `;
+  list.appendChild(row);
+}
+
+function mRemoveChar(btn) {
+  const list = document.getElementById('mCharList');
+  if (list.querySelectorAll('.m-char-row').length > 1) {
+    btn.closest('.m-char-row').remove();
+  }
+}
+
+// ── Bottom nav ──
+function mSwitchNav(el) {
+  document.querySelectorAll('.m-nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
