@@ -82,3 +82,9 @@ try:
     api_router.include_router(weave_router, prefix="/weave", tags=["weave"])
 except ImportError:
     pass
+
+try:
+    from app.router.subscription import router as subscription_router
+    api_router.include_router(subscription_router, prefix="/subscriptions", tags=["subscriptions"])
+except ImportError:
+    pass
