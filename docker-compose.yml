@@ -54,6 +54,10 @@ services:
     build:
       context: ./moling-web
       target: runner
+      args:
+        # 构建时必须传入正确的前端 API 地址！
+        # 例: docker compose build --build-arg NEXT_PUBLIC_API_BASE_URL=http://123.45.67.89:8000/api/v1 web
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
     ports:
       - "3000:3000"
     depends_on:

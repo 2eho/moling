@@ -49,8 +49,11 @@ function generateRequestId(): string {
 }
 
 function getBaseUrl(): string {
+  // 优先级: NEXT_PUBLIC_API_BASE_URL > NEXT_PUBLIC_API_URL (旧) > fallback
   return (
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1"
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:8000/api/v1"
   );
 }
 
@@ -154,7 +157,17 @@ async function request<T>(
     fetchOptions.body = JSON.stringify(body);
   }
 
-  let response = await fetch(url, fetchOptions);
+  let response: Response;
+  try {
+    response = await fetch(url, fetchOptions);
+  } catch (fetchError) {
+    // 网络不可达 / DNS 解析失败 / CORS 被拦截 等
+    const reason =
+      fetchError instanceof TypeError
+        ? `无法连接到服务器 (${url}) — 请检查网络或 API 地址配置`
+        : `请求失败: ${(fetchError as Error).message}`;
+    throw new Error(reason);
+  }
 
   // ---- 401 Auto-Refresh ----
   if (response.status === 401 && getRefreshToken()) {

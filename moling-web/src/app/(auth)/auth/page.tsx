@@ -32,18 +32,23 @@ export default function AuthPage() {
   }
 
   return (
-    <div className={styles.card}>
-      <div className={styles.header}>
-        <span className={styles.logo}>✒</span>
-        <h1 className={styles.title}>墨灵</h1>
-        <p className={styles.subtitle}>AI 驱动的创意写作平台</p>
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <div className={styles.header}>
+            <div className={styles.logo}>
+              <span className={styles.logoIndigo}>墨</span>灵
+            </div>
+            <p className={styles.subtitle}>AI 驱动的网文创作平台</p>
+          </div>
+
+          <AuthTabs activeTab={activeTab} onChange={setActiveTab} />
+
+          {activeTab === "login" && <LoginForm onSwitchToReset={() => setActiveTab("reset")} />}
+          {activeTab === "register" && <RegisterForm />}
+          {activeTab === "reset" && <ResetPasswordForm />}
+        </div>
       </div>
-
-      <AuthTabs activeTab={activeTab} onChange={setActiveTab} />
-
-      {activeTab === "login" && <LoginForm onSwitchToReset={() => setActiveTab("reset")} />}
-      {activeTab === "register" && <RegisterForm />}
-      {activeTab === "reset" && <ResetPasswordForm />}
     </div>
   );
 }

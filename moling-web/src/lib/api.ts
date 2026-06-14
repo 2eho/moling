@@ -620,7 +620,11 @@ export const importApi = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    // 复用 apiClient 的 baseUrl 逻辑，确保与主 API 地址一致
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+      ?? process.env.NEXT_PUBLIC_API_URL
+      ?? 'http://localhost:8000/api/v1';
+    // upload 不走 JSON，直接 FormData，故不通过 apiClient 调用
     const response = await fetch(`${baseUrl}/import/upload`, {
       method: 'POST',
       headers,

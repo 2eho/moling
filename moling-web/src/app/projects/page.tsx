@@ -33,28 +33,35 @@ export default function ProjectsPage() {
     setSelectedProject(null);
   };
 
+  const handleNewProject = () => {
+    router.push("/projects/new");
+  };
+
   return (
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.greeting}>我的项目</h1>
+          <h1 className={styles.greeting}>我的作品</h1>
           <p className={styles.subtitle}>
             欢迎回来，继续你的创作之旅
           </p>
         </div>
         <div className={styles.headerActions}>
           <Input
-            placeholder="搜索项目..."
+            placeholder="搜索作品名称..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <Button
             variant="primary"
             size="md"
-            onClick={() => router.push("/projects/new")}
+            onClick={handleNewProject}
           >
-            + 新建项目
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{marginRight:"6px"}}>
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            新建作品
           </Button>
         </div>
       </div>
@@ -63,7 +70,7 @@ export default function ProjectsPage() {
       <div className={styles.statsSection}>
         {isLoading ? (
           <div className={styles.statsSkeleton}>
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} height={80} borderRadius={12} />
             ))}
           </div>
@@ -89,9 +96,13 @@ export default function ProjectsPage() {
             ))}
         {!isLoading && filteredProjects.length === 0 && (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon}>📚</span>
-            <p className={styles.emptyTitle}>暂无项目</p>
-            <p className={styles.emptyDesc}>点击"新建项目"开始创作吧</p>
+            <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+            <p className={styles.emptyTitle}>暂无作品</p>
+            <p className={styles.emptyDesc}>点击"新建作品"开始创作吧</p>
           </div>
         )}
       </div>
@@ -103,7 +114,6 @@ export default function ProjectsPage() {
         onClose={() => setSelectedProject(null)}
         onEdit={() => {
           if (selectedProject) {
-            // 保存最后访问的项目ID
             localStorage.setItem("lastProjectId", selectedProject.id);
             router.push(`/workspace/${selectedProject.id}`);
           }

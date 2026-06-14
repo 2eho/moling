@@ -144,10 +144,12 @@ app.add_middleware(RequestIDMiddleware)
 # 2. CORS — 跨域配置（根据环境动态设置）
 _cors_origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS else []
 
-# 生产环境不允许通配符，开发环境可以
 if settings.ENVIRONMENT == "production":
-    # 生产环境：只允许配置的域名
-    allow_origins = _cors_origins
+    # 生产环境：只允许配置的域名（若配置了 "*" 则放行所有）
+    if "*" in _cors_origins:
+        allow_origins = ["*"]
+    else:
+        allow_origins = _cors_origins
 else:
     # 开发/测试环境：允许配置的域名 + localhost
     allow_origins = _cors_origins + [
@@ -156,9 +158,6 @@ else:
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
-    # 开发环境可以允许所有（可选，建议在 .env 中配置具体域名）
-    # if "*" in _cors_origins:
-    #     allow_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,

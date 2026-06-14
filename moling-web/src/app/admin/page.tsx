@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import styles from "./admin.module.css";
@@ -18,13 +18,56 @@ const TAB_NAMES: Record<AdminTab, string> = {
   llmconfig: "LLM 配置",
 };
 
-const TAB_ICONS: Record<AdminTab, string> = {
-  overview: "📊",
-  users: "👥",
-  llm: "🤖",
-  payments: "💰",
-  llmconfig: "🔑",
-};
+function OverviewIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/>
+      <rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  );
+}
+
+function LlmIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="10" rx="2"/>
+      <circle cx="12" cy="16" r="2"/>
+      <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+    </svg>
+  );
+}
+
+function PaymentsIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M8 12h8"/>
+      <path d="M12 8v8"/>
+    </svg>
+  );
+}
+
+function LlmConfigIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  );
+}
 
 export default function AdminPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -66,7 +109,7 @@ export default function AdminPage() {
 
   if (isLoading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0a0c14", color: "#6b7199" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "var(--color-admin-bg, #0a0c14)", color: "var(--color-text-tertiary, #6b7199)" }}>
         加载中...
       </div>
     );
@@ -76,12 +119,12 @@ export default function AdminPage() {
     return null;
   }
 
-  const navItems: { id: AdminTab; icon: string; label: string }[] = [
-    { id: "overview", icon: "📊", label: "系统概览" },
-    { id: "users", icon: "👥", label: "用户管理" },
-    { id: "llm", icon: "🤖", label: "LLM 用量" },
-    { id: "payments", icon: "💰", label: "支付记录" },
-    { id: "llmconfig", icon: "🔑", label: "LLM 配置" },
+  const navItems: { id: AdminTab; icon: ReactNode; label: string }[] = [
+    { id: "overview", icon: <OverviewIcon />, label: "系统概览" },
+    { id: "users", icon: <UsersIcon />, label: "用户管理" },
+    { id: "llm", icon: <LlmIcon />, label: "LLM 用量" },
+    { id: "payments", icon: <PaymentsIcon />, label: "支付记录" },
+    { id: "llmconfig", icon: <LlmConfigIcon />, label: "LLM 配置" },
   ];
 
   const sidebarItemClass = (tab: AdminTab) =>
@@ -122,11 +165,22 @@ export default function AdminPage() {
         <div className={styles.sidebarFooter}>
           <div className={styles.sidebarNavSection}>
             <div className={styles.sidebarNavItem} data-tooltip="系统设置">
-              <span className={styles.sidebarNavIcon}>⚙️</span>
+              <span className={styles.sidebarNavIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </span>
               <span className={styles.sidebarNavText}>系统设置</span>
             </div>
             <div className={styles.sidebarNavItem} data-tooltip="退出登录">
-              <span className={styles.sidebarNavIcon}>🚪</span>
+              <span className={styles.sidebarNavIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </span>
               <span className={styles.sidebarNavText}>退出登录</span>
             </div>
           </div>
@@ -190,7 +244,7 @@ export default function AdminPage() {
   );
 }
 
-// ── LLM Usage Tab (kept inline as it's mostly presentational) ──
+// ── LLM Usage Tab ──
 function LlmUsageContent() {
   const [dateFilter, setDateFilter] = useState("今日");
   const dateFilterOptions = ["今日", "本周", "本月", "自定义"];
@@ -207,7 +261,12 @@ function LlmUsageContent() {
       <div className={styles.llmStatCards}>
         <div className={styles.statCard}>
           <div className={styles.statCardHeader}>
-            <div className={`${styles.statCardIcon} ${styles.statCardIconBlue}`}>📊</div>
+            <div className={`${styles.statCardIcon} ${styles.statCardIconBlue}`}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+            </div>
           </div>
           <div className={styles.statCardLabel}>本月 Token 消耗</div>
           <div className={styles.statCardValue}>1.2B</div>
@@ -218,7 +277,12 @@ function LlmUsageContent() {
         </div>
         <div className={styles.statCard}>
           <div className={styles.statCardHeader}>
-            <div className={`${styles.statCardIcon} ${styles.statCardIconIndigo}`}>🔄</div>
+            <div className={`${styles.statCardIcon} ${styles.statCardIconIndigo}`}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+            </div>
           </div>
           <div className={styles.statCardLabel}>API 调用次数</div>
           <div className={styles.statCardValue}>856K</div>
@@ -229,7 +293,12 @@ function LlmUsageContent() {
         </div>
         <div className={styles.statCard}>
           <div className={styles.statCardHeader}>
-            <div className={`${styles.statCardIcon} ${styles.statCardIconAmber}`}>⚡</div>
+            <div className={`${styles.statCardIcon} ${styles.statCardIconAmber}`}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
           </div>
           <div className={styles.statCardLabel}>平均响应时间</div>
           <div className={styles.statCardValue}>1.8s</div>
@@ -274,7 +343,7 @@ function LlmUsageContent() {
   );
 }
 
-// ── Payments Tab (kept inline with mock data - needs backend API) ──
+// ── Payments Tab ──
 function PaymentsContent() {
   const [paymentFilterTab, setPaymentFilterTab] = useState("全部");
   const paymentFilterTabs = ["全部", "已支付", "待支付", "已退款", "失败"];
@@ -288,7 +357,6 @@ function PaymentsContent() {
   ];
 
   const badgeForStatus = (status: string) => {
-    const cls = styles as Record<string, string>;
     switch (status) {
       case "paid": return <span className={styles.badgePaid}><span className={styles.badgeDot}></span>已支付</span>;
       case "pending": return <span className={styles.badgePending}><span className={styles.badgeDot}></span>待支付</span>;
@@ -316,7 +384,11 @@ function PaymentsContent() {
         </div>
         <select className={styles.filterSelect}><option>日期范围</option><option>今天</option><option>本周</option><option>本月</option><option>自定义</option></select>
         <div className={styles.filterSearchWrap}>
-          <span className={styles.filterSearchIcon}>🔍</span>
+          <span className={styles.filterSearchIcon}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
           <input className={styles.filterSearch} type="text" placeholder="搜索订单号/用户..." />
         </div>
       </div>

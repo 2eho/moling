@@ -1,219 +1,300 @@
-/* Notifications 页面样式 */
+/* ═══════════════════════════════════════════════════════
+   Notifications — 墨灵创作工作台
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Container ── */
 .container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: #0d0f1a;
-  color: #e8e9f0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  opacity: 0;
+  transition: all var(--duration-slow) var(--ease-default);
+  z-index: 1000;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.toastVisible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Header ── */
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid #2a2d45;
+  padding: 0 var(--space-5);
+  height: var(--header-height, 52px);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
 }
 
-.title {
-  font-family: 'Noto Serif SC', serif;
-  font-size: 24px;
-  font-weight: 700;
+.headerBack {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  margin-right: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  transition: color var(--duration-normal);
+}
+
+.headerBack:hover {
+  color: var(--color-text-primary);
+}
+
+.headerBack svg {
+  width: 14px;
+  height: 14px;
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
 }
 
 .headerActions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
-.actionBtn {
-  padding: 8px 16px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 8px;
-  color: #6366f1;
-  font-size: 13px;
+.markAllBtn {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
+  font-family: inherit;
 }
 
-.actionBtn:hover {
-  background: rgba(99, 102, 241, 0.2);
+.markAllBtn:hover {
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
 }
 
-.actionBtn:disabled {
-  opacity: 0.5;
+.markAllBtn:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+/* ── Content Area ── */
+.content {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+/* ── Unread Badge ── */
 .unreadBadge {
-  padding: 12px 24px;
-  font-size: 14px;
-  color: #9ca3c4;
-  border-bottom: 1px solid #2a2d45;
-}
-
-.filters {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-4) 0;
   display: flex;
-  gap: 8px;
-  padding: 16px 24px;
-  border-bottom: 1px solid #2a2d45;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--color-text-tertiary);
 }
 
-.filterBtn {
-  padding: 6px 12px;
-  background: #151829;
-  border: 1px solid #2a2d45;
-  border-radius: 8px;
-  color: #6b7199;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
+.unreadBadge svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-brand-indigo);
 }
 
-.filterBtn:hover {
-  border-color: #6366f1;
-  color: #9ca3c4;
-}
-
-.filterBtnActive {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: #6366f1;
-  color: #6366f1;
-}
-
-.list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 24px;
-}
-
+/* ── Notification Item ── */
 .item {
   display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: #151829;
-  border: 1px solid #2a2d45;
-  border-radius: 12px;
-  margin-bottom: 12px;
-  transition: all 0.2s;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  transition: background var(--duration-fast);
 }
 
 .item:hover {
-  border-color: #3d4166;
+  background: rgba(99, 102, 241, 0.04);
 }
 
 .itemUnread {
-  border-left: 3px solid #6366f1;
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(99, 102, 241, 0.06);
 }
 
+/* ── Notification Icon ── */
 .itemIcon {
-  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.itemIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iconWarning {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--color-warning);
+}
+
+.iconError {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger);
+}
+
+.iconSuccess {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--color-success);
+}
+
+.iconInfo {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-brand-indigo);
+}
+
+/* ── Notification Content ── */
 .itemContent {
   flex: 1;
+  min-width: 0;
 }
 
 .itemTitle {
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #e8e9f0;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
 }
 
-.itemMessage {
-  font-size: 13px;
-  color: #9ca3c4;
-  line-height: 1.6;
-  margin-bottom: 8px;
+.itemBody {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
 }
 
 .itemTime {
   font-size: 11px;
-  color: #6b7199;
+  color: var(--color-text-disabled);
+  margin-top: 4px;
 }
 
-.itemActions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* ── Unread Dot ── */
+.unreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
+  margin-top: 6px;
+  background: var(--color-brand-indigo);
 }
 
-.itemActionBtn {
-  padding: 4px 8px;
-  background: none;
-  border: 1px solid #2a2d45;
-  border-radius: 4px;
-  color: #9ca3c4;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
+.unreadDotRead {
+  background: transparent;
 }
 
-.itemActionBtn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-}
-
-.itemActionBtnDanger:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-}
-
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  color: #6b7199;
-}
-
+/* ── Empty State ── */
 .empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 64px 32px;
-  color: #6b7199;
-  font-size: 16px;
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--color-text-tertiary);
 }
 
+.emptyIcon {
+  margin-bottom: var(--space-4);
+  display: inline-flex;
+}
+
+.emptyIcon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.empty p {
+  font-size: 13px;
+}
+
+/* ── Loading ── */
+.loading {
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+}
+
+/* ── Pagination ── */
 .pagination {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 16px 24px;
-  border-top: 1px solid #2a2d45;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
-.pagination button {
-  padding: 8px 16px;
-  background: #151829;
-  border: 1px solid #2a2d45;
-  border-radius: 8px;
-  color: #9ca3c4;
-  font-size: 13px;
+.pageBtn {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
+  font-family: inherit;
 }
 
-.pagination button:hover:not(:disabled) {
-  border-color: #6366f1;
-  color: #e8e9f0;
+.pageBtn:hover:not(:disabled) {
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
 }
 
-.pagination button:disabled {
-  opacity: 0.5;
+.pageBtn:disabled {
+  color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 
-.pagination span {
-  font-size: 14px;
-  color: #6b7199;
+.pageInfo {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .content {
+    padding: var(--space-3);
+  }
+
+  .headerTitle {
+    font-size: 14px;
+  }
+
+  .item {
+    padding: var(--space-3);
+  }
 }

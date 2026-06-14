@@ -190,7 +190,10 @@ export default function NewProjectPage() {
       {/* Back to projects */}
       <div className={styles.back}>
         <Button variant="ghost" onClick={() => router.push("/projects")}>
-          ← 返回项目列表
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{marginRight:"4px", verticalAlign:"middle"}}>
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          返回项目列表
         </Button>
       </div>
     </div>

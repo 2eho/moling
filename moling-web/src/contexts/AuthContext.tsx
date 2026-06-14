@@ -87,9 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (username: string, email: string, password: string) => {
+      // 后端 RegisterReq 接收的是 nickname（不是 username）
       const res = await apiClient.post<ApiResponse<RegisterResponse>>(
         "/auth/register",
-        { username, email, password },
+        { nickname: username, email, password },
       );
       const { access_token, refresh_token, user: userData } = res.data;
       storeTokens(access_token, refresh_token);
@@ -106,12 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    await apiClient.post("/auth/reset-password", { email });
+    // 后端路径: POST /auth/password-reset-request
+    await apiClient.post("/auth/password-reset-request", { email });
   }, []);
 
   const setNewPassword = useCallback(
     async (token: string, password: string) => {
-      await apiClient.post("/auth/set-password", { token, password });
+      // 后端路径: POST /auth/password-reset
+      await apiClient.post("/auth/password-reset", { token, new_password: password });
     },
     [],
   );

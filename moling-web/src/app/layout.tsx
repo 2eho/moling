@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
+import { AppShell } from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: '墨灵 - AI 创作工作台',
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body>
         <Providers>
-          {children}
+          <AppShell>
+            {children}
+          </AppShell>
         </Providers>
       </body>
     </html>

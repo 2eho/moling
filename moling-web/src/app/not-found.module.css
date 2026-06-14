@@ -13,24 +13,41 @@
 }
 
 .icon {
-  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
   margin-bottom: var(--space-4);
 }
 
 .code {
   font-family: var(--font-heading);
   font-size: 96px;
+  font-weight: 700;
   color: var(--color-brand-indigo);
   line-height: 1;
   margin-bottom: var(--space-2);
   opacity: 0.6;
+  animation: glow 3s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.15));
+  }
+  50% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.3));
+  }
 }
 
 .title {
+  font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 600;
-  margin-bottom: var(--space-2);
   color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
 }
 
 .desc {
@@ -38,6 +55,27 @@
   color: var(--color-text-tertiary);
   line-height: 1.6;
   margin-bottom: var(--space-8);
+}
+
+.links {
+  margin-top: var(--space-6);
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.linkBtn {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.linkBtn:hover {
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 480px) {
