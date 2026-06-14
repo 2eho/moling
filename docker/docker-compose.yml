@@ -55,16 +55,14 @@ services:
     env_file:
       - ../moling-server/.env
     environment:
-      # 以下环境变量会覆盖 .env 文件中的值
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-moling}:${POSTGRES_PASSWORD:-moling}@db:5432/${POSTGRES_DB:-moling}
+      # 默认使用 SQLite（单文件，MVP 部署推荐）
+      # 切换 PostgreSQL: postgresql+asyncpg://${POSTGRES_USER:-moling}:${POSTGRES_PASSWORD:-moling}@db:5432/${POSTGRES_DB:-moling}
+      - DATABASE_URL=sqlite+aiosqlite:///app/data/moling.db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      # LLM API 配置（如果在 Docker 内运行 LLM，使用服务名或 host.docker.internal）
       - LLM_API_BASE=${LLM_API_BASE:-http://host.docker.internal:4000/v1}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -87,14 +85,12 @@ services:
     env_file:
       - ../moling-server/.env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-moling}:${POSTGRES_PASSWORD:-moling}@db:5432/${POSTGRES_DB:-moling}
+      - DATABASE_URL=sqlite+aiosqlite:///app/data/moling.db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - LLM_API_BASE=${LLM_API_BASE:-http://host.docker.internal:4000/v1}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
       app:

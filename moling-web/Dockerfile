@@ -15,16 +15,16 @@ WORKDIR /app
 # 设置环境变量
 ENV NODE_ENV=production
 
-# 安装依赖（利用 Docker 缓存）
+# 安装依赖（需要 devDependencies 来构建 Next.js）
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm ci
 
-# 复制源代码并构建
+# 复制源代码并构建（静态导出）
 COPY . .
 RUN npm run build
 
-# 验证构建产物是否存在
-RUN ls -la out/ || ls -la .next/ || echo "Warning: No build output found"
+# 验证构建产物是否存在（next.config.ts 配置了 output: 'export' -> out/ 目录）
+RUN ls -la out/ || (echo "ERROR: out/ directory not found. Did you set output: 'export' in next.config.ts?" && exit 1)
 
 # ---- Runtime Stage ----
 FROM nginx:alpine AS runner
@@ -37,14 +37,10 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S frontend -u 1001
 
 # 复制 Nginx 配置文件
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
 
-# 从构建阶段复制静态文件
+# 从构建阶段复制静态文件（next export 输出到 out/）
 COPY --from=builder /app/out /usr/share/nginx/html
-# 如果是 Next.js 的 .next 构建，使用以下行 instead:
-# COPY --from=builder /app/.next /usr/share/nginx/html/.next
-# COPY --from=builder /app/public /usr/share/nginx/html/public
-# COPY --from=builder /app/package.json /usr/share/nginx/html/
 
 # 设置文件权限
 RUN chown -R frontend:nodejs /usr/share/nginx/html && \
@@ -59,8 +55,8 @@ USER frontend
 # 暴露端口
 EXPOSE 80
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+# 健康检查（Nginx 静态文件服务）
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD wget -qO- http://localhost:80/health || exit 1
 
 # 启动 Nginx

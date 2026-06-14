@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"  # development | staging | production
 
     # ---- Database ----
-    DATABASE_URL: str = "postgresql+asyncpg://moling:moling@localhost:5432/moling"
-    # ^ WARNING: Default contains a weak password. In production, set DATABASE_URL
-    #   via environment variable with a strong, unique database credential.
+    # MVP 默认使用 SQLite（单文件、零配置）
+    # 生产环境切换为 PostgreSQL: postgresql+asyncpg://user:pass@host:5432/db
+    DATABASE_URL: str = "sqlite+aiosqlite:///./moling.db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # ---- Auth / JWT ----

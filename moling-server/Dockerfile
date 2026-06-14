@@ -18,16 +18,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# 安装系统构建依赖
+# 安装系统构建依赖（SQLite 只需要 gcc/libffi，无需 pg）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    g++ \
-    libpq-dev \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 Python 依赖
+# 复制包源码（setuptools build 需要 app/ 目录）
 COPY pyproject.toml .
+COPY app/ ./app/
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir .
 
@@ -44,7 +43,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # 安装运行时系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
     libffi8 \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -62,7 +60,7 @@ COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
 # 创建必要的目录并设置权限
-RUN mkdir -p /app/logs && \
+RUN mkdir -p /app/logs /app/data && \
     chown -R appuser:appuser /app && \
     chmod -R 755 /app
 

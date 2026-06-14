@@ -57,6 +57,8 @@ temp/
 
 # Build artifacts
 moling-web/.next/
+moling-web/out/
+moling-web/tsconfig.tsbuildinfo
 moling-server/__pycache__/
 moling-server/*.pyc
 

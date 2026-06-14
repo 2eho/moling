@@ -1,6 +1,15 @@
 version: "3.9"
 
+# ==============================================================================
+# 墨灵 Docker Compose — MVP 部署配置
+# ==============================================================================
+# 启动: docker compose up -d --build
+# 日志: docker compose logs -f
+# 停止: docker compose down
+# ==============================================================================
+
 services:
+  # ---- 后端 API ----
   app:
     build:
       context: ./moling-server
@@ -9,32 +18,24 @@ services:
     env_file:
       - ./moling-server/.env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://moling:moling@db:5432/moling
+      # SQLite 数据库（文件存储在卷中）
+      - DATABASE_URL=sqlite+aiosqlite:///app/data/moling.db
+      # Redis（可选，Celery 任务队列需要）
       - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - app_data:/app/data
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_started
     restart: unless-stopped
-
-  db:
-    image: postgres:16-alpine
-    environment:
-      - POSTGRES_USER=moling
-      - POSTGRES_PASSWORD=moling
-      - POSTGRES_DB=moling
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U moling"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
 
+  # ---- Redis（Celery 任务队列）----
   redis:
     image: redis:7-alpine
     ports:
@@ -48,6 +49,7 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ---- 前端 Nginx ----
   web:
     build:
       context: ./moling-web
@@ -59,5 +61,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  app_data:
   redis_data:
