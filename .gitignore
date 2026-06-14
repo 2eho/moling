@@ -65,3 +65,5 @@ moling-server/*.pyc
 # OS files
 Thumbs.db
 Desktop.ini
+
+nul

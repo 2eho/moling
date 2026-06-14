@@ -35,10 +35,8 @@ ENV PORT=3000
 
 # 从构建阶段复制产物
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/.next/standalone ./.next/standalone/
+COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static/
-COPY --from=builder /app/public ./public/
-COPY --from=builder /app/next.config.ts ./
 
 # 创建非 root 用户
 RUN addgroup -g 1001 -S nodejs && \
@@ -52,5 +50,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget -qO- http://localhost:3000/ || exit 1
 
-# 启动 Next.js 服务器
-CMD ["node", ".next/standalone/server.js"]
+# 启动 Next.js 服务器（standalone 模式下 server.js 在根目录）
+CMD ["node", "server.js"]
