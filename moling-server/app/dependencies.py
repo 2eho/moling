@@ -107,12 +107,17 @@ settings = get_settings()
 def _get_db_url() -> str:
     """返回适配当前平台的数据库 URL。
 
-    Windows 上使用 SQLite 时，强制使用 aiosqlite 驱动。
+    - Windows + SQLite：强制使用 aiosqlite 驱动
+    - PostgreSQL：异步和同步引擎都使用 psycopg 3.x
+      （psycopg 原生支持异步，不依赖 greenlet）
     """
     url = settings.DATABASE_URL
     if platform.system() == "Windows" and url.startswith("sqlite"):
         if "aiosqlite" not in url:
             url = url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+    # PostgreSQL：强制使用 psycopg 驱动（异步/同步均支持）
+    if url.startswith("postgresql+asyncpg"):
+        url = url.replace("postgresql+asyncpg", "postgresql+psycopg", 1)
     return url
 
 

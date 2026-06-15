@@ -33,7 +33,8 @@ services:
       - ./moling-server/.env
     environment:
       # 容器内连接 db 容器，不走 localhost
-      - DATABASE_URL=postgresql+asyncpg://moling:moling@db:5432/moling
+      # 使用 psycopg 3.x 驱动（异步/同步均支持，不依赖 greenlet）
+      - DATABASE_URL=postgresql+psycopg://moling:moling@db:5432/moling
       # CORS：允许前端通过 Nginx 访问
       - CORS_ORIGINS=http://localhost:8080,http://124.222.163.79:8080
       # 生产环境标记
