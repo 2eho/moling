@@ -9,7 +9,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { User, ApiResponse } from "@/lib/types";
+import type { User } from "@/lib/types";
 import { apiClient } from "@/lib/apiClient";
 import {
   setTokens as storeTokens,
@@ -76,11 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ---- Actions ----
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await apiClient.post<ApiResponse<LoginResponse>>("/auth/login", {
+    const res = await apiClient.post<LoginResponse>("/auth/login", {
       email,
       password,
     });
-    const { access_token, refresh_token, user: userData } = res.data;
+    const { access_token, refresh_token, user: userData } = res;
     storeTokens(access_token, refresh_token);
     storeUser(userData);
     setUserState(userData);
@@ -89,11 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (username: string, email: string, password: string) => {
       // 后端 RegisterReq 接收的是 nickname（不是 username）
-      const res = await apiClient.post<ApiResponse<RegisterResponse>>(
+      const res = await apiClient.post<RegisterResponse>(
         "/auth/register",
         { nickname: username, email, password },
       );
-      const { access_token, refresh_token, user: userData } = res.data;
+      const { access_token, refresh_token, user: userData } = res;
       storeTokens(access_token, refresh_token);
       storeUser(userData);
       setUserState(userData);
