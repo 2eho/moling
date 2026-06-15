@@ -915,3 +915,45 @@ ew URL() 构造，需字符串拼接
 - Tags: deployment, nginx, docker, production, api-client
 
 ---
+
+## [LRN-20260615-022] pitfall
+
+**Logged**: 2026-06-15T14:32:00+08:00
+**Priority**: high
+**Status**: pending
+**Area**: infra | config
+
+### Summary
+Windows 上 git rename 文件仅改变大小写时，NTFS 认为文件名相同，git 不会正确跟踪改动。commit 看似正确，但 Linux 服务器上 checkout 后文件会丢失，Docker 构建报 Module not found。
+
+### Details
+**问题复现**：
+1. 本地（Windows）有文件 Notifications.module.css（大写）
+2. import 语句用 './notifications.module.css'（小写）
+3. Windows 不区分大小写 → 开发正常
+4. 执行 git mv 并提交 → git 记录 {Notifications => notifications}
+5. 推送到 Linux 服务器，git pull 后文件没被正确 checkout
+6. Docker 构建报 Module not found
+
+**根因**：
+- Windows NTFS 是 case-insensitive，core.ignorecase=true，git 把大小写变化视为"重命名"但底层 inode 没变
+- Linux 是 case-sensitive，git pull 时旧的大写文件没被删除，新的小写文件没被创建
+
+**修复**（在 Linux 服务器上执行）：
+`ash
+rm -f Notifications.module.css
+git checkout HEAD -- notifications.module.css
+`
+
+**预防**：
+- Windows 上改文件名大小写用 git mv -f 强制跟踪
+- 或分两步：git rm --cached OLD → 重命名 → git add NEW
+- 或直接在 Linux 环境操作
+
+### Metadata
+- Source: production build failure
+- Related Files: moling-web/src/app/notifications/notifications.module.css, moling-web/src/app/pricing/pricing.module.css
+- Tags: git, case-sensitive, cross-platform, docker, build
+- See Also: LRN-20260615-021
+
+---

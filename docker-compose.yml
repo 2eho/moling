@@ -1,19 +1,48 @@
 services:
+  # ---- PostgreSQL ----
+  db:
+    image: postgres:16-alpine
+    container_name: moling-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: moling
+      POSTGRES_PASSWORD: moling
+      POSTGRES_DB: moling
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moling -d moling"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - moling-net
+
+  # ---- 后端 API ----
   app:
     build:
       context: ./moling-server
       dockerfile: Dockerfile
     container_name: moling-app
     restart: unless-stopped
-    ports:                              # ✅ nginx 在宿主机上，需要端口映射
-      - "8000:8000"                     # nginx proxy_pass → 127.0.0.1:8000
+    ports:
+      - "8000:8000"
     env_file:
       - ./moling-server/.env
+    environment:
+      # 容器内连接 db 容器，不走 localhost
+      - DATABASE_URL=postgresql+asyncpg://moling:moling@db:5432/moling
     volumes:
       - ./moling-server:/app
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - moling-net
 
+  # ---- 前端 Next.js ----
   web:
     build:
       context: ./moling-web
@@ -21,7 +50,7 @@ services:
     container_name: moling-web
     restart: unless-stopped
     ports:
-      - "3000:3000"                     # ✅ 映射 3000，不碰 8080（nginx在用）
+      - "3000:3000"
     environment:
       - NODE_ENV=production
     depends_on:
@@ -32,3 +61,6 @@ services:
 networks:
   moling-net:
     driver: bridge
+
+volumes:
+  pgdata:
