@@ -108,7 +108,7 @@ function getBaseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_API_BASE_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
-    "http://124.222.163.79:8080/api/v1"
+    "http://124.222.163.79:8080/moling/api/v1"
   );
 }
 

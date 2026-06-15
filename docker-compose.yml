@@ -34,6 +34,10 @@ services:
     environment:
       # 容器内连接 db 容器，不走 localhost
       - DATABASE_URL=postgresql+asyncpg://moling:moling@db:5432/moling
+      # CORS：允许前端通过 Nginx 访问
+      - CORS_ORIGINS=http://localhost:8080,http://124.222.163.79:8080
+      # 生产环境标记
+      - ENVIRONMENT=production
     volumes:
       - ./moling-server:/app
     depends_on:

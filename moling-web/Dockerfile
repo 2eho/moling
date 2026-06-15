@@ -14,7 +14,7 @@ WORKDIR /app
 
 # ---- 构建参数（生产环境下必须传入正确的 API 地址）----
 ARG NEXT_PUBLIC_API_BASE_URL
-ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://124.222.163.79:8080/api/v1}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://124.222.163.79:8080/moling/api/v1}
 
 # 安装依赖（先装，NODE_ENV 在后面设，确保 devDependencies 被安装）
 COPY package.json package-lock.json* ./

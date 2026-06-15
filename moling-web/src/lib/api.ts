@@ -707,7 +707,7 @@ export const importApi = {
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       ?? process.env.NEXT_PUBLIC_API_URL
-      ?? 'http://124.222.163.79:8080/api/v1';
+      ?? 'http://124.222.163.79:8080/moling/api/v1';
     
     const response = await fetch(`${baseUrl}/projects/${projectId}/import/upload`, {
       method: 'POST',
