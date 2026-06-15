@@ -1,39 +1,9 @@
 /* ═══════════════════════════════════════════════════════
-   墨灵 (Moling) — AppShell Layout Styles
+   墨灵 (Moling) — Sidebar Styles (Web端侧边栏)
    ═══════════════════════════════════════════════════════ */
 
-/* ---- Shell Container (移动端) ---- */
-
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-  background: var(--color-bg);
-}
-
-/* ---- Main Content Area ---- */
-
-.main {
-  flex: 1;
-  overflow-y: auto;
-  margin-top: var(--header-height, 52px);
-  background: var(--color-bg);
-  transition: background var(--transition-normal);
-}
-
-/* ---- 移动端：底部导航栏占位 ---- */
-
-@media (max-width: 768px) {
-  .main {
-    padding-bottom: 56px; /* 底部导航栏高度 */
-  }
-}
-
-/* ---- 侧边栏样式 (Web端) ---- */
-
 .sidebar {
-  width: var(--sidebar-width, 280px);
+  width: 280px;
   height: 100vh;
   position: fixed;
   left: 0;
@@ -43,26 +13,74 @@
   display: flex;
   flex-direction: column;
   z-index: 50;
+  transition: width 0.3s var(--ease-spring);
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+  width: 56px;
+}
+
+/* ---- Header ---- */
+
+.header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  text-decoration: none;
+  white-space: nowrap;
   transition: all var(--transition-normal);
 }
 
-.sidebarCollapsed {
-  width: var(--sidebar-collapsed, 56px);
+.logo:hover {
+  opacity: 0.8;
 }
 
-/* ---- 侧边栏头部 ---- */
+.logoIcon {
+  font-size: var(--font-size-xl);
+}
 
-.sidebarHeader {
-  height: var(--header-height, 52px);
+.logoText {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.toggleBtn {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  padding: 0 var(--spacing-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-normal);
+  flex-shrink: 0;
+  font-size: 14px;
 }
 
-/* ---- 侧边栏导航 ---- */
+.toggleBtn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-brand-indigo);
+}
 
-.sidebarNav {
+/* ---- Navigation ---- */
+
+.nav {
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-4) var(--spacing-3);
@@ -70,8 +88,6 @@
   flex-direction: column;
   gap: var(--spacing-1);
 }
-
-/* ---- 导航项 ---- */
 
 .navItem {
   display: flex;
@@ -84,8 +100,9 @@
   font-weight: 500;
   transition: all var(--transition-normal);
   cursor: pointer;
-  position: relative;
   text-decoration: none;
+  white-space: nowrap;
+  position: relative;
 }
 
 .navItem:hover {
@@ -93,13 +110,13 @@
   color: var(--color-text-primary);
 }
 
-.navItemActive {
+.navItem.active {
   background: var(--color-brand-indigo-dim);
   color: var(--color-brand-indigo);
   font-weight: 600;
 }
 
-.navItemActive::before {
+.navItem.active::before {
   content: '';
   position: absolute;
   left: 0;
@@ -111,8 +128,6 @@
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
-/* ---- 导航图标 ---- */
-
 .navIcon {
   width: 20px;
   height: 20px;
@@ -120,45 +135,20 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 16px;
 }
-
-/* ---- 导航标签 ---- */
 
 .navLabel {
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ---- 响应式：移动端隐藏侧边栏 ---- */
+/* ---- Responsive: 移动端隐藏侧边栏 ---- */
 
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%);
+    display: none;
   }
-
-  .sidebarOpen {
-    transform: translateX(0);
-  }
-}
-
-/* ---- Web端：带侧边栏的布局 ---- */
-
-.layoutWithSidebar {
-  display: flex;
-  height: 100vh;
-}
-
-.layoutWithSidebar .main {
-  margin-left: var(--sidebar-width, 280px);
-  margin-top: 0; /* 覆盖移动端的 margin-top */
-  flex: 1;
-  overflow-y: auto;
-  transition: margin-left var(--transition-normal);
-}
-
-.layoutWithSidebar .mainCollapsed {
-  margin-left: var(--sidebar-collapsed, 56px);
 }

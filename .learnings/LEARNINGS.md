@@ -104,3 +104,50 @@ Corrections, insights, and knowledge gaps captured during development.
 - **Notes**: 已创建 .learnings/ 目录并更新 LEARNINGS.md
 
 ---
+
+## [LRN-20250615-004] best_practice
+
+**Logged**: 2026-06-15T19:50:00+08:00
+**Priority**: high
+**Status**: resolved
+**Area**: frontend | design | responsive
+
+### Summary
+响应式布局设计：移动端和Web端双端可用，使用统一布局管理器（AppShell）根据屏幕尺寸自动切换导航方式。
+
+### Details
+**问题**：`/moling/projects` 页面出现双重标题栏（两个"AI小说操作平台"）。
+
+**根因**：Next.js App Router 的布局嵌套规则 - Root Layout (`app/layout.tsx`) 包含 `<AppShell>`（含 Navbar），Projects Layout (`app/projects/layout.tsx`) 又包含了一个 `<Navbar>`，导致重复渲染。
+
+**解决方案**：
+1. **统一布局管理**：使用 `AppShell` 作为唯一布局管理器
+2. **响应式设计**：
+   - Web端（> 768px）：侧边栏导航（可折叠）
+   - 移动端（≤ 768px）：顶部导航 + 底部导航
+3. **移除子布局重复组件**：所有子布局不重复 Navbar/Sidebar
+
+**关键代码**：
+- `AppShell.tsx`：检测屏幕尺寸（`useEffect` + `window.addEventListener("resize")`）
+- `Sidebar.tsx`：Web端侧边栏（280px / 56px 可折叠）
+- `BottomNav.tsx`：移动端底部导航（56px 高度，适配 iPhone X+ 安全区）
+
+### Suggested Action
+1. 在设计布局时，明确哪一层是"布局管理层"
+2. 子布局只负责数据提供（如 `ProjectProvider`），不负责导航渲染
+3. 使用 CSS Media Query (`@media (max-width: 768px)`) 实现响应式
+
+### Metadata
+- Source: user_feedback | error
+- Related Files: app/projects/layout.tsx, components/layout/AppShell.tsx, components/layout/Sidebar.tsx, components/layout/BottomNav.tsx
+- Tags: responsive_design, nextjs_app_router, layout_nesting, mobile_first
+- Pattern-Key: design.responsive_layout_management
+- Recurrence-Count: 1
+- First-Seen: 2026-06-15
+- Last-Seen: 2026-06-15
+
+### Resolution
+- **Resolved**: 2026-06-15T19:50:00+08:00
+- **Notes**: 创建响应式布局系统，支持移动端+Web端双端可用，移除子布局重复 Navbar
+
+---

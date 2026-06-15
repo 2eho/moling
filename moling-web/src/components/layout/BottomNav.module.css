@@ -1,0 +1,61 @@
+/* ═══════════════════════════════════════════════════════
+   墨灵 (Moling) — Bottom Navigation Styles (移动端底部导航)
+   ═══════════════════════════════════════════════════════ */
+
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: rgba(13, 15, 26, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--color-border-subtle);
+  display: none; /* 默认隐藏，移动端显示 */
+  align-items: center;
+  justify-content: space-around;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom); /* iPhone X+ 安全区 */
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  height: 100%;
+  text-decoration: none;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-normal);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navItem:hover {
+  color: var(--color-text-primary);
+}
+
+.navItem.active {
+  color: var(--color-brand-indigo);
+}
+
+.navIcon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* ---- 移动端显示底部导航 ---- */
+
+@media (max-width: 768px) {
+  .bottomNav {
+    display: flex;
+  }
+}
