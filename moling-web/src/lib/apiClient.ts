@@ -120,25 +120,34 @@ function buildUrl(path: string, params?: RequestParams): string {
   const baseUrl = getBaseUrl();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-  // If baseUrl is empty, use relative path (for nginx reverse proxy setup)
-  // Browser will resolve relative to current origin, nginx proxies /api to backend
-  if (!baseUrl) {
-    let url = normalizedPath;
-    if (params) {
-      const search = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          search.append(key, String(value));
-        }
-      });
-      const qs = search.toString();
-      if (qs) url += `?${qs}`;
-    }
-    return url;
+  // Helper to append query params to a URL string
+  function appendParams(url: string): string {
+    if (!params) return url;
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) search.append(key, String(value));
+    });
+    const qs = search.toString();
+    return qs ? `${url}?${qs}` : url;
   }
 
-  // Absolute URL mode (development, or when API is on different domain)
+  // 情况 A: baseUrl 为空 → 相对路径（无前缀）
+  if (!baseUrl) {
+    return appendParams(normalizedPath);
+  }
+
   const normalizedBase = baseUrl.replace(/\/+$/, "");
+
+  // 情况 B: baseUrl 以 / 开头 → 带前缀的相对路径（如 /moling/api/v1）
+  if (baseUrl.startsWith("/")) {
+    // 注意：这里不能使用 new URL()，因为不包含 host
+    // 直接用字符串拼接，浏览器会自动解析为相对于当前 origin 的 URL
+    const url = `${normalizedBase}${normalizedPath}`;
+    return appendParams(url);
+  }
+
+  // 情况 C: baseUrl 是完整 URL（http://...）→ 绝对路径
+  // 适用于开发环境（前后端不同端口）或前后端不同域
   const fullUrl = `${normalizedBase}${normalizedPath}`;
   const url = new URL(fullUrl);
 

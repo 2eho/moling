@@ -1,198 +1,177 @@
-/* ═══════════════════════════════════════════════════════
-   Pricing — 墨灵创作工作台
-   ═══════════════════════════════════════════════════════ */
+/* ======== Pricing Page Styles ======== */
 
-/* ── Layout ── */
 .container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
   min-height: 100vh;
-  background: var(--color-bg);
-  color: var(--color-text-primary);
-  display: flex;
-  flex-direction: column;
+  background: #0f0f13;
+  color: #e4e4e7;
 }
 
-/* ── Navigation ── */
+/* Navigation */
 .nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--color-border);
-  max-width: 1100px;
-  margin: 0 auto;
-  width: 100%;
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .navBrand {
-  font-family: var(--font-heading);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
+  color: #f4f4f5;
 }
 
 .navBrandAccent {
-  color: var(--color-brand-indigo);
+  color: #a78bfa;
 }
 
 .navLinks {
   display: flex;
-  gap: var(--space-6);
   align-items: center;
+  gap: 24px;
 }
 
 .navLink {
-  color: var(--color-text-tertiary);
+  color: #a1a1aa;
+  font-size: 0.875rem;
   text-decoration: none;
-  font-size: 13px;
-  transition: color var(--duration-normal) var(--ease-default);
+  transition: color 0.2s;
 }
 
-.navLink:hover {
-  color: var(--color-text-primary);
-}
-
+.navLink:hover,
 .navLinkActive {
-  color: var(--color-text-primary);
+  color: #f4f4f5;
 }
 
 .navBtn {
-  padding: 8px 20px;
-  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  background: #a78bfa;
   color: #fff;
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 600;
-  transition: transform var(--duration-normal) var(--ease-spring),
-              box-shadow var(--duration-normal) var(--ease-default);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.2s;
 }
 
 .navBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  background: #8b6bf5;
 }
 
-/* ── Hero ── */
+/* Hero */
 .hero {
   text-align: center;
-  padding: var(--space-10) var(--space-5) var(--space-8);
-  position: relative;
+  padding: 60px 0 40px;
 }
 
 .heroTitle {
-  font-family: var(--font-heading);
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: var(--space-3);
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #f4f4f5;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
 }
 
 .heroDesc {
-  color: var(--color-text-tertiary);
-  font-size: 15px;
+  font-size: 1rem;
+  color: #a1a1aa;
   max-width: 500px;
   margin: 0 auto;
   line-height: 1.6;
 }
 
-/* ── Billing Toggle ── */
+/* Billing Toggle */
 .billingToggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-8);
-  font-size: 13px;
-  color: var(--color-text-secondary);
+  gap: 12px;
+  margin-bottom: 40px;
 }
 
 .toggleLabel {
+  font-size: 0.875rem;
+  color: #71717a;
   cursor: pointer;
-  transition: color var(--duration-normal) var(--ease-default);
-  color: var(--color-text-tertiary);
+  user-select: none;
+  transition: color 0.2s;
 }
 
 .toggleLabelActive {
-  color: var(--color-text-primary);
-  font-weight: 500;
+  color: #f4f4f5;
+  font-weight: 600;
 }
 
 .toggleTrack {
+  position: relative;
   width: 44px;
   height: 24px;
-  background: var(--color-border);
   border-radius: 12px;
-  position: relative;
+  background: #27272a;
   cursor: pointer;
-  transition: background var(--duration-normal) var(--ease-default);
+  transition: background 0.2s;
 }
 
 .toggleTrackActive {
-  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+  background: #a78bfa;
 }
 
 .toggleKnob {
-  width: 18px;
-  height: 18px;
-  background: #fff;
-  border-radius: 50%;
   position: absolute;
   top: 3px;
   left: 3px;
-  transition: left var(--duration-normal) var(--ease-spring);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f4f4f5;
+  transition: transform 0.2s ease;
 }
 
 .toggleTrackActive .toggleKnob {
-  left: 23px;
+  transform: translateX(20px);
 }
 
 .saveBadge {
-  background: rgba(52, 211, 153, 0.15);
-  color: var(--color-success);
+  display: inline-block;
   padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
+  background: rgba(167, 139, 250, 0.15);
+  color: #a78bfa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
 }
 
-/* ── Plan Cards ── */
+/* Cards */
 .cards {
-  display: flex;
-  gap: var(--space-5);
-  justify-content: center;
-  padding: 0 var(--space-5) var(--space-10);
-  max-width: 960px;
-  margin: 0 auto;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 60px;
 }
 
 .card {
-  flex: 1;
-  min-width: 260px;
-  max-width: 320px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  transition: all var(--duration-normal) var(--ease-default);
-  position: relative;
+  padding: 32px;
+  border-radius: 16px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
-  border-color: var(--color-border);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
 }
 
 .cardPopular {
-  border-color: var(--color-brand-indigo);
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.1);
-}
-
-.cardPopular:hover {
-  box-shadow: 0 0 32px rgba(99, 102, 241, 0.15), var(--shadow-lg);
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.08);
+  position: relative;
 }
 
 .popularBadge {
@@ -200,234 +179,214 @@
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+  padding: 4px 16px;
+  background: #a78bfa;
   color: #fff;
-  font-size: 11px;
-  padding: 3px 14px;
-  border-radius: 12px;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .planName {
-  font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: var(--space-1);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  margin-bottom: 4px;
 }
 
 .planDesc {
-  font-size: 12px;
-  color: var(--color-text-tertiary);
-  margin-bottom: var(--space-5);
+  font-size: 0.8125rem;
+  color: #a1a1aa;
+  margin-bottom: 24px;
+  line-height: 1.5;
 }
 
 .planPrice {
-  margin-bottom: var(--space-5);
   display: flex;
   align-items: baseline;
-  gap: var(--space-1);
-}
-
-.priceAmount {
-  font-family: var(--font-heading);
-  font-size: 36px;
-  font-weight: 700;
-  line-height: 1;
+  gap: 4px;
+  margin-bottom: 28px;
 }
 
 .priceCurrency {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-size: 1rem;
+  color: #a1a1aa;
+}
+
+.priceAmount {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #f4f4f5;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .pricePeriod {
-  font-size: 13px;
-  color: var(--color-text-tertiary);
+  font-size: 0.875rem;
+  color: #71717a;
 }
 
 .priceOriginal {
-  font-size: 12px;
-  color: var(--color-text-disabled);
+  font-size: 0.8125rem;
+  color: #52525b;
   text-decoration: line-through;
-  margin-left: var(--space-2);
+  margin-left: 8px;
 }
 
-/* ── Features List ── */
 .features {
-  flex: 1;
   list-style: none;
-  margin-bottom: var(--space-6);
+  padding: 0;
+  margin: 0 0 32px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .featureItem {
-  padding: 6px 0;
-  font-size: 13px;
-  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: #d4d4d8;
 }
 
 .featureCheck {
-  width: 16px;
-  height: 16px;
-  color: var(--color-success);
+  width: 14px;
+  height: 14px;
+  color: #a78bfa;
   flex-shrink: 0;
 }
 
 .featureDisabled {
-  padding: 6px 0;
-  font-size: 13px;
-  color: var(--color-text-disabled);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: #52525b;
 }
 
 .featureDash {
-  width: 16px;
-  height: 16px;
-  color: var(--color-text-disabled);
+  width: 14px;
+  height: 14px;
+  color: #3f3f46;
   flex-shrink: 0;
 }
 
-/* ── CTA Buttons ── */
-.planCta {
+.planCta,
+.planCtaPrimary {
   display: block;
-  text-align: center;
-  padding: 11px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
+  width: 100%;
+  padding: 12px;
+  font-size: 0.875rem;
   font-weight: 600;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  background: transparent;
+  border-radius: 8px;
+  border: none;
   cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-default);
-  text-decoration: none;
+  transition: background 0.2s;
+  text-align: center;
+}
+
+.planCta {
+  background: #27272a;
+  color: #d4d4d8;
 }
 
 .planCta:hover {
-  border-color: var(--color-text-tertiary);
-  background: rgba(99, 102, 241, 0.04);
+  background: #3f3f46;
 }
 
 .planCtaPrimary {
-  display: block;
-  text-align: center;
-  padding: 11px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 600;
-  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
-  border: 1px solid var(--color-brand-indigo);
+  background: #a78bfa;
   color: #fff;
-  cursor: pointer;
-  transition: transform var(--duration-normal) var(--ease-spring),
-              box-shadow var(--duration-normal) var(--ease-default);
-  text-decoration: none;
 }
 
 .planCtaPrimary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+  background: #8b6bf5;
 }
 
-/* ── FAQ ── */
+/* FAQ */
 .faq {
-  max-width: 720px;
+  max-width: 700px;
   margin: 0 auto;
-  padding: 0 var(--space-5) var(--space-10);
 }
 
 .faqTitle {
-  text-align: center;
-  font-family: var(--font-heading);
-  font-size: 20px;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: var(--space-6);
+  color: #f4f4f5;
+  text-align: center;
+  margin-bottom: 32px;
 }
 
 .faqList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 4px;
 }
 
 .faqItem {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-5);
-  transition: border-color var(--duration-normal) var(--ease-default);
-}
-
-.faqItem:hover {
-  border-color: var(--color-border);
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .faqQuestion {
-  font-size: 14px;
+  font-size: 0.9375rem;
   font-weight: 600;
-  margin-bottom: var(--space-2);
+  color: #f4f4f5;
+  margin: 0 0 8px;
 }
 
 .faqAnswer {
-  font-size: 13px;
-  color: var(--color-text-tertiary);
+  font-size: 0.8125rem;
+  color: #a1a1aa;
+  margin: 0;
   line-height: 1.6;
 }
 
-/* ── Footer ── */
+/* Footer */
 .footer {
-  text-align: center;
-  padding: var(--space-8);
-  border-top: 1px solid var(--color-border-subtle);
-  color: var(--color-text-disabled);
-  font-size: 12px;
+  margin-top: 60px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: #52525b;
 }
 
 .footerLinks {
   display: flex;
-  justify-content: center;
-  gap: var(--space-5);
-  margin-bottom: var(--space-3);
+  gap: 20px;
 }
 
 .footerLink {
-  color: var(--color-text-tertiary);
+  color: #71717a;
   text-decoration: none;
-  transition: color var(--duration-normal) var(--ease-default);
+  font-size: 0.8125rem;
+  transition: color 0.2s;
 }
 
 .footerLink:hover {
-  color: var(--color-text-secondary);
+  color: #d4d4d8;
 }
 
-/* ── Responsive ── */
+/* Responsive */
 @media (max-width: 768px) {
   .cards {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .card {
-    max-width: 100%;
-    width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .heroTitle {
-    font-size: 24px;
+    font-size: 1.75rem;
   }
 
   .navLinks {
-    display: none;
-  }
-
-  .nav {
-    padding: var(--space-4);
+    gap: 12px;
   }
 }
