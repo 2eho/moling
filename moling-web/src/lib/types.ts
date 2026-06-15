@@ -359,6 +359,8 @@ export interface Template {
   structure: TemplateChapter[];
   created_at: string;
   is_official: boolean;
+  icon?: string;
+  worldSuggestion?: string;
 }
 
 export interface TemplateChapter {

@@ -280,7 +280,7 @@ try:
     )
     
     # Instrument the app
-    instrumentator.instrument_app(app)
+    instrumentator.instrument(app)
     print("[OK] Prometheus metrics enabled at /metrics")
 except ImportError:
     print("[WARN] prometheus-fastapi-instrumentator not installed, metrics disabled")

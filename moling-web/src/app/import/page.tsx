@@ -75,7 +75,12 @@ export default function ImportPage() {
     const loadHistory = async () => {
       try {
         const data = await importApi.getImportHistory(projectId);
-        setHistory(data);
+        setHistory(data.map((item: { id: string; file_name: string; status: string; created_at: string }) => ({
+          id: item.id,
+          fileName: item.file_name,
+          status: item.status,
+          createdAt: item.created_at,
+        })));
       } catch (error) {
         console.error('加载导入历史失败:', error);
       }
@@ -89,20 +94,31 @@ export default function ImportPage() {
 
     const pollProgress = async () => {
       try {
-        const data = await importApi.getImportProgress(taskId);
-        setImportProgress(data as any);
+        const res = await importApi.getJobStatus(projectId, taskId);
+        const jobStatus = res.data;
+        setImportProgress(jobStatus as any);
 
-        if (data.status === 'completed' && data.result) {
-          setResult(data.result);
+        if (jobStatus.status === 'completed' && jobStatus.result) {
+          setResult({
+            charactersCreated: jobStatus.result.characters_created,
+            eventsCreated: jobStatus.result.events_created,
+            commitmentsCreated: jobStatus.result.commitments_created,
+            entriesCreated: jobStatus.result.entries_created,
+          });
           setUploading(false);
           const historyData = await importApi.getImportHistory(projectId);
-          setHistory(historyData);
+          setHistory(historyData.map((item: { id: string; file_name: string; status: string; created_at: string }) => ({
+            id: item.id,
+            fileName: item.file_name,
+            status: item.status,
+            createdAt: item.created_at,
+          })));
           setCurrentStep(4);
           return;
         }
 
-        if (data.status === 'failed') {
-          setError(data.error || '导入失败');
+        if (jobStatus.status === 'failed') {
+          setError(jobStatus.error || '导入失败');
           setUploading(false);
           return;
         }
@@ -127,8 +143,13 @@ export default function ImportPage() {
     setResult(null);
 
     try {
-      const response = await importApi.uploadAndImport(projectId, file, options);
-      setTaskId(response.taskId);
+      const response = await importApi.uploadAndImport(projectId, file, {
+        analyze_characters: options.analyzeCharacters,
+        analyze_timeline: options.analyzeTimeline,
+        analyze_commitments: options.analyzeCommitments,
+        analyze_worldview: options.analyzeWorldview,
+      });
+      setTaskId(response.job_id);
       setFileName(file.name);
       setFileSize(`${(file.size / 1024).toFixed(0)} KB`);
     } catch (err) {

@@ -72,7 +72,7 @@ export default function NotificationsPage() {
       const result = await notificationsApi.list(params);
       // API 返回格式: { data: { items: [], total: number } }
       setNotifications(result.data.items || result.data || []);
-      setTotal(result.data.total || result.data?.length || 0);
+      setTotal(result.data.total || 0);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {

@@ -7,6 +7,7 @@ import {
   generationApi,
   healthApi,
   chapterAgentApi,
+  ChapterSuggestion,
 } from '@/lib/api';
 
 // 类型定义
@@ -169,7 +170,7 @@ export default function WorkspacePage() {
       // 调用生成 API
       const selectedCardData = cards.filter(c => selectedCards.includes(c.id));
       const cardIds = selectedCardData.map(c => c.id);
-      const response = await generationApi.generate('current-project-id', 'current-chapter-id', cardIds);
+      const response = await generationApi.generate('current-project-id', 'current-chapter-id', { card_ids: cardIds });
 
       // 轮询进度
       const pollProgress = async (taskId: string) => {
@@ -207,7 +208,7 @@ export default function WorkspacePage() {
 
   const confirmInspiration = async () => {
     try {
-      await generationApi.confirm('current-project-id', 'current-chapter-id');
+      await generationApi.confirm('current-project-id', 'current-chapter-id', '');
       showToast('✅ 已确认收纳');
       closeModal();
     } catch (error) {
@@ -237,7 +238,7 @@ export default function WorkspacePage() {
       try {
         const suggestionsRes = await chapterAgentApi.getSuggestions('current-project-id', 'current-chapter-id');
         const items = suggestionsRes.data.suggestions || [];
-        setSuggestions(items.map((text: string, i: number) => ({ id: String(i), text })));
+        setSuggestions(items.map((s: ChapterSuggestion, i: number) => ({ id: s.id, text: s.description })));
       } catch (error) {
         console.error('加载建议失败:', error);
         // 使用默认建议（已在 state 中定义）

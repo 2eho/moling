@@ -1,6 +1,6 @@
 """API routers."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 api_router = APIRouter()
 
@@ -55,7 +55,7 @@ except ImportError:
 
 # /system/health 别名，供前端统一调用
 @api_router.get("/system/health", tags=["health"])
-async def system_health_alias(request):  # FastAPI 自动注入 Request
+async def system_health_alias(request: Request):  # FastAPI 自动注入 Request
     """系统健康检查（别名路径，供前端 /system/health 调用）。"""
     from app.router.health import health_check
     return await health_check(request)

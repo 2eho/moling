@@ -22,7 +22,7 @@ export function showToast(type: ToastType, message: string) {
 export const ToastContainer = memo(function ToastContainer() {
   const [toasts, setToasts] = useState<ToastItemData[]>([]);
 
-  const addToast = useCallback((toast: ToastItem) => {
+  const addToast = useCallback((toast: ToastItemData) => {
     setToasts((prev) => [...prev, toast]);
   }, []);
 
