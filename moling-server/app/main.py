@@ -239,30 +239,6 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 
 # ---------------------------------------------------------------------------
-# Health Check — 简单健康检查端点（用于 Docker 健康检查）
-# ---------------------------------------------------------------------------
-
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """健康检查端点，返回服务状态。"""
-    return {
-        "status": "healthy",
-        "version": __version__,
-        "service": "moling-api",
-    }
-
-
-@app.get("/api/v1/health", tags=["Health"])
-async def api_health_check():
-    """API 健康检查端点。"""
-    return {
-        "status": "healthy",
-        "version": __version__,
-        "service": "moling-api",
-    }
-
-
-# ---------------------------------------------------------------------------
 # Prometheus Metrics — 性能指标收集
 # ---------------------------------------------------------------------------
 
@@ -275,7 +251,7 @@ try:
         should_ignore_untemplated=True,
         should_respect_env_var=True,
         should_instrument_requests_inprogress=True,
-        excluded_handlers=["/health", "/api/v1/health", "/metrics"],
+        excluded_handlers=["/api/v1/health", "/api/v1/system/health", "/metrics"],
         env_var_name="ENABLE_METRICS",
     )
     

@@ -15,13 +15,17 @@ from app.service import card_service
 router = APIRouter(tags=["cards"])
 
 
-@router.get("/cards", response_model=CardPoolListResp)
+@router.get("/cards", response_model=CardPoolListResp, deprecated=True)
 async def list_cards(
     project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> CardPoolListResp:
-    """List all cards in a project's card pool."""
+    """List all cards in a project's card pool.
+    
+    .. deprecated::
+       Use GET /cards/pool instead. This endpoint will be removed in a future version.
+    """
     return await card_service.list_cards(db, current_user["id"], project_id)
 
 
