@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
   // 性能优化配置
   // ═══════════════════════════════════════════════════════════
 
-  // 开启 SWC 压缩（生产环境默认开启，显式声明）
-  swcMinify: true,
+  // 注意: Next.js 15 中 SWC 压缩默认开启，无需显式配置
+  // 如需禁用: swcMinify: false (Next.js 14 兼容项已移除)
 
   // 移除 X-Powered-By 响应头，提高安全性
   poweredByHeader: false,

@@ -7,11 +7,25 @@
   min-height: 100vh;
   background: var(--color-bg);
   padding: var(--space-5);
+  position: relative;
+  overflow: hidden;
+}
+
+.page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(212, 168, 67, 0.04) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .container {
   width: 100%;
   max-width: 420px;
+  position: relative;
+  z-index: 1;
 }
 
 .card {
@@ -19,6 +33,14 @@
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-xl);
   padding: var(--space-8) var(--space-6);
+  box-shadow: var(--shadow-modal);
+  transition: transform var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .header {
@@ -42,8 +64,6 @@
   font-size: 13px;
   color: var(--color-text-tertiary);
 }
-
-/* Tabs are rendered by AuthTabs component — styles kept in its own CSS module */
 
 /* ── 响应式 ── */
 @media (max-width: 480px) {

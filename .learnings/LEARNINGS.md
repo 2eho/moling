@@ -664,3 +664,221 @@ const Editor = dynamic(() => import('@/components/workspace/Editor'), {
 ---
 
 
+
+## [LRN-20260615-016] best_practice
+
+**Logged**: 2026-06-15T13:00:00+08:00
+**Priority**: high
+**Status**: resolved
+**Area**: frontend | css
+
+### Summary
+CSS 设计令牌系统统一策略：在更新设计令牌时，保留旧变量名作为别名（alias），确保渐进式迁移不报错。
+
+### Details
+在墨灵 UI 美化中，`globals.css` 原使用 `--space-2`、`--color-brand-indigo` 等新变量名，
+但所有组件 CSS 文件使用 `--spacing-2`、`--color-brand-primary` 等旧变量名。
+
+**解决方案**：在 `globals.css` 中同时定义新变量和别名：
+```css
+:root {
+  /* 新变量 */
+  --space-2: 8px;
+  --color-brand-indigo: #6366f1;
+  
+  /* 别名（兼容旧组件）*/
+  --spacing-2: var(--space-2);
+  --color-brand-primary: var(--color-brand-indigo);
+}
+```
+
+**优势**：
+- 旧组件无需立即修改，不会报错
+- 新组件使用新变量名，逐步统一
+- 可以在后续迭代中逐步迁移旧组件
+
+### Suggested Action
+在重构 CSS 变量系统时，始终保留旧变量名作为别名，确保向后兼容。
+
+### Metadata
+- Source: ui-beautification
+- Related Files: src/app/globals.css
+- Tags: css, design-tokens, migration, best_practice
+
+---
+
+## [LRN-20260615-017] insight
+
+**Logged**: 2026-06-15T13:05:00+08:00
+**Priority**: medium
+**Status**: resolved
+**Area**: frontend | css
+
+### Summary
+圆角系统优化原则：将圆角从「偏小」调整为「现代柔和」，提升视觉精致度。
+原系统：4/8/12/16/20px → 新系统：6/10/14/18/24px（每个增大 2px）。
+
+### Details
+在墨灵 UI 美化中，调整了圆角系统：
+- `--radius-sm`: 4px → 6px（更柔和）
+- `--radius-md`: 8px → 10px（更现代）
+- `--radius-lg`: 12px → 14px（更圆润）
+- `--radius-xl`: 16px → 18px（更亲和）
+- `--radius-2xl`: 20px → 24px（更醒目）
+
+**设计原理**：
+- 4px 圆角过于锐利，显得「廉价」
+- 6-10px 圆角在现代 Web 设计中更常见（参考：Linear、Vercel、Stripe）
+- 14-24px 圆角用于大卡片/模态框，显得「精致」而非「可爱」
+
+### Suggested Action
+在新项目设计系统中，默认使用 6/10/14/18/24px 圆角系统。
+
+### Metadata
+- Source: ui-beautification
+- Related Files: src/app/globals.css
+- Tags: css, border-radius, design-system, insight
+
+---
+
+## [LRN-20260615-018] best_practice
+
+**Logged**: 2026-06-15T13:10:00+08:00
+**Priority**: high
+**Status**: resolved
+**Area**: frontend | workflow
+
+### Summary
+多 Agent 并行 UI 优化策略：在需要覆盖大量 CSS 文件时，使用多个 Agent 并行处理不同类别的组件，显著提升效率。
+
+### Details
+在墨灵 UI 美化中，需要覆盖 ~50 个 CSS 文件。采用多 Agent 并行策略：
+
+| Agent | 任务 | 文件数 | 预计时间（串行） | 实际时间（并行） |
+|-------|------|--------|:----------------:|:----------------:|
+| Agent 1 | UI 组件美化 | 7 个 | ~30 min | ~30 min |
+| Agent 2 | 布局+项目组件美化 | 9 个 | ~40 min | ~40 min |
+| Agent 3 | 工作台组件美化 | 15 个 | ~60 min | ~60 min |
+| Agent 4 | 页面 CSS 美化 | 12 个页面 | ~50 min | ~50 min |
+| **总计** | | **43 个** | **~180 min** | **~60 min** |
+
+**关键经验**：
+1. **按类别分组**：将组件按功能分组（UI组件/布局组件/业务组件），每个 Agent 处理一类
+2. **明确设计语言**：在派发 Agent 前，先统一定义设计令牌系统（globals.css），确保各 Agent 输出一致
+3. **独立无冲突**：确保各 Agent 处理的文件无重叠，避免合并冲突
+
+### Suggested Action
+在大规模前端优化任务中，优先采用多 Agent 并行策略。
+
+### Metadata
+- Source: ui-beautification
+- Related Files: (multiple)
+- Tags: workflow, multi-agent, parallel, efficiency
+
+---
+
+## [LRN-20260615-019] best_practice
+
+**Logged**: 2026-06-15T13:15:00+08:00
+**Priority**: medium
+**Status**: resolved
+**Area**: frontend | css
+
+### Summary
+CSS 动效性能优化原则：使用 `transform` 和 `opacity` 触发 GPU 加速，避免 `width`/`height`/`top`/`left` 等触发重排。
+
+### Details
+在墨灵 UI 美化中，所有交互动效都使用 `transform` 和 `opacity`：
+
+**? 正确做法**（GPU 加速，流畅）：
+```css
+/* Hover 浮起 */
+transform: translateY(-4px);
+/* 淡入 */
+opacity: 0; transition: opacity var(--transition-normal);
+/* 缩放 */
+transform: scale(1.05);
+```
+
+**? 错误做法**（触发重排，卡顿）：
+```css
+/* 避免使用 */
+top: -4px;
+height: 120%;
+margin-top: -4px;
+```
+
+**原理**：
+- `transform` 和 `opacity` 的变更只触发「合成」阶段（compositing），不触发「布局」和「绘制」
+- `width`/`height`/`top`/`left` 的变更触发「布局」阶段（layout），导致重排重绘
+
+### Suggested Action
+在编写 CSS 动效时，优先使用 `transform` 和 `opacity`。
+
+### Metadata
+- Source: ui-beautification
+- Related Files: src/components/ui/Button.module.css, ProjectCard.module.css
+- Tags: css, animation, performance, best_practice
+
+---
+
+## [LRN-20260615-020] insight
+
+**Logged**: 2026-06-15T13:20:00+08:00
+**Priority**: low
+**Status**: resolved
+**Area**: frontend | landing
+
+### Summary
+Landing Page 美化亮点：Hero 多层渐变 + 星光粒子 + 浮动卡牌动画 + 滚动触发淡入，显著提升视觉冲击力。
+
+### Details
+在墨灵 Landing Page 美化中，实现了以下视觉效果：
+
+1. **Hero 多层径向渐变**：
+   ```css
+   background: 
+     radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.15), transparent 60%),
+     radial-gradient(ellipse at 80% 50%, rgba(212,168,67,0.1), transparent 60%),
+     var(--color-bg);
+   ```
+
+2. **星光粒子效果**（CSS 绘制）：
+   ```css
+   .star {
+     position: absolute;
+     width: 2px; height: 2px;
+     background: white;
+     border-radius: 50%;
+     animation: twinkle 2s infinite;
+   }
+   ```
+
+3. **浮动卡牌动画**：
+   ```css
+   @keyframes float {
+     0%, 100% { transform: translateY(0); }
+     50% { transform: translateY(-10px); }
+   }
+   ```
+
+4. **滚动触发淡入**（JavaScript）：
+   ```js
+   const observer = new IntersectionObserver((entries) => {
+     entries.forEach(entry => {
+       if (entry.isIntersecting) {
+         entry.target.classList.add(''visible'');
+       }
+     });
+   });
+   ```
+
+### Suggested Action
+在新项目 Landing Page 设计中，参考墨灵的实现（Hero 动画 + 滚动触发）。
+
+### Metadata
+- Source: ui-beautification
+- Related Files: src/app/landing/Landing.module.css, LandingPage.tsx
+- Tags: css, animation, landing-page, hero, insight
+
+---

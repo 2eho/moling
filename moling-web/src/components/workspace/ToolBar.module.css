@@ -2,17 +2,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-3) var(--spacing-4);
-  background-color: var(--color-bg-card);
-  border-top: 1px solid var(--color-border-default);
-  gap: var(--spacing-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  gap: var(--space-3);
 }
 
 .left,
 .right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .center {
@@ -24,18 +24,19 @@
 
 .agentInput {
   width: 100%;
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-border-default);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background-color: var(--color-bg-input);
   color: var(--color-text-primary);
   font-size: var(--text-sm);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-normal);
 }
 
 .agentInput:focus {
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
 }
 
 .agentInput:disabled {

@@ -555,7 +555,8 @@
   }
   .dForeshadowCard:hover {
     border-color: var(--color-border);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
 
   .statusPending {
@@ -710,8 +711,8 @@
   }
   .dCharacterCard:hover {
     border-color: var(--color-border);
-    box-shadow: var(--shadow-sm);
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px) scale(1.01);
   }
 
   .dCharacterCardTop {
@@ -1162,8 +1163,8 @@
 
   .dWorldCardStyle:hover {
     border-color: var(--color-border);
-    box-shadow: var(--shadow-sm);
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px) scale(1.01);
   }
 
   .dWorldCardName {
@@ -1566,8 +1567,8 @@
   border: 1px solid rgba(168,85,247,0.08);
   transition: border-color 0.3s, transform 0.15s;
 }
+.mWorldCard:hover { border-color: rgba(168,85,247,0.3); transform: translateY(-2px); }
 .mWorldCard:active { transform: scale(0.97); }
-.mWorldCard:hover { border-color: rgba(168,85,247,0.22); }
 
 .mWorldIcon {
   width: 36px; height: 36px; border-radius: 10px;

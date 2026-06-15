@@ -1,11 +1,11 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
 }
 
 .empty {
-  padding: var(--spacing-8);
+  padding: var(--space-8);
   text-align: center;
 }
 
@@ -16,14 +16,19 @@
 
 .timeline {
   background-color: var(--color-bg-hover);
-  border-radius: var(--radius-sm);
-  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  transition: background-color var(--transition-normal);
+}
+
+.timeline:hover {
+  background-color: var(--color-elevated);
 }
 
 .header {
-  margin-bottom: var(--spacing-3);
-  padding-bottom: var(--spacing-2);
-  border-bottom: 1px solid var(--color-border-default);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .title {
@@ -46,8 +51,8 @@
 
 .event {
   display: flex;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2) 0;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
   position: relative;
 }
 
@@ -58,7 +63,7 @@
   top: 16px;
   bottom: 0;
   width: 1px;
-  background-color: var(--color-border-default);
+  background-color: var(--color-border);
 }
 
 .eventDot {
@@ -84,7 +89,7 @@
 
 .chapter {
   font-size: 11px;
-  color: var(--color-brand-primary);
+  color: var(--color-brand-indigo);
   font-weight: 500;
 }
 

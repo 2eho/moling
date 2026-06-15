@@ -4,8 +4,8 @@
   width: 240px;
   flex-shrink: 0;
   flex-grow: 0;
-  background-color: var(--color-bg-card);
-  border-right: 1px solid var(--color-border-default);
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border-subtle);
   height: 100%;
   overflow: hidden;
 }
@@ -13,14 +13,14 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-3);
+  padding: var(--space-3);
 }
 
 .loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-8);
+  padding: var(--space-8);
   color: var(--color-text-disabled);
   font-size: var(--font-size-sm);
 }

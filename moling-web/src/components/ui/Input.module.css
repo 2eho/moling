@@ -1,13 +1,14 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
 }
 
 .label {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   font-weight: 500;
+  transition: color var(--transition-normal);
 }
 
 .inputContainer {
@@ -18,27 +19,33 @@
 
 .icon {
   position: absolute;
-  left: var(--spacing-3);
+  left: var(--space-3);
   color: var(--color-text-disabled);
   font-size: var(--font-size-base);
   pointer-events: none;
+  transition: color var(--transition-normal);
 }
 
 .input {
   width: 100%;
-  padding: var(--spacing-3) var(--spacing-4);
-  background-color: var(--color-bg-hover);
-  border: 1px solid var(--color-border-default);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   outline: none;
-  transition: var(--transition-fast);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), background-color var(--transition-normal);
+}
+
+.input:hover:not(:disabled) {
+  border-color: var(--color-text-tertiary);
 }
 
 .input:focus {
-  border-color: var(--color-brand-primary);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  border-color: var(--color-brand-indigo);
+  box-shadow: 0 0 0 3px var(--color-brand-indigo-dim);
+  background-color: var(--color-elevated);
 }
 
 .input::placeholder {
@@ -46,19 +53,55 @@
 }
 
 .hasError .input {
-  border-color: var(--color-error);
+  border-color: var(--color-danger);
+  background-color: var(--color-danger-dim);
 }
 
 .hasError .input:focus {
-  border-color: var(--color-error);
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-dim);
+}
+
+.hasError .label {
+  color: var(--color-danger);
 }
 
 .error {
   font-size: var(--font-size-xs);
-  color: var(--color-error);
+  color: var(--color-danger);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  animation: slideDown 0.2s ease;
 }
 
 .isFocused .label {
-  color: var(--color-brand-primary);
+  color: var(--color-brand-indigo);
+}
+
+.isFocused .icon {
+  color: var(--color-brand-indigo);
+}
+
+/* Disabled state */
+.input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: var(--color-bg-active);
+}
+
+/* With icon padding */
+.inputContainer:has(.icon) .input {
+  padding-left: calc(var(--space-3) * 2 + 16px);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

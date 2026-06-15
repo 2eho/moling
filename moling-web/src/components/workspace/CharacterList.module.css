@@ -1,11 +1,11 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .empty {
-  padding: var(--spacing-8);
+  padding: var(--space-8);
   text-align: center;
 }
 
@@ -16,22 +16,23 @@
 
 .item {
   background-color: var(--color-bg-hover);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow: hidden;
+  transition: background-color var(--transition-normal);
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   width: 100%;
-  padding: var(--spacing-2) var(--spacing-3);
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
   transition: var(--transition-fast);
 }
 
 .header:hover {
-  background-color: var(--color-bg-elevated);
+  background-color: var(--color-elevated);
 }
 
 .avatar {
@@ -40,7 +41,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-brand-primary);
+  background-color: var(--color-brand-indigo);
   color: #ffffff;
   border-radius: 50%;
   font-size: var(--font-size-xs);
@@ -73,11 +74,11 @@
 }
 
 .detail {
-  padding: var(--spacing-3);
-  border-top: 1px solid var(--color-border-default);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .desc {
@@ -89,16 +90,16 @@
 .traits {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
 }
 
 .trait {
   display: inline-flex;
   align-items: center;
   height: 20px;
-  padding: 0 var(--spacing-2);
+  padding: 0 var(--space-2);
   font-size: 11px;
-  color: var(--color-brand-primary);
+  color: var(--color-brand-indigo);
   background-color: rgba(99, 102, 241, 0.1);
   border-radius: 10px;
 }
@@ -106,7 +107,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
 }
 
 .sectionLabel {

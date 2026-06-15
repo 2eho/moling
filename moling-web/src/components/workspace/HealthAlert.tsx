@@ -22,7 +22,7 @@ const severityColors: Record<string, { bg: string; border: string; dot: string }
   critical: {
     bg: "rgba(239, 68, 68, 0.1)",
     border: "rgba(239, 68, 68, 0.3)",
-    dot: "var(--color-error)",
+    dot: "var(--color-danger)",
   },
 };
 

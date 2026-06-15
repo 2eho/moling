@@ -1,20 +1,19 @@
 .card {
-  background-color: var(--color-bg-card);
-  border: 1px solid var(--color-border-default);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--spacing-6);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all var(--transition-slow);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);
 }
 
 .card:hover {
-  background-color: var(--color-bg-hover);
-  border-color: var(--color-border-hover);
-  box-shadow: var(--shadow-card);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-lg);
 }
 
 .header {
@@ -25,6 +24,7 @@
 }
 
 .title {
+  font-family: var(--font-heading);
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
@@ -45,6 +45,21 @@
   color: #ffffff;
   border-radius: var(--radius-sm);
   font-weight: 500;
+}
+
+.statusDraft {
+  composes: status;
+  background-color: var(--color-text-tertiary);
+}
+
+.statusActive {
+  composes: status;
+  background-color: var(--color-success);
+}
+
+.statusArchived {
+  composes: status;
+  background-color: var(--color-warning);
 }
 
 .meta {
@@ -74,8 +89,8 @@
   align-items: center;
   gap: var(--spacing-4);
   margin-top: auto;
-  padding-top: var(--spacing-2);
-  border-top: 1px solid var(--color-border-default);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .statItem {
@@ -88,4 +103,5 @@
 
 .statIcon {
   font-size: var(--font-size-sm);
+  color: var(--color-brand-indigo);
 }

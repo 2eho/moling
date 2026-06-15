@@ -10,7 +10,7 @@ interface PlotPromiseListProps {
 const promiseStatusColors: Record<string, string> = {
   pending: "var(--color-warning)",
   fulfilled: "var(--color-success)",
-  broken: "var(--color-error)",
+  broken: "var(--color-danger)",
 };
 
 const promiseStatusLabels: Record<string, string> = {

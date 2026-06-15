@@ -39,7 +39,7 @@
   align-items: center;
   padding: 0 var(--space-5);
   height: var(--header-height, 52px);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
@@ -56,7 +56,7 @@
   border: none;
   padding: 0;
   font-family: inherit;
-  transition: color var(--duration-normal);
+  transition: color var(--duration-normal) var(--ease-default);
 }
 
 .headerBack:hover {
@@ -87,7 +87,7 @@
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--duration-normal);
+  transition: all var(--duration-normal) var(--ease-default);
   font-family: inherit;
 }
 
@@ -131,17 +131,28 @@
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
   cursor: pointer;
-  transition: background var(--duration-fast);
+  transition: all var(--duration-normal) var(--ease-default);
+  position: relative;
 }
 
 .item:hover {
-  background: rgba(99, 102, 241, 0.04);
+  border-color: var(--color-border);
+  background: var(--color-elevated);
+  transform: translateX(2px);
 }
 
 .itemUnread {
-  background: rgba(99, 102, 241, 0.06);
+  border-left: 3px solid var(--color-brand-indigo);
+  background: var(--color-surface);
+}
+
+.itemUnread:hover {
+  background: var(--color-elevated);
 }
 
 /* ── Notification Icon ── */
@@ -212,16 +223,18 @@
   flex-shrink: 0;
   margin-top: 6px;
   background: var(--color-brand-indigo);
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.4);
 }
 
 .unreadDotRead {
   background: transparent;
+  box-shadow: none;
 }
 
 /* ── Empty State ── */
 .empty {
   text-align: center;
-  padding: var(--space-10);
+  padding: var(--space-16);
   color: var(--color-text-tertiary);
 }
 
@@ -231,8 +244,9 @@
 }
 
 .emptyIcon svg {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
 }
 
 .empty p {
@@ -265,7 +279,7 @@
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--duration-normal);
+  transition: all var(--duration-normal) var(--ease-default);
   font-family: inherit;
 }
 
@@ -296,5 +310,6 @@
 
   .item {
     padding: var(--space-3);
+    margin-bottom: var(--space-2);
   }
 }

@@ -15,7 +15,7 @@
 .topBar {
   height: var(--header-height);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   padding: 0 var(--space-4);
@@ -102,7 +102,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .leftPanelTitle {
@@ -110,6 +110,8 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .chapterList {
@@ -202,7 +204,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   flex-shrink: 0;
   gap: var(--space-2);
@@ -242,7 +244,7 @@
 .toolDivider {
   width: 1px;
   height: 20px;
-  background: var(--color-border-subtle);
+  background: var(--color-border);
   margin: 0 var(--space-1);
 }
 
@@ -251,6 +253,56 @@
   overflow-y: auto;
   padding: var(--space-6);
   background: var(--color-bg);
+}
+
+/* ── Editor text styling ── */
+.editorText {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.editorText::selection {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--color-text-primary);
+}
+
+.editorCursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background: var(--color-brand-indigo);
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.editorLineNumber {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-disabled);
+  text-align: right;
+  padding-right: var(--space-4);
+  user-select: none;
+  min-width: 40px;
+  flex-shrink: 0;
+}
+
+.editorLine {
+  display: flex;
+  align-items: flex-start;
+  min-height: 1.8em;
+}
+
+.editorLine:hover .editorLineNumber {
+  color: var(--color-text-tertiary);
 }
 
 /* ── Right Panel (AI Tools) ── */
@@ -267,7 +319,7 @@
 
 .rightPanelTabs {
   display: flex;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .rightPanelTab {
@@ -309,7 +361,7 @@
 .generationBar {
   flex-shrink: 0;
   background: var(--color-elevated);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-border);
   padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: center;

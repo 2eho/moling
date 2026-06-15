@@ -24,7 +24,7 @@
 .topNav {
   height: 56px;
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   padding: 0 var(--space-6);
@@ -122,11 +122,13 @@
   border-radius: var(--radius-xl);
   padding: var(--space-6);
   margin-bottom: var(--space-6);
-  transition: border-color var(--duration-normal);
+  transition: border-color var(--duration-normal) var(--ease-default),
+              box-shadow var(--duration-normal) var(--ease-default);
 }
 
 .section:hover {
   border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .sectionTitle {
@@ -193,7 +195,7 @@
   font-size: 11px;
   color: var(--color-brand-indigo);
   cursor: pointer;
-  transition: color var(--duration-normal);
+  transition: color var(--duration-normal) var(--ease-default);
 }
 
 .avatarChangeLabel:hover {
@@ -218,16 +220,22 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-secondary);
+  transition: color var(--duration-normal) var(--ease-default);
+}
+
+.fieldGroup:focus-within .fieldLabel {
+  color: var(--color-brand-indigo);
 }
 
 .fieldInput {
-  background: var(--color-bg);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
   font-size: 14px;
   color: var(--color-text-primary);
-  transition: border-color var(--duration-normal);
+  transition: border-color var(--duration-normal) var(--ease-default),
+              box-shadow var(--duration-normal) var(--ease-default);
   width: 100%;
 }
 
@@ -237,6 +245,8 @@
 
 .fieldInput:focus {
   border-color: var(--color-brand-indigo);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  outline: none;
 }
 
 .fieldInput:read-only {
@@ -252,14 +262,14 @@
 }
 
 .fieldSelect {
-  background: var(--color-bg);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
   font-size: 14px;
   color: var(--color-text-primary);
   cursor: pointer;
-  transition: border-color var(--duration-normal);
+  transition: border-color var(--duration-normal) var(--ease-default);
   -webkit-appearance: none;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7199' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -270,6 +280,8 @@
 
 .fieldSelect:focus {
   border-color: var(--color-brand-indigo);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  outline: none;
 }
 
 .fieldSelect option {
@@ -322,12 +334,12 @@
   border-radius: 12px;
   position: relative;
   cursor: pointer;
-  transition: background var(--duration-normal);
+  transition: background var(--duration-normal) var(--ease-default);
   flex-shrink: 0;
 }
 
 .toggleOn {
-  background: var(--color-brand-indigo);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
 }
 
 .toggleKnob {
@@ -346,6 +358,10 @@
   transform: translateX(20px);
 }
 
+.toggle:hover .toggleKnob {
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
 /* ── Font Size Group ── */
 .fontSizeGroup {
   display: flex;
@@ -360,7 +376,7 @@
   color: var(--color-text-tertiary);
   background: transparent;
   cursor: pointer;
-  transition: all var(--duration-normal);
+  transition: all var(--duration-normal) var(--ease-default);
 }
 
 .fontSizeBtn:hover {
@@ -388,16 +404,18 @@
   background: transparent;
   cursor: pointer;
   text-align: center;
-  transition: all var(--duration-normal);
+  transition: all var(--duration-normal) var(--ease-default);
 }
 
 .themeOption:hover {
   border-color: var(--color-border);
+  transform: translateY(-1px);
 }
 
 .themeOptionActive {
   border-color: var(--color-brand-indigo);
   background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.06);
 }
 
 .themeLabel {
@@ -446,11 +464,11 @@
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all var(--duration-normal);
+  transition: all var(--duration-normal) var(--ease-spring);
 }
 
 .accentColor:hover {
-  transform: scale(1.15);
+  transform: scale(1.2);
 }
 
 .accentColorActive {
@@ -508,24 +526,28 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-5);
-  background: var(--color-brand-indigo);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
   color: #fff;
   border: none;
   border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity var(--duration-normal);
+  transition: transform var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-default),
+              opacity var(--duration-normal);
   margin-top: var(--space-3);
 }
 
 .saveBtn:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .saveBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* ── Stats Bar ── */
@@ -548,6 +570,7 @@
   font-size: 22px;
   font-weight: 700;
   color: var(--color-brand-amber);
+  font-family: var(--font-heading);
 }
 
 .statLabel {

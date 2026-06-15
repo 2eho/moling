@@ -147,13 +147,15 @@
 .stepConnector {
   width: 60px;
   height: 2px;
-  background: var(--color-border);
+  background: linear-gradient(90deg, var(--color-border), var(--color-border));
   position: relative;
   z-index: 1;
-  transition: background var(--duration-slow);
+  transition: background var(--duration-slow) var(--ease-default);
+  border-radius: 1px;
 }
 
-.stepConnectorDone { background: var(--color-success); }
+.stepConnectorDone { background: linear-gradient(90deg, var(--color-success), var(--color-success)); }
+.stepConnectorPartial { background: linear-gradient(90deg, var(--color-brand-indigo), var(--color-border)); }
 
 /* ── Card ── */
 .card {
@@ -282,11 +284,26 @@
   text-align: center;
   transition: all var(--duration-normal) var(--ease-default);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.uploadArea::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(99,102,241,0.03), transparent 70%);
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-default);
 }
 
 .uploadArea:hover, .dragOver {
   border-color: var(--color-brand-indigo);
   background: rgba(99,102,241,0.04);
+}
+
+.uploadArea:hover::before {
+  opacity: 1;
 }
 
 .uploadIcon {
@@ -417,10 +434,27 @@
 
 .progressBarFill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-brand-indigo), #818cf8);
+  background: linear-gradient(90deg, var(--color-brand-indigo), #818cf8, var(--color-brand-amber));
   border-radius: 3px;
   width: 0%;
   transition: width var(--duration-cinematic) var(--ease-default);
+  position: relative;
+}
+
+.progressBarFill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: progressShimmer 2s ease-in-out infinite;
+}
+
+@keyframes progressShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .progressStats {

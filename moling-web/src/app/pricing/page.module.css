@@ -21,7 +21,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
   max-width: 1100px;
   margin: 0 auto;
   width: 100%;
@@ -46,7 +46,7 @@
   color: var(--color-text-tertiary);
   text-decoration: none;
   font-size: 13px;
-  transition: color var(--duration-fast);
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
 .navLinks a:hover {
@@ -59,17 +59,19 @@
 
 .navBtn {
   padding: 8px 20px;
-  background: var(--color-brand-indigo);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
   color: #fff;
   border-radius: var(--radius-md);
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
-  transition: opacity var(--duration-fast);
+  transition: transform var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-default);
 }
 
 .navBtn:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 /* ── 头部 ── */
@@ -79,10 +81,10 @@
 }
 
 .hero h1 {
+  font-family: var(--font-heading);
   font-size: 32px;
   font-weight: 700;
   margin-bottom: var(--space-3);
-  font-family: var(--font-heading);
 }
 
 .hero p {
@@ -111,11 +113,11 @@
   border-radius: 12px;
   position: relative;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--duration-normal) var(--ease-default);
 }
 
 .toggleTrackActive {
-  background: var(--color-brand-indigo);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
 }
 
 .toggleKnob {
@@ -126,7 +128,7 @@
   position: absolute;
   top: 3px;
   left: 3px;
-  transition: left 0.2s;
+  transition: left var(--duration-normal) var(--ease-spring);
 }
 
 .toggleTrackActive .toggleKnob {
@@ -163,15 +165,18 @@
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  transition: border-color 0.2s;
+  transition: all var(--duration-normal) var(--ease-default);
 }
 
 .planCard:hover {
   border-color: var(--color-border);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .planCardPopular {
   border-color: var(--color-brand-indigo);
+  box-shadow: 0 0 24px rgba(99, 102, 241, 0.1);
   position: relative;
 }
 
@@ -181,16 +186,18 @@
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--color-brand-indigo);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
   color: #fff;
   font-size: 11px;
   padding: 3px 14px;
   border-radius: 12px;
   font-weight: 500;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .planName {
+  font-family: var(--font-heading);
   font-size: 16px;
   font-weight: 600;
   margin-bottom: var(--space-1);
@@ -207,6 +214,7 @@
 }
 
 .amount {
+  font-family: var(--font-heading);
   font-size: 36px;
   font-weight: 700;
 }
@@ -263,22 +271,24 @@
   font-weight: 600;
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
-  transition: all 0.2s;
+  transition: all var(--duration-normal) var(--ease-default);
   background: transparent;
 }
 
 .planCta:hover {
   border-color: var(--color-text-tertiary);
+  background: rgba(99, 102, 241, 0.04);
 }
 
 .planCtaPrimary {
-  background: var(--color-brand-indigo);
+  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
   border-color: var(--color-brand-indigo);
   color: #fff;
 }
 
 .planCtaPrimary:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
 }
 
 .planCtaCurrent {
@@ -298,9 +308,9 @@
 
 .featuresCompare h2 {
   text-align: center;
+  font-family: var(--font-heading);
   font-size: 20px;
   margin-bottom: var(--space-6);
-  font-family: var(--font-heading);
 }
 
 .fTable {
@@ -325,6 +335,11 @@
 .fTable th {
   color: var(--color-text-primary);
   font-weight: 600;
+  background: var(--color-surface);
+}
+
+.fTable tbody tr:hover {
+  background: rgba(99, 102, 241, 0.03);
 }
 
 .fYes {
@@ -349,7 +364,7 @@
   color: var(--color-text-tertiary);
   text-decoration: none;
   margin: 0 8px;
-  transition: color var(--duration-fast);
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
 .footer a:hover {
@@ -373,7 +388,7 @@
   font-size: 13px;
   color: var(--color-text-primary);
   opacity: 0;
-  transition: all 0.3s;
+  transition: all var(--duration-slow) var(--ease-default);
   z-index: 1000;
   white-space: nowrap;
   pointer-events: none;

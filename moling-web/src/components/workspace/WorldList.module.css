@@ -1,11 +1,11 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .empty {
-  padding: var(--spacing-8);
+  padding: var(--space-8);
   text-align: center;
 }
 
@@ -16,17 +16,16 @@
 
 .item {
   background-color: var(--color-bg-hover);
-  border-radius: var(--radius-sm);
-  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
+  transition: background-color var(--transition-normal);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.item:hover {
+  background-color: var(--color-elevated);
 }
 
 .name {
@@ -37,9 +36,9 @@
 
 .category {
   font-size: 11px;
-  color: var(--color-brand-primary);
+  color: var(--color-brand-indigo);
   background-color: rgba(99, 102, 241, 0.1);
-  padding: 1px var(--spacing-2);
+  padding: 1px var(--space-2);
   border-radius: 8px;
 }
 
@@ -52,9 +51,9 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-  padding-top: var(--spacing-1);
-  border-top: 1px solid var(--color-border-default);
+  gap: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
 }
 
 .sectionLabel {
@@ -72,7 +71,7 @@
 .rule {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  padding-left: var(--spacing-2);
+  padding-left: var(--space-2);
   position: relative;
 }
 
@@ -84,10 +83,10 @@
 }
 
 .faction {
-  padding: var(--spacing-2);
-  background-color: var(--color-bg-elevated);
+  padding: var(--space-2);
+  background-color: var(--color-elevated);
   border-radius: var(--radius-sm);
-  margin-bottom: var(--spacing-1);
+  margin-bottom: var(--space-1);
 }
 
 .factionHeader {

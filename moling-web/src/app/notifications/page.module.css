@@ -8,7 +8,7 @@
   align-items: center;
   padding: 0 var(--space-5);
   height: var(--header-height);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
@@ -18,7 +18,7 @@
   font-size: 13px;
   margin-right: var(--space-4);
   cursor: pointer;
-  transition: color var(--duration-fast);
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
 .headerBack:hover {
@@ -44,7 +44,7 @@
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: border-color var(--duration-fast), color var(--duration-fast);
+  transition: all var(--duration-normal) var(--ease-default);
 }
 
 .headerActions button:hover {
@@ -63,23 +63,29 @@
 .notifList {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
 }
 
 .notifItem {
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all var(--duration-normal) var(--ease-default);
+  position: relative;
 }
 
 .notifItem:hover {
-  background: rgba(99, 102, 241, 0.04);
+  border-color: var(--color-border);
+  background: var(--color-elevated);
+  transform: translateX(2px);
 }
 
 .notifItem.unread {
-  background: rgba(99, 102, 241, 0.06);
+  border-left: 3px solid var(--color-brand-indigo);
 }
 
 /* ── 类型图标圆 ── */
@@ -96,18 +102,22 @@
 
 .notifIcon.warning {
   background: rgba(245, 158, 11, 0.12);
+  color: var(--color-warning);
 }
 
 .notifIcon.error {
   background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger);
 }
 
 .notifIcon.success {
   background: rgba(52, 211, 153, 0.12);
+  color: var(--color-success);
 }
 
 .notifIcon.info {
   background: rgba(99, 102, 241, 0.12);
+  color: var(--color-brand-indigo);
 }
 
 /* ── 内容 ── */
@@ -145,23 +155,26 @@
 
 .notifDot.unread {
   background: var(--color-brand-indigo);
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.4);
 }
 
 .notifDot.read {
   background: transparent;
+  box-shadow: none;
 }
 
 /* ── 空状态 ── */
 .emptyState {
   text-align: center;
-  padding: var(--space-10);
+  padding: var(--space-16);
   color: var(--color-text-tertiary);
 }
 
 .emptyIcon {
-  font-size: 40px;
+  font-size: 48px;
   margin-bottom: var(--space-4);
   display: block;
+  opacity: 0.4;
 }
 
 .emptyText {

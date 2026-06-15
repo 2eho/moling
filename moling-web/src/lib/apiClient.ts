@@ -117,12 +117,30 @@ function isMockEnabled(): boolean {
 }
 
 function buildUrl(path: string, params?: RequestParams): string {
-  // path already includes /api/v1 prefix from env, so we just append
   const baseUrl = getBaseUrl();
-  // Remove trailing slash from base + ensure path starts with /
-  const normalizedBase = baseUrl.replace(/\/+$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(`${normalizedBase}${normalizedPath}`);
+
+  // If baseUrl is empty, use relative path (for nginx reverse proxy setup)
+  // Browser will resolve relative to current origin, nginx proxies /api to backend
+  if (!baseUrl) {
+    let url = normalizedPath;
+    if (params) {
+      const search = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          search.append(key, String(value));
+        }
+      });
+      const qs = search.toString();
+      if (qs) url += `?${qs}`;
+    }
+    return url;
+  }
+
+  // Absolute URL mode (development, or when API is on different domain)
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const fullUrl = `${normalizedBase}${normalizedPath}`;
+  const url = new URL(fullUrl);
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {

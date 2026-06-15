@@ -8,8 +8,8 @@
 .textarea {
   flex: 1;
   width: 100%;
-  padding: var(--spacing-8);
-  background-color: var(--color-bg-page);
+  padding: var(--space-8);
+  background-color: var(--color-bg);
   border: none;
   border-radius: 0;
   color: var(--color-text-primary);
@@ -18,20 +18,26 @@
   line-height: 1.8;
   resize: none;
   outline: none;
+  transition: box-shadow var(--transition-normal);
 }
 
 .textarea::placeholder {
   color: var(--color-text-disabled);
 }
 
+.textarea:focus {
+  box-shadow: 0 0 0 1px var(--color-brand-indigo), 0 0 12px rgba(99, 102, 241, 0.15);
+  border-radius: var(--radius-sm);
+}
+
 .wordCount {
   position: absolute;
-  bottom: var(--spacing-3);
-  right: var(--spacing-4);
+  bottom: var(--space-3);
+  right: var(--space-4);
   font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
-  background-color: var(--color-bg-card);
-  padding: var(--spacing-1) var(--spacing-3);
+  background-color: var(--color-surface);
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
 }
 
@@ -41,7 +47,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
   color: var(--color-text-disabled);
 }
 

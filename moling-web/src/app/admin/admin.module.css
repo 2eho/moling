@@ -487,9 +487,9 @@
 }
 
 .statCardValue {
-  font-family: var(--font-mono);
+  font-family: var(--font-heading);
   font-size: 32px;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--color-text-primary, #e8e9f0);
   line-height: 1.2;
   margin-bottom: 4px;
@@ -761,6 +761,14 @@
 
 .dataTable thead {
   background: var(--color-table-header-bg, #181b2e);
+}
+
+.dataTable thead tr:first-child th:first-child {
+  border-top-left-radius: var(--radius-md);
+}
+
+.dataTable thead tr:first-child th:last-child {
+  border-top-right-radius: var(--radius-md);
 }
 
 .dataTable th {

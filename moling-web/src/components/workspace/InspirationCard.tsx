@@ -19,7 +19,7 @@ const rarityBorderColors: Record<string, string> = {
 };
 
 export function InspirationCard({ card, selected, onToggle }: InspirationCardProps) {
-  const borderColor = rarityBorderColors[card.rarity] ?? "var(--color-border-default)";
+  const borderColor = rarityBorderColors[card.rarity] ?? "var(--color-border)";
 
   return (
     <div
