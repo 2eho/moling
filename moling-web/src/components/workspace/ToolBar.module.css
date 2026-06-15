@@ -5,6 +5,7 @@
   padding: var(--spacing-3) var(--spacing-4);
   background-color: var(--color-bg-card);
   border-top: 1px solid var(--color-border-default);
+  gap: var(--spacing-3);
 }
 
 .left,
@@ -12,4 +13,32 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.agentInput {
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.agentInput:focus {
+  border-color: var(--color-primary);
+}
+
+.agentInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

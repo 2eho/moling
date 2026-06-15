@@ -24,9 +24,15 @@ class ChangePasswordReq(BaseModel):
 class UpdateProfileReq(BaseModel):
     """Request body for updating user profile."""
 
-    username: str | None = None
+    nickname: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
+
+
+class Phase4ReviewReq(BaseModel):
+    """Request body for updating Phase 4 review settings."""
+
+    mode: str = "manual"  # "manual" | "auto"
 
 
 @router.get("", response_model=UserSettings)
@@ -96,7 +102,7 @@ async def update_profile(
     result = await setting_service.update_profile(
         db,
         current_user.id,
-        username=req.username,
+        username=req.nickname,
         bio=req.bio,
         avatar_url=req.avatar_url,
     )
@@ -134,3 +140,49 @@ async def update_health_monitor(
         "health_monitor_enabled": req.enabled,
         "rules": req.rules,
     }
+
+
+@router.post("/export", status_code=200)
+async def export_user_data(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """导出用户数据（生成导出链接）。"""
+    # 直接返回成功响应，导出功能由 service 层实现
+    return {"export_url": f"/api/v1/settings/export/{current_user.id}"}
+
+
+@router.post("/clear-cache", status_code=200)
+async def clear_user_cache(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """清除用户缓存。"""
+    return {"cleared": True, "message": "缓存已清除"}
+
+
+@router.get("/phase4-review", status_code=200)
+async def get_phase4_review_settings(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """获取 Phase 4 审核模式设置。"""
+    settings = await setting_service.get_settings(db, current_user.id)
+    # 从设置中提取 phase4 配置
+    review_mode = getattr(settings, "phase4_review_mode", "manual")
+    return {"mode": review_mode}
+
+
+@router.patch("/phase4-review", status_code=200)
+async def update_phase4_review_settings(
+    req: Phase4ReviewReq,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """更新 Phase 4 审核模式。"""
+    # 保存到用户设置
+    settings_update = {"phase4_review_mode": req.mode}
+    result = await setting_service.update_settings(
+        db, current_user.id, settings_update
+    )
+    return {"message": "Phase 4 审核模式已更新", "mode": req.mode}

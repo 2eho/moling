@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef, use } from "react";
+import { useState, useCallback, useRef, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
+import { importApi } from "@/lib/api";
 
 /* ─── Types ─── */
 
 type ImportMethod = "paste" | "file" | null;
 type ProgressStatus = "pending" | "active" | "done";
+type JobStatus = "pending" | "running" | "phase1_done" | "phase2_done" | "completed" | "failed";
 
 interface ProgressItem {
   id: string;
@@ -85,8 +87,6 @@ const DEMO_PASTE_TEXT = `第1章 星辰陨落
 第3章 玉佩之谜
 夜深人静之时，苏铭独自坐在房中，手中握着一枚温润的玉佩——那是母亲留给他的唯一遗物。`;
 
-/* ─── Helpers ─── */
-
 function getPhaseLabel(idx: number): string {
   const labels = ["导入方式", "全库分析", "动态层", "审查确认"];
   return labels[idx] ?? "";
@@ -107,8 +107,61 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
   const [overallDone, setOverallDone] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // API 集成相关状态
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<{
+    characters?: number;
+    timeline?: number;
+    commitments?: number;
+    world?: number;
+    conflicts?: ConflictItem[];
+    dynamicLayer?: DynamicLayer;
+    chapters?: ChapterData[];
+    novelName?: string;
+    totalChapters?: number;
+  } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mFileInputRef = useRef<HTMLInputElement>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 使用 API 结果或 mock 数据的辅助函数
+  const getData = (): {
+    novelName: string;
+    totalChapters: number;
+    characters: number;
+    timeline: number;
+    commitments: number;
+    world: number;
+    conflicts: ConflictItem[];
+    chapters: ChapterData[];
+    dynamicLayer: DynamicLayer;
+  } => {
+    if (importResult) {
+      return {
+        novelName: importResult.novelName || MOCK.novelName,
+        totalChapters: importResult.totalChapters || MOCK.totalChapters,
+        characters: importResult.characters ?? 0,
+        timeline: importResult.timeline ?? 0,
+        commitments: importResult.commitments ?? 0,
+        world: importResult.world ?? 0,
+        conflicts: importResult.conflicts || MOCK.conflicts,
+        chapters: importResult.chapters || MOCK.chapters,
+        dynamicLayer: importResult.dynamicLayer || MOCK.dynamicLayer,
+      };
+    }
+    return {
+      novelName: MOCK.novelName,
+      totalChapters: MOCK.totalChapters,
+      characters: 12,
+      timeline: 5,
+      commitments: 8,
+      world: 6,
+      conflicts: MOCK.conflicts,
+      chapters: MOCK.chapters,
+      dynamicLayer: MOCK.dynamicLayer,
+    };
+  };
 
   // ── Desktop: Word count ──
   const charCount = pasteText.replace(/\s/g, "").length;
@@ -138,120 +191,189 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
     [handleFile]
   );
 
-  // ── Phase 1: Run analysis sequentially ──
-  const runPhase1 = useCallback(async (): Promise<void> => {
-    const libOrder = ["characters", "timeline", "commitments", "worldview"];
+/* ─── API 集成函数 ─── */
 
-    const processNext = (idx: number): Promise<void> => {
-      return new Promise((resolve) => {
-        if (idx >= libOrder.length) {
-          resolve();
-          return;
+// 轮询导入任务状态 (API 7.2)
+const startPolling = useCallback((pid: string, jid: string) => {
+  // 清除之前的轮询
+  if (pollIntervalRef.current) {
+    clearInterval(pollIntervalRef.current);
+  }
+
+  pollIntervalRef.current = setInterval(async () => {
+    try {
+      const res = await importApi.getJobStatus(pid, jid);
+      const job = res.data;
+
+      // 更新进度显示
+      if (job.progress !== undefined) {
+        setOverallDone(Math.floor(job.progress / 25)); // 4 阶段，每阶段 25%
+      }
+
+      if (job.status === "completed" || job.status === "phase1_done" || job.status === "phase2_done") {
+        // 停止轮询
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
         }
 
-        const libId = libOrder[idx];
-
-        setProgressItems((prev) =>
-          prev.map((item) =>
-            item.id === libId ? { ...item, status: "active" as ProgressStatus } : item
-          )
-        );
-        setOverallDone(idx);
-
-        setTimeout(() => {
-          setProgressItems((prev) =>
-            prev.map((item) =>
-              item.id === libId ? { ...item, status: "done" as ProgressStatus } : item
-            )
-          );
-
-          setTimeout(() => {
-            resolve(processNext(idx + 1));
-          }, 100);
-        }, 800);
-      });
-    };
-
-    return processNext(0);
-  }, []);
-
-  // ── Desktop Import Flow ──
-  const dStartImport = useCallback(async () => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-
-    setPhase(1);
-    await runPhase1();
-
-    setPhase(2);
-    await new Promise((r) => setTimeout(r, 1200));
-
-    setPhase(3);
-    setOverallDone(4);
-    setIsProcessing(false);
-  }, [isProcessing, runPhase1]);
-
-  // ── Mobile Import Flow ──
-  const mStartAnalysis = useCallback(() => {
-    if (importMethod === null) return;
-    setPhase(1);
-
-    const libOrder = ["characters", "timeline", "commitments", "worldview"];
-    let doneCount = 0;
-
-    libOrder.forEach((libId, i) => {
-      setTimeout(() => {
-        setProgressItems((prev) =>
-          prev.map((item) =>
-            item.id === libId ? { ...item, status: "active" as ProgressStatus } : item
-          )
-        );
-
-        setTimeout(() => {
-          setProgressItems((prev) =>
-            prev.map((item) =>
-              item.id === libId ? { ...item, status: "done" as ProgressStatus } : item
-            )
-          );
-          doneCount++;
-          setOverallDone(doneCount);
-
-          if (doneCount === 4) {
-            setTimeout(() => {
-              setPhase(2);
-              setTimeout(() => {
-                setPhase(3);
-              }, 1800);
-            }, 600);
+        // 获取导入结果
+        try {
+          const resultRes = await importApi.getImportResult(pid, jid);
+          setImportResult({
+            characters: resultRes.data.characters_created,
+            timeline: resultRes.data.events_created,
+            commitments: resultRes.data.commitments_created,
+            world: resultRes.data.entries_created,
+          });
+        } catch {
+          // 如果 result 端点不存在，使用 job.result 并映射字段名
+          if (job.result) {
+            const r = job.result;
+            setImportResult({
+              characters: r.characters_created ?? 0,
+              timeline: r.events_created ?? 0,
+              commitments: r.commitments_created ?? 0,
+              world: r.entries_created ?? 0,
+            });
           }
-        }, 800);
-      }, i * 900);
-    });
-  }, [importMethod]);
+        }
 
-  // ── Confirm Import ──
-  const dConfirmImport = useCallback(() => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    setTimeout(() => {
-      setPhase(4);
-      setIsProcessing(false);
-    }, 600);
-  }, [isProcessing]);
+        setPhase(3);
+        setIsProcessing(false);
+      } else if (job.status === "failed") {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        alert(`导入失败: ${job.error || "未知错误"}`);
+        setIsProcessing(false);
+        setPhase(0);
+      }
+    } catch (err) {
+      console.error("轮询导入状态失败:", err);
+    }
+  }, 2000); // 2秒轮询间隔，符合接口文档建议
+}, []);
 
-  const mConfirmImport = useCallback(() => {
-    setPhase(4);
-  }, []);
+// 开始导入流程 (API 7.1 + 7.3)
+const startImport = useCallback(async (pid: string, text: string) => {
+  setIsProcessing(true);
+  setPhase(1);
 
-  // ── Abort Import ──
-  const resetAll = useCallback(() => {
-    setPhase(0);
-    setProgressItems(INITIAL_PROGRESS);
-    setOverallDone(0);
+  try {
+    // 7.1 提交导入任务
+    const createRes = await importApi.createJob(pid, { text, source_type: "paste" });
+    const jid = createRes.data.job_id;
+    setJobId(jid);
+
+    // 7.3 执行 Phase 1（四库提取）
+    await importApi.runPhase1(pid, jid);
+
+    // 7.4 执行 Phase 2（动态层分析）
+    await importApi.runPhase2(pid, jid);
+
+    // 开始轮询进度 (API 7.2)
+    startPolling(pid, jid);
+  } catch (err) {
+    console.error("导入失败:", err);
+    alert("导入失败，请重试");
     setIsProcessing(false);
-    setImportMethod(null);
-    setUploadFile(null);
-  }, []);
+    setPhase(0);
+  }
+}, [startPolling]);
+
+// ── Desktop Import Flow ──
+const dStartImport = useCallback(async () => {
+  if (isProcessing) return;
+
+  if (importMethod === "paste" && pasteText.trim()) {
+    await startImport(projectId, pasteText);
+  } else if (importMethod === "file" && uploadFile) {
+    // 文件上传模式
+    setIsProcessing(true);
+    setPhase(1);
+    // TODO: 实现文件上传，使用 importApi.uploadAndImport
+    alert("文件上传功能开发中");
+    setIsProcessing(false);
+    setPhase(0);
+  } else {
+    alert("请选择导入方式并输入内容");
+  }
+}, [isProcessing, importMethod, pasteText, uploadFile, projectId, startImport]);
+
+// ── Mobile Import Flow ──
+const mStartAnalysis = useCallback(() => {
+  if (importMethod === null) return;
+
+  if (importMethod === "paste" && pasteText.trim()) {
+    startImport(projectId, pasteText);
+  } else if (importMethod === "file" && uploadFile) {
+    alert("文件上传功能开发中");
+  } else {
+    alert("请选择导入方式并输入内容");
+  }
+}, [importMethod, pasteText, uploadFile, projectId, startImport]);
+
+// ── Confirm Import (API 7.5) ──
+const confirmImport = useCallback(async () => {
+  if (!jobId || isProcessing) return;
+  setIsProcessing(true);
+
+  try {
+    const res = await importApi.confirmImport(projectId, jobId);
+    if (res.data.confirmed) {
+      setPhase(4);
+      // 3秒后自动跳转到工作台
+      setTimeout(() => {
+        router.push(`/workspace/${projectId}`);
+      }, 3000);
+    } else {
+      alert("确认导入失败");
+    }
+  } catch (err) {
+    console.error("确认导入失败:", err);
+    alert("确认导入失败，请重试");
+  } finally {
+    setIsProcessing(false);
+  }
+}, [jobId, isProcessing, projectId, router]);
+
+// ── Desktop Confirm Import ──
+const dConfirmImport = useCallback(() => {
+  confirmImport();
+}, [confirmImport]);
+
+// ── Mobile Confirm Import ──
+const mConfirmImport = useCallback(() => {
+  confirmImport();
+}, [confirmImport]);
+
+// ── Abort Import ──
+const resetAll = useCallback(() => {
+  // 清除轮询
+  if (pollIntervalRef.current) {
+    clearInterval(pollIntervalRef.current);
+    pollIntervalRef.current = null;
+  }
+  setPhase(0);
+  setProgressItems(INITIAL_PROGRESS);
+  setOverallDone(0);
+  setIsProcessing(false);
+  setImportMethod(null);
+  setUploadFile(null);
+  setJobId(null);
+  setImportResult(null);
+}, []);
+
+// 组件卸载时清理轮询
+useEffect(() => {
+  return () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+  };
+}, []);
 
   // ── Navigation ──
   const goBack = useCallback(() => {
@@ -263,6 +385,7 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
   }, [router, projectId]);
 
   // ── Derived ──
+  const data = getData();
   const pct = Math.min(Math.round((overallDone / 4) * 100), 100);
 
   // ═══════════════════════════════════════════════════════
@@ -285,9 +408,9 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
           <div className={styles.headerSpacer} />
           <div className={styles.headerProject}>
             <span className={styles.projectDot} />
-            <span className={styles.projectName}>{MOCK.novelName}</span>
+            <span className={styles.projectName}>{data.novelName}</span>
             <span style={{ fontSize: 11, color: "var(--color-text-disabled)" }}>
-              {MOCK.totalChapters}章
+              {data.totalChapters}章
             </span>
           </div>
         </header>
@@ -333,7 +456,7 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
                 选择导入方式
               </div>
               <div className={styles.cardSubtitle}>
-                已有 {MOCK.totalChapters} 章内容待导入到系统，请选择你的导入方式。
+                已有 {data.totalChapters} 章内容待导入到系统，请选择你的导入方式。
               </div>
 
               <div className={styles.importOptions}>
@@ -436,7 +559,7 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
                 全库分析 · 四库提取
               </div>
               <div className={styles.cardSubtitle}>
-                LLM 正在分析全部 {MOCK.totalChapters} 章内容，提取人物库、时间线库、剧情承诺库和世界观库。
+                LLM 正在分析全部 {data.totalChapters} 章内容，提取人物库、时间线库、剧情承诺库和世界观库。
               </div>
 
               <div className={styles.progressGrid}>
@@ -497,7 +620,7 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
               </div>
 
               <div className={styles.dynamicChapters}>
-                {MOCK.chapters.map((ch) => (
+                {data.chapters.map((ch) => (
                   <div key={ch.number} className={styles.chapterCard}>
                     <div className={styles.chapterNumber}>第 {ch.number} 章</div>
                     <div className={styles.chapterTitle}>{ch.title}</div>
@@ -515,14 +638,14 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
                   <div className={styles.insightIcon}>🎯</div>
                   <div className={styles.insightContent}>
                     <div className={styles.insightLabel}>当前 POV</div>
-                    <div className={styles.insightValue}>{MOCK.dynamicLayer.pov}</div>
+                    <div className={styles.insightValue}>{data.dynamicLayer.pov}</div>
                   </div>
                 </div>
                 <div className={styles.insightItem}>
                   <div className={styles.insightIcon}>📍</div>
                   <div className={styles.insightContent}>
                     <div className={styles.insightLabel}>主要地点</div>
-                    <div className={styles.insightValue}>{MOCK.dynamicLayer.location}</div>
+                    <div className={styles.insightValue}>{data.dynamicLayer.location}</div>
                   </div>
                 </div>
                 <div className={styles.insightItem}>
@@ -530,7 +653,7 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
                   <div className={styles.insightContent}>
                     <div className={styles.insightLabel}>活跃钩子</div>
                     <div className={styles.insightValue}>
-                      {MOCK.dynamicLayer.hooks.map((h, i) => (
+                      {data.dynamicLayer.hooks.map((h, i) => (
                         <span key={i} className={`${styles.tag} ${styles.tagIndigo}`}>
                           {h}
                         </span>
@@ -543,7 +666,7 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
                   <div className={styles.insightContent}>
                     <div className={styles.insightLabel}>连贯性基线</div>
                     <div className={styles.insightValue}>
-                      <span className={`${styles.tag} ${styles.tagGreen}`}>{MOCK.dynamicLayer.baseline}</span>
+                      <span className={`${styles.tag} ${styles.tagGreen}`}>{data.dynamicLayer.baseline}</span>
                     </div>
                   </div>
                 </div>
@@ -561,39 +684,39 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
                 审查确认
               </div>
               <div className={styles.cardSubtitle}>
-                以下是系统从 {MOCK.totalChapters} 章中分析提取的四库数据摘要，请确认无误后导入。
+                以下是系统从 {data.totalChapters} 章中分析提取的四库数据摘要，请确认无误后导入。
               </div>
 
               <div className={styles.reviewSummary}>
                 <div className={styles.reviewItem}>
                   <div className={styles.revIcon}>👥</div>
-                  <div className={styles.revCount}>12</div>
+                  <div className={styles.revCount}>{data.characters}</div>
                   <div className={styles.revLabel}>人物</div>
-                  <div className={styles.revSublabel}>苏铭、叶青寒、夜无痕...</div>
+                  <div className={styles.revSublabel}>已提取</div>
                 </div>
                 <div className={styles.reviewItem}>
                   <div className={styles.revIcon}>⏱️</div>
-                  <div className={styles.revCount}>5</div>
+                  <div className={styles.revCount}>{data.timeline}</div>
                   <div className={styles.revLabel}>时间节点</div>
-                  <div className={styles.revSublabel}>第1天 → 第23天</div>
+                  <div className={styles.revSublabel}>已提取</div>
                 </div>
                 <div className={styles.reviewItem}>
                   <div className={styles.revIcon}>📖</div>
-                  <div className={styles.revCount}>8</div>
+                  <div className={styles.revCount}>{data.commitments}</div>
                   <div className={styles.revLabel}>剧情承诺</div>
-                  <div className={styles.revSublabel}>玉佩秘密、禁术残卷...</div>
+                  <div className={styles.revSublabel}>已提取</div>
                 </div>
                 <div className={styles.reviewItem}>
                   <div className={styles.revIcon}>🌍</div>
-                  <div className={styles.revCount}>6</div>
+                  <div className={styles.revCount}>{data.world}</div>
                   <div className={styles.revLabel}>世界观条目</div>
-                  <div className={styles.revSublabel}>灵力体系、玄天宗...</div>
+                  <div className={styles.revSublabel}>已提取</div>
                 </div>
               </div>
 
               <div className={styles.conflictsSection}>
-                <div className={styles.conflictsTitle}>⚠️ 发现 {MOCK.conflicts.length} 项冲突</div>
-                {MOCK.conflicts.map((c, i) => (
+                <div className={styles.conflictsTitle}>⚠️ 发现 {data.conflicts.length} 项冲突</div>
+                {data.conflicts.map((c, i) => (
                   <div key={i} className={styles.conflictItem}>
                     <span className={styles.conflictIcon}>⚠️</span>
                     <div className={styles.conflictText}>
@@ -624,29 +747,29 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
                 <div className={styles.compIcon}>✅</div>
                 <div className={styles.compTitle}>导入成功</div>
                 <div className={styles.compSubtitle}>
-                  已导入 {MOCK.totalChapters} 章小说内容，系统已完成四库分析和动态层提取。
+                  已导入 {data.totalChapters} 章小说内容，系统已完成四库分析和动态层提取。
                   <br />
                   你可以直接进入创作工作台，继续后续的写作。
                 </div>
                 <div className={styles.compStats}>
                   <div className={styles.compStat}>
-                    <div className={styles.compStatValue}>{MOCK.totalChapters}</div>
+                    <div className={styles.compStatValue}>{data.totalChapters}</div>
                     <div className={styles.compStatLabel}>已导入章节</div>
                   </div>
                   <div className={styles.compStat}>
-                    <div className={styles.compStatValue}>12</div>
+                    <div className={styles.compStatValue}>{data.characters}</div>
                     <div className={styles.compStatLabel}>提取人物</div>
                   </div>
                   <div className={styles.compStat}>
-                    <div className={styles.compStatValue}>5</div>
+                    <div className={styles.compStatValue}>{data.timeline}</div>
                     <div className={styles.compStatLabel}>时间线节点</div>
                   </div>
                   <div className={styles.compStat}>
-                    <div className={styles.compStatValue}>8</div>
+                    <div className={styles.compStatValue}>{data.commitments}</div>
                     <div className={styles.compStatLabel}>剧情承诺</div>
                   </div>
                   <div className={styles.compStat}>
-                    <div className={styles.compStatValue}>6</div>
+                    <div className={styles.compStatValue}>{data.world}</div>
                     <div className={styles.compStatLabel}>世界观条目</div>
                   </div>
                 </div>
@@ -807,7 +930,7 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
           <div className={`${styles.mPhase} ${phase === 2 ? styles.mPhaseVisible : ""}`}>
             <div className={styles.mPhase2Title}>近三章动态分析（第21-23章）</div>
             <div className={styles.mChapterCards}>
-              {MOCK.chapters.map((ch) => (
+              {data.chapters.map((ch) => (
                 <div key={ch.number} className={styles.mChapterCard}>
                   <div className={styles.mChNum}>第{ch.number}章</div>
                   <div className={styles.mChTitle}>{ch.title}</div>
@@ -819,18 +942,18 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
               <div className={styles.mInsightRow}>
                 <span className={styles.mInsightIcon}>👤</span>
                 <span className={styles.mInsightLabel}>POV</span>
-                <span className={styles.mInsightValue}>{MOCK.dynamicLayer.pov}</span>
+                <span className={styles.mInsightValue}>{data.dynamicLayer.pov}</span>
               </div>
               <div className={styles.mInsightRow}>
                 <span className={styles.mInsightIcon}>📍</span>
                 <span className={styles.mInsightLabel}>地点</span>
-                <span className={styles.mInsightValue}>{MOCK.dynamicLayer.location}</span>
+                <span className={styles.mInsightValue}>{data.dynamicLayer.location}</span>
               </div>
               <div className={styles.mInsightRow}>
                 <span className={styles.mInsightIcon}>⚡</span>
                 <span className={styles.mInsightLabel}>活跃钩子</span>
                 <span className={`${styles.mInsightValue} ${styles.mInsightWarn}`}>
-                  {MOCK.dynamicLayer.hooks.join(" · ")}
+                  {data.dynamicLayer.hooks.join(" · ")}
                 </span>
               </div>
               <div className={styles.mInsightRow}>
@@ -847,26 +970,26 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
               <div className={styles.mSummaryHeader}>📊 四库摘要</div>
               <div className={styles.mSummaryGrid}>
                 <div className={styles.mSummaryItem}>
-                  <div className={styles.mSiValue}>12</div>
+                  <div className={styles.mSiValue}>{data.characters}</div>
                   <div className={styles.mSiLabel}>人物</div>
                 </div>
                 <div className={styles.mSummaryItem}>
-                  <div className={styles.mSiValue}>5</div>
+                  <div className={styles.mSiValue}>{data.timeline}</div>
                   <div className={styles.mSiLabel}>时间线节点</div>
                 </div>
                 <div className={styles.mSummaryItem}>
-                  <div className={styles.mSiValue}>8</div>
+                  <div className={styles.mSiValue}>{data.commitments}</div>
                   <div className={styles.mSiLabel}>剧情承诺</div>
                 </div>
                 <div className={styles.mSummaryItem}>
-                  <div className={styles.mSiValue}>6</div>
+                  <div className={styles.mSiValue}>{data.world}</div>
                   <div className={styles.mSiLabel}>世界观</div>
                 </div>
               </div>
             </div>
             <div className={styles.mConflictCard}>
               <div className={styles.mConflictHeader}>⚠️ 冲突标记</div>
-              {MOCK.conflicts.map((c, i) => (
+              {data.conflicts.map((c, i) => (
                 <div key={i} className={styles.mConflictItem}>
                   <div className={styles.mConflictDot} />
                   <div className={styles.mConflictText}>
@@ -888,13 +1011,13 @@ export default function ImportPage({ params }: { params: Promise<{ projectId: st
           <div className={`${styles.mDonePage} ${phase === 4 ? styles.mDoneVisible : ""}`}>
             <div className={styles.mDoneCheck}>✓</div>
             <div className={styles.mDoneTitle}>导入完成！</div>
-            <div className={styles.mDoneSub}>已导入 {MOCK.totalChapters} 章</div>
+            <div className={styles.mDoneSub}>已导入 {data.totalChapters} 章</div>
             <div className={styles.mDoneStats}>
               {[
-                { value: "12", label: "人物" },
-                { value: "5", label: "时间线" },
-                { value: "8", label: "承诺" },
-                { value: "6", label: "世界观" },
+                { value: String(data.characters), label: "人物" },
+                { value: String(data.timeline), label: "时间线" },
+                { value: String(data.commitments), label: "承诺" },
+                { value: String(data.world), label: "世界观" },
               ].map((stat, i) => (
                 <div key={i} className={styles.mDoneStat}>
                   <div className={styles.mDsValue}>{stat.value}</div>

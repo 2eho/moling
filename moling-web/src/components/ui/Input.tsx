@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import styles from "./Input.module.css";
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
@@ -9,7 +9,7 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "
   icon?: string;
 }
 
-export function Input({
+export const Input = memo(function Input({
   label,
   error,
   icon,
@@ -42,4 +42,4 @@ export function Input({
       {error && <span className={styles.error}>{error}</span>}
     </div>
   );
-}
+});

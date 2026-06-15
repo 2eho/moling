@@ -7,6 +7,9 @@
    - 401 auto-refresh (token rotation)
    - X-Request-ID on every request
    - Mock mode when NEXT_PUBLIC_MOCK_ENABLED=true
+   - GET 请求去重（并发重复请求合并）
+   - GET 请求结果缓存（TTL 可配置）
+   - AbortController 支持
    ============================================ */
 
 import { getAccessToken, getRefreshToken, setTokens, clearAuth } from "./auth";
@@ -22,6 +25,11 @@ interface MockHandler {
   (...args: any[]): unknown;
 }
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 // ---- Mock Registry ----
 
 const mockHandlers = new Map<string, MockHandler>();
@@ -32,6 +40,53 @@ const mockHandlers = new Map<string, MockHandler>();
  */
 export function registerMock(pattern: string, handler: MockHandler): void {
   mockHandlers.set(pattern, handler);
+}
+
+// ---- 请求去重（Deduplication） ----
+// 同一 URL 的并发 GET 请求只发一次，所有调用者共享同一个 Promise
+
+const inflightRequests = new Map<string, Promise<unknown>>();
+
+function deduplicateKey(method: HttpMethod, path: string, params?: RequestParams): string {
+  const url = buildUrl(path, params);
+  return `${method}:${url}`;
+}
+
+// ---- 响应缓存（Response Cache） ----
+// 只缓存 GET 请求，默认 TTL = 5000ms
+
+const responseCache = new Map<string, CacheEntry<unknown>>();
+const DEFAULT_CACHE_TTL = 5_000; // 5 seconds
+
+function getCacheKey(method: HttpMethod, path: string, params?: RequestParams): string {
+  return deduplicateKey(method, path, params);
+}
+
+function getFromCache<T>(key: string): T | null {
+  const entry = responseCache.get(key) as CacheEntry<T> | undefined;
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > DEFAULT_CACHE_TTL) {
+    responseCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache<T>(key: string, data: T): void {
+  responseCache.set(key, { data, timestamp: Date.now() });
+  // 缓存数量控制：超过 50 条时清理最旧的
+  if (responseCache.size > 50) {
+    const oldest = responseCache.keys().next().value;
+    if (oldest) responseCache.delete(oldest);
+  }
+}
+
+/**
+ * 清空缓存（在登出或需要强制刷新时调用）
+ */
+export function clearApiCache(): void {
+  responseCache.clear();
+  inflightRequests.clear();
 }
 
 // ---- Internal Helpers ----
@@ -114,6 +169,17 @@ async function tryRefreshToken(): Promise<boolean> {
   }
 }
 
+// ---- Token Refresh 防并发 ----
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshTokenDeduped(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = tryRefreshToken().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
 /**
  * Core request function.
  */
@@ -131,6 +197,24 @@ async function request<T>(
     const handler = mockHandlers.get(mockKey);
     if (handler) {
       return handler(body, params) as T;
+    }
+  }
+
+  // ---- GET 请求缓存命中 ----
+  if (method === "GET") {
+    const cacheKey = getCacheKey(method, path, params);
+    const cached = getFromCache<T>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
+  // ---- GET 请求去重（并发重复请求合并） ----
+  if (method === "GET") {
+    const dedupKey = deduplicateKey(method, path, params);
+    const inflight = inflightRequests.get(dedupKey);
+    if (inflight) {
+      return inflight as Promise<T>;
     }
   }
 
@@ -157,51 +241,77 @@ async function request<T>(
     fetchOptions.body = JSON.stringify(body);
   }
 
-  let response: Response;
-  try {
-    response = await fetch(url, fetchOptions);
-  } catch (fetchError) {
-    // 网络不可达 / DNS 解析失败 / CORS 被拦截 等
-    const reason =
-      fetchError instanceof TypeError
-        ? `无法连接到服务器 (${url}) — 请检查网络或 API 地址配置`
-        : `请求失败: ${(fetchError as Error).message}`;
-    throw new Error(reason);
-  }
-
-  // ---- 401 Auto-Refresh ----
-  if (response.status === 401 && getRefreshToken()) {
-    const refreshed = await tryRefreshToken();
-    if (refreshed) {
-      // Retry original request with new token
-      headers["Authorization"] = `Bearer ${getAccessToken()}`;
-      response = await fetch(url, { ...fetchOptions, headers });
-    } else {
-      // Refresh failed — clear auth and redirect
-      clearAuth();
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth";
-      }
-      throw new Error("认证已过期，请重新登录");
+  // 创建实际请求的 Promise
+  const executeFetch = async (): Promise<T> => {
+    let response: Response;
+    try {
+      response = await fetch(url, fetchOptions);
+    } catch (fetchError) {
+      // 网络不可达 / DNS 解析失败 / CORS 被拦截 等
+      const reason =
+        fetchError instanceof TypeError
+          ? `无法连接到服务器 (${url}) — 请检查网络或 API 地址配置`
+          : `请求失败: ${(fetchError as Error).message}`;
+      throw new Error(reason);
     }
+
+    // ---- 401 Auto-Refresh（防并发） ----
+    if (response.status === 401 && getRefreshToken()) {
+      const refreshed = await tryRefreshTokenDeduped();
+      if (refreshed) {
+        // Retry original request with new token
+        headers["Authorization"] = `Bearer ${getAccessToken()}`;
+        response = await fetch(url, { ...fetchOptions, headers });
+      } else {
+        // Refresh failed — clear auth and redirect
+        clearAuth();
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth";
+        }
+        throw new Error("认证已过期，请重新登录");
+      }
+    }
+
+    // ---- Parse Response ----
+    let data: T;
+    try {
+      data = (await response.json()) as T;
+    } catch {
+      data = {} as T;
+    }
+
+    if (!response.ok) {
+      const message =
+        (data as Record<string, unknown>)?.message ??
+        `请求失败 (${response.status})`;
+      throw new Error(message as string);
+    }
+
+    return data;
+  };
+
+  // ---- 执行请求（GET 去重） ----
+  const dedupKey = deduplicateKey(method, path, params);
+  const promise = executeFetch().finally(() => {
+    // 请求完成后从去重 Map 中移除
+    if (method === "GET") {
+      inflightRequests.delete(dedupKey);
+    }
+  });
+
+  if (method === "GET") {
+    inflightRequests.set(dedupKey, promise);
+
+    // 写入缓存
+    promise.then((data) => {
+      const cacheKey = getCacheKey(method, path, params);
+      setCache(cacheKey, data);
+    }).catch(() => {
+      // 请求失败不缓存
+    });
   }
 
-  // ---- Parse Response ----
-  let data: T;
-  try {
-    data = (await response.json()) as T;
-  } catch {
-    data = {} as T;
-  }
-
-  if (!response.ok) {
-    const message =
-      (data as Record<string, unknown>)?.message ??
-      `请求失败 (${response.status})`;
-    throw new Error(message as string);
-  }
-
-  return data;
+  return promise;
 }
 
 // ---- Public API ----

@@ -47,6 +47,23 @@ async def get_project_stats(
     return await project_service.get_project_stats(db, current_user.id)
 
 
+@router.get("/{project_id}/stats", response_model=dict)
+async def get_single_project_stats(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """获取单个项目的统计信息。"""
+    project = await project_service.get_project(db, current_user.id, project_id)
+    return {
+        "project_id": project.id,
+        "title": project.title,
+        "total_chapters": project.chapters,
+        "total_words": project.word_count,
+        "status": project.status,
+    }
+
+
 @router.get("/{project_id}", response_model=ProjectResp)
 async def get_project(
     project_id: int,

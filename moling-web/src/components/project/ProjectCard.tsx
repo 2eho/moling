@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import styles from "./ProjectCard.module.css";
 import type { Project } from "@/lib/types";
 import { PROJECT_STATUS_LABELS } from "@/lib/constants";
@@ -33,7 +34,7 @@ const statusColors: Record<string, string> = {
   archived: "var(--color-warning)",
 };
 
-export function ProjectCard({ project, onClick }: ProjectCardProps) {
+export const ProjectCard = memo(function ProjectCard({ project, onClick }: ProjectCardProps) {
   return (
     <div className={styles.card} onClick={onClick}>
       <div className={styles.header}>
@@ -66,4 +67,4 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       </div>
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import styles from "./ProjectStats.module.css";
 import type { ProjectStats as Stats } from "@/contexts/ProjectContext";
 
@@ -8,7 +9,7 @@ interface ProjectStatsProps {
   isLoading: boolean;
 }
 
-export function ProjectStats({ stats, isLoading }: ProjectStatsProps) {
+export const ProjectStats = memo(function ProjectStats({ stats, isLoading }: ProjectStatsProps) {
   const items = [
     { label: "总项目", value: stats?.total ?? 0, icon: "📚" },
     { label: "活跃中", value: stats?.active ?? 0, icon: "✍" },
@@ -31,7 +32,7 @@ export function ProjectStats({ stats, isLoading }: ProjectStatsProps) {
       ))}
     </div>
   );
-}
+});
 
 function formatWords(count: number): string {
   if (count >= 10000) return `${(count / 10000).toFixed(1)}万`;

@@ -69,9 +69,10 @@ export default function NotificationsPage() {
     setLoading(true);
     try {
       const params: any = { page, pageSize };
-      const result = await notificationsApi.getNotifications(params);
-      setNotifications(result.items);
-      setTotal(result.total);
+      const result = await notificationsApi.list(params);
+      // API 返回格式: { data: { items: [], total: number } }
+      setNotifications(result.data.items || result.data || []);
+      setTotal(result.data.total || result.data?.length || 0);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {

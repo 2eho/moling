@@ -157,17 +157,15 @@ export function LandingPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isMobile]);
 
-  // Intersection Observer for scroll fade-in
+  // Intersection Observer for scroll fade-in — 一次性注册，函数式更新避免闭包
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        const newVisible = new Set(visibleElements);
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            newVisible.add(entry.target.id);
+            setVisibleElements(prev => new Set(prev).add(entry.target.id));
           }
         });
-        setVisibleElements(newVisible);
       },
       { threshold: 0.15 }
     );
@@ -176,7 +174,7 @@ export function LandingPage() {
     elements.forEach((el) => observerRef.current?.observe(el));
 
     return () => observerRef.current?.disconnect();
-  }, [visibleElements]);
+  }, []);
 
   // Mobile feature slider dot update
   const handleSliderScroll = useCallback(() => {

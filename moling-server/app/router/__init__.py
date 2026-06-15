@@ -18,26 +18,32 @@ except ImportError:
     pass
 
 try:
+    from app.router.project_health import router as project_health_router
+    api_router.include_router(project_health_router, prefix="/projects", tags=["project-health"])
+except ImportError:
+    pass
+
+try:
     from app.router.chapter import router as chapter_router
-    api_router.include_router(chapter_router, prefix="/chapters", tags=["chapters"])
+    api_router.include_router(chapter_router, prefix="/projects/{project_id}", tags=["chapters"])
 except ImportError:
     pass
 
 try:
     from app.router.card import router as card_router
-    api_router.include_router(card_router, prefix="/cards", tags=["cards"])
+    api_router.include_router(card_router, prefix="/projects/{project_id}", tags=["cards"])
 except ImportError:
     pass
 
 try:
     from app.router.generation import router as generation_router
-    api_router.include_router(generation_router, prefix="/generation", tags=["generation"])
+    api_router.include_router(generation_router, prefix="/generate", tags=["generation"])
 except ImportError:
     pass
 
 try:
     from app.router.vault import router as vault_router
-    api_router.include_router(vault_router, prefix="/vault", tags=["vault"])
+    api_router.include_router(vault_router, prefix="/projects/{project_id}/vault", tags=["vault"])
 except ImportError:
     pass
 
@@ -46,6 +52,13 @@ try:
     api_router.include_router(health_router, prefix="/health", tags=["health"])
 except ImportError:
     pass
+
+# /system/health 别名，供前端统一调用
+@api_router.get("/system/health", tags=["health"])
+async def system_health_alias(request):  # FastAPI 自动注入 Request
+    """系统健康检查（别名路径，供前端 /system/health 调用）。"""
+    from app.router.health import health_check
+    return await health_check(request)
 
 try:
     from app.router.admin import router as admin_router
@@ -90,7 +103,7 @@ except ImportError:
     pass
 
 try:
-    from app.router.secret import router as secret_router
-    api_router.include_router(secret_router, prefix="/secrets", tags=["secrets"])
+    from app.ingest.router import router as ingest_router
+    api_router.include_router(ingest_router, tags=["import"])
 except ImportError:
     pass

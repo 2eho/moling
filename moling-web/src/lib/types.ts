@@ -229,15 +229,34 @@ export type NotificationType =
 export interface UserSettings {
   id: string;
   user_id: string;
+  // 用户资料字段
+  nickname?: string;
+  bio?: string;
+  email?: string;
+  avatar_url?: string;
+  // 界面设置
   theme: "light" | "dark" | "system";
   language: string;
   editor_font_size: number;
   editor_line_height: number;
   auto_save_interval: number;
+  // 创作偏好
   generation_preference: GenerationPreference;
+  // 通知设置
   notification_settings: NotificationSettings;
+  // 健康监控规则
+  health_rules?: HealthRules;
+  // Phase 4 审核模式
+  phase4_review_mode?: "manual" | "auto";
   created_at: string;
   updated_at: string;
+}
+
+export interface HealthRules {
+  r1_enabled: boolean;
+  r2_enabled: boolean;
+  r3_enabled: boolean;
+  anti_fatigue: boolean;
 }
 
 export interface GenerationPreference {

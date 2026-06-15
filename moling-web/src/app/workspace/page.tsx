@@ -103,26 +103,31 @@ export default function WorkspacePage() {
 
   const [selectedCards, setSelectedCards] = useState<string[]>(['1', '2']);
 
-  // 倒计时逻辑
+  // 倒计时逻辑 — 使用 ref 存储 countdown 值，避免闭包过期
   const countdownRef = useRef<number | null>(null);
+  const countdownValueRef = useRef(6);
 
   useEffect(() => {
-    if (!draftConfirmed && countdown > 0) {
-      countdownRef.current = window.setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            confirmDraft();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    if (draftConfirmed) return;
+
+    countdownValueRef.current = countdown;
+    if (countdown <= 0) return;
+
+    countdownRef.current = window.setInterval(() => {
+      setCountdown(prev => {
+        const next = prev - 1;
+        if (next <= 0) {
+          confirmDraft();
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
 
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [draftConfirmed]);
+  }, [draftConfirmed, countdown]); // ✅ 补全依赖
 
   const confirmDraft = () => {
     setDraftConfirmed(true);

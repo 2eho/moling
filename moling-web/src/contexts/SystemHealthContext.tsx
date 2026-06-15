@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import type { SystemHealthStatus } from "@/lib/types";
@@ -92,7 +93,7 @@ export function SystemHealthProvider({
     setWarningDismissed(true);
   }, []);
 
-  const value: SystemHealthContextValue = {
+  const value = useMemo<SystemHealthContextValue>(() => ({
     health,
     isLoading,
     error,
@@ -100,7 +101,7 @@ export function SystemHealthProvider({
     dismissWarning,
     warningDismissed,
     pollInterval,
-  };
+  }), [health, isLoading, error, refresh, dismissWarning, warningDismissed, pollInterval]);
 
   return (
     <SystemHealthContext.Provider value={value}>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import styles from "./Navbar.module.css";
 
-export function Navbar() {
+export const Navbar = memo(function Navbar() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -68,4 +68,4 @@ export function Navbar() {
       </div>
     </nav>
   );
-}
+});

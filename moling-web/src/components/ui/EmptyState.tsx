@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import styles from "./EmptyState.module.css";
 import { Button } from "./Button";
 
@@ -14,7 +14,7 @@ interface EmptyStateProps {
   };
 }
 
-export function EmptyState({
+export const EmptyState = memo(function EmptyState({
   icon = "📭",
   title,
   description,
@@ -32,4 +32,4 @@ export function EmptyState({
       )}
     </div>
   );
-}
+});

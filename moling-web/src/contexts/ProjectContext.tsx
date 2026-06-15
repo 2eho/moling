@@ -6,6 +6,8 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import type { Project } from "@/lib/types";
@@ -27,7 +29,7 @@ export interface ProjectContextValue {
   isLoading: boolean;
   loadProjects: () => Promise<void>;
   loadProject: (id: string) => Promise<void>;
-  loadStats: () => Promise<void>;
+  loadStats: (projectId?: string) => Promise<void>;
   createProject: (data: Partial<Project>) => Promise<Project>;
   updateProject: (id: string, data: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
@@ -45,6 +47,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ✅ useRef 保存 currentProject.id，避免 deleteProject 等回调因 currentProject 变化而重建
+  const currentProjectIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    currentProjectIdRef.current = currentProject?.id ?? null;
+  }, [currentProject]);
+
   const loadProjects = useCallback(async () => {
     const res = await projectApi.list();
     setProjects(res.data);
@@ -55,11 +63,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setCurrentProject(res.data);
   }, []);
 
-  const loadStats = useCallback(async () => {
-    if (!currentProject?.id) return;
-    const res = await projectApi.getStats(currentProject.id);
+  const loadStats = useCallback(async (projectId?: string) => {
+    const id = projectId ?? currentProjectIdRef.current;
+    if (!id) return;
+    const res = await projectApi.getStats(id);
     setStats(res.data);
-  }, [currentProject]);
+  }, []); // ✅ 使用 ref 替代 currentProject state 依赖
 
   const createProject = useCallback(async (data: Partial<Project>) => {
     const res = await projectApi.create(data);
@@ -78,19 +87,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const deleteProject = useCallback(async (id: string) => {
     await projectApi.delete(id);
     setProjects((prev) => prev.filter((p) => p.id !== id));
-    if (currentProject?.id === id) {
+    if (currentProjectIdRef.current === id) {
       setCurrentProject(null);
     }
-  }, [currentProject]);
+  }, []); // ✅ 使用 ref 替代 currentProject state 依赖
 
   // Initial load
   useEffect(() => {
-    Promise.all([loadProjects(), loadStats()]).finally(() =>
+    loadProjects().finally(() =>
       setIsLoading(false),
     );
-  }, [loadProjects, loadStats]);
+  }, [loadProjects]);
 
-  const value: ProjectContextValue = {
+  const value = useMemo<ProjectContextValue>(() => ({
     projects,
     currentProject,
     stats,
@@ -101,7 +110,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     createProject,
     updateProject,
     deleteProject,
-  };
+  }), [
+    projects, currentProject, stats, isLoading,
+    loadProjects, loadProject, loadStats,
+    createProject, updateProject, deleteProject,
+  ]);
 
   return (
     <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>

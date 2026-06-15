@@ -28,7 +28,7 @@ export function TimelineList({ timelines }: TimelineListProps) {
           </div>
           <div className={styles.events}>
             {tl.events.map((event, idx) => (
-              <div key={idx} className={styles.event}>
+              <div key={`ch${event.chapter_number}-${idx}`} className={styles.event}>
                 <div className={styles.eventDot}>
                   {event.importance >= 4 && (
                     <span className={styles.keyEvent}>★</span>

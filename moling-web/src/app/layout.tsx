@@ -1,11 +1,27 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { AppShell } from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
-  title: '墨灵 - AI 创作工作台',
+  title: {
+    default: '墨灵 - AI 创作工作台',
+    template: '%s | 墨灵',
+  },
   description: '墨灵 · 智能创作引擎，15秒完成整章生成',
+  keywords: ['AI写作', '小说创作', '网文', '智能写作', '灵感抽卡'],
+  authors: [{ name: '墨灵团队' }],
+  // 预连接 API 服务端以减少 DNS/SSL 握手耗时
+  other: {
+    'Cache-Control': 'no-cache',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#0d0f1a',
 };
 
 export default function RootLayout({
@@ -14,11 +30,38 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        {/* 预连接 API 服务以缩短 TLS 握手时间 */}
+        <link
+          rel="preconnect"
+          href={process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'}
+          crossOrigin="anonymous"
+        />
+        {/* DNS 预解析 */}
+        <link
+          rel="dns-prefetch"
+          href={process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'}
+        />
+      </head>
       <body>
+        {/* 无障碍：跳过导航链接 */}
+        <a
+          href="#main-content"
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            width: '1px',
+            height: '1px',
+            overflow: 'hidden',
+          }}
+          className="skip-link"
+        >
+          跳过导航，直达内容
+        </a>
         <Providers>
           <AppShell>
-            {children}
+            <div id="main-content">{children}</div>
           </AppShell>
         </Providers>
       </body>

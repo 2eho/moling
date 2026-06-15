@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import styles from "./Modal.module.css";
 
 interface ModalProps {
@@ -11,7 +11,7 @@ interface ModalProps {
   footer?: React.ReactNode;
 }
 
-export function Modal({
+export const Modal = memo(function Modal({
   isOpen,
   onClose,
   title,
@@ -56,4 +56,4 @@ export function Modal({
       </div>
     </div>
   );
-}
+});

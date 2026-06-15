@@ -1,3 +1,4 @@
+import { memo } from "react";
 import styles from "./Skeleton.module.css";
 
 interface SkeletonProps {
@@ -7,7 +8,7 @@ interface SkeletonProps {
   variant?: "text" | "circular" | "rectangular";
 }
 
-export function Skeleton({
+export const Skeleton = memo(function Skeleton({
   width = "100%",
   height = 16,
   borderRadius,
@@ -30,4 +31,4 @@ export function Skeleton({
       aria-hidden="true"
     />
   );
-}
+});

@@ -67,3 +67,43 @@ async def list_project_tasks(
     """查询项目的所有 Phase 4 任务。"""
     result = await phase4_service.list_project_tasks(db, project_id)
     return result
+
+
+@router.get("/pending-reviews", status_code=200)
+async def get_pending_reviews(
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """获取待审核的精修建议列表。"""
+    # MVP 实现：返回空列表（等 service 层完善）
+    return {
+        "reviews": [],
+        "total": 0,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+@router.post("/reviews/{review_id}/approve", status_code=200)
+async def approve_review(
+    review_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """批准精修建议。"""
+    # MVP 实现：返回确认（等 service 层完善）
+    return {"approved": True, "review_id": review_id}
+
+
+@router.post("/reviews/{review_id}/reject", status_code=200)
+async def reject_review(
+    review_id: int,
+    req: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """拒绝精修建议并给出理由。"""
+    reason = req.get("reason", "")
+    return {"rejected": True, "review_id": review_id, "reason": reason}

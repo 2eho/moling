@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Settings.module.css';
 import { settingsApi } from '@/lib/api';
-import type { UserSettings } from '@/api';
+import type { UserSettings, HealthRules } from '@/lib/types';
 
 const ACCENT_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981'];
 
@@ -22,19 +22,30 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Profile
-  const [username, setUsername] = useState('');
+  const [nickname, setNickname] = useState('');
   const [bio, setBio] = useState('');
   const [email, setEmail] = useState('');
   const [avatarInitial, setAvatarInitial] = useState('U');
 
   // Creation defaults
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [fontSize, setFontSize] = useState<number>(14);
   const [autoSave, setAutoSave] = useState(true);
   const [generationMode, setGenerationMode] = useState('balanced');
 
   // Theme
   const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark');
   const [accentColor, setAccentColor] = useState('#6366f1');
+
+  // Health monitor
+  const [healthRules, setHealthRules] = useState<HealthRules>({
+    r1_enabled: true,
+    r2_enabled: true,
+    r3_enabled: true,
+    anti_fatigue: false,
+  });
+
+  // Phase 4 review mode
+  const [phase4ReviewMode, setPhase4ReviewMode] = useState<'manual' | 'auto'>('manual');
 
   // Data management
   const [storageStats, setStorageStats] = useState({ totalWords: 0, projects: 0, chapters: 0, cards: 0 });
@@ -51,17 +62,28 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const data = await settingsApi.getSettings();
+        const res = await settingsApi.get();
+        const data: UserSettings = res.data;
         setSettings(data);
-        setTheme(data.globalSettings?.theme || 'dark');
-        setAutoSave(data.globalSettings?.autoSave ?? true);
-        setUsername(data.globalSettings?.username || '');
-        setEmail(data.globalSettings?.email || '');
-        setAvatarInitial(data.globalSettings?.username?.charAt(0)?.toUpperCase() || 'U');
-        setBio(data.globalSettings?.bio || '');
-        setFontSize(data.globalSettings?.fontSize || 'medium');
-        setGenerationMode(data.globalSettings?.generationMode || 'balanced');
-        setAccentColor(data.globalSettings?.accentColor || '#6366f1');
+        setTheme(data.theme || 'dark');
+        setAutoSave(data.auto_save_interval > 0);
+        setNickname(data.nickname || '');
+        setEmail(data.email || '');
+        setAvatarInitial(data.nickname?.charAt(0)?.toUpperCase() || 'U');
+        setBio(data.bio || '');
+        setFontSize(data.editor_font_size || 14);
+        setGenerationMode(data.generation_preference?.default_mode || 'balanced');
+        setAccentColor('#6366f1'); // 暂时硬编码，后续从设置读取
+
+        // 健康监控规则
+        if (data.health_rules) {
+          setHealthRules(data.health_rules);
+        }
+
+        // Phase 4 审核模式
+        if (data.phase4_review_mode) {
+          setPhase4ReviewMode(data.phase4_review_mode);
+        }
       } catch (error) {
         console.error('Failed to load settings:', error);
         showMessage('error', '加载设置失败');
@@ -78,17 +100,34 @@ export default function SettingsPage() {
   const handleSaveGlobalSettings = async () => {
     setSaving(true);
     try {
-      await settingsApi.updateGlobalSettings({
-        theme,
-        autoSave,
-        username,
-        email,
+      const updateData: Partial<UserSettings> = {
+        nickname,
         bio,
-        fontSize,
-        generationMode,
-        accentColor,
-      });
+        email,
+        theme,
+        language: 'zh-CN',
+        editor_font_size: fontSize,
+        auto_save_interval: autoSave ? 6 : 0,
+        generation_preference: {
+          default_mode: generationMode,
+          default_weights: { plot: 0.4, character: 0.3, worldview: 0.3 },
+          auto_confirm: false,
+        },
+      };
+
+      await settingsApi.update(updateData);
       showMessage('success', '设置已保存');
+
+      // 保存健康监控设置
+      await settingsApi.updateHealthMonitor({
+        r1_enabled: healthRules.r1_enabled,
+        r2_enabled: healthRules.r2_enabled,
+        r3_enabled: healthRules.r3_enabled,
+        anti_fatigue: healthRules.anti_fatigue,
+      });
+
+      // 保存 Phase 4 审核模式
+      await settingsApi.updatePhase4Review({ mode: phase4ReviewMode });
     } catch (error) {
       console.error('Failed to save:', error);
       showMessage('error', `保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -104,13 +143,23 @@ export default function SettingsPage() {
     }
   };
 
-  const handleExportData = () => {
-    showMessage('success', '数据导出已开始');
+  const handleExportData = async () => {
+    try {
+      await settingsApi.exportData();
+      showMessage('success', '数据导出已开始');
+    } catch (error) {
+      showMessage('error', '导出失败');
+    }
   };
 
-  const handleClearCache = () => {
+  const handleClearCache = async () => {
     if (window.confirm('确认清除缓存？')) {
-      showMessage('success', '缓存已清除');
+      try {
+        await settingsApi.clearCache();
+        showMessage('success', '缓存已清除');
+      } catch (error) {
+        showMessage('error', '清除缓存失败');
+      }
     }
   };
 
@@ -206,16 +255,16 @@ export default function SettingsPage() {
 
               <div className={styles.profileFields}>
                 <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>用户名</label>
+                  <label className={styles.fieldLabel}>昵称</label>
                   <input
                     className={styles.fieldInput}
                     type="text"
-                    value={username}
+                    value={nickname}
                     onChange={(e) => {
-                      setUsername(e.target.value);
+                      setNickname(e.target.value);
                       setAvatarInitial(e.target.value.charAt(0).toUpperCase() || 'U');
                     }}
-                    placeholder="输入用户名"
+                    placeholder="输入昵称"
                   />
                 </div>
                 <div className={styles.fieldGroup}>
@@ -255,16 +304,16 @@ export default function SettingsPage() {
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
                 <span className={styles.settingName}>编辑器字体大小</span>
-                <span className={styles.settingDesc}>调整编辑器的字号大小</span>
+                <span className={styles.settingDesc}>调整编辑器的字号大小（像素）</span>
               </div>
               <div className={styles.fontSizeGroup}>
-                {(['small', 'medium', 'large'] as const).map((size) => (
+                {([12, 14, 16, 18, 20] as const).map((size) => (
                   <button
                     key={size}
                     className={`${styles.fontSizeBtn} ${fontSize === size ? styles.fontSizeBtnActive : ''}`}
                     onClick={() => setFontSize(size)}
                   >
-                    {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
+                    {size}px
                   </button>
                 ))}
               </div>
@@ -297,6 +346,74 @@ export default function SettingsPage() {
                 <option value="conservative">保守</option>
                 <option value="balanced">均衡</option>
                 <option value="creative">创意</option>
+              </select>
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <span className={styles.settingName}>健康监控 - R1 规则</span>
+                <span className={styles.settingDesc}>检测角色崩坏</span>
+              </div>
+              <div
+                className={`${styles.toggle} ${healthRules.r1_enabled ? styles.toggleOn : ''}`}
+                onClick={() => setHealthRules({ ...healthRules, r1_enabled: !healthRules.r1_enabled })}
+              >
+                <div className={styles.toggleKnob} />
+              </div>
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <span className={styles.settingName}>健康监控 - R2 规则</span>
+                <span className={styles.settingDesc}>检测剧情矛盾</span>
+              </div>
+              <div
+                className={`${styles.toggle} ${healthRules.r2_enabled ? styles.toggleOn : ''}`}
+                onClick={() => setHealthRules({ ...healthRules, r2_enabled: !healthRules.r2_enabled })}
+              >
+                <div className={styles.toggleKnob} />
+              </div>
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <span className={styles.settingName}>健康监控 - R3 规则</span>
+                <span className={styles.settingDesc}>检测伏笔丢失</span>
+              </div>
+              <div
+                className={`${styles.toggle} ${healthRules.r3_enabled ? styles.toggleOn : ''}`}
+                onClick={() => setHealthRules({ ...healthRules, r3_enabled: !healthRules.r3_enabled })}
+              >
+                <div className={styles.toggleKnob} />
+              </div>
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <span className={styles.settingName}>防疲劳模式</span>
+                <span className={styles.settingDesc}>长时间写作时提醒休息</span>
+              </div>
+              <div
+                className={`${styles.toggle} ${healthRules.anti_fatigue ? styles.toggleOn : ''}`}
+                onClick={() => setHealthRules({ ...healthRules, anti_fatigue: !healthRules.anti_fatigue })}
+              >
+                <div className={styles.toggleKnob} />
+              </div>
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <span className={styles.settingName}>Phase 4 审核模式</span>
+                <span className={styles.settingDesc}>控制质检阶段的审核方式</span>
+              </div>
+              <select
+                className={styles.fieldSelect}
+                value={phase4ReviewMode}
+                onChange={(e) => setPhase4ReviewMode(e.target.value as 'manual' | 'auto')}
+                style={{ width: 150 }}
+              >
+                <option value="manual">手动审核</option>
+                <option value="auto">自动审核</option>
               </select>
             </div>
 

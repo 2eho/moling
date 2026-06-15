@@ -8,10 +8,10 @@ export default function WorkspaceLoading() {
         style={{
           display: "flex",
           alignItems: "center",
-          padding: "var(--spacing-3) var(--spacing-4)",
-          gap: "var(--spacing-4)",
-          backgroundColor: "var(--color-bg-card)",
-          borderBottom: "1px solid var(--color-border-default)",
+          padding: "var(--space-3) var(--space-4)",
+          gap: "var(--space-4)",
+          background: "var(--color-surface)",
+          borderBottom: "1px solid var(--color-border-subtle)",
           flexShrink: 0,
         }}
       >
@@ -27,17 +27,16 @@ export default function WorkspaceLoading() {
           minHeight: 0,
         }}
       >
-        {/* Left Panel Skeleton */}
         <div
           style={{
-            width: 240,
+            width: 280,
             flexShrink: 0,
-            backgroundColor: "var(--color-bg-card)",
-            borderRight: "1px solid var(--color-border-default)",
-            padding: "var(--spacing-3)",
+            background: "var(--color-surface)",
+            borderRight: "1px solid var(--color-border)",
+            padding: "var(--space-3)",
             display: "flex",
             flexDirection: "column",
-            gap: "var(--spacing-2)",
+            gap: "var(--space-2)",
           }}
         >
           {[1, 2, 3, 4].map((i) => (
@@ -45,28 +44,28 @@ export default function WorkspaceLoading() {
           ))}
         </div>
 
-        {/* Center Skeleton */}
         <div
           style={{
             flex: 1,
-            padding: "var(--spacing-8)",
+            padding: "var(--space-8)",
+            contain: "layout style",
           }}
         >
           <Skeleton height="100%" borderRadius={8} />
         </div>
 
-        {/* Right Panel Skeleton */}
         <div
           style={{
             width: 280,
             flexShrink: 0,
-            backgroundColor: "var(--color-bg-card)",
-            borderLeft: "1px solid var(--color-border-default)",
-            padding: "var(--spacing-4)",
+            background: "var(--color-surface)",
+            borderLeft: "1px solid var(--color-border)",
+            padding: "var(--space-4)",
+            contain: "layout style",
           }}
         >
           <Skeleton height={24} width={80} borderRadius={4} />
-          <div style={{ marginTop: "var(--spacing-8)" }}>
+          <div style={{ marginTop: "var(--space-8)" }}>
             <Skeleton height={120} borderRadius={8} />
           </div>
         </div>

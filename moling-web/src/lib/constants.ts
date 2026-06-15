@@ -42,21 +42,19 @@ export const API_ENDPOINTS = {
     REDRAW: "/cards/redraw",
   },
   GENERATION: {
-    GENERATE: "/generation/generate",
-    STATUS: "/generation/status",
-    CANCEL: "/generation/cancel",
-    CONFIRM: "/generation/confirm",
-    REVISE: "/generation/revise",
+    GENERATE: "/projects/{projectId}/chapters/{chapterId}/generate",
+    STATUS: "/generate/{taskId}/status",
+    CANCEL: "/generate/{taskId}/cancel",
   },
   VAULT: {
-    CHARACTERS: "/vault/characters",
-    TIMELINE: "/vault/timeline",
-    PLOT_PROMISES: "/vault/plot-promises",
-    WORLD: "/vault/world",
+    CHARACTERS: "/projects/{projectId}/vault/characters",
+    TIMELINE: "/projects/{projectId}/vault/timeline",
+    PLOT_PROMISES: "/projects/{projectId}/vault/plot-promises",
+    WORLD: "/projects/{projectId}/vault/world",
   },
   HEALTH: {
-    ALERTS: "/health/alerts",
-    REFRESH: "/health/refresh",
+    ALERTS: "/projects/{projectId}/health",
+    REFRESH: "/projects/{projectId}/health/refresh",
   },
 } as const;
 

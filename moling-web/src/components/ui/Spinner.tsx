@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import styles from "./Spinner.module.css";
 
 interface SpinnerProps {
@@ -7,7 +8,7 @@ interface SpinnerProps {
   color?: string;
 }
 
-export function Spinner({ size = "md", color }: SpinnerProps) {
+export const Spinner = memo(function Spinner({ size = "md", color }: SpinnerProps) {
   const sizeMap = { sm: 16, md: 24, lg: 36 };
   const px = sizeMap[size];
 
@@ -23,4 +24,4 @@ export function Spinner({ size = "md", color }: SpinnerProps) {
       aria-hidden="true"
     />
   );
-}
+});

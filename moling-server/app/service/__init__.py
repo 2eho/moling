@@ -17,6 +17,7 @@ from app.service.secret_service import secret_service
 from app.service.prompt_service import prompt_service
 from app.service.algorithm_service import algorithm_service
 from app.service.validation_service import validation_service
+from app.service.health_service import health_service
 
 try:
     from app.service.import_service import import_service
@@ -45,6 +46,7 @@ __all__ = [
     "prompt_service",
     "algorithm_service",
     "validation_service",
+    "health_service",
     "import_service",
     "book_analysis_service",
     "CardPoolService",

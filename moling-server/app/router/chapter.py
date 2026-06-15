@@ -5,19 +5,20 @@ Provides endpoints for chapter CRUD operations within a project.
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.chapter import CreateChapterReq, ChapterResp, UpdateChapterReq
-from app.service import chapter_service
+from app.schemas.generation import GenerateReq
+from app.service import chapter_service, generation_service
 
 router = APIRouter(tags=["chapters"])
 
 
-@router.post("", response_model=ChapterResp, status_code=201)
+@router.post("/chapters", response_model=ChapterResp, status_code=201)
 async def create_chapter(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     req: CreateChapterReq = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -26,9 +27,9 @@ async def create_chapter(
     return await chapter_service.create_chapter(db, current_user["id"], project_id, req)
 
 
-@router.get("", response_model=list[ChapterResp])
+@router.get("/chapters", response_model=list[ChapterResp])
 async def list_chapters(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[ChapterResp]:
@@ -36,9 +37,23 @@ async def list_chapters(
     return await chapter_service.list_chapters(db, current_user["id"], project_id)
 
 
-@router.get("/{chapter_id}", response_model=ChapterResp)
+@router.get("/chapters/current", response_model=ChapterResp)
+async def get_current_chapter(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> ChapterResp:
+    """Get the current (first) chapter in a project."""
+    chapters = await chapter_service.list_chapters(db, current_user["id"], project_id)
+    if not chapters:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="No chapters found")
+    return chapters[0]
+
+
+@router.get("/chapters/{chapter_id}", response_model=ChapterResp)
 async def get_chapter(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_id: int = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -47,9 +62,9 @@ async def get_chapter(
     return await chapter_service.get_chapter(db, current_user["id"], project_id, chapter_id)
 
 
-@router.put("/{chapter_id}", response_model=ChapterResp)
+@router.put("/chapters/{chapter_id}", response_model=ChapterResp)
 async def update_chapter(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_id: int = ...,
     req: UpdateChapterReq = ...,
     db: AsyncSession = Depends(get_db),
@@ -59,9 +74,9 @@ async def update_chapter(
     return await chapter_service.update_chapter(db, current_user["id"], project_id, chapter_id, req)
 
 
-@router.delete("/{chapter_id}", status_code=204)
+@router.delete("/chapters/{chapter_id}", status_code=204)
 async def delete_chapter(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_id: int = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -70,9 +85,9 @@ async def delete_chapter(
     await chapter_service.delete_chapter(db, current_user["id"], project_id, chapter_id)
 
 
-@router.post("/reorder", response_model=list[ChapterResp])
+@router.post("/chapters/reorder", response_model=list[ChapterResp])
 async def reorder_chapters(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_numbers: list[int] = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -81,9 +96,9 @@ async def reorder_chapters(
     return await chapter_service.reorder_chapters(db, current_user["id"], project_id, chapter_numbers)
 
 
-@router.post("/{chapter_id}/confirm", response_model=ChapterResp)
+@router.post("/chapters/{chapter_id}/confirm", response_model=ChapterResp)
 async def confirm_chapter(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_id: int = ...,
     confirm_data: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
@@ -95,9 +110,9 @@ async def confirm_chapter(
     )
 
 
-@router.post("/{chapter_id}/revise", response_model=ChapterResp)
+@router.post("/chapters/{chapter_id}/revise", response_model=ChapterResp)
 async def revise_chapter(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_id: int = ...,
     revise_data: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
@@ -109,9 +124,9 @@ async def revise_chapter(
     )
 
 
-@router.get("/{chapter_id}/suggestions", response_model=dict)
+@router.get("/chapters/{chapter_id}/suggestions", response_model=dict)
 async def get_chapter_suggestions(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_id: int = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -123,9 +138,9 @@ async def get_chapter_suggestions(
     return suggestions
 
 
-@router.post("/{chapter_id}/agent", response_model=dict)
+@router.post("/chapters/{chapter_id}/agent", response_model=dict)
 async def send_agent_instruction(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     chapter_id: int = ...,
     instruction: dict = ...,
     db: AsyncSession = Depends(get_db),
@@ -134,5 +149,21 @@ async def send_agent_instruction(
     """向 AI 发送指令（用于章节生成过程中的干预）。"""
     result = await chapter_service.send_agent_instruction(
         db, current_user["id"], project_id, chapter_id, instruction
+    )
+    return result
+
+
+@router.post("/chapters/{chapter_id}/generate", response_model=dict, status_code=201)
+async def generate_chapter_content(
+    project_id: int,
+    chapter_id: int,
+    req: dict = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """Start AI generation for a chapter (接口映射文档 4.5 节)."""
+    generate_req = GenerateReq(**req)
+    result = await generation_service.start_generation(
+        db, current_user["id"], project_id, chapter_id, generate_req
     )
     return result

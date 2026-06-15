@@ -18,6 +18,7 @@ from app.dao import project_dao, vault_dao
 from app.errors import NotFoundError, ErrorCode, AppError
 from app.models.health_alert import HealthAlert
 from app.models.chapter import Chapter
+from app.models.project import Project
 from app.models.vault_character import VaultCharacter
 from app.models.vault_plot_promise import VaultPlotPromise
 from app.models.vault_timeline import VaultTimeline
@@ -56,7 +57,7 @@ class HealthService:
             )
         if project.user_id != user_id:
             raise AppError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
 
@@ -342,7 +343,6 @@ class HealthService:
         return result
 
     async def get_alerts(
-        self,
         self,
         db: AsyncSession,
         project_id: int,

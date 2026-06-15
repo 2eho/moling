@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import styles from "./ProjectDetailModal.module.css";
@@ -20,7 +21,7 @@ function formatWordCount(count: number): string {
   return `${count}`;
 }
 
-export function ProjectDetailModal({
+export const ProjectDetailModal = memo(function ProjectDetailModal({
   project,
   isOpen,
   onClose,
@@ -128,4 +129,4 @@ export function ProjectDetailModal({
       </div>
     </Modal>
   );
-}
+});

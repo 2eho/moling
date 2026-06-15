@@ -67,7 +67,7 @@ export function CharacterList({ characters }: CharacterListProps) {
                 <div className={styles.section}>
                   <span className={styles.sectionLabel}>关系</span>
                   {char.relationships.map((rel, i) => (
-                    <p key={i} className={styles.sectionText}>
+                    <p key={rel.character_id || `rel-${i}`} className={styles.sectionText}>
                       {rel.relationship}: {rel.description}
                     </p>
                   ))}

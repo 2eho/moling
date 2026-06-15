@@ -1,10 +1,11 @@
 "use client";
 
+import { memo } from "react";
 import { usePathname } from "next/navigation";
 import { Navbar } from "./Navbar";
 import styles from "./AppShell.module.css";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export const AppShell = memo(function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isSimplePage =
     pathname === "/" ||
@@ -19,4 +20,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className={styles.main}>{children}</main>
     </div>
   );
-}
+});

@@ -10,7 +10,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-export function Button({
+import { memo } from "react";
+
+export const Button = memo(function Button({
   variant = "primary",
   size = "md",
   loading = false,
@@ -37,4 +39,4 @@ export function Button({
       <span className={loading ? styles.labelHidden : ""}>{children}</span>
     </button>
   );
-}
+});

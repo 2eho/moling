@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useSystemHealth } from "@/contexts/SystemHealthContext";
+import { memo, useState, useEffect, useRef, useMemo } from "react";import { useSystemHealth } from "@/contexts/SystemHealthContext";
 import styles from "./SystemHealthBanner.module.css";
 
 /**
@@ -12,7 +11,7 @@ import styles from "./SystemHealthBanner.module.css";
  * - R2（警告/黄色）：功能受限，可点击关闭
  * - R3（信息/蓝色）：系统正常，3秒后自动消失
  */
-export function SystemHealthBanner() {
+export const SystemHealthBanner = memo(function SystemHealthBanner() {
   const { health, isLoading, error, dismissWarning, warningDismissed } =
     useSystemHealth();
 
@@ -78,33 +77,27 @@ export function SystemHealthBanner() {
   const isR2 = health.level === "R2";
   const isR3 = health.level === "R3";
 
-  const bannerClass = [
+  const bannerClass = useMemo(() => [
     styles.banner,
-    isR1 ? styles.bannerR1 : "",
-    isR2 ? styles.bannerR2 : "",
-    isR3 ? styles.bannerR3 : "",
-    exiting ? styles.bannerExiting : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    isR1 && styles.bannerR1,
+    isR2 && styles.bannerR2,
+    isR3 && styles.bannerR3,
+    exiting && styles.bannerExiting,
+  ].filter(Boolean).join(" "), [isR1, isR2, isR3, exiting, styles]);
 
-  const iconClass = [
+  const iconClass = useMemo(() => [
     styles.icon,
-    isR1 ? styles.iconR1 : "",
-    isR2 ? styles.iconR2 : "",
-    isR3 ? styles.iconR3 : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    isR1 && styles.iconR1,
+    isR2 && styles.iconR2,
+    isR3 && styles.iconR3,
+  ].filter(Boolean).join(" "), [isR1, isR2, isR3, styles]);
 
-  const titleClass = [
+  const titleClass = useMemo(() => [
     styles.title,
-    isR1 ? styles.titleR1 : "",
-    isR2 ? styles.titleR2 : "",
-    isR3 ? styles.titleR3 : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    isR1 && styles.titleR1,
+    isR2 && styles.titleR2,
+    isR3 && styles.titleR3,
+  ].filter(Boolean).join(" "), [isR1, isR2, isR3, styles]);
 
   // Icon symbols
   const iconSymbol = isR1 ? "✕" : isR2 ? "⚠" : "✓";
@@ -195,4 +188,4 @@ export function SystemHealthBanner() {
       </div>
     </div>
   );
-}
+});

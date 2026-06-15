@@ -1,26 +1,26 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { memo, useEffect, useState, useCallback } from "react";
 import styles from "./Toast.module.css";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
-interface ToastItem {
+interface ToastItemData {
   id: number;
   type: ToastType;
   message: string;
 }
 
 let toastId = 0;
-const listeners: Array<(toast: ToastItem) => void> = [];
+const listeners: Array<(toast: ToastItemData) => void> = [];
 
 export function showToast(type: ToastType, message: string) {
-  const toast: ToastItem = { id: ++toastId, type, message };
+  const toast: ToastItemData = { id: ++toastId, type, message };
   listeners.forEach((fn) => fn(toast));
 }
 
-export function ToastContainer() {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
+export const ToastContainer = memo(function ToastContainer() {
+  const [toasts, setToasts] = useState<ToastItemData[]>([]);
 
   const addToast = useCallback((toast: ToastItem) => {
     setToasts((prev) => [...prev, toast]);
@@ -45,13 +45,13 @@ export function ToastContainer() {
       ))}
     </div>
   );
-}
+});
 
-function ToastItem({
+const ToastItem = memo(function ToastItem({
   toast,
   onRemove,
 }: {
-  toast: ToastItem;
+  toast: ToastItemData;
   onRemove: (id: number) => void;
 }) {
   useEffect(() => {
@@ -75,4 +75,4 @@ function ToastItem({
       <span className={styles.message}>{toast.message}</span>
     </div>
   );
-}
+});

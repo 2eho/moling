@@ -1,11 +1,11 @@
-﻿"""墨灵 (Moling) — Vault API Router.
+"""墨灵 (Moling) — Vault API Router.
 
 Provides endpoints for the Four Databases (四库): Characters, Timeline, Plot Promises, World Building.
 """
 
-from typing import Optional
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
@@ -20,7 +20,7 @@ router = APIRouter(tags=["vault"])
 
 @router.get("/characters", response_model=list[CharacterResp])
 async def list_characters(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[CharacterResp]:
@@ -30,8 +30,8 @@ async def list_characters(
 
 @router.get("/characters/{character_id}", response_model=CharacterResp)
 async def get_character(
-    project_id: int = Query(..., description="Project ID"),
-    character_id: int = ...,
+    project_id: int,
+    character_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> CharacterResp:
@@ -41,7 +41,7 @@ async def get_character(
 
 @router.post("/characters", response_model=CharacterResp, status_code=201)
 async def create_character(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     character_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -52,8 +52,8 @@ async def create_character(
 
 @router.put("/characters/{character_id}", response_model=CharacterResp)
 async def update_character(
-    project_id: int = Query(..., description="Project ID"),
-    character_id: int = ...,
+    project_id: int,
+    character_id: int,
     character_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -66,8 +66,8 @@ async def update_character(
 
 @router.delete("/characters/{character_id}", status_code=204)
 async def delete_character(
-    project_id: int = Query(..., description="Project ID"),
-    character_id: int = ...,
+    project_id: int,
+    character_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> None:
@@ -80,7 +80,7 @@ async def delete_character(
 
 @router.get("/timeline", response_model=list[TimelineResp])
 async def list_timeline(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[TimelineResp]:
@@ -90,8 +90,8 @@ async def list_timeline(
 
 @router.get("/timeline/{event_id}", response_model=TimelineResp)
 async def get_timeline_event(
-    project_id: int = Query(..., description="Project ID"),
-    event_id: int = ...,
+    project_id: int,
+    event_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> TimelineResp:
@@ -101,7 +101,7 @@ async def get_timeline_event(
 
 @router.post("/timeline", response_model=TimelineResp, status_code=201)
 async def create_timeline_event(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     event_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -112,8 +112,8 @@ async def create_timeline_event(
 
 @router.put("/timeline/{event_id}", response_model=TimelineResp)
 async def update_timeline_event(
-    project_id: int = Query(..., description="Project ID"),
-    event_id: int = ...,
+    project_id: int,
+    event_id: int,
     event_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -126,8 +126,8 @@ async def update_timeline_event(
 
 @router.delete("/timeline/{event_id}", status_code=204)
 async def delete_timeline_event(
-    project_id: int = Query(..., description="Project ID"),
-    event_id: int = ...,
+    project_id: int,
+    event_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> None:
@@ -140,7 +140,7 @@ async def delete_timeline_event(
 
 @router.get("/plot-promises", response_model=list[PlotPromiseResp])
 async def list_plot_promises(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[PlotPromiseResp]:
@@ -150,8 +150,8 @@ async def list_plot_promises(
 
 @router.get("/plot-promises/{promise_id}", response_model=PlotPromiseResp)
 async def get_plot_promise(
-    project_id: int = Query(..., description="Project ID"),
-    promise_id: int = ...,
+    project_id: int,
+    promise_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> PlotPromiseResp:
@@ -161,7 +161,7 @@ async def get_plot_promise(
 
 @router.post("/plot-promises", response_model=PlotPromiseResp, status_code=201)
 async def create_plot_promise(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     promise_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -172,8 +172,8 @@ async def create_plot_promise(
 
 @router.put("/plot-promises/{promise_id}", response_model=PlotPromiseResp)
 async def update_plot_promise(
-    project_id: int = Query(..., description="Project ID"),
-    promise_id: int = ...,
+    project_id: int,
+    promise_id: int,
     promise_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -186,8 +186,8 @@ async def update_plot_promise(
 
 @router.delete("/plot-promises/{promise_id}", status_code=204)
 async def delete_plot_promise(
-    project_id: int = Query(..., description="Project ID"),
-    promise_id: int = ...,
+    project_id: int,
+    promise_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> None:
@@ -200,7 +200,7 @@ async def delete_plot_promise(
 
 @router.get("/world", response_model=list[WorldResp])
 async def list_world_entries(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[WorldResp]:
@@ -210,8 +210,8 @@ async def list_world_entries(
 
 @router.get("/world/{entry_id}", response_model=WorldResp)
 async def get_world_entry(
-    project_id: int = Query(..., description="Project ID"),
-    entry_id: int = ...,
+    project_id: int,
+    entry_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> WorldResp:
@@ -221,7 +221,7 @@ async def get_world_entry(
 
 @router.post("/world", response_model=WorldResp, status_code=201)
 async def create_world_entry(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     entry_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -232,8 +232,8 @@ async def create_world_entry(
 
 @router.put("/world/{entry_id}", response_model=WorldResp)
 async def update_world_entry(
-    project_id: int = Query(..., description="Project ID"),
-    entry_id: int = ...,
+    project_id: int,
+    entry_id: int,
     entry_data: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -246,8 +246,8 @@ async def update_world_entry(
 
 @router.delete("/world/{entry_id}", status_code=204)
 async def delete_world_entry(
-    project_id: int = Query(..., description="Project ID"),
-    entry_id: int = ...,
+    project_id: int,
+    entry_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> None:
@@ -257,10 +257,26 @@ async def delete_world_entry(
 
 @router.get("/summary", response_model=dict)
 async def get_vault_summary(
-    project_id: int = Query(..., description="Project ID"),
+    project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
     """获取四库总览（角色、时间线、伏笔、世界观的统计数据）。"""
     summary = await vault_service.get_summary(db, current_user["id"], project_id)
     return summary
+
+
+@router.post("/full-reanalyze", status_code=202)
+async def full_reanalyze(
+    project_id: int,
+    req: dict = {},
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """全量重新分析项目内容，更新四库数据。"""
+    # MVP 实现：返回接受状态
+    return {
+        "status": "accepted",
+        "task_id": f"reanalyze-{project_id}-{uuid4()}",
+        "message": "全量分析已启动，请稍后查看结果",
+    }

@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import type { User, ApiResponse } from "@/lib/types";
@@ -121,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ---- Value ----
 
-  const value: AuthContextValue = {
+  const value = useMemo<AuthContextValue>(() => ({
     user,
     isLoading,
     isAuthenticated: !!user,
@@ -130,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     resetPassword,
     setNewPassword,
-  };
+  }), [user, isLoading, login, register, logout, resetPassword, setNewPassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

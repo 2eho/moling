@@ -31,7 +31,7 @@ export function WorldList({ worlds }: WorldListProps) {
               <span className={styles.sectionLabel}>规则</span>
               <ul className={styles.ruleList}>
                 {w.rules.map((rule, idx) => (
-                  <li key={idx} className={styles.rule}>
+                  <li key={`${rule}-${idx}`} className={styles.rule}>
                     {rule}
                   </li>
                 ))}
@@ -43,7 +43,7 @@ export function WorldList({ worlds }: WorldListProps) {
             <div className={styles.section}>
               <span className={styles.sectionLabel}>势力</span>
               {w.factions.map((f, idx) => (
-                <div key={idx} className={styles.faction}>
+                <div key={f.name || `faction-${idx}`} className={styles.faction}>
                   <div className={styles.factionHeader}>
                     <span className={styles.factionName}>{f.name}</span>
                     <span className={styles.factionInfluence}>

@@ -151,6 +151,19 @@ export const chapterApi = {
       data,
     );
   },
+
+  async delete(projectId: string, id: string) {
+    return apiClient.delete<ApiResponse<null>>(
+      `/projects/${projectId}/chapters/${id}`,
+    );
+  },
+
+  async reorder(projectId: string, chapterNumbers: number[]) {
+    return apiClient.post<ApiResponse<Chapter[]>>(
+      `/projects/${projectId}/chapters/reorder`,
+      { chapter_numbers: chapterNumbers },
+    );
+  },
 };
 
 // ---- Card API ----
@@ -162,9 +175,11 @@ export const chapterApi = {
 // - mode: 生成模式（"single"|"dual"|"all"|"hybrid"）
 
 export const cardApi = {
-  async getPool(projectId: string) {
+  async getPool(projectId: string, count?: number) {
+    const params = count ? { count } : undefined;
     return apiClient.get<ApiResponse<CardPool[]>>(
       `/projects/${projectId}/cards/pool`,
+      params,
     );
   },
 
@@ -195,6 +210,20 @@ export const cardApi = {
     return apiClient.post<ApiResponse<DrawRecord>>(
       `/projects/${projectId}/chapters/${chapterId}/redraw`,
       params || {},
+    );
+  },
+
+  async create(projectId: string, data: { name: string; type: string; rarity: string; description: string }) {
+    return apiClient.post<ApiResponse<DrawRecord>>(
+      `/projects/${projectId}/cards`,
+      data,
+    );
+  },
+
+  async retire(projectId: string, cardId: string) {
+    return apiClient.post<ApiResponse<null>>(
+      `/projects/${projectId}/cards/${cardId}/retire`,
+      {},
     );
   },
 };
@@ -228,25 +257,27 @@ export const generationApi = {
 
   async getStatus(taskId: string) {
     return apiClient.get<ApiResponse<GenerationTask>>(
-      `/generation/${taskId}/status`,
+      `/generate/${taskId}/status`,
     );
   },
 
   async cancel(taskId: string) {
     return apiClient.post<ApiResponse<{ cancelled: boolean; task_id: string }>>(
-      `/generation/${taskId}/cancel`,
+      `/generate/${taskId}/cancel`,
     );
   },
 
-  async confirm(projectId: string, chapterId: string) {
-    return apiClient.post<ApiResponse<{ confirmed: boolean; chapter_id: string }>>(
+  async confirm(projectId: string, chapterId: string, nonce: string) {
+    return apiClient.post<ApiResponse<{ confirmed: boolean; chapter_id: string; task_id?: string }>>(
       `/projects/${projectId}/chapters/${chapterId}/confirm`,
+      { nonce },
     );
   },
 
-  async revise(projectId: string, chapterId: string) {
-    return apiClient.post<ApiResponse<{ revised: boolean; chapter_id: string }>>(
+  async revise(projectId: string, chapterId: string, reason?: string) {
+    return apiClient.post<ApiResponse<{ revised: boolean; chapter_id: string; suggestion?: string }>>(
       `/projects/${projectId}/chapters/${chapterId}/revise`,
+      reason ? { reason } : {},
     );
   },
 };
@@ -307,6 +338,13 @@ export const vaultApi = {
   async getSummary(projectId: string) {
     return apiClient.get<ApiResponse<VaultSummary>>(
       `/projects/${projectId}/vault/summary`,
+    );
+  },
+
+  async fullReanalyze(projectId: string) {
+    return apiClient.post<ApiResponse<{ status: string; task_id: string }>>(
+      `/projects/${projectId}/vault/full-reanalyze`,
+      {},
     );
   },
 
@@ -382,7 +420,7 @@ export const vaultApi = {
 export const healthApi = {
   async getAlerts(projectId: string) {
     return apiClient.get<ApiResponse<HealthAlert[]>>(
-      `/projects/${projectId}/health/alerts`,
+      `/projects/${projectId}/health`,
     );
   },
 
@@ -412,12 +450,21 @@ export const settingsApi = {
     return apiClient.put<ApiResponse<UserSettings>>("/settings", data);
   },
 
-  async getHealthMonitor() {
-    return apiClient.get<ApiResponse<Record<string, unknown>>>("/settings/health-monitor");
+  async updateHealthMonitor(data: {
+    r1_enabled?: boolean;
+    r2_enabled?: boolean;
+    r3_enabled?: boolean;
+    anti_fatigue?: boolean;
+  }) {
+    return apiClient.patch<ApiResponse<Record<string, unknown>>>("/settings/health-monitor", data);
   },
 
   async getPhase4Review() {
     return apiClient.get<ApiResponse<Record<string, unknown>>>("/settings/phase4-review");
+  },
+
+  async updatePhase4Review(data: { mode: "manual" | "auto" }) {
+    return apiClient.patch<ApiResponse<Record<string, unknown>>>("/settings/phase4-review", data);
   },
 
   async exportData() {
@@ -430,13 +477,17 @@ export const settingsApi = {
 
   async changePassword(oldPassword: string, newPassword: string) {
     return apiClient.post<ApiResponse<{ success: boolean }>>(
-      "/settings/password",
+      "/settings/change-password",
       { old_password: oldPassword, new_password: newPassword },
     );
   },
 
+  async getProfile() {
+    return apiClient.get<ApiResponse<User>>("/settings/profile");
+  },
+
   async updateProfile(data: { nickname?: string; bio?: string; avatar_url?: string }) {
-    return apiClient.put<ApiResponse<User>>("/auth/me", data);
+    return apiClient.put<ApiResponse<User>>("/settings/profile", data);
   },
 
   // ---- Compatibility wrappers for old @/api settings interface ----
@@ -481,7 +532,7 @@ export const settingsApi = {
 
 export const notificationsApi = {
   async list(params?: { page?: number; page_size?: number; unread_only?: boolean }) {
-    return apiClient.get<ApiResponse<Notification[]>>("/notifications", params);
+    return apiClient.get<ApiResponse<{ items: Notification[]; total: number }>>("/notifications", params);
   },
 
   async markAsRead(notificationId: string) {
@@ -535,6 +586,10 @@ export const subscriptionApi = {
 };
 
 // ---- Secrets API (D4) ----
+// 注意：根据接口映射文档 5.6 节，秘密矩阵 API 如下：
+// - 列表：GET /api/v1/projects/:pid/secrets
+// - 角色知识状态：GET /api/v1/projects/:pid/secrets/character/:name
+// - 编辑秘密：PATCH /api/v1/projects/:pid/secrets/:sid
 
 export const secretsApi = {
   async list(projectId: string) {
@@ -543,15 +598,15 @@ export const secretsApi = {
     );
   },
 
-  async getByCharacter(projectId: string, characterId: string) {
+  async getByCharacter(projectId: string, characterName: string) {
     return apiClient.get<ApiResponse<SecretMatrix>>(
-      `/projects/${projectId}/secrets/character/${characterId}`,
+      `/projects/${projectId}/secrets/character/${characterName}`,
     );
   },
 
-  async update(projectId: string, characterId: string, data: Partial<SecretMatrix>) {
-    return apiClient.put<ApiResponse<SecretMatrix>>(
-      `/projects/${projectId}/secrets/character/${characterId}`,
+  async update(projectId: string, secretId: string, data: Partial<SecretMatrix>) {
+    return apiClient.patch<ApiResponse<SecretMatrix>>(
+      `/projects/${projectId}/secrets/${secretId}`,
       data,
     );
   },
@@ -572,12 +627,24 @@ export const templatesApi = {
     return apiClient.post<ApiResponse<Template>>("/templates", data);
   },
 
+  async update(templateId: string, data: Partial<Template>) {
+    return apiClient.put<ApiResponse<Template>>(`/templates/${templateId}`, data);
+  },
+
   async delete(templateId: string) {
     return apiClient.delete<ApiResponse<null>>(`/templates/${templateId}`);
+  },
+
+  async createProject(templateId: string, data?: { title?: string; author?: string }) {
+    return apiClient.post<ApiResponse<{ project_id: string; title: string; status: string }>>(
+      `/templates/${templateId}/create-project`,
+      data || {},
+    );
   },
 };
 
 // ---- Weave API (D8) ----
+// apply 端点：POST /weave/apply（project_id 放在请求体中）
 
 export const weaveApi = {
   async list() {
@@ -588,10 +655,14 @@ export const weaveApi = {
     return apiClient.get<ApiResponse<WeavePattern>>(`/weave/patterns/${patternId}`);
   },
 
-  async apply(projectId: string, patternId: string, params?: Record<string, unknown>) {
+  async apply(
+    projectId: string,
+    patternId: string,
+    params?: Record<string, unknown>,
+  ) {
     return apiClient.post<ApiResponse<{ applied: boolean; pattern_id: string }>>(
-      `/projects/${projectId}/weave/apply`,
-      { pattern_id: patternId, ...params },
+      `/weave/apply`,
+      { project_id: projectId, pattern_id: patternId, ...params },
     );
   },
 };
@@ -669,6 +740,20 @@ export const importApi = {
     }>>(`/projects/${projectId}/import/${jobId}`);
   },
 
+  async runPhase1(projectId: string, jobId: string) {
+    return apiClient.post<ApiResponse<{ status: string }>>(
+      `/projects/${projectId}/import/${jobId}/phase1`,
+      {},
+    );
+  },
+
+  async runPhase2(projectId: string, jobId: string) {
+    return apiClient.post<ApiResponse<{ status: string }>>(
+      `/projects/${projectId}/import/${jobId}/phase2`,
+      {},
+    );
+  },
+
   async getImportResult(projectId: string, jobId: string) {
     return apiClient.get<ApiResponse<{
       characters_created: number;
@@ -714,18 +799,37 @@ export const draftApi = {
 };
 
 // ---- Chapter Suggestions/Agent API (D11) ----
+// 根据接口映射文档 4.8 和 4.9 节
+// 4.8: GET /api/v1/projects/:pid/chapters/:id/suggestions
+//     响应: {suggestions: [{id, type, title, description, impact}]}
+// 4.9: POST /api/v1/projects/:pid/chapters/:id/agent
+//     请求: {command: string}
+//     响应: {result: string, actions: [...]}
+
+export interface ChapterSuggestion {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  impact: string;
+}
+
+export interface AgentResult {
+  result: string;
+  actions: unknown[];
+}
 
 export const chapterAgentApi = {
   async getSuggestions(projectId: string, chapterId: string) {
-    return apiClient.get<ApiResponse<{ suggestions: string[] }>>(
+    return apiClient.get<ApiResponse<{ suggestions: ChapterSuggestion[] }>>(
       `/projects/${projectId}/chapters/${chapterId}/suggestions`,
     );
   },
 
-  async runAgent(projectId: string, chapterId: string, instruction: string) {
-    return apiClient.post<ApiResponse<{ task_id: string }>>(
+  async runAgent(projectId: string, chapterId: string, command: string) {
+    return apiClient.post<ApiResponse<AgentResult>>(
       `/projects/${projectId}/chapters/${chapterId}/agent`,
-      { instruction },
+      { command },
     );
   },
 };
@@ -750,6 +854,31 @@ export const phase4Api = {
       { reason },
     );
   },
+
+  async getSuggestions(chapterId: string) {
+    return apiClient.get<ApiResponse<{ suggestions: unknown[] }>>(
+      `/phase4/suggestions/${chapterId}`,
+    );
+  },
+
+  async apply(data: { suggestion_ids: number[]; chapter_id: number }) {
+    return apiClient.post<ApiResponse<{ status: string; updated_content?: string }>>(
+      "/phase4/apply",
+      data,
+    );
+  },
+
+  async getChapterTasks(chapterId: string) {
+    return apiClient.get<ApiResponse<Array<{ id: number; status: string; created_at: string; completed_at?: string }>>>(
+      `/phase4/chapters/${chapterId}/tasks`,
+    );
+  },
+
+  async getProjectTasks(projectId: string) {
+    return apiClient.get<ApiResponse<Array<{ id: number; status: string; created_at: string; completed_at?: string }>>>(
+      `/phase4/projects/${projectId}/tasks`,
+    );
+  },
 };
 
 // ---- Draw History API (D13) ----
@@ -757,14 +886,14 @@ export const phase4Api = {
 export const drawHistoryApi = {
   async list(projectId: string, params?: { page?: number; page_size?: number }) {
     return apiClient.get<ApiResponse<DrawHistory[]>>(
-      `/projects/${projectId}/draw-history`,
+      `/projects/${projectId}/cards/draw-history`,
       params,
     );
   },
 
   async getById(projectId: string, drawId: string) {
     return apiClient.get<ApiResponse<DrawHistory>>(
-      `/projects/${projectId}/draw-history/${drawId}`,
+      `/projects/${projectId}/cards/draw-history/${drawId}`,
     );
   },
 };

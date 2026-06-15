@@ -67,12 +67,77 @@ body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
+  /* 减少布局偏移：为滚动条预留空间 */
+  scrollbar-gutter: stable;
 }
 button { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
 input { font-family: inherit; border: none; outline: none; background: none; color: inherit; }
 a { color: inherit; text-decoration: none; }
-::-webkit-scrollbar { width: 5px; }
+
+/* 滚动条样式优化 */
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
+
+/* 动画性能优化：对可能发生变化的属性启用 GPU 合成 */
+main, section, .page, .shell, .main-content {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 500px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   可访问性 · Accessibility
+   ═══════════════════════════════════════════════════════ */
+
+/* 当跳过链接获得焦点时可见 */
+.skip-link:focus {
+  position: fixed !important;
+  top: 8px;
+  left: 8px;
+  width: auto !important;
+  height: auto !important;
+  padding: 12px 24px;
+  background: var(--color-brand-indigo);
+  color: white;
+  z-index: 9999;
+  border-radius: 8px;
+  font-size: 16px;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: nowrap;
+}
+
+/* 尊重用户动画偏好：减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  :root {
+    --color-text-primary: #f0f0ff;
+    --color-text-secondary: #c0c0e0;
+    --color-border: #4a4d80;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   焦点样式 · Focus Styles
+   ═══════════════════════════════════════════════════════ */
+:focus-visible {
+  outline: 2px solid var(--color-brand-indigo);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}

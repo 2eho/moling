@@ -1,20 +1,39 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import { LeftPanel } from "@/components/workspace/LeftPanel";
-import { Editor } from "@/components/workspace/Editor";
-import { RightPanel } from "@/components/workspace/RightPanel";
 import { ChapterSelector } from "@/components/workspace/ChapterSelector";
 import { ToolBar } from "@/components/workspace/ToolBar";
-import { CardModal } from "@/components/workspace/CardModal";
-import { GenerationProgress } from "@/components/workspace/GenerationProgress";
 import { HealthAlertBanner } from "@/components/workspace/HealthAlert";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { showToast } from "@/components/ui/Toast";
+import { Spinner } from "@/components/ui/Spinner";
 import styles from "./workspace.module.css";
+
+// ✅ 动态导入：三个主面板和卡牌弹窗 — 减小初始包体积
+const LeftPanel = dynamic(
+  () => import("@/components/workspace/LeftPanel").then((mod) => mod.LeftPanel),
+  { loading: () => <div className={styles.panelPlaceholder}><Spinner size="sm" /></div> },
+);
+const Editor = dynamic(
+  () => import("@/components/workspace/Editor").then((mod) => mod.Editor),
+  { loading: () => <div className={styles.editorPlaceholder}><Spinner size="sm" /></div> },
+);
+const RightPanel = dynamic(
+  () => import("@/components/workspace/RightPanel").then((mod) => mod.RightPanel),
+  { loading: () => <div className={styles.panelPlaceholder}><Spinner size="sm" /></div> },
+);
+const GenerationProgress = dynamic(
+  () => import("@/components/workspace/GenerationProgress").then((mod) => mod.GenerationProgress),
+  { ssr: false },
+);
+const CardModal = dynamic(
+  () => import("@/components/workspace/CardModal").then((mod) => mod.CardModal),
+  { ssr: false },
+);
 
 function WorkspaceContent({ projectId }: { projectId: string }) {
   const {
@@ -110,7 +129,7 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
         onDraw={handleDrawCards}
         onRedraw={handleRedraw}
         onConfirm={(cardIds, weights, mode) => {
-          generate(cardIds);
+          generate(cardIds, weights, mode);
           setCardModalOpen(false);
           showToast("info", "正在同步世界设定…");
         }}

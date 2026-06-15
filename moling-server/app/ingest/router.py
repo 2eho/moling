@@ -1,8 +1,9 @@
 """
-墨灵 (Moling) — ingest / router.py
-连载书导入引擎 API 路由
+墨灵 (Moling) — import / router.py
+导入功能 API 路由
 
-对应后端设计文档 v1.0 第十章 Phase 0-3 全部 API 接口。
+对应接口映射文档第七节"导入"的要求。
+保留 Phase 0-3 全部功能。
 """
 
 from __future__ import annotations
@@ -15,117 +16,113 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user
 from app.ingest.service import IngestService
 
-router = APIRouter(prefix="/api/v1/ingest", tags=["Ingest"])
+router = APIRouter(prefix="/projects/{project_id}/import", tags=["Import"])
 
 
-# ════════════════════════════════════════════════════════════════
-# Phase 0: 采集与分章
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 7.1 提交导入任务（对应 Phase 0）
+# ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/url")
-async def ingest_from_url(
-    url: str = Query(..., description="目标章节 URL"),
+@router.post("")
+async def submit_import(
+    project_id: int,
+    text: Optional[str] = Query(default=None, description="粘贴文本导入"),
     split_strategies: Optional[str] = Query(
         default=None,
         description="拆分策略，逗号分隔，如 'chapter_regex,paragraph'",
     ),
-):
-    """从单章 URL 采集并拆解。对应 Phase 0 的 URL 采集路径。"""
-    strategies = split_strategies.split(",") if split_strategies else None
-    return await IngestService.dissect_url(url, strategies)
-
-
-@router.post("/html")
-async def ingest_from_html(
-    raw_html: str = Query(..., description="完整 HTML 页面源码"),
-    source_url: str = Query(default="", description="来源 URL（可选）"),
-    split_strategies: Optional[str] = Query(
-        default=None,
-        description="拆分策略，逗号分隔",
-    ),
-):
-    """从 HTML 源码拆解。对应 Phase 0 的 HTML 输入路径。"""
-    strategies = split_strategies.split(",") if split_strategies else None
-    return await IngestService.dissect_html(raw_html, source_url, strategies)
-
-
-@router.post("/text")
-async def ingest_from_text(
-    text: str = Query(..., description="小说正文纯文本"),
-    title: str = Query(default="", description="书名（可选）"),
-    split_strategies: Optional[str] = Query(
-        default=None,
-        description="拆分策略，逗号分隔",
-    ),
-):
-    """从纯文本拆解。对应 Phase 0 的粘贴/手动输入路径。"""
-    strategies = split_strategies.split(",") if split_strategies else None
-    return await IngestService.dissect_text(text, title, strategies)
-
-
-@router.get("/toc")
-async def fetch_toc(
-    toc_url: str = Query(..., description="目录页 URL"),
-    max_chapters: Optional[int] = Query(
-        default=None,
-        description="最大章节数限制",
-    ),
-):
-    """解析目录页，返回章节链接预览。对应 Phase 0 的目录解析步骤。"""
-    return await IngestService.fetch_toc(toc_url, max_chapters)
-
-
-@router.post("/crawl")
-async def batch_crawl(
-    toc_url: str = Query(..., description="目录页 URL"),
-    max_chapters: Optional[int] = Query(
-        default=None,
-        description="最大章节数限制",
-    ),
-    split_strategies: Optional[str] = Query(
-        default=None,
-        description="拆分策略，逗号分隔",
-    ),
-):
-    """从目录页批量采集并拆解全部章节。对应 Phase 0 的全量自动采集路径。"""
-    strategies = split_strategies.split(",") if split_strategies else None
-    return await IngestService.batch_crawl(toc_url, max_chapters, strategies)
-
-
-# ════════════════════════════════════════════════════════════════
-# Job Management
-# ════════════════════════════════════════════════════════════════
-
-
-@router.post("/projects/{project_id}/jobs")
-async def create_ingest_job(
-    project_id: int,
-    source_type: str = Query(..., description="导入来源: url / html / text / file"),
-    source_url: Optional[str] = Query(None, description="来源 URL"),
-    title: str = Query("", description="作品名称"),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    """创建一个导入任务，并关联项目。"""
+    """
+    提交导入任务。
+    
+    - 粘贴文本：传入 text 参数
+    - 对应 Phase 0 的采集与分章
+    """
+    if not text:
+        raise HTTPException(status_code=400, detail="请提供 text 参数")
+    
+    strategies = split_strategies.split(",") if split_strategies else None
+    
+    # Phase 0: 从纯文本拆解
+    dissect_result = await IngestService.dissect_text(text, "", strategies)
+    if not dissect_result.get("success"):
+        return dissect_result
+    
+    chapters_data = dissect_result.get("chapters", [])
+    if not chapters_data:
+        return {"success": False, "error": "未能拆解出章节内容"}
+    
+    # 创建导入任务
     job = await IngestService.create_job(
         db=db,
         project_id=project_id,
         user_id=int(user["id"]),
-        source_type=source_type,
-        source_url=source_url,
-        title=title,
+        source_type="text",
+        source_url=None,
+        title="",
     )
+    
+    # 保存章节数据到 job（需要实现）
+    # TODO: 将 chapters_data 保存到 job 中
+    
     return {
         "success": True,
         "job_id": job.id,
         "status": "created",
-        "current_phase": job.current_phase,
     }
 
 
-@router.get("/projects/{project_id}/jobs")
-async def list_ingest_jobs(
+# ═══════════════════════════════════════════════════════════════
+# 7.2 轮询导入进度
+# ═══════════════════════════════════════════════════════════════
+
+
+@router.get("/{job_id}")
+async def get_import_job(
+    project_id: int,
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """获取导入任务详情和进度。对应 7.2 轮询导入进度。"""
+    job = await IngestService.get_job(db, job_id)
+    
+    # 构建响应，匹配接口映射文档 7.2
+    result = {}
+    conflicts = []
+    
+    if job.phase1_result:
+        result["characters"] = job.phase1_result.get("characters", [])
+        result["timeline"] = job.phase1_result.get("timeline", [])
+        result["commitments"] = job.phase1_result.get("plot_promises", [])
+        result["world"] = job.phase1_result.get("world", [])
+    
+    if job.phase3_result:
+        conflicts = job.phase3_result.get("conflicts", [])
+    
+    return {
+        "success": True,
+        "status": job.current_phase,
+        "progress": {
+            "phase": job.current_phase,
+            "percent": job.progress_percent,
+        },
+        "result": result,
+        "conflicts": conflicts,
+        "error": job.error_message,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# Job Management（保留现有功能）
+# ═══════════════════════════════════════════════════════════════
+
+
+@router.get("")
+async def list_import_jobs(
     project_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
@@ -150,51 +147,25 @@ async def list_ingest_jobs(
     }
 
 
-@router.get("/jobs/{job_id}")
-async def get_ingest_job(
-    job_id: int,
-    db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
-):
-    """获取导入任务详情。"""
-    job = await IngestService.get_job(db, job_id)
-    return {
-        "success": True,
-        "job": {
-            "id": job.id,
-            "project_id": job.project_id,
-            "source_type": job.source_type,
-            "title": job.title,
-            "total_chapters": job.total_chapters,
-            "current_phase": job.current_phase,
-            "progress_percent": job.progress_percent,
-            "error_message": job.error_message,
-            "has_phase1_result": job.phase1_result is not None,
-            "has_phase2_result": job.phase2_result is not None,
-            "has_phase3_result": job.phase3_result is not None,
-            "created_at": job.created_at.isoformat() if job.created_at else None,
-            "updated_at": job.updated_at.isoformat() if job.updated_at else None,
-        },
-    }
-
-
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 # Phase 1: 全量四库分析
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/jobs/{job_id}/phase1")
+@router.post("/{job_id}/phase1")
 async def run_phase1(
+    project_id: int,
     job_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    """执行 Phase 1 全量四库分析（异步）。"""
+    """执行 Phase 1 全量四库分析（异步）。对应 7.3 执行 Phase 1。"""
     return await IngestService.run_phase1(db, job_id)
 
 
-@router.get("/jobs/{job_id}/phase1/result")
+@router.get("/{job_id}/phase1/result")
 async def get_phase1_result(
+    project_id: int,
     job_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
@@ -210,23 +181,25 @@ async def get_phase1_result(
     }
 
 
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 # Phase 2: 近三章动态层分析
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/jobs/{job_id}/phase2")
+@router.post("/{job_id}/phase2")
 async def run_phase2(
+    project_id: int,
     job_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    """执行 Phase 2 近三章动态层分析。"""
+    """执行 Phase 2 近三章动态层分析。对应 7.4 执行 Phase 2。"""
     return await IngestService.run_phase2(db, job_id)
 
 
-@router.get("/jobs/{job_id}/phase2/result")
+@router.get("/{job_id}/phase2/result")
 async def get_phase2_result(
+    project_id: int,
     job_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
@@ -242,13 +215,14 @@ async def get_phase2_result(
     }
 
 
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 # Phase 3: 确认导入
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/jobs/{job_id}/phase3")
-async def run_phase3(
+@router.post("/{job_id}/confirm")
+async def confirm_import(
+    project_id: int,
     job_id: int,
     resolve_strategy: str = Query(
         default="keep_existing",
@@ -257,12 +231,13 @@ async def run_phase3(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    """执行 Phase 3 确认导入（冲突校验 + 事务写入 + 卡牌池生成）。"""
+    """执行 Phase 3 确认导入（冲突校验 + 事务写入 + 卡牌池生成）。对应 7.5 确认导入。"""
     return await IngestService.run_phase3(db, job_id, resolve_strategy)
 
 
-@router.get("/jobs/{job_id}/phase3/result")
+@router.get("/{job_id}/phase3/result")
 async def get_phase3_result(
+    project_id: int,
     job_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
@@ -278,12 +253,12 @@ async def get_phase3_result(
     }
 
 
-# ════════════════════════════════════════════════════════════════
-# 全流程一键导入
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 全流程一键导入（保留现有功能）
+# ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/projects/{project_id}/full-import")
+@router.post("/full-import")
 async def full_import(
     project_id: int,
     text: str = Query(..., description="小说正文纯文本"),
@@ -297,7 +272,7 @@ async def full_import(
 ):
     """
     全流程一键导入。
-
+    
     1. 先通过 Phase 0 分章
     2. 自动串联 Phase 1 → Phase 2 → Phase 3
     3. 返回完整导入报告
@@ -306,11 +281,11 @@ async def full_import(
     dissect_result = await IngestService.dissect_text(text, title)
     if not dissect_result.get("success"):
         return dissect_result
-
+    
     chapters_data = dissect_result.get("chapters", [])
     if not chapters_data:
         return {"success": False, "error": "未能拆解出章节内容"}
-
+    
     # Step 2-4: Phase 1 → 2 → 3 自动串联
     return await IngestService.full_import(
         db=db,

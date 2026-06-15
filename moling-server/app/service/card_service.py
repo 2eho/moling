@@ -381,6 +381,20 @@ class CardService:
 
         return history
 
+    async def get_draw_history_detail(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        draw_id: int,
+    ) -> Optional[dict]:
+        """Get a single draw history record by draw_id."""
+        history = await self.get_draw_history(db, user_id, project_id)
+        for item in history:
+            if item.get("id") == draw_id or item.id == draw_id:
+                return item
+        return None
+
 
 # Singleton instance
 card_service = CardService()
