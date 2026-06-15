@@ -1,85 +1,34 @@
-# ==============================================================================
-# 墨灵 Docker Compose — MVP 部署配置
-# ==============================================================================
-# 一条命令搞定所有：
-#   1. 编辑项目根目录 .env 文件填入服务器 IP 和前端端口
-#   2. 运行: docker compose up -d --build
-# ==============================================================================
-# .env 文件格式（项目根目录，docker-compose 自动加载）:
-#   FRONTEND_PORT=8080
-#   SERVER_IP=123.45.67.89
-#   FRONTEND_URL=http://123.45.67.89:8080
-#   BACKEND_API_URL=http://123.45.67.89:8000/api/v1
-# ==============================================================================
-
 services:
-  # ---- 后端 API ----
   app:
     build:
       context: ./moling-server
-    ports:
-      - "8000:8000"
+      dockerfile: Dockerfile
+    container_name: moling-app
+    restart: unless-stopped
+    ports:                              # ✅ nginx 在宿主机上，需要端口映射
+      - "8000:8000"                     # nginx proxy_pass → 127.0.0.1:8000
     env_file:
       - ./moling-server/.env
-    environment:
-      # SQLite 数据库（文件存储在卷中）
-      - DATABASE_URL=sqlite+aiosqlite:///app/data/moling.db
-      # Redis（可选，Celery 任务队列需要）
-      - REDIS_URL=redis://redis:6379/0
-      # CORS — 不再需要手改 backend/.env，在这里一次性设置
-      - CORS_ORIGINS=http://localhost:${FRONTEND_PORT:-3000},${FRONTEND_URL:-http://localhost:3000}
-      # 生产环境标记（让后端 CORS 等行为按生产模式运行）
-      - ENVIRONMENT=production
     volumes:
-      - app_data:/app/data
-    depends_on:
-      redis:
-        condition: service_started
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
-      interval: 30s
-      timeout: 10s
-      start_period: 15s
-      retries: 3
+      - ./moling-server:/app
+    networks:
+      - moling-net
 
-  # ---- Redis（Celery 任务队列）----
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  # ---- 前端 Next.js ----
   web:
     build:
       context: ./moling-web
-      target: runner
-      args:
-        # 从根 .env 自动读取，无需手改
-        NEXT_PUBLIC_API_BASE_URL: ${BACKEND_API_URL:-http://localhost:8000/api/v1}
+      dockerfile: Dockerfile
+    container_name: moling-web
+    restart: unless-stopped
     ports:
-      # 外部端口从 .env 读取，默认 8080
-      - "${FRONTEND_PORT:-8080}:3000"
+      - "3000:3000"                     # ✅ 映射 3000，不碰 8080（nginx在用）
     environment:
-      - PORT=3000
+      - NODE_ENV=production
     depends_on:
       - app
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 5s
-      start_period: 15s
-      retries: 3
+    networks:
+      - moling-net
 
-volumes:
-  app_data:
-  redis_data:
+networks:
+  moling-net:
+    driver: bridge
