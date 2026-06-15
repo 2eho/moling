@@ -144,9 +144,16 @@ async_session_factory = async_sessionmaker(
 
 # ---------------------------------------------------------------------------
 # 同步引擎（Windows 上 auth 等操作使用，完全避开 greenlet）
+# 注意：PostgreSQL 同步引擎必须用 psycopg2/psycopg 驱动，不能用 asyncpg
 # ---------------------------------------------------------------------------
 
-_sync_url = settings.DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://")
+_sync_url = settings.DATABASE_URL
+if _sync_url.startswith("postgresql"):
+    # PostgreSQL 同步引擎：把 asyncpg 换成 psycopg (psycopg3)
+    _sync_url = _sync_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+elif _sync_url.startswith("sqlite"):
+    _sync_url = _sync_url.replace("sqlite+aiosqlite://", "sqlite://")
+
 _sync_engine = create_engine(_sync_url, echo=False)
 _sync_session_factory = sessionmaker(bind=_sync_engine, expire_on_commit=False)
 
