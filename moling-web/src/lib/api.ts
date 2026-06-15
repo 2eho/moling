@@ -857,7 +857,7 @@ export const phase4Api = {
 
   async getSuggestions(chapterId: string) {
     return apiClient.get<ApiResponse<{ suggestions: unknown[] }>>(
-      `/phase4/suggestions/${chapterId}`,
+      `/phase4/chapters/${chapterId}/suggestions`,
     );
   },
 
