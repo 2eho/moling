@@ -104,12 +104,25 @@ function generateRequestId(): string {
 }
 
 function getBaseUrl(): string {
-  // 优先级: NEXT_PUBLIC_API_BASE_URL > NEXT_PUBLIC_API_URL (旧) > fallback
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    "http://124.222.163.79:8080/moling/api/v1"
-  );
+  // 使用相对路径，由 Nginx 反代到后端
+  // 优先级: NEXT_PUBLIC_API_BASE_URL > 相对路径 fallback
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (envUrl) {
+    // 如果设置了环境变量，确保是相对路径（以 / 开头）
+    if (envUrl.startsWith("/")) {
+      return envUrl;
+    }
+    // 如果是完整 URL，提取路径部分
+    try {
+      const url = new URL(envUrl);
+      return url.pathname.replace(/\/+$/, "");
+    } catch {
+      // 忽略解析错误，继续使用默认值
+    }
+  }
+  
+  // 默认使用相对路径（由 Nginx 反代）
+  return "/moling/api/v1";
 }
 
 function isMockEnabled(): boolean {
@@ -171,7 +184,8 @@ async function tryRefreshToken(): Promise<boolean> {
   if (!refreshToken) return false;
 
   try {
-    const baseUrl = getBaseUrl();
+    // 使用相对路径，由 Nginx 反代
+    const baseUrl = getBaseUrl(); // 返回 /moling/api/v1
     const response = await fetch(`${baseUrl}/auth/refresh`, {
       method: "POST",
       headers: {
