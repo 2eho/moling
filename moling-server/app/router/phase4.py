@@ -14,7 +14,7 @@ from app.schemas.phase4 import Phase4SuggestionResp, ApplyPhase4Req, Phase4TaskR
 router = APIRouter()
 
 
-@router.get("/suggestions/{chapter_id}", response_model=Phase4SuggestionResp)
+@router.get("/chapters/{chapter_id}/suggestions", response_model=Phase4SuggestionResp)
 async def get_suggestions(
     chapter_id: int,
     db: AsyncSession = Depends(get_db),
@@ -23,6 +23,18 @@ async def get_suggestions(
     """获取章节的精修建议。"""
     result = await phase4_service.get_suggestions(db, chapter_id)
     return result
+
+
+@router.get("/suggestions/{chapter_id}", response_model=Phase4SuggestionResp, deprecated=True, tags=["phase4 (deprecated)"])
+async def get_suggestions_legacy(
+    chapter_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> Phase4SuggestionResp:
+    """获取章节的精修建议（弃用路径，请使用 /chapters/{cid}/suggestions）。"""
+    import warnings
+    warnings.warn("Use /phase4/chapters/{cid}/suggestions instead", DeprecationWarning)
+    return await phase4_service.get_suggestions(db, chapter_id)
 
 
 @router.post("/apply", status_code=200)
