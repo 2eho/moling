@@ -55,15 +55,15 @@ class UserSubscription(BaseModel):
 
     __tablename__ = "user_subscriptions"
 
-    user_id: Mapped[int] = mapped_column(
-        Integer,
+    user_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="用户 ID",
     )
-    plan_id: Mapped[int] = mapped_column(
-        Integer,
+    plan_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("plans.id", ondelete="CASCADE"),
         nullable=False,
         comment="方案 ID",

@@ -19,7 +19,8 @@ class Project(BaseModel):
         autoincrement=True,
         comment="主键 ID",
     )
-    user_id: Mapped[int] = mapped_column(
+    user_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

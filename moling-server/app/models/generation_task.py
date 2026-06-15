@@ -36,7 +36,8 @@ class GenerationTask(Base, TimestampMixin):
         index=True,
         comment="关联章节 ID (可为空)",
     )
-    user_id: Mapped[int] = mapped_column(
+    user_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

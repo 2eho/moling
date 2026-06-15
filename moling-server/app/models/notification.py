@@ -18,8 +18,8 @@ class Notification(Base, TimestampMixin):
         primary_key=True,
         autoincrement=True,
     )
-    user_id: Mapped[int] = mapped_column(
-        Integer,
+    user_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

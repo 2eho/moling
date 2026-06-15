@@ -33,8 +33,8 @@ class Template(BaseModel):
         nullable=True,
         comment="模板结构 (JSON)",
     )
-    created_by: Mapped[Optional[int]] = mapped_column(
-        Integer,
+    created_by: Mapped[Optional[str]] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         comment="创建者用户 ID",
