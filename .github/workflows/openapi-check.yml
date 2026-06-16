@@ -3,12 +3,17 @@ name: OpenAPI Spec Check
 on:
   push:
     branches: [main, master]
+    paths:
+      - 'moling-server/**'
+      - '015_前后端接口映射.md'
+      - 'openapi.json'
   pull_request:
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
   # ==========================================================================
-  # Job 1: 验证 OpenAPI 规范（宽容模式，不阻断）
+  # Job 1: 验证 OpenAPI 规范（检查，不阻断）
   # ==========================================================================
   check-openapi:
     runs-on: ubuntu-latest
@@ -23,25 +28,16 @@ jobs:
       - name: Generate OpenAPI spec from doc
         run: |
           cd moling-server
-          python scripts/generate_openapi_from_doc.py || echo "⚠️ 脚本执行失败，使用已有 openapi.json"
+          python scripts/generate_openapi_from_doc.py
 
-      - name: Validate openapi.json format
+      - name: Validate openapi.json
         run: |
-          python -m json.tool openapi.json > /dev/null && echo "✅ openapi.json 是合法的 JSON" || echo "❌ openapi.json 不是合法 JSON"
-          python -c "
-import json
-try:
-    d = json.load(open('openapi.json'))
-    paths = d.get('paths', {})
-    tags = d.get('tags', [])
-    print(f'✅ 路径数：{len(paths)}')
-    print(f'✅ Tag 数：{len(tags)}')
-except Exception as e:
-    print(f'❌ 解析失败：{e}')
-"
+          python -m json.tool openapi.json > /dev/null 2>&1
+          echo "✅ JSON 格式合法"
+          python -c "import json; d=json.load(open('openapi.json')); print(f'路径数：{len(d.get(\"paths\",{}))}'); print(f'Tag 数：{len(d.get(\"tags\",[]))}')"
         continue-on-error: true
 
-      - name: Upload artifact
+      - name: Upload openapi.json as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -49,11 +45,12 @@ except Exception as e:
           path: openapi.json
 
   # ==========================================================================
-  # Job 2: 自动更新（独立运行，容错）
+  # Job 2: 自动更新 openapi.json（仅 push 到 main 时）
   # ==========================================================================
   auto-update:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # 正确的 if 语法：用 parentheses 包裹条件
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: write
     steps:
@@ -67,35 +64,26 @@ except Exception as e:
           python-version: "3.13"
 
       - name: Generate OpenAPI spec from doc
-        run: cd moling-server && python scripts/generate_openapi_from_doc.py || true
-
-      - name: Validate generated file
-        id: validate
         run: |
-          if [ ! -f openapi.json ]; then
-            echo "valid=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          python -m json.tool openapi.json > /dev/null 2>&1
-          if [ $? -eq 0 ]; then
-            echo "valid=true" >> $GITHUB_OUTPUT
-          else
-            echo "valid=false" >> $GITHUB_OUTPUT
-          fi
+          cd moling-server
+          python scripts/generate_openapi_from_doc.py
 
-      - name: Check if changed
+      - name: Check if openapi.json changed
         id: check
-        if: steps.validate.outputs.valid == 'true'
         run: |
-          git diff --quiet openapi.json && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+          if git diff --quiet openapi.json 2>/dev/null; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit and push if changed
         if: steps.check.outputs.changed == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add openapi.json
-          git commit -m "auto: 更新 OpenAPI 规范 [skip ci]"
-          git push || echo "⚠️ 推送失败（可能已被其他 workflow 更新）"
+          git commit -m "auto: 自动更新 OpenAPI 规范 [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
