@@ -1,0 +1,70 @@
+name: Auto Update OpenAPI Spec
+
+on:
+  push:
+    paths:
+      - 'moling-server/**'
+    branches:
+      - main
+
+jobs:
+  update-openapi:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          cd moling-server
+          pip install -r requirements.txt
+        continue-on-error: true
+      
+      - name: Generate OpenAPI spec from code
+        run: |
+          cd moling-server
+          python scripts/export_openapi.py
+        continue-on-error: true
+      
+      - name: Check if openapi.json changed
+        id: check_changes
+        run: |
+          if git diff --quiet openapi.json 2>/dev/null; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "OpenAPI 规范无变更"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "OpenAPI 规范已更新"
+          fi
+      
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add openapi.json
+          git commit -m "auto: 自动更新 OpenAPI 规范 [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Comment on commit (if failed)
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: '⚠️ OpenAPI 规范自动更新失败，请手动运行：`cd moling-server && python scripts/export_openapi.py`'
+            })

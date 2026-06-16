@@ -1,0 +1,36 @@
+#!/bin/bash
+# Git pre-commit hook：自动生成 OpenAPI 规范
+# 
+# 使用方法：
+#   1. 将此文件复制到 .git/hooks/pre-commit
+#   2. 运行：chmod +x .git/hooks/pre-commit
+#
+# Windows 用户：此文件会在 Git Bash 中运行
+
+echo "📄 正在检查 OpenAPI 规范..."
+
+# 检查是否有后端代码变更
+if git diff --cached --name-only | grep -q "moling-server/"; then
+    echo "  ✓ 检测到后端代码变更，重新生成 OpenAPI 规范..."
+    
+    # 切换到项目根目录
+    PROJECT_ROOT=$(git rev-parse --show-toplevel)
+    cd "$PROJECT_ROOT/moling-server"
+    
+    # 运行生成脚本
+    python scripts/generate_openapi_from_doc.py
+    
+    # 检查是否有变更
+    cd "$PROJECT_ROOT"
+    if ! git diff --quiet openapi.json; then
+        echo "  ✓ openapi.json 已更新，自动添加到提交"
+        git add openapi.json
+    else
+        echo "  ✓ openapi.json 无变更"
+    fi
+else
+    echo "  ✓ 无后端代码变更，跳过 OpenAPI 规范生成"
+fi
+
+echo "✅ pre-commit hook 完成"
+exit 0

@@ -321,3 +321,32 @@ except ImportError:
 from app.router import api_router  # noqa: E402
 
 app.include_router(api_router, prefix="/api/v1")
+
+
+# ---------------------------------------------------------------------------
+# OpenAPI 规范自动保存（开发模式下）
+# ---------------------------------------------------------------------------
+
+def _save_openapi_schema():
+    """保存 OpenAPI 规范到静态文件（开发模式下）"""
+    from app.config import get_settings
+    settings = get_settings()
+    
+    if settings.ENVIRONMENT != "production":
+        import json
+        from pathlib import Path
+        
+        # 保存到项目根目录
+        output_path = Path(__file__).resolve().parent.parent.parent / "openapi.json"
+        
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(app.openapi(), f, ensure_ascii=False, indent=2)
+            print(f"[OK] OpenAPI 规范已保存到：{output_path}")
+        except Exception as e:
+            print(f"[WARN] 保存 OpenAPI 规范失败：{e}")
+
+
+# 在应用启动时保存 OpenAPI 规范
+_save_openapi_schema()
+

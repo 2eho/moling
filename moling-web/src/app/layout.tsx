@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 import { AppShell } from '@/components/layout/AppShell';
 import { Suspense } from 'react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: {
@@ -73,23 +74,25 @@ export default function RootLayout({
         >
           跳过导航，直达内容
         </a>
-        <Providers>
-          <Suspense fallback={
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              height: '100vh',
-              background: 'var(--color-bg)'
-            }}>
-              加载中...
-            </div>
-          }>
-            <AppShell>
-              <div id="main-content">{children}</div>
-            </AppShell>
-          </Suspense>
-        </Providers>
+        <ErrorBoundary>
+          <Providers>
+            <Suspense fallback={
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100vh',
+                background: 'var(--color-bg)'
+              }}>
+                加载中...
+              </div>
+            }>
+              <AppShell>
+                <div id="main-content">{children}</div>
+              </AppShell>
+            </Suspense>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );
