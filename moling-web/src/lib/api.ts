@@ -676,7 +676,7 @@ export const importApi = {
       analyze_commitments?: boolean;
       analyze_worldview?: boolean;
     }
-  ): Promise<{ job_id: string; status: string }> {
+  ): Promise<ApiResponse<{ job_id: string; status: string }>> {
     // 读取文件内容为文本
     const text = await file.text();
     return this.createJob(projectId, { text, source_type: 'file' });

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { FormError, FieldError } from "@/components/FormError";
+import { validateForm, clearFieldError } from "@/lib/formValidation";
 import { useAuth } from "@/hooks/useAuth";
 import { showToast } from "@/components/ui/Toast";
 import styles from "./RegisterForm.module.css";
@@ -14,7 +16,35 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [apiError, setApiError] = useState("");
+
+  const validationRules = {
+    username: [
+      { required: true, message: '昵称不能为空' },
+      { min: 2, message: '昵称至少2个字符' }
+    ],
+    email: [
+      { required: true, message: '邮箱不能为空' },
+      { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '邮箱格式不正确' }
+    ],
+    password: [
+      { required: true, message: '密码不能为空' },
+      { min: 8, message: '密码至少8个字符' }
+    ]
+  };
+
+  const handleFieldChange = (field: string, value: string) => {
+    setErrors(prev => clearFieldError(prev, field));
+    setApiError("");
+    
+    switch (field) {
+      case 'username': setUsername(value); break;
+      case 'email': setEmail(value); break;
+      case 'password': setPassword(value); break;
+      case 'confirmPassword': setConfirmPassword(value); break;
+    }
+  };
 
   const getPasswordStrength = (pw: string): { label: string; level: number; color: string } => {
     let score = 0;
@@ -33,31 +63,35 @@ export function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    if (!username.trim()) {
-      setError("请输入用户名");
-      return;
-    }
-    if (!email.trim()) {
-      setError("请输入邮箱地址");
-      return;
-    }
-    if (!password) {
-      setError("请输入密码");
-      return;
-    }
+    setApiError("");
+    
+    const formData = {
+      username,
+      email,
+      password,
+      confirmPassword
+    };
+    
+    const validationErrors = validateForm(formData, validationRules);
+    
     if (password !== confirmPassword) {
-      setError("两次输入的密码不一致");
+      validationErrors.confirmPassword = '两次输入的密码不一致';
+    }
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
-
+    
     setLoading(true);
     try {
       await register(username, email, password);
       showToast("success", "注册成功，欢迎加入墨灵！");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "注册失败，请稍后重试");
+    } catch (err: any) {
+      if (err?.status === 400 || err?.status === 422) {
+        setErrors(err.errors || {});
+      }
+      setApiError(err instanceof Error ? err.message : '注册失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -65,31 +99,42 @@ export function RegisterForm() {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
-      <Input
-        label="用户名"
-        type="text"
-        placeholder="请输入用户名"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        icon="👤"
-      />
+      {apiError && <FormError error={apiError} />}
+      
+      <div className={styles.field}>
+        <Input
+          label="用户名 *"
+          type="text"
+          placeholder="请输入用户名"
+          value={username}
+          onChange={(e) => handleFieldChange('username', e.target.value)}
+          error={errors.username}
+          icon="👤"
+        />
+        <FieldError error={errors.username} />
+      </div>
 
-      <Input
-        label="邮箱"
-        type="email"
-        placeholder="请输入邮箱地址"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        icon="✉"
-      />
+      <div className={styles.field}>
+        <Input
+          label="邮箱 *"
+          type="email"
+          placeholder="请输入邮箱地址"
+          value={email}
+          onChange={(e) => handleFieldChange('email', e.target.value)}
+          error={errors.email}
+          icon="✉"
+        />
+        <FieldError error={errors.email} />
+      </div>
 
       <div className={styles.passwordSection}>
         <Input
-          label="密码"
+          label="密码 *"
           type="password"
-          placeholder="请输入密码"
+          placeholder="请输入密码（至少8个字符）"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => handleFieldChange('password', e.target.value)}
+          error={errors.password}
           icon="🔒"
         />
         {strength && (
@@ -112,19 +157,24 @@ export function RegisterForm() {
             </span>
           </div>
         )}
+        <FieldError error={errors.password} />
       </div>
 
-      <Input
-        label="确认密码"
-        type="password"
-        placeholder="请再次输入密码"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        icon="🔒"
-      />
+      <div className={styles.field}>
+        <Input
+          label="确认密码 *"
+          type="password"
+          placeholder="请再次输入密码"
+          value={confirmPassword}
+          onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
+          error={errors.confirmPassword}
+          icon="🔒"
+        />
+        <FieldError error={errors.confirmPassword} />
+      </div>
 
-      {error && <p className={styles.error}>{error}</p>}
-
+      <FormError errors={errors} />
+      
       <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
         注册
       </Button>

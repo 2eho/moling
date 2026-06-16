@@ -290,7 +290,9 @@ export type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing"
 export interface SubscriptionPlanDetails {
   id: SubscriptionPlan;
   name: string;
-  price: number;
+  price_monthly: number;
+  price_yearly: number;
+  description: string;
   features: string[];
   limits: {
     projects: number;

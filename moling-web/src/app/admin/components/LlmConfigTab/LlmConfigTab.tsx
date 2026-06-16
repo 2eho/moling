@@ -68,15 +68,17 @@ export default function LlmConfigTab() {
       setConfigLoading(false);
     }
 
-    try {
-      const poolRes = await adminApi.getLlmPools();
-      setProPool(poolRes.data.pro_pool);
-      setFlashPool(poolRes.data.flash_pool);
-    } catch (e) {
-      setPoolError(e instanceof Error ? e.message : "获取池状态失败");
-    } finally {
-      setPoolLoading(false);
-    }
+    // TODO: 后端暂未实现 LLM Pools 端点，跳过池状态获取
+    // try {
+    //   const poolRes = await adminApi.getLlmPools();
+    //   setProPool(poolRes.data.pro_pool);
+    //   setFlashPool(poolRes.data.flash_pool);
+    // } catch (e) {
+    //   setPoolError(e instanceof Error ? e.message : "获取池状态失败");
+    // } finally {
+    //   setPoolLoading(false);
+    // }
+    setPoolLoading(false);
   }, []);
 
   useEffect(() => {
@@ -132,11 +134,13 @@ export default function LlmConfigTab() {
     }
     setAddingKey(true);
     try {
-      await adminApi.addApiKey({ name: newKeyName.trim(), key: newKeyValue.trim() });
-      showToast("success", "API Key 已添加");
-      setNewKeyName("");
-      setNewKeyValue("");
-      fetchAll();
+      // TODO: 后端暂未实现 addApiKey 端点
+      showToast("error", "添加 API Key 功能暂未实现");
+      // await adminApi.addApiKey({ name: newKeyName.trim(), key: newKeyValue.trim() });
+      // showToast("success", "API Key 已添加");
+      // setNewKeyName("");
+      // setNewKeyValue("");
+      // fetchAll();
     } catch (e) {
       showToast("error", e instanceof Error ? e.message : "添加失败");
     } finally {
@@ -148,9 +152,11 @@ export default function LlmConfigTab() {
   const handleDeleteKey = useCallback(async (keyId: string) => {
     setKeyLoading(true);
     try {
-      await adminApi.deleteApiKey(keyId);
-      showToast("success", "API Key 已删除");
-      fetchAll();
+      // TODO: 后端暂未实现 deleteApiKey 端点
+      showToast("error", "删除 API Key 功能暂未实现");
+      // await adminApi.deleteApiKey(keyId);
+      // showToast("success", "API Key 已删除");
+      // fetchAll();
     } catch (e) {
       showToast("error", e instanceof Error ? e.message : "删除失败");
     } finally {
@@ -162,9 +168,11 @@ export default function LlmConfigTab() {
   const handleToggleKey = useCallback(async (keyId: string, enabled: boolean) => {
     setKeyLoading(true);
     try {
-      await adminApi.toggleApiKey(keyId, enabled);
-      showToast("success", `密钥已${enabled ? "启用" : "禁用"}`);
-      fetchAll();
+      // TODO: 后端暂未实现 toggleApiKey 端点
+      showToast("error", "切换 API Key 状态功能暂未实现");
+      // await adminApi.toggleApiKey(keyId, enabled);
+      // showToast("success", `密钥已${enabled ? "启用" : "禁用"}`);
+      // fetchAll();
     } catch (e) {
       showToast("error", e instanceof Error ? e.message : "操作失败");
     } finally {

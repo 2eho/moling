@@ -204,7 +204,18 @@ const startPolling = useCallback((pid: string, jid: string) => {
     try {
       const res = await importApi.getJobStatus(pid, jid);
       const job = res.data;
-
+      
+      if (!job) {
+        // API 返回错误
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        alert('获取导入状态失败');
+        setIsProcessing(false);
+        return;
+      }
+      
       // 更新进度显示
       if (job.progress !== undefined) {
         setOverallDone(Math.floor(job.progress / 25)); // 4 阶段，每阶段 25%
@@ -217,26 +228,15 @@ const startPolling = useCallback((pid: string, jid: string) => {
           pollIntervalRef.current = null;
         }
 
-        // 获取导入结果
-        try {
-          const resultRes = await importApi.getImportResult(pid, jid);
+        // 获取导入结果 - 使用 job.result（API 对齐后无单独 result 端点）
+        if (job.result) {
+          const r = job.result;
           setImportResult({
-            characters: resultRes.data.characters_created,
-            timeline: resultRes.data.events_created,
-            commitments: resultRes.data.commitments_created,
-            world: resultRes.data.entries_created,
+            characters: r.characters_created ?? 0,
+            timeline: r.events_created ?? 0,
+            commitments: r.commitments_created ?? 0,
+            world: r.entries_created ?? 0,
           });
-        } catch {
-          // 如果 result 端点不存在，使用 job.result 并映射字段名
-          if (job.result) {
-            const r = job.result;
-            setImportResult({
-              characters: r.characters_created ?? 0,
-              timeline: r.events_created ?? 0,
-              commitments: r.commitments_created ?? 0,
-              world: r.entries_created ?? 0,
-            });
-          }
         }
 
         setPhase(3);

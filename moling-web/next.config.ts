@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   // output: "standalone", // 临时禁用，修复复制错误
   // 子路径部署，配合宿主机 Nginx 的 /moling 反代
   basePath: "/moling",
+  
+  // 修复多lockfile警告和构建错误
+  outputFileTracingRoot: process.cwd(),
   // 禁用 Image Optimization（standalone 模式可选）
   images: {
     unoptimized: true,

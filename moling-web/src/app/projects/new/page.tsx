@@ -54,8 +54,13 @@ export default function NewProjectPage() {
       const project = await createProject(projectData as any);
       showToast("success", "项目创建成功！");
       router.push(`/workspace/${project.id}`);
-    } catch {
-      showToast("error", "创建失败，请稍后重试");
+    } catch (error: any) {
+      // 修复：显示具体错误信息，而不是模糊的"创建失败"
+      const errorMessage = 
+        error?.message || 
+        (error as any)?.data?.message || 
+        "创建失败，请检查表单输入";
+      showToast("error", errorMessage);
     } finally {
       setCreating(false);
     }

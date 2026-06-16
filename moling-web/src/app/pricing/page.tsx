@@ -1,53 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styles from './pricing.module.css';
-
-const PLANS = [
-  {
-    id: 'free',
-    name: '免费版',
-    price: { monthly: 0, yearly: 0 },
-    description: '适合初次体验墨灵的创作者',
-    features: ['最多 3 个项目', '每月 50 章', '基础写作 + 卡牌池', '四库管理'],
-    disabledFeatures: ['优先生成队列', '全量重新分析', '团队协作'],
-    cta: '当前方案',
-    popular: false,
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: { monthly: 29.9, yearly: 299 },
-    description: '专业作者的首选',
-    features: [
-      '无限项目',
-      '无限章节',
-      '优先生成队列',
-      '全量重新分析',
-      '优先技术支持',
-    ],
-    disabledFeatures: ['团队协作'],
-    cta: '立即订阅',
-    popular: true,
-  },
-  {
-    id: 'enterprise',
-    name: '企业版',
-    price: { monthly: 99.9, yearly: 999 },
-    description: '适合工作室和创作团队',
-    features: [
-      '全部 Pro 功能',
-      '多人协作',
-      '权限管理',
-      '共享资料库与卡牌池',
-      '专属客户经理',
-      '99.9% SLA',
-    ],
-    disabledFeatures: [],
-    cta: '联系销售',
-    popular: false,
-  },
-];
+import { subscriptionApi } from '@/lib/api';
+import type { SubscriptionPlanDetails, Subscription } from '@/lib/types';
 
 const FAQ_ITEMS = [
   {
@@ -70,24 +26,69 @@ const FAQ_ITEMS = [
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [plans, setPlans] = useState<SubscriptionPlanDetails[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const yearlyMonthlyEquivalent = (yearlyPrice: number, monthlyPrice: number) => {
-    const perMonth = +(yearlyPrice / 12).toFixed(1);
-    const saving = Math.round((1 - perMonth / monthlyPrice) * 100);
-    return saving;
-  };
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [plansResult, subResult] = await Promise.all([
+        subscriptionApi.getPlans(),
+        subscriptionApi.getCurrent().catch(() => null),
+      ]);
+      setPlans(plansResult.data || []);
+      if (subResult) {
+        setCurrentSubscription(subResult.data || null);
+      }
+    } catch (error) {
+      console.error('Failed to load pricing data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleSubscribe = (planId: string) => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleSubscribe = async (planId: string) => {
     if (planId === 'free') {
       window.location.href = '/auth/register';
       return;
     }
-    if (planId === 'enterprise') {
-      window.alert('感谢您的关注！我们的销售团队将在 24 小时内与您联系。');
+
+    if (currentSubscription?.plan === planId && currentSubscription?.status === 'active') {
+      alert('您当前已订阅此方案');
       return;
     }
-    window.alert('支付页面将打开（演示模式）');
+
+    setActionLoading(planId);
+    try {
+      const successUrl = `${window.location.origin}/pricing?success=true`;
+      const cancelUrl = `${window.location.origin}/pricing?canceled=true`;
+      const result = await subscriptionApi.createCheckout(planId, successUrl, cancelUrl);
+      if (result.data?.checkout_url) {
+        window.location.href = result.data.checkout_url;
+      } else {
+        alert('创建支付会话失败，请稍后重试');
+      }
+    } catch (error) {
+      console.error('Failed to create checkout:', error);
+      alert('创建支付会话失败，请稍后重试');
+    } finally {
+      setActionLoading(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -110,54 +111,28 @@ export default function PricingPage() {
         <p className={styles.heroDesc}>免费版让你体验核心功能，Pro 版释放全部创作力，企业版支持团队协作。</p>
       </section>
 
-      {/* Billing Toggle */}
-      <div className={styles.billingToggle}>
-        <span
-          className={`${styles.toggleLabel} ${billingCycle === 'monthly' ? styles.toggleLabelActive : ''}`}
-          onClick={() => setBillingCycle('monthly')}
-        >
-          月付
-        </span>
-        <div
-          className={`${styles.toggleTrack} ${billingCycle === 'yearly' ? styles.toggleTrackActive : ''}`}
-          onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-        >
-          <div className={styles.toggleKnob} />
-        </div>
-        <span
-          className={`${styles.toggleLabel} ${billingCycle === 'yearly' ? styles.toggleLabelActive : ''}`}
-          onClick={() => setBillingCycle('yearly')}
-        >
-          年付
-          <span className={styles.saveBadge} style={{ marginLeft: 6 }}>
-            省 2 个月
-          </span>
-        </span>
-      </div>
-
       {/* Plan Cards */}
       <div className={styles.cards}>
-        {PLANS.map((plan) => {
-          const price = plan.price[billingCycle];
-          const monthlyPrice = plan.price.monthly;
-          const yearlyPrice = plan.price.yearly;
+        {plans.map((plan) => {
+          const isCurrentPlan = currentSubscription?.plan === plan.id && currentSubscription?.status === 'active';
+          const isPopular = plan.id === 'pro';
 
           return (
-            <div key={plan.id} className={`${styles.card} ${plan.popular ? styles.cardPopular : ''}`}>
-              {plan.popular && <div className={styles.popularBadge}>最受欢迎</div>}
+            <div key={plan.id} className={`${styles.card} ${isPopular ? styles.cardPopular : ''}`}>
+              {isPopular && <div className={styles.popularBadge}>最受欢迎</div>}
 
               <div className={styles.planName}>{plan.name}</div>
               <div className={styles.planDesc}>{plan.description}</div>
 
               <div className={styles.planPrice}>
-                {price > 0 && <span className={styles.priceCurrency}>¥</span>}
-                <span className={styles.priceAmount}>{price}</span>
+                {plan.price_monthly > 0 && <span className={styles.priceCurrency}>¥</span>}
+                <span className={styles.priceAmount}>{billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly}</span>
                 <span className={styles.pricePeriod}>
-                  {price > 0 ? (billingCycle === 'monthly' ? '/月' : '/年') : '/月'}
+                  {plan.price_monthly > 0 ? (billingCycle === 'monthly' ? '/月' : '/年') : '/月'}
                 </span>
-                {billingCycle === 'yearly' && price > 0 && monthlyPrice > 0 && (
+                {billingCycle === 'yearly' && plan.price_monthly > 0 && (
                   <span className={styles.priceOriginal}>
-                    ¥{(monthlyPrice * 12).toFixed(1)}
+                    ¥{(plan.price_monthly * 12).toFixed(1)}
                   </span>
                 )}
               </div>
@@ -171,21 +146,14 @@ export default function PricingPage() {
                     {f}
                   </li>
                 ))}
-                {plan.disabledFeatures.map((f, i) => (
-                  <li key={i} className={styles.featureDisabled}>
-                    <svg className={styles.featureDash} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    {f}
-                  </li>
-                ))}
               </ul>
 
               <button
-                className={`${plan.popular ? styles.planCtaPrimary : styles.planCta}`}
+                className={`${isPopular ? styles.planCtaPrimary : styles.planCta}`}
                 onClick={() => handleSubscribe(plan.id)}
+                disabled={actionLoading === plan.id || isCurrentPlan}
               >
-                {plan.cta}
+                {actionLoading === plan.id ? '处理中...' : isCurrentPlan ? '当前方案' : '立即订阅'}
               </button>
             </div>
           );

@@ -26,7 +26,17 @@
 .fieldLabel {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  font-weight: 500);
+  font-weight: 500;
+}
+
+.required {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+.selectError {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px var(--color-error-dim, rgba(239, 68, 68, 0.1));
 }
 
 .formInput {

@@ -1,0 +1,88 @@
+/* page.module.css - Phase 4 四库管理页面样式 */
+
+.page {
+  padding: var(--space-6);
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--color-bg);
+}
+
+.pageHeader {
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.pageDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* 标签页导航 */
+.tabsWrapper {
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.tab.active {
+  color: var(--color-brand-indigo);
+  border-bottom-color: var(--color-brand-indigo);
+  font-weight: 600;
+}
+
+.tabIcon {
+  font-size: var(--font-size-base);
+}
+
+.tabLabel {
+  font-size: var(--font-size-sm);
+}
+
+/* 内容区域 */
+.content {
+  animation: fadeIn 0.3s var(--ease-default);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

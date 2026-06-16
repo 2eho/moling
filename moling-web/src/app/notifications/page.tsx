@@ -4,49 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './notifications.module.css';
 import { notificationsApi } from '@/lib/api';
 import type { Notification } from '@/lib/types';
-import { safePaginatedData } from '@/lib/apiSafety';  // ✅ 导入安全工具
-
-const NOTIFICATION_ICONS: Record<string, { svg: React.ReactNode; iconClass: string }> = {
-  warning: {
-    iconClass: styles.iconWarning,
-    svg: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-        <line x1="12" y1="9" x2="12" y2="13" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
-    ),
-  },
-  error: {
-    iconClass: styles.iconError,
-    svg: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="15" y1="9" x2="9" y2="15" />
-        <line x1="9" y1="9" x2="15" y2="15" />
-      </svg>
-    ),
-  },
-  success: {
-    iconClass: styles.iconSuccess,
-    svg: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-        <polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-    ),
-  },
-  info: {
-    iconClass: styles.iconInfo,
-    svg: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-      </svg>
-    ),
-  },
-};
+import { safePaginatedData } from '@/lib/apiSafety';
+import { NotificationList } from '@/components/notifications/NotificationList';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -143,25 +102,6 @@ export default function NotificationsPage() {
     }
   };
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes} 分钟前`;
-    if (hours < 24) return `${hours} 小时前`;
-    if (days < 7) return `${days} 天前`;
-    return date.toLocaleDateString('zh-CN');
-  };
-
-  const getNotifConfig = (type: string) => {
-    return NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.info;
-  };
-
   return (
     <div className={styles.container}>
       {/* Toast */}
@@ -206,43 +146,16 @@ export default function NotificationsPage() {
 
       {/* Notification List */}
       <div className={styles.content}>
-        {loading ? (
-          <div className={styles.loading}>加载中...</div>
-        ) : notifications.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </div>
-            <p>暂无通知</p>
-          </div>
-        ) : (
-          notifications.map((notification) => {
-            const config = getNotifConfig(notification.type);
-            return (
-              <div
-                key={notification.id}
-                className={`${styles.item} ${!notification.is_read ? styles.itemUnread : ''}`}
-                onClick={() => !notification.is_read && handleMarkAsRead(notification.id)}
-              >
-                <div className={`${styles.itemIcon} ${config.iconClass}`}>
-                  {config.svg}
-                </div>
-                <div className={styles.itemContent}>
-                  <div className={styles.itemTitle}>{notification.title}</div>
-                  <div className={styles.itemBody}>{notification.message}</div>
-                  <div className={styles.itemTime}>{formatTime(notification.created_at)}</div>
-                </div>
-                <div className={`${styles.unreadDot} ${notification.is_read ? styles.unreadDotRead : ''}`} />
-              </div>
-            );
-          })
-        )}
+        <NotificationList
+          notifications={notifications}
+          loading={loading}
+          actionLoading={actionLoading}
+          onMarkAsRead={handleMarkAsRead}
+          onDelete={handleDelete}
+        />
 
         {/* Pagination */}
-        {total > pageSize && (
+        {!loading && total > pageSize && (
           <div className={styles.pagination}>
             <button
               className={styles.pageBtn}

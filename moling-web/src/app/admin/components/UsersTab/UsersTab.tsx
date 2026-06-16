@@ -118,11 +118,13 @@ export default function UsersTab() {
   const toggleUserStatus = useCallback(async (user: AdminUser) => {
     setActingUserId(user.id);
     try {
+      // TODO: 后端暂未实现 updateUser 端点
       const newStatus = user.status === "active" ? "banned" : "active";
-      await adminApi.updateUser(user.id, { status: newStatus } as Partial<AdminUser>);
-      showToast("success", `用户 ${user.username} 已${newStatus === "active" ? "启用" : "禁用"}`);
+      showToast("error", "用户状态切换功能暂未实现");
+      // await adminApi.updateUser(user.id, { status: newStatus } as Partial<AdminUser>);
+      // showToast("success", `用户 ${user.username} 已${newStatus === "active" ? "启用" : "禁用"}`);
       // Refresh list
-      fetchUsers();
+      // fetchUsers();
     } catch (e) {
       showToast("error", e instanceof Error ? e.message : "操作失败");
     } finally {

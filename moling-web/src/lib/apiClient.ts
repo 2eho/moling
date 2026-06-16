@@ -14,6 +14,23 @@
 
 import { getAccessToken, getRefreshToken, setTokens, clearAuth } from "./auth";
 
+// ---- Custom Error Class ----
+
+/**
+ * 结构化 API 错误，包含状态码、错误信息和字段级验证错误。
+ */
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly message: string,
+    public readonly errors: Record<string, string> | null = null,
+    public readonly data: unknown = null,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 // ---- Types ----
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -293,7 +310,12 @@ async function request<T>(
         fetchError instanceof TypeError
           ? `无法连接到服务器 (${url}) — 请检查网络或 API 地址配置`
           : `请求失败: ${(fetchError as Error).message}`;
-      throw new Error(reason);
+
+      if (process.env.NODE_ENV === "development") {
+        console.error("[API Error] Network error:", reason, fetchError);
+      }
+
+      throw new ApiError(0, reason);
     }
 
     // ---- 401 Auto-Refresh（防并发） ----
@@ -309,7 +331,7 @@ async function request<T>(
         if (typeof window !== "undefined") {
           window.location.href = "/auth";
         }
-        throw new Error("认证已过期，请重新登录");
+        throw new ApiError(401, "认证已过期，请重新登录");
       }
     }
 
@@ -322,10 +344,29 @@ async function request<T>(
     }
 
     if (!response.ok) {
-      const message =
-        (data as Record<string, unknown>)?.message ??
+      // 提取错误信息（支持多种后端响应格式）
+      const dataObj = data as Record<string, unknown>;
+      const errorMessage =
+        (dataObj?.message as string) ||
+        (dataObj?.detail as string) ||
         `请求失败 (${response.status})`;
-      throw new Error(message as string);
+
+      // 提取字段级验证错误（支持 errors 和 validation_errors 两种格式）
+      const rawErrors =
+        (dataObj?.errors as Record<string, string>) ||
+        (dataObj?.validation_errors as Record<string, string>) ||
+        null;
+
+      if (process.env.NODE_ENV === "development") {
+        console.error("[API Error]", {
+          status: response.status,
+          message: errorMessage,
+          errors: rawErrors,
+          data,
+        });
+      }
+
+      throw new ApiError(response.status, errorMessage, rawErrors, data);
     }
 
     return data;

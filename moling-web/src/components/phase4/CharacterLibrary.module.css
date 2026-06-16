@@ -1,0 +1,317 @@
+/* CharacterLibrary.module.css - 角色库样式 */
+
+.container {
+  padding: var(--space-4);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.createButton {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand-indigo);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.createButton:hover {
+  background: var(--color-brand-hover);
+}
+
+.error {
+  padding: var(--space-3);
+  background: var(--color-danger-dim);
+  color: var(--color-danger);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.loading {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3);
+  gap: var(--space-3);
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.itemHeader:hover {
+  background: var(--color-bg-hover);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-brand-indigo);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  text-align: left;
+}
+
+.name {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.role {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.expandIcon {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.detail {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+  line-height: 1.6;
+}
+
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.trait {
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-brand-indigo-dim);
+  color: var(--color-brand-indigo);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.section {
+  margin-bottom: var(--space-3);
+}
+
+.sectionLabel {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+}
+
+.sectionText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.editButton {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand-indigo);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  transition: background var(--transition-fast);
+}
+
+.editButton:hover {
+  background: var(--color-brand-hover);
+}
+
+.deleteButton {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-danger-dim);
+  color: var(--color-danger);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  transition: background var(--transition-fast);
+}
+
+.deleteButton:hover {
+  background: var(--color-danger);
+  color: white;
+}
+
+/* 表单样式 */
+.formOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.form h4 {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.input {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-1);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  border-color: var(--color-brand-indigo);
+  outline: none;
+}
+
+.textarea {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-1);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  resize: vertical;
+  transition: border-color var(--transition-fast);
+}
+
+.textarea:focus {
+  border-color: var(--color-brand-indigo);
+  outline: none;
+}
+
+.traitInput {
+  margin-top: var(--space-1);
+}
+
+.formActions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.cancelButton {
+  flex: 1;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.cancelButton:hover {
+  background: var(--color-surface);
+}
+
+.submitButton {
+  flex: 1;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand-indigo);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.submitButton:hover {
+  background: var(--color-brand-hover);
+}
