@@ -3,10 +3,6 @@ name: OpenAPI Spec Check
 on:
   push:
     branches: [main, master]
-    paths:
-      - 'moling-server/**'
-      - '015_前后端接口映射.md'
-      - 'openapi.json'
   pull_request:
     branches: [main, master]
   workflow_dispatch:
