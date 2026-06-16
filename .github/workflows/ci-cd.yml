@@ -63,7 +63,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install flake8 bandit safety black isort mypy
 
       - name: 运行 flake8（代码风格检查）
@@ -159,7 +159,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install pytest pytest-asyncio httpx pytest-cov
 
       - name: 运行后端测试
@@ -220,7 +220,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install uvicorn
 
       - name: 安装 Playwright 浏览器

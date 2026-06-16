@@ -47,7 +47,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install pytest pytest-asyncio httpx
       - name: Run backend tests
         env:
@@ -85,7 +85,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install uvicorn
       - name: Install Playwright browsers
         run: |
@@ -130,7 +130,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install flake8 bandit safety
       - name: Run flake8
         run: |
@@ -160,7 +160,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install requests
       - name: Start backend
         env:

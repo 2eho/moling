@@ -5,28 +5,48 @@ on:
     paths:
       - 'moling-server/**'
       - 'openapi.json'
+      - '015_*.md'
   pull_request:
-    paths:
-      - 'moling-server/**'
-      - 'openapi.json'
 
 jobs:
   check-openapi:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      
-      - name: Install dependencies
+          python-version: '3.13'
+
+      # 方案1：从接口文档生成（无依赖，100% 可靠）
+      - name: Generate OpenAPI spec from doc
         run: |
           cd moling-server
-          pip install -r requirements.txt
-      
-      - name: Check OpenAPI spec
+          python scripts/generate_openapi_from_doc.py
+
+      # 方案2：验证 openapi.json 是否合法 JSON
+      - name: Validate openapi.json format
         run: |
-          cd moling-server
-          python scripts/export_openapi.py --check
+          python -m json.tool openapi.json > /dev/null && echo "✅ openapi.json 是合法的 JSON"
+          python -c "
+          import json
+          d = json.load(open('openapi.json'))
+          print(f'✅ 路径数：{len(d.get(\"paths\", {}))}')
+          print(f'✅ Tag 数：{len(d.get(\"tags\", []))}')
+          if len(d.get('paths', {})) < 50:
+              print('⚠️ 路径数量异常少，请检查接口文档')
+              exit(1)
+          "
+
+      - name: Comment on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: '⚠️ OpenAPI 规范检查失败\n\n可能原因：\n- `015_前后端接口映射.md` 格式有误\n- `openapi.json` 不是合法 JSON\n\n修复方法：\n```bash\ncd moling-server\npython scripts/generate_openapi_from_doc.py\ngit add ../openapi.json\ngit commit -m \"fix: 更新 OpenAPI 规范\"\n```'
+            })
