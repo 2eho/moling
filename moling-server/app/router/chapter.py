@@ -153,15 +153,25 @@ async def send_agent_instruction(
     return result
 
 
-@router.post("/chapters/{chapter_id}/generate", response_model=dict, status_code=201)
-async def generate_chapter_content(
+@router.post("/chapters/{chapter_id}/generate-sync", response_model=dict, status_code=201)
+async def generate_chapter_content_sync(
     project_id: int,
     chapter_id: int,
     req: dict = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
-    """Start AI generation for a chapter (接口映射文档 4.5 节)."""
+    """同步 AI 生成（已弃用，请使用异步接口 /api/v1/generate/chapters/{chapter_id}/generate）。
+    
+    保留此接口是为了向后兼容，后续版本将删除。
+    见接口映射文档 4.5 节。
+    """
+    import warnings
+    warnings.warn(
+        "Sync generation endpoint is deprecated. Use async endpoint instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     generate_req = GenerateReq(**req)
     result = await generation_service.start_generation(
         db, current_user["id"], project_id, chapter_id, generate_req

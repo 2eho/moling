@@ -238,6 +238,7 @@ export const cardApi = {
 // - word_count: 目标字数（500-5000，可选）
 
 export const generationApi = {
+  // 异步生成（立即返回 job_id）
   async generate(
     projectId: string,
     chapterId: string,
@@ -249,24 +250,33 @@ export const generationApi = {
       word_count?: number;
     }
   ) {
-    return apiClient.post<ApiResponse<GenerationTask>>(
-      `/projects/${projectId}/chapters/${chapterId}/generate`,
+    return apiClient.post<ApiResponse<{ job_id: string; status: string }>>(
+      `/generate/chapters/${chapterId}/generate?project_id=${projectId}`,
       params,
     );
   },
 
-  async getStatus(taskId: string) {
-    return apiClient.get<ApiResponse<GenerationTask>>(
-      `/generate/${taskId}/status`,
+  // 查询异步任务状态
+  async getJobStatus(jobId: string) {
+    return apiClient.get<ApiResponse<{
+      job_id: string;
+      status: string;
+      progress: number;
+      result?: { content: string };
+      error?: string;
+    }>>(
+      `/generate/jobs/${jobId}`,
     );
   },
 
-  async cancel(taskId: string) {
-    return apiClient.post<ApiResponse<{ cancelled: boolean; task_id: string }>>(
-      `/generate/${taskId}/cancel`,
+  // 取消任务（可选）
+  async cancelJob(jobId: string) {
+    return apiClient.delete<ApiResponse<{ cancelled: boolean }>>(
+      `/generate/jobs/${jobId}`,
     );
   },
 
+  // 确认生成结果（向后兼容）
   async confirm(projectId: string, chapterId: string, nonce: string) {
     return apiClient.post<ApiResponse<{ confirmed: boolean; chapter_id: string; task_id?: string }>>(
       `/projects/${projectId}/chapters/${chapterId}/confirm`,
@@ -274,6 +284,7 @@ export const generationApi = {
     );
   },
 
+  // 修订生成结果（向后兼容）
   async revise(projectId: string, chapterId: string, reason?: string) {
     return apiClient.post<ApiResponse<{ revised: boolean; chapter_id: string; suggestion?: string }>>(
       `/projects/${projectId}/chapters/${chapterId}/revise`,

@@ -15,6 +15,7 @@ import type {
   CardPool,
   DrawRecord,
   GenerationTask,
+  TaskStatus,
   VaultCharacter,
   VaultTimeline,
   VaultPlotPromise,
@@ -90,6 +91,14 @@ export function WorkspaceProvider({
   const [vaultData, setVaultData] = useState<VaultData | null>(null);
   const [healthAlerts, setHealthAlerts] = useState<HealthAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [generationProgress, setGenerationProgress] = useState<number>(0);
+  const generationPollRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 简单的 toast 实现（后续替换为真正的 toast 库）
+  const showToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
+    console.log(`[${type}] ${message}`);
+    // TODO: 用真正的 toast 库（react-hot-toast / sonner）替换
+  }, []);
 
   // ✅ 使用 useRef 替代 useState：避免 generate 回调因 generationParams 变化而重建
   const generationParamsRef = useRef<{
@@ -212,26 +221,111 @@ export function WorkspaceProvider({
           creativity: finalCreativity,
           word_count: finalWordCount,
         });
-        // ✅ 修复：确保 generationTask 不是 undefined
-        setGenerationTask(res.data || null);
+
+        const jobId = (res.data as { job_id: string }).job_id;
+        if (!jobId) throw new Error("后端未返回 job_id，请检查异步生成接口");
+
+        // 立即更新状态为 pending，UI 显示进度条
+        setGenerationTask({
+          id: jobId,
+          project_id: projectId,
+          chapter_id: chapterId,
+          task_type: "generate_chapter",
+          status: "pending",
+          progress_stage: "等待队列...",
+          progress_percent: 0,
+        } as GenerationTask);
+        setGenerationProgress(0);
+
+        // 开始轮询（每 2 秒）
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusRes = await generationApi.getJobStatus(jobId);
+            const job = statusRes.data;
+
+            setGenerationProgress(job.progress ?? 0);
+            setGenerationTask(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                status: job.status as TaskStatus,
+                progress_stage: job.status === "running" ? "AI 生成中..." : prev.progress_stage,
+                progress_percent: job.progress ?? prev.progress_percent,
+              } as GenerationTask;
+            });
+
+            if (job.status === "completed") {
+              clearInterval(pollInterval);
+              setGenerationTask(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  status: "completed",
+                  progress_percent: 100,
+                  output_data: job.result ?? null,
+                } as GenerationTask;
+              });
+              showToast("success", "AI 生成完成！");
+            } else if (job.status === "failed") {
+              clearInterval(pollInterval);
+              setGenerationTask(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  status: "failed",
+                  error_message: job.error ?? "未知错误",
+                } as GenerationTask;
+              });
+              showToast("error", `生成失败：${job.error ?? "未知错误"}`);
+            }
+          } catch (err) {
+            console.error("轮询生成状态失败：", err);
+          }
+        }, 2000);
+
+        // 组件卸载或下次生成前清理定时器
+        generationPollRef.current = pollInterval;
       } catch (error) {
         console.error("Failed to generate:", error);
         setGenerationTask(null);
+        showToast("error", `创建生成任务失败：${error instanceof Error ? error.message : "未知错误"}`);
       }
     },
     [projectId], // ✅ 大幅简化依赖数组
   );
 
   const confirmChapter = useCallback(async (chapterId: string) => {
+    // 清理可能还在运行的轮询定时器
+    if (generationPollRef.current) {
+      clearInterval(generationPollRef.current);
+      generationPollRef.current = null;
+    }
     const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     await generationApi.confirm(projectId, chapterId, nonce);
     setGenerationTask(null);
+    setGenerationProgress(0);
   }, [projectId]);
 
   const reviseChapter = useCallback(async (chapterId: string, reason?: string) => {
+    // 清理可能还在运行的轮询定时器
+    if (generationPollRef.current) {
+      clearInterval(generationPollRef.current);
+      generationPollRef.current = null;
+    }
     await generationApi.revise(projectId, chapterId, reason);
     setGenerationTask(null);
+    setGenerationProgress(0);
   }, [projectId]);
+
+  // 组件卸载时清理轮询定时器
+  useEffect(() => {
+    return () => {
+      if (generationPollRef.current) {
+        clearInterval(generationPollRef.current);
+        generationPollRef.current = null;
+      }
+    };
+  }, []);
 
   const loadVault = useCallback(async (_projectId: string) => {
     try {

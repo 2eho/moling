@@ -36,9 +36,10 @@ except ImportError:
     pass
 
 try:
-    from app.router.generation import router as generation_router
+    from app.generation.router import router as generation_router
     api_router.include_router(generation_router, prefix="/generate", tags=["generation"])
-except ImportError:
+except ImportError as e:
+    print(f"[WARN] Generation router not loaded: {e}")
     pass
 
 try:

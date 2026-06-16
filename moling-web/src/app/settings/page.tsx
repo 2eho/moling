@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Settings.module.css';
 import { settingsApi } from '@/lib/api';
 import type { UserSettings, HealthRules } from '@/lib/types';
-import { safeObject } from '@/lib/apiSafety';  // ✅ 导入安全工具
+import { safeObject } from '@/lib/apiSafety';
+import { validateForm, clearFieldError, parseApiError } from '@/lib/formValidation';
+import { FormError, FieldError } from '@/components/FormError';
 
 const ACCENT_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981'];
 
@@ -12,11 +14,12 @@ const TAB_LABELS: Record<string, string> = {
   profile: '个人信息',
   defaults: '创作默认设置',
   theme: '主题设置',
+  security: '安全设置',
   data: '数据管理',
 };
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'defaults' | 'theme' | 'data'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'defaults' | 'theme' | 'security' | 'data'>('profile');
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,14 @@ export default function SettingsPage() {
 
   // Phase 4 review mode
   const [phase4ReviewMode, setPhase4ReviewMode] = useState<'manual' | 'auto'>('manual');
+
+  // Password change
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [passwordApiError, setPasswordApiError] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   // Data management
   const [storageStats, setStorageStats] = useState({ totalWords: 0, projects: 0, chapters: 0, cards: 0 });
@@ -165,6 +176,67 @@ export default function SettingsPage() {
     }
   };
 
+  // 修改密码
+  const passwordValidationRules: Record<string, {
+    required?: boolean;
+    min?: number;
+    validate?: (value: unknown) => boolean;
+    message: string;
+  }[]> = {
+    oldPassword: [
+      { required: true, message: '当前密码不能为空' },
+    ],
+    newPassword: [
+      { required: true, message: '新密码不能为空' },
+      { min: 8, message: '新密码至少 8 个字符' },
+      {
+        validate: (v) => typeof v === 'string' && v.length >= 8,
+        message: '新密码至少 8 个字符',
+      },
+    ],
+    confirmPassword: [
+      { required: true, message: '请再次输入新密码' },
+      {
+        validate: (v) => v === newPassword,
+        message: '两次输入的新密码不一致',
+      },
+    ],
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordApiError('');
+
+    const formData: Record<string, unknown> = {
+      oldPassword,
+      newPassword,
+      confirmPassword,
+    };
+    const errors = validateForm(formData, passwordValidationRules);
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await settingsApi.changePassword(oldPassword, newPassword);
+      showMessage('success', '密码修改成功，请重新登录');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordErrors({});
+    } catch (error: unknown) {
+      const err = error as any;
+      setPasswordApiError(err?.message || (error instanceof Error ? error.message : '密码修改失败'));
+      if (err?.errors) {
+        setPasswordErrors(err.errors);
+      }
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   if (loading) {
     return <div className={styles.loading}>加载中...</div>;
   }
@@ -216,6 +288,18 @@ export default function SettingsPage() {
               <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
             </svg>
             <span>数据管理</span>
+          </button>
+
+          {/* 安全设置 Tab */}
+          <button
+            className={`${styles.navTab} ${activeTab === 'security' ? styles.navTabActive : ''}`}
+            onClick={() => setActiveTab('security')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>安全设置</span>
           </button>
         </div>
       </nav>
@@ -533,6 +617,71 @@ export default function SettingsPage() {
                 <span className={styles.statValue}>{storageStats.cards}</span>
                 <span className={styles.statLabel}>收集的卡牌</span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Security Tab */}
+        {activeTab === 'security' && (
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>安全设置</div>
+
+            <div className={styles.profileFields}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>当前密码 *</label>
+                <input
+                  className={styles.fieldInput}
+                  type="password"
+                  value={oldPassword}
+                  onChange={(e) => {
+                    setOldPassword(e.target.value);
+                    setPasswordErrors(clearFieldError(passwordErrors, 'oldPassword'));
+                  }}
+                  placeholder="输入当前密码"
+                />
+                <FieldError error={passwordErrors.oldPassword} />
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>新密码 *</label>
+                <input
+                  className={styles.fieldInput}
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordErrors(clearFieldError(passwordErrors, 'newPassword'));
+                  }}
+                  placeholder="至少 8 个字符"
+                />
+                <FieldError error={passwordErrors.newPassword} />
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>确认新密码 *</label>
+                <input
+                  className={styles.fieldInput}
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordErrors(clearFieldError(passwordErrors, 'confirmPassword'));
+                  }}
+                  placeholder="再次输入新密码"
+                />
+                <FieldError error={passwordErrors.confirmPassword} />
+              </div>
+
+              <FormError error={passwordApiError} />
+
+              <button
+                type="button"
+                className={styles.saveBtn}
+                onClick={handleChangePassword}
+                disabled={passwordSaving}
+              >
+                {passwordSaving ? '修改中...' : '修改密码'}
+              </button>
             </div>
           </div>
         )}

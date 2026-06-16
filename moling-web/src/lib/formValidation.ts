@@ -107,12 +107,13 @@ export function validateForm(data: FormData, rules: ValidationRules): FormErrors
 
 /**
  * 解析API错误响应
- * @param error 错误对象（来自apiClient）
+ * @param error 错误对象（来自apiClient，支持 ApiError 或兼容结构）
  * @returns 格式化的错误信息
  */
 export function parseApiError(error: {
   status?: number;
   message?: string;
+  errors?: Record<string, string>;
   data?: {
     message?: string;
     detail?: string;
@@ -120,18 +121,27 @@ export function parseApiError(error: {
     validation_errors?: Record<string, string>;
   };
 }): { message: string; errors?: Record<string, string> } {
-  // 网络错误
-  if (!error.status) {
+  // 网络错误（status 为 0 或 undefined）
+  const status = error.status ?? 0;
+  if (!status) {
     return { message: '网络连接失败，请检查网络后重试' };
   }
 
   // 服务器错误
-  if (error.status >= 500) {
+  if (status >= 500) {
     return { message: '服务器内部错误，请稍后重试' };
   }
 
-  // 客户端错误（400, 422等）
-  if (error.status === 400 || error.status === 422) {
+  // 客户端错误（400, 422 等）
+  if (status === 400 || status === 422) {
+    // 优先使用顶层 errors（ApiError.errors）
+    if (error.errors) {
+      return {
+        message: '请检查表单输入',
+        errors: error.errors
+      };
+    }
+
     const data = error.data;
     
     // 尝试提取验证错误
@@ -148,25 +158,25 @@ export function parseApiError(error: {
         errors: data.validation_errors
       };
     }
-
+    
     // 提取错误消息
     const message = data?.message || data?.detail || error.message || '请求错误';
     return { message };
   }
 
   // 认证错误
-  if (error.status === 401) {
+  if (status === 401) {
     return { message: '未授权，请重新登录' };
   }
 
   // 权限错误
-  if (error.status === 403) {
+  if (status === 403) {
     return { message: '没有权限执行此操作' };
   }
 
   // 默认错误
   return {
-    message: error.message || `错误 (${error.status})`
+    message: error.message || `错误 (${status})`
   };
 }
 

@@ -45,21 +45,23 @@ export function LoginForm({ onSwitchToReset }: LoginFormProps) {
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <Input
-        label="邮箱"
+        label="邮箱 *"
         type="email"
         placeholder="请输入邮箱地址"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         icon="✉"
+        error={error && !email.trim() ? error : undefined}
       />
 
       <Input
-        label="密码"
+        label="密码 *"
         type="password"
         placeholder="请输入密码"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         icon="🔒"
+        error={error && !password ? error : undefined}
       />
 
       {error && <p className={styles.error}>{error}</p>}
