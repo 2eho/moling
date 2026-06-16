@@ -459,9 +459,8 @@ export const settingsApi = {
     return apiClient.patch<ApiResponse<Record<string, unknown>>>("/settings/health-monitor", data);
   },
 
-  async getPhase4Review() {
-    return apiClient.get<ApiResponse<Record<string, unknown>>>("/settings/phase4-review");
-  },
+  // getPhase4Review 已移除：后端没有对应的 GET 端点
+  // 如需获取Phase4审核设置，请使用 updatePhase4Review 时返回完整设置
 
   async updatePhase4Review(data: { mode: "manual" | "auto" }) {
     return apiClient.patch<ApiResponse<Record<string, unknown>>>("/settings/phase4-review", data);
@@ -726,15 +725,11 @@ export const importApi = {
     );
   },
 
-  // 获取导入历史：使用 GET /import（列表）
+  // 获取导入历史：后端暂未实现列表端点，返回空数组
   async getImportHistory(projectId: string) {
-    const res = await apiClient.get<ApiResponse<Array<{
-      id: string;
-      file_name: string;
-      status: string;
-      created_at: string;
-    }>>>(`/projects/${projectId}/import`);
-    return res.data;
+    // TODO: 后端添加 GET /projects/:pid/import 端点后启用
+    console.warn("getImportHistory: 后端暂未实现，返回空数组");
+    return { items: [], total: 0 };
   },
 };
 
@@ -787,19 +782,14 @@ export const phase4Api = {
     return apiClient.get<ApiResponse<{ reviews: unknown[] }>>("/phase4/pending-reviews");
   },
 
-  async approve(reviewId: string) {
-    return apiClient.post<ApiResponse<{ approved: boolean }>>(
-      `/phase4/reviews/${reviewId}/approve`,
-      {},
-    );
-  },
-
-  async reject(reviewId: string, reason: string) {
-    return apiClient.post<ApiResponse<{ rejected: boolean }>>(
-      `/phase4/reviews/${reviewId}/reject`,
-      { reason },
-    );
-  },
+  // approve 和 reject 已移除：后端没有对应的端点
+  // 审核逻辑请直接使用 apply() 方法
+  // approve(reviewId: string) {
+  //   return apiClient.post("/phase4/apply", {
+  //     suggestion_ids: [reviewId],
+  //     action: "approve"
+  //   });
+  // },
 
   async getSuggestions(chapterId: string) {
     return apiClient.get<ApiResponse<{ suggestions: unknown[] }>>(
