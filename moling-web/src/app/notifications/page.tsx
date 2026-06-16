@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './notifications.module.css';
 import { notificationsApi } from '@/lib/api';
 import type { Notification } from '@/lib/types';
+import { safePaginatedData } from '@/lib/apiSafety';  // ✅ 导入安全工具
 
 const NOTIFICATION_ICONS: Record<string, { svg: React.ReactNode; iconClass: string }> = {
   warning: {
@@ -70,9 +71,10 @@ export default function NotificationsPage() {
     try {
       const params: any = { page, pageSize };
       const result = await notificationsApi.list(params);
-      // API 返回格式: { data: { items: [], total: number } }
-      setNotifications(result.data.items || result.data || []);
-      setTotal(result.data.total || 0);
+      // ✅ 修复：使用 safePaginatedData 确保安全
+      const { items, total } = safePaginatedData<Notification>(result);
+      setNotifications(items);
+      setTotal(total);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {

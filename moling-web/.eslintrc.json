@@ -1,0 +1,52 @@
+{
+  "extends": ["next/core-web-vitals", "eslint:recommended"],
+  "plugins": ["@typescript-eslint"],
+  "parser": "@typescript-eslint/parser",
+  "rules": {
+    // ── TypeScript 严格规则 ──
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/strict-boolean-expressions": "error",
+    
+    // ── 防止不安全的数据访问 ──
+    // 禁止使用 `.filter()` 除非先检查是否是数组
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.property.name='filter']",
+        "message": "避免使用 .filter() 除非已确认值是数组。请使用 safeArray() 包装。"
+      },
+      {
+        "selector": "CallExpression[callee.property.name='map']",
+        "message": "避免使用 .map() 除非已确认值是数组。请使用 safeArray() 包装。"
+      },
+      {
+        "selector": "CallExpression[callee.property.name='forEach']",
+        "message": "避免使用 .forEach() 除非已确认值是数组。请使用 safeArray() 包装。"
+      },
+      {
+        "selector": "MemberExpression[property.name='length']",
+        "message": "避免直接访问 .length，可能 undefined。请使用 safeArray().length。"
+      }
+    ],
+    
+    // ── React 最佳实践 ──
+    "react-hooks/exhaustive-deps": "error",
+    "react-hooks/rules-of-hooks": "error",
+    
+    // ── 代码质量 ──
+    "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
+    "no-unused-expressions": "error",
+    "no-return-await": "error"
+  },
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/consistent-type-imports": "error"
+      }
+    }
+  ],
+  "ignorePatterns": ["node_modules", ".next", "out"]
+}

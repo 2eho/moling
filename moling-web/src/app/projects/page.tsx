@@ -20,7 +20,9 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const filteredProjects = projects.filter(
+  // ✅ 防御性检查：确保 projects 始终是数组
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const filteredProjects = safeProjects.filter(
     (p) =>
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.genre.includes(searchQuery),

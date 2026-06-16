@@ -222,7 +222,8 @@ export default function WorkspacePage() {
     const loadCards = async () => {
       try {
         const cardsRes = await cardApi.getPool('current-project-id');
-        setCards(cardsRes.data as any);
+        // ✅ 修复：确保 cards 始终是数组
+        setCards(Array.isArray(cardsRes.data) ? cardsRes.data as any : []);
       } catch (error) {
         console.error('加载卡牌失败:', error);
         // 使用默认卡牌（已在 state 中定义）
@@ -253,13 +254,17 @@ export default function WorkspacePage() {
     const loadHealthAlerts = async () => {
       try {
         const alertsRes = await healthApi.getAlerts('current-project-id');
-        setHealthAlerts(alertsRes.data.map(a => ({
+        // ✅ 修复：确保 healthAlerts 始终是数组
+        const alertsData = Array.isArray(alertsRes.data) ? alertsRes.data : [];
+        setHealthAlerts(alertsData.map(a => ({
           type: a.rule,
           message: a.detail || a.title,
           severity: a.severity === 'critical' ? 'error' : a.severity,
         })));
       } catch (error) {
         console.error('加载健康告警失败:', error);
+        // ✅ 修复：API 失败时保持 healthAlerts 为 []
+        setHealthAlerts([]);
       }
     };
 

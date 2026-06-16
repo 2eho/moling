@@ -106,33 +106,56 @@ export function WorkspaceProvider({
   }, [currentChapter]);
 
   const loadChapter = useCallback(async (chapterId: string) => {
-    const res = await chapterApi.getById(projectId, chapterId);
-    setCurrentChapterState(res.data);
+    try {
+      const res = await chapterApi.getById(projectId, chapterId);
+      setCurrentChapterState(res.data || null);
+    } catch (error) {
+      console.error("Failed to load chapter:", error);
+      setCurrentChapterState(null);
+    }
   }, [projectId]);
 
   const loadChapters = useCallback(async (_projectId: string) => {
-    const res = await chapterApi.list(_projectId);
-    setChapters(res.data);
+    try {
+      const res = await chapterApi.list(_projectId);
+      // ✅ 修复：确保 chapters 始终是数组
+      setChapters(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Failed to load chapters:", error);
+      setChapters([]);
+    }
   }, []); // ✅ 移除 currentChapter 依赖，避免循环
 
   const loadCards = useCallback(async (_projectId: string) => {
-    const res = await cardApi.getPool(_projectId);
-    setCards(res.data);
+    try {
+      const res = await cardApi.getPool(_projectId);
+      // ✅ 修复：确保 cards 始终是数组
+      setCards(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Failed to load cards:", error);
+      setCards([]);
+    }
   }, []);
 
   const drawCards = useCallback(
     async (cardIds: string[], weights: number[], mode: string) => {
       const chapterId = currentChapterRef.current?.id || "";
-      const res = await cardApi.drawCards(
-        projectId,
-        {
-          chapter_id: chapterId,
-          keep_card_ids: cardIds,
-          weights,
-          mode,
-        },
-      );
-      setDrawResult(res.data);
+      try {
+        const res = await cardApi.drawCards(
+          projectId,
+          {
+            chapter_id: chapterId,
+            keep_card_ids: cardIds,
+            weights,
+            mode,
+          },
+        );
+        // ✅ 修复：确保 drawResult 不是 undefined
+        setDrawResult(res.data || null);
+      } catch (error) {
+        console.error("Failed to draw cards:", error);
+        setDrawResult(null);
+      }
     },
     [projectId], // ✅ 使用 ref 替代 currentChapter state 依赖
   );
@@ -141,13 +164,19 @@ export function WorkspaceProvider({
     async (_projectId: string) => {
       const chapterId = currentChapterRef.current?.id;
       if (!chapterId) return;
-      // 使用固定值代替未定义的 cardIds
-      const res = await cardApi.redraw(
-        _projectId,
-        chapterId,
-        { keep_card_ids: [] }, // ✅ 修复：原代码引用了未定义的 cardIds
-      );
-      setDrawResult(res.data);
+      try {
+        // 使用固定值代替未定义的 cardIds
+        const res = await cardApi.redraw(
+          _projectId,
+          chapterId,
+          { keep_card_ids: [] }, // ✅ 修复：原代码引用了未定义的 cardIds
+        );
+        // ✅ 修复：确保 drawResult 不是 undefined
+        setDrawResult(res.data || null);
+      } catch (error) {
+        console.error("Failed to redraw cards:", error);
+        setDrawResult(null);
+      }
     },
     [], // ✅ 使用 ref 替代 state 依赖
   );
@@ -175,14 +204,20 @@ export function WorkspaceProvider({
         creativity: finalCreativity,
         wordCount: finalWordCount,
       };
-      const res = await generationApi.generate(projectId, chapterId, {
-        card_ids: cardIds,
-        weights: finalWeights,
-        mode: finalMode,
-        creativity: finalCreativity,
-        word_count: finalWordCount,
-      });
-      setGenerationTask(res.data);
+      try {
+        const res = await generationApi.generate(projectId, chapterId, {
+          card_ids: cardIds,
+          weights: finalWeights,
+          mode: finalMode,
+          creativity: finalCreativity,
+          word_count: finalWordCount,
+        });
+        // ✅ 修复：确保 generationTask 不是 undefined
+        setGenerationTask(res.data || null);
+      } catch (error) {
+        console.error("Failed to generate:", error);
+        setGenerationTask(null);
+      }
     },
     [projectId], // ✅ 大幅简化依赖数组
   );
@@ -199,23 +234,36 @@ export function WorkspaceProvider({
   }, [projectId]);
 
   const loadVault = useCallback(async (_projectId: string) => {
-    const [charsRes, tlRes, ppRes, wldRes] = await Promise.all([
-      vaultApi.getCharacters(_projectId),
-      vaultApi.getTimeline(_projectId),
-      vaultApi.getPlotPromises(_projectId),
-      vaultApi.getWorld(_projectId),
-    ]);
-    setVaultData({
-      characters: charsRes.data,
-      timelines: tlRes.data,
-      plotPromises: ppRes.data,
-      worlds: wldRes.data,
-    });
+    try {
+      const [charsRes, tlRes, ppRes, wldRes] = await Promise.all([
+        vaultApi.getCharacters(_projectId),
+        vaultApi.getTimeline(_projectId),
+        vaultApi.getPlotPromises(_projectId),
+        vaultApi.getWorld(_projectId),
+      ]);
+      // ✅ 修复：确保每个字段都是数组（或空数组）
+      setVaultData({
+        characters: Array.isArray(charsRes.data) ? charsRes.data : [],
+        timelines: Array.isArray(tlRes.data) ? tlRes.data : [],
+        plotPromises: Array.isArray(ppRes.data) ? ppRes.data : [],
+        worlds: Array.isArray(wldRes.data) ? wldRes.data : [],
+      });
+    } catch (error) {
+      console.error("Failed to load vault:", error);
+      // ✅ 修复：API 失败时保持 vaultData 为 null 或安全的默认值
+      setVaultData(null);
+    }
   }, []);
 
   const loadHealthAlerts = useCallback(async (_projectId: string) => {
-    const res = await healthApi.getAlerts(_projectId);
-    setHealthAlerts(res.data);
+    try {
+      const res = await healthApi.getAlerts(_projectId);
+      // ✅ 修复：确保 healthAlerts 始终是数组
+      setHealthAlerts(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Failed to load health alerts:", error);
+      setHealthAlerts([]);
+    }
   }, []);
 
   const setCurrentChapter = useCallback((chapter: Chapter) => {

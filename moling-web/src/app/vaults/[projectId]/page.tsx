@@ -7,6 +7,7 @@ import { showToast } from "@/components/ui/Toast";
 import { Spinner } from "@/components/ui/Spinner";
 import { vaultApi } from "@/lib/api";
 import type { VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld } from "@/lib/types";
+import { safeArray, safeObject } from "@/lib/apiSafety";  // ✅ 导入安全工具
 import styles from "./page.module.css";
 
 // ── Type Definitions ──
@@ -274,15 +275,18 @@ export default function VaultsPage() {
           vaultApi.getPlotPromises(projectId),
           vaultApi.getWorld(projectId),
         ]);
+        
+        // ✅ 修复：使用 safeArray 确保永远是数组
         setVaultData({
-          characters: charsRes.data,
-          timelines: tlRes.data,
-          plotPromises: ppRes.data,
-          worlds: wldRes.data,
+          characters: safeArray<VaultCharacter>(charsRes.data, []),
+          timelines: safeArray<VaultTimeline>(tlRes.data, []),
+          plotPromises: safeArray<VaultPlotPromise>(ppRes.data, []),
+          worlds: safeArray<VaultWorld>(wldRes.data, []),
         });
       } catch (error) {
         console.error("Failed to load vault data:", error);
-        // Keep using mock data as fallback
+        // ✅ 修复：API 失败时保持 vaultData 为 null（使用 Mock 数据作为 fallback）
+        setVaultData(null);
       } finally {
         setIsLoading(false);
       }

@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { User } from "@/lib/types";
-import { apiClient } from "@/lib/apiClient";
+import { authApi } from "@/lib/api"; // ✅ 使用 api.ts 包装器，而非直接调用 apiClient
 import {
   setTokens as storeTokens,
   setUser as storeUser,
@@ -76,11 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ---- Actions ----
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await apiClient.post<LoginResponse>("/auth/login", {
-      email,
-      password,
-    });
-    const { access_token, refresh_token, user: userData } = res;
+    const res = await authApi.login(email, password);
+    // ✅ 修复：authApi.login() 返回 ApiResponse<LoginResponse>
+    //    所以 res.data 才是 {access_token, refresh_token, user}
+    const { access_token, refresh_token, user: userData } = res.data;
     storeTokens(access_token, refresh_token);
     storeUser(userData);
     setUserState(userData);
@@ -89,11 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (username: string, email: string, password: string) => {
       // 后端 RegisterReq 接收的是 nickname（不是 username）
-      const res = await apiClient.post<RegisterResponse>(
-        "/auth/register",
-        { nickname: username, email, password },
-      );
-      const { access_token, refresh_token, user: userData } = res;
+      const res = await authApi.register(username, email, password);
+      // ✅ 修复：使用 res.data
+      const { access_token, refresh_token, user: userData } = res.data;
       storeTokens(access_token, refresh_token);
       storeUser(userData);
       setUserState(userData);
@@ -108,14 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    // 后端路径: POST /auth/password-reset-request
-    await apiClient.post("/auth/password-reset-request", { email });
+    await authApi.resetPassword(email);
   }, []);
 
   const setNewPassword = useCallback(
     async (token: string, password: string) => {
-      // 后端路径: POST /auth/password-reset
-      await apiClient.post("/auth/password-reset", { token, new_password: password });
+      await authApi.setNewPassword(token, password);
     },
     [],
   );

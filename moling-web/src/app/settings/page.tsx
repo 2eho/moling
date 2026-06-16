@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Settings.module.css';
 import { settingsApi } from '@/lib/api';
 import type { UserSettings, HealthRules } from '@/lib/types';
+import { safeObject } from '@/lib/apiSafety';  // ✅ 导入安全工具
 
 const ACCENT_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981'];
 
@@ -63,7 +64,8 @@ export default function SettingsPage() {
     const loadSettings = async () => {
       try {
         const res = await settingsApi.get();
-        const data: UserSettings = res.data;
+        // ✅ 修复：使用 safeObject 确保 data 不会是 undefined
+        const data: UserSettings = safeObject<UserSettings>(res.data, {} as UserSettings);
         setSettings(data);
         setTheme(data.theme || 'dark');
         setAutoSave(data.auto_save_interval > 0);

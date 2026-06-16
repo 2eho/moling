@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { showToast } from "@/components/ui/Toast";
 import { projectApi } from "@/lib/api";
 import type { Project } from "@/lib/types";
+import { safeObject } from "@/lib/apiSafety";  // ✅ 导入安全工具
 import styles from "./edit.module.css";
 
 export default function EditProjectPage() {
@@ -22,13 +23,17 @@ export default function EditProjectPage() {
     projectApi
       .getById(projectId)
       .then((res) => {
-        if (!res) {
+        // ✅ 修复：使用 safeObject 确保 project 不会是 undefined
+        const projectData = safeObject<Project>(res.data, null);
+        
+        if (!projectData) {
           showToast("error", "项目不存在");
           router.push("/projects");
           return;
         }
-        setProject(res.data);
-        setTitle(res.data?.title || "");
+        
+        setProject(projectData);
+        setTitle(projectData.title || "");
       })
       .catch(() => showToast("error", "加载项目信息失败"))
       .finally(() => setLoading(false));
