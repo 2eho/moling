@@ -1,0 +1,133 @@
+/* HealthWarning 样式 */
+/* 顶部警告条 */
+
+.warningBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: slideDown 0.3s ease-out;
+}
+
+/* 滑入动画 */
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 警告图标 */
+.icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* 警告文字 */
+.text {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+}
+
+/* 重试按钮 */
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.retryButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.retryButton:active {
+  transform: scale(0.98);
+}
+
+/* 关闭按钮 */
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 旋转动画（重试中） */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .warningBar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .text {
+    width: 100%;
+    order: -1;
+  }
+
+  .retryButton {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .warningBar {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .retryButton {
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+}

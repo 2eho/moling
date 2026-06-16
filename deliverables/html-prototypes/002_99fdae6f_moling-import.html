@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>墨灵 · 导入已有小说</title>
+<!-- 设计系统: 墨灵连载书导入引擎 v1.0 · Dual-Shell Responsive -->
+<style>
+/* ═══════════════════════════════════════════════════════
+   设计令牌 · Design Tokens（与 MoLing 工作台一致）
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --color-bg: #0d0f1a;
+  --color-surface: #151829;
+  --color-elevated: #111327;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #9ca3c4;
+  --color-text-tertiary: #6b7199;
+  --color-text-disabled: #3d4166;
+  --color-brand-indigo: #6366f1;
+  --color-brand-amber: #d4a843;
+  --color-border: #2a2d45;
+  --color-border-subtle: #1e2138;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --font-heading: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-ui: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(99,102,241,0.08);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.25), 0 2px 4px rgba(99,102,241,0.1);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.3), 0 4px 8px rgba(99,102,241,0.12);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  --duration-cinematic: 800ms;
+}
+
+/* ═══════════════════════════════════════════════════════
+   共享重置 · Shared Reset
+   ═══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+button { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
+input, textarea { font-family: inherit; border: none; outline: none; background: none; color: inherit; }
+textarea { resize: none; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
+
+/* ═══════════════════════════════════════════════════════
+   Shell 显示/隐藏 · Shell Toggle
+   ═══════════════════════════════════════════════════════ */
+.desktop-shell { display: none; }
+.mobile-shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+@media (min-width: 769px) {
+  .desktop-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .mobile-shell { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   共享动画 · Shared Animations
+   ═══════════════════════════════════════════════════════ */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes phaseEnter {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes successBounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.3) rotate(-5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+
+/* ╔══════════════════════════════════════════════════════╗
+   ║  DESKTOP STYLES (min-width: 769px)                  ║
+   ╚══════════════════════════════════════════════════════╝ */
+@media (min-width: 769px) {
+
+  /* ── Header ── */
+  .app-header {
+    height: 52px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-4);
+    gap: var(--space-3);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .header-back-btn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-md);
+    color: var(--color-text-tertiary);
+    transition: all var(--duration-normal) var(--ease-default);
+    text-decoration: none;
+  }
+  .header-back-btn:hover { background: var(--color-border-subtle); color: var(--color-text-secondary); }
+  .header-back-btn svg { width: 18px; height: 18px; }
+  .header-title {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+  .header-project {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+    padding: var(--space-1) var(--space-3);
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+  }
+  .header-project .project-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-success);
+  }
+  .header-project .project-name {
+    color: var(--color-text-secondary);
+    font-weight: 600;
+  }
+
+  /* ── Main Scroll Area ── */
+  .main-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-8);
+    max-width: 880px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ── Step Indicator ── */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: var(--space-8);
+    padding: var(--space-4) 0;
+  }
+  .step-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    position: relative;
+    z-index: 2;
+  }
+  .step-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    border: 2px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-disabled);
+    transition: all var(--duration-slow) var(--ease-spring);
+  }
+  .step-node.active .step-circle {
+    border-color: var(--color-brand-indigo);
+    background: rgba(99,102,241,0.15);
+    color: var(--color-brand-indigo);
+    box-shadow: 0 0 12px rgba(99,102,241,0.25);
+  }
+  .step-node.done .step-circle {
+    border-color: var(--color-success);
+    background: rgba(52,211,153,0.15);
+    color: var(--color-success);
+  }
+  .step-label {
+    font-size: 11px;
+    color: var(--color-text-disabled);
+    white-space: nowrap;
+    transition: color var(--duration-normal);
+  }
+  .step-node.active .step-label { color: var(--color-brand-indigo); }
+  .step-node.done .step-label { color: var(--color-success); }
+  .step-connector {
+    width: 60px;
+    height: 2px;
+    background: var(--color-border);
+    position: relative;
+    z-index: 1;
+    transition: background var(--duration-slow);
+  }
+  .step-connector.done { background: var(--color-success); }
+
+  /* ── Card ── */
+  .card {
+    background: rgba(21, 24, 41, 0.85);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    margin-bottom: var(--space-6);
+    transition: all var(--duration-slow) var(--ease-default);
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  .card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .card-title {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .card-title .phase-badge {
+    font-size: 11px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    background: rgba(99,102,241,0.12);
+    color: var(--color-brand-indigo);
+  }
+  .card-subtitle {
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+    margin-bottom: var(--space-5);
+    line-height: 1.7;
+  }
+
+  /* ── Phase 0: Import Options ── */
+  .import-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  .import-option {
+    background: var(--color-elevated);
+    border: 2px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-default);
+    text-align: center;
+  }
+  .import-option:hover { border-color: var(--color-border); }
+  .import-option.selected {
+    border-color: var(--color-brand-indigo);
+    background: rgba(99,102,241,0.06);
+    box-shadow: 0 0 16px rgba(99,102,241,0.12);
+  }
+  .import-option-icon { font-size: 32px; margin-bottom: var(--space-3); }
+  .import-option-title { font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--space-2); }
+  .import-option-desc { font-size: 12px; color: var(--color-text-tertiary); line-height: 1.6; }
+
+  .import-content {
+    display: none;
+    margin-top: var(--space-4);
+    animation: fadeSlideIn var(--duration-slower) var(--ease-out);
+  }
+  .import-content.visible { display: block; }
+
+  /* ── Paste Text Area ── */
+  .paste-area-d {
+    width: 100%;
+    min-height: 240px;
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+    transition: border-color var(--duration-normal);
+  }
+  .paste-area-d:focus { border-color: var(--color-brand-indigo); }
+  .paste-area-d::placeholder { color: var(--color-text-disabled); }
+  .paste-hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-3);
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+  .paste-hint .word-count { color: var(--color-text-disabled); }
+
+  /* ── Upload Area ── */
+  .upload-area {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-10);
+    text-align: center;
+    transition: all var(--duration-normal) var(--ease-default);
+    cursor: pointer;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--color-brand-indigo);
+    background: rgba(99,102,241,0.04);
+  }
+  .upload-icon { font-size: 40px; margin-bottom: var(--space-3); }
+  .upload-title { font-size: 15px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: var(--space-2); }
+  .upload-desc { font-size: 12px; color: var(--color-text-tertiary); margin-bottom: var(--space-4); }
+  .upload-btn {
+    display: inline-block;
+    padding: var(--space-2) var(--space-5);
+    background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: var(--radius-md);
+    transition: all var(--duration-normal);
+  }
+  .upload-btn:hover { box-shadow: 0 4px 12px rgba(99,102,241,0.3); transform: translateY(-1px); }
+  .upload-formats { font-size: 11px; color: var(--color-text-disabled); margin-top: var(--space-4); }
+  .upload-file-info {
+    display: none;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: rgba(52,211,153,0.06);
+    border: 1px solid rgba(52,211,153,0.2);
+    border-radius: var(--radius-lg);
+    margin-top: var(--space-4);
+  }
+  .upload-file-info.visible { display: flex; }
+  .upload-file-icon { font-size: 24px; }
+  .upload-file-name { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
+  .upload-file-size { font-size: 11px; color: var(--color-text-tertiary); }
+
+  /* ── Phase 1: Analysis ── */
+  .progress-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .progress-item {
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    transition: all var(--duration-normal) var(--ease-default);
+  }
+  .progress-item.pending { opacity: 0.5; }
+  .progress-item.active {
+    border-color: var(--color-brand-indigo);
+    background: rgba(99,102,241,0.06);
+  }
+  .progress-item.done {
+    border-color: rgba(52,211,153,0.2);
+    background: rgba(52,211,153,0.04);
+  }
+  .progress-icon {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+  }
+  .progress-item.done .progress-icon {
+    background: rgba(52,211,153,0.12);
+    border-color: rgba(52,211,153,0.25);
+  }
+  .progress-item-info { flex: 1; }
+  .progress-item-label { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 2px; }
+  .progress-item-status { font-size: 11px; color: var(--color-text-tertiary); }
+  .progress-item.done .progress-item-status { color: var(--color-success); }
+  .progress-item.active .progress-item-status { color: var(--color-brand-indigo); }
+  .progress-spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-brand-indigo);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  /* ── Overall Progress Bar ── */
+  .overall-progress {
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+  }
+  .progress-bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--color-border-subtle);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: var(--space-3);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-brand-indigo), #818cf8);
+    border-radius: 3px;
+    width: 0%;
+    transition: width var(--duration-cinematic) var(--ease-default);
+  }
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+  .progress-stats .stat-value { color: var(--color-brand-indigo); font-weight: 600; }
+
+  /* ── Phase 2: Dynamic ── */
+  .dynamic-chapters {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .dynamic-chapter-card {
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    transition: all var(--duration-normal);
+  }
+  .dynamic-chapter-card:hover { border-color: var(--color-border); }
+  .dynamic-chapter-number { font-size: 11px; color: var(--color-text-disabled); margin-bottom: var(--space-1); }
+  .dynamic-chapter-title {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-2);
+  }
+  .dynamic-chapter-events { font-size: 12px; color: var(--color-text-tertiary); line-height: 1.7; }
+  .dynamic-chapter-events li { list-style: none; padding-left: var(--space-3); position: relative; }
+  .dynamic-chapter-events li::before { content: '›'; position: absolute; left: 0; color: var(--color-brand-indigo); }
+
+  .dynamic-insights {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+  .dynamic-insight {
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .dynamic-insight-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(99,102,241,0.08);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .dynamic-insight-content { flex: 1; }
+  .dynamic-insight-label { font-size: 11px; color: var(--color-text-disabled); margin-bottom: 2px; }
+  .dynamic-insight-value { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
+  .dynamic-insight-value .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    margin-right: var(--space-1);
+    margin-bottom: 2px;
+  }
+  .dynamic-insight-value .tag.indigo { background: rgba(99,102,241,0.12); color: var(--color-brand-indigo); }
+  .dynamic-insight-value .tag.amber { background: rgba(212,168,67,0.12); color: var(--color-brand-amber); }
+  .dynamic-insight-value .tag.green { background: rgba(52,211,153,0.12); color: var(--color-success); }
+
+  /* ── Phase 3: Review ── */
+  .review-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .review-item {
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    text-align: center;
+    transition: all var(--duration-normal);
+  }
+  .review-item:hover { border-color: var(--color-border); }
+  .review-item-icon { font-size: 24px; margin-bottom: var(--space-2); }
+  .review-item-count { font-size: 28px; font-weight: 700; color: var(--color-brand-indigo); font-family: var(--font-heading); }
+  .review-item-label { font-size: 12px; color: var(--color-text-tertiary); margin-top: var(--space-1); }
+  .review-item-sublabel { font-size: 10px; color: var(--color-text-disabled); margin-top: 2px; }
+
+  .conflicts-section {
+    background: rgba(239,68,68,0.04);
+    border: 1px solid rgba(239,68,68,0.12);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  .conflicts-title {
+    font-size: 14px; font-weight: 600; color: var(--color-danger);
+    margin-bottom: var(--space-3); display: flex; align-items: center; gap: var(--space-2);
+  }
+  .conflict-item {
+    display: flex; align-items: flex-start; gap: var(--space-3);
+    padding: var(--space-3);
+    background: rgba(239,68,68,0.04);
+    border: 1px solid rgba(239,68,68,0.08);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+  }
+  .conflict-item:last-child { margin-bottom: 0; }
+  .conflict-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .conflict-text { flex: 1; }
+  .conflict-text-main { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 2px; }
+  .conflict-text-detail { font-size: 11px; color: var(--color-text-tertiary); }
+
+  .no-conflicts {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3);
+    background: rgba(52,211,153,0.04);
+    border: 1px solid rgba(52,211,153,0.12);
+    border-radius: var(--radius-md);
+    font-size: 13px; color: var(--color-success);
+    margin-bottom: var(--space-5);
+  }
+
+  .review-actions { display: flex; gap: var(--space-3); justify-content: flex-end; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
+    color: #fff; font-weight: 700; font-size: 14px;
+    border-radius: var(--radius-md);
+    transition: all var(--duration-normal) var(--ease-spring);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99,102,241,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: transparent; color: var(--color-text-secondary);
+    font-weight: 600; font-size: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all var(--duration-normal);
+  }
+  .btn-secondary:hover { border-color: var(--color-text-tertiary); color: var(--color-text-primary); }
+  .btn-amber {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: linear-gradient(135deg, var(--color-brand-amber), #c49030);
+    color: #1a1400; font-weight: 700; font-size: 14px;
+    border-radius: var(--radius-md);
+    transition: all var(--duration-normal) var(--ease-spring);
+  }
+  .btn-amber:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(212,168,67,0.3); }
+
+  .continue-row { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
+  .btn-continue {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    background: rgba(99,102,241,0.1);
+    color: var(--color-brand-indigo);
+    font-weight: 600; font-size: 13px;
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: var(--radius-md);
+    transition: all var(--duration-normal);
+  }
+  .btn-continue:hover { background: rgba(99,102,241,0.18); }
+  .btn-continue:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Completion ── */
+  .completion-card { text-align: center; padding: var(--space-10) var(--space-6); }
+  .completion-icon { font-size: 56px; margin-bottom: var(--space-4); animation: successBounce 0.6s var(--ease-spring); }
+  .completion-title { font-family: var(--font-heading); font-size: 24px; font-weight: 700; color: var(--color-success); margin-bottom: var(--space-3); }
+  .completion-subtitle { font-size: 14px; color: var(--color-text-tertiary); margin-bottom: var(--space-6); line-height: 1.8; }
+  .completion-stats { display: flex; justify-content: center; gap: var(--space-6); margin-bottom: var(--space-8); flex-wrap: wrap; }
+  .completion-stat { text-align: center; }
+  .completion-stat-value { font-size: 24px; font-weight: 700; color: var(--color-brand-indigo); font-family: var(--font-heading); }
+  .completion-stat-label { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+  .completion-actions { display: flex; justify-content: center; gap: var(--space-3); }
+
+  /* ── Phase container ── */
+  .phase-container { display: none; animation: phaseEnter var(--duration-slower) var(--ease-out); }
+  .phase-container.visible { display: block; }
+
+  /* ── Desktop Responsive (within desktop range) ── */
+  @media (max-width: 900px) {
+    .main-scroll { padding: var(--space-4); }
+    .import-options { grid-template-columns: 1fr; }
+    .progress-grid { grid-template-columns: 1fr; }
+    .dynamic-chapters { grid-template-columns: 1fr; }
+    .dynamic-insights { grid-template-columns: 1fr; }
+    .review-summary { grid-template-columns: repeat(2, 1fr); }
+    .completion-stats { gap: var(--space-4); }
+    .step-connector { width: 30px; }
+  }
+} /* end @media (min-width: 769px) */
+
+
+/* ╔══════════════════════════════════════════════════════╗
+   ║  MOBILE STYLES (default, < 769px)                   ║
+   ╚══════════════════════════════════════════════════════╝ */
+
+/* ── Mobile Shell Root ── */
+.mobile-shell {
+  max-width: 428px;
+  margin: 0 auto;
+  overflow-x: hidden;
+}
+.mobile-shell h1, .mobile-shell h2, .mobile-shell h3 {
+  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+}
+
+/* ── Status Bar ── */
+.m-status-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 24px 8px; font-size: 14px; font-weight: 600;
+  background: var(--color-bg); position: sticky; top: 0; z-index: 100;
+}
+.m-status-bar .time { letter-spacing: 0.5px; }
+.m-status-icons { display: flex; gap: 6px; align-items: center; }
+.m-status-icons svg { width: 18px; height: 18px; fill: var(--color-text-primary); }
+
+/* ── Top Nav ── */
+.m-top-nav {
+  display: flex; align-items: center; padding: 8px 16px 12px; gap: 12px;
+  background: var(--color-bg); position: sticky; top: 44px; z-index: 99;
+}
+.m-back-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--color-surface); border: none; color: var(--color-text-primary);
+  font-size: 20px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: background 0.2s;
+}
+.m-back-btn:active { background: var(--color-elevated); }
+.m-nav-title { font-size: 18px; font-weight: 600; font-family: 'Noto Serif SC', serif; }
+
+/* ── Step Bar ── */
+.m-step-bar {
+  display: flex; align-items: center; padding: 0 24px 20px;
+  background: var(--color-bg); gap: 0;
+}
+.m-step-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; position: relative;
+}
+.m-step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--color-surface); border: 2px solid var(--color-text-tertiary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--color-text-tertiary);
+  transition: all 0.4s ease; position: relative; z-index: 2;
+}
+.m-step-item.active .m-step-dot {
+  background: var(--color-brand-indigo); border-color: var(--color-brand-indigo); color: #fff;
+  box-shadow: 0 0 12px rgba(99,102,241,0.5);
+}
+.m-step-item.done .m-step-dot {
+  background: var(--color-brand-indigo); border-color: var(--color-brand-indigo); color: #fff;
+}
+.m-step-label {
+  font-size: 10px; color: var(--color-text-tertiary); margin-top: 6px;
+  white-space: nowrap; transition: color 0.3s;
+}
+.m-step-item.active .m-step-label { color: var(--color-text-primary); }
+.m-step-item.done .m-step-label { color: var(--color-text-secondary); }
+.m-step-line {
+  position: absolute; top: 14px; left: 50%; width: 100%; height: 2px;
+  background: var(--color-text-tertiary); z-index: 1;
+}
+.m-step-item:last-child .m-step-line { display: none; }
+.m-step-item.done .m-step-line { background: var(--color-brand-indigo); }
+
+/* ── Main Content ── */
+.m-main-content {
+  flex: 1; padding: 0 20px 100px; overflow-y: auto;
+}
+.m-phase { display: none; animation: mFadeIn 0.4s ease; }
+.m-phase.visible { display: block; }
+@keyframes mFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Phase 0: Import Options ── */
+.m-import-options { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+.m-import-opt {
+  background: var(--color-surface); border: 2px solid transparent;
+  border-radius: 16px; padding: 20px; cursor: pointer;
+  transition: all 0.3s ease; position: relative;
+}
+.m-import-opt:active { transform: scale(0.98); }
+.m-import-opt.selected { border-color: var(--color-brand-indigo); background: rgba(99,102,241,0.08); }
+.m-opt-icon { font-size: 28px; margin-bottom: 8px; }
+.m-opt-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.m-opt-desc { font-size: 13px; color: var(--color-text-secondary); }
+
+.m-paste-area { margin-top: 16px; display: none; }
+.m-paste-area.show { display: block; animation: mFadeIn 0.3s ease; }
+.m-paste-area textarea {
+  width: 100%; height: 200px; background: var(--color-elevated);
+  border: 1px solid rgba(99,102,241,0.2); border-radius: 12px;
+  padding: 14px; color: var(--color-text-primary); font-size: 14px;
+  line-height: 1.7; resize: none; font-family: inherit;
+}
+.m-paste-area textarea:focus { outline: none; border-color: var(--color-brand-indigo); }
+
+.m-upload-zone { margin-top: 16px; display: none; }
+.m-upload-zone.show { display: block; animation: mFadeIn 0.3s ease; }
+.m-upload-drop {
+  border: 2px dashed var(--color-text-tertiary); border-radius: 12px;
+  padding: 32px 20px; text-align: center; color: var(--color-text-secondary);
+  font-size: 14px; cursor: pointer; transition: border-color 0.3s;
+}
+.m-upload-drop:active { border-color: var(--color-brand-indigo); }
+
+/* ── Big Button ── */
+.m-big-btn {
+  width: 100%; padding: 16px; border: none; border-radius: 14px;
+  font-size: 17px; font-weight: 600; cursor: pointer;
+  transition: all 0.25s ease; margin-top: 28px;
+}
+.m-big-btn:active { transform: scale(0.97); }
+.m-big-btn.brand { background: var(--color-brand-indigo); color: #fff; }
+.m-big-btn.brand:disabled { opacity: 0.4; pointer-events: none; }
+.m-ghost-link {
+  display: block; text-align: center; margin-top: 14px;
+  color: var(--color-text-tertiary); font-size: 14px; cursor: pointer;
+  text-decoration: none; padding: 8px;
+}
+.m-ghost-link:active { color: var(--color-text-secondary); }
+
+/* ── Phase 1: Analysis ── */
+.m-analysis-list { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+.m-analysis-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px; background: var(--color-surface);
+  border-radius: 14px; transition: all 0.3s;
+}
+.m-analysis-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+  background: var(--color-elevated); transition: all 0.4s;
+}
+.m-analysis-item.done .m-analysis-icon { background: rgba(34,197,94,0.15); }
+.m-analysis-item.running .m-analysis-icon { background: rgba(99,102,241,0.15); }
+.m-analysis-text { font-size: 15px; color: var(--color-text-secondary); transition: color 0.3s; }
+.m-analysis-item.done .m-analysis-text { color: var(--color-text-primary); }
+.m-analysis-status {
+  margin-left: auto; font-size: 13px; flex-shrink: 0; transition: all 0.3s;
+}
+.m-analysis-item.done .m-analysis-status { color: var(--color-success); }
+.m-analysis-item.running .m-analysis-status { color: var(--color-brand-indigo); }
+.m-analysis-item.pending .m-analysis-status { color: var(--color-text-tertiary); }
+
+.m-spinner {
+  width: 18px; height: 18px; border: 2px solid rgba(99,102,241,0.3);
+  border-top-color: var(--color-brand-indigo); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.m-progress-track {
+  width: 100%; height: 6px; background: var(--color-surface);
+  border-radius: 3px; margin-top: 24px; overflow: hidden;
+}
+.m-progress-fill {
+  height: 100%; width: 0%; background: linear-gradient(90deg, var(--color-brand-indigo), #818cf8);
+  border-radius: 3px; transition: width 0.6s ease;
+}
+.m-progress-label {
+  text-align: center; margin-top: 10px; font-size: 13px; color: var(--color-text-secondary);
+}
+
+/* ── Phase 2: Dynamic ── */
+.m-phase2-title {
+  font-size: 16px; font-weight: 600; color: var(--color-text-secondary);
+  margin-bottom: 14px; margin-top: 4px;
+}
+.m-chapter-cards {
+  display: flex; gap: 12px; overflow-x: auto;
+  padding-bottom: 8px; margin-bottom: 20px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.m-chapter-cards::-webkit-scrollbar { display: none; }
+.m-chapter-card {
+  min-width: 160px; background: var(--color-surface);
+  border-radius: 14px; padding: 16px; flex-shrink: 0;
+  border: 1px solid rgba(99,102,241,0.08);
+}
+.m-ch-num { font-size: 12px; color: var(--color-brand-indigo); font-weight: 600; margin-bottom: 6px; }
+.m-ch-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.m-ch-summary { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+
+.m-insights {
+  background: var(--color-surface); border-radius: 14px; padding: 18px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.m-insight-row {
+  display: flex; align-items: center; gap: 10px; font-size: 14px;
+}
+.m-insight-icon { font-size: 18px; width: 24px; text-align: center; }
+.m-insight-label { color: var(--color-text-tertiary); min-width: 60px; }
+.m-insight-value { color: var(--color-text-primary); font-weight: 500; }
+.m-insight-value.good { color: var(--color-success); }
+.m-insight-value.warn { color: var(--color-brand-amber); }
+
+/* ── Phase 3: Review ── */
+.m-summary-card {
+  background: var(--color-surface); border-radius: 14px;
+  padding: 20px; margin-bottom: 16px;
+}
+.m-summary-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; font-size: 16px; font-weight: 600;
+}
+.m-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m-summary-item {
+  background: var(--color-elevated); border-radius: 10px;
+  padding: 14px; text-align: center;
+}
+.m-si-value { font-size: 22px; font-weight: 700; color: var(--color-brand-indigo); }
+.m-si-label { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+.m-conflict-card {
+  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15);
+  border-radius: 14px; padding: 18px; margin-bottom: 20px;
+}
+.m-conflict-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; font-size: 15px; font-weight: 600; color: var(--color-danger);
+}
+.m-conflict-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid rgba(239,68,68,0.08);
+  font-size: 13px;
+}
+.m-conflict-item:last-child { border-bottom: none; }
+.m-conflict-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-danger); flex-shrink: 0; margin-top: 5px;
+}
+.m-conflict-text { color: var(--color-text-secondary); line-height: 1.5; }
+.m-conflict-tag {
+  display: inline-block; background: rgba(239,68,68,0.12);
+  color: var(--color-danger); font-size: 11px; padding: 2px 8px;
+  border-radius: 6px; margin-left: 4px;
+}
+
+/* ── Done Page ── */
+.m-done-page {
+  display: none; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; padding-top: 60px;
+  animation: mFadeIn 0.6s ease;
+}
+.m-done-page.visible { display: flex; }
+.m-done-check {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-brand-indigo), #818cf8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; margin-bottom: 24px;
+  animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+.m-done-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; font-family: serif; }
+.m-done-sub { font-size: 15px; color: var(--color-text-secondary); margin-bottom: 28px; }
+.m-done-stats { display: flex; gap: 24px; margin-bottom: 36px; }
+.m-done-stat { text-align: center; }
+.m-ds-value { font-size: 24px; font-weight: 700; color: var(--color-brand-amber); }
+.m-ds-label { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+/* ── Bottom Nav ── */
+.m-bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 428px;
+  background: var(--color-surface); border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex; padding: 8px 0 env(safe-area-inset-bottom, 20px); z-index: 100;
+}
+.m-nav-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 6px 0; cursor: pointer;
+  color: var(--color-text-tertiary); transition: color 0.2s;
+  background: none; border: none; font-size: 10px;
+}
+.m-nav-tab.active { color: var(--color-brand-indigo); }
+.m-nav-tab svg { width: 22px; height: 22px; fill: currentColor; }
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  DESKTOP SHELL (visible ≥ 769px)                    ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div class="desktop-shell">
+
+  <!-- ═══════════════════════════════════════════════════════
+       Header
+       ═══════════════════════════════════════════════════════ -->
+  <header class="app-header">
+    <a href="#" class="header-back-btn" id="dBackBtn" title="返回我的作品">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <span class="header-title">导入已有小说</span>
+    <div class="header-spacer"></div>
+    <div class="header-project">
+      <span class="project-dot"></span>
+      <span class="project-name">星穹之下</span>
+      <span style="font-size:11px;color:var(--color-text-disabled)">23章</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════
+       Main Scroll Area
+       ═══════════════════════════════════════════════════════ -->
+  <div class="main-scroll" id="dMainScroll">
+
+    <!-- ── Step Indicator ── -->
+    <div class="step-indicator" id="dStepIndicator">
+      <div class="step-node active" data-step="0">
+        <div class="step-circle">1</div>
+        <span class="step-label">导入方式</span>
+      </div>
+      <div class="step-connector" data-connector="0"></div>
+      <div class="step-node" data-step="1">
+        <div class="step-circle">2</div>
+        <span class="step-label">全库分析</span>
+      </div>
+      <div class="step-connector" data-connector="1"></div>
+      <div class="step-node" data-step="2">
+        <div class="step-circle">3</div>
+        <span class="step-label">动态层</span>
+      </div>
+      <div class="step-connector" data-connector="2"></div>
+      <div class="step-node" data-step="3">
+        <div class="step-circle">4</div>
+        <span class="step-label">审查确认</span>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         Phase 0: 选择导入方式
+         ═══════════════════════════════════════════════════════ -->
+    <div class="phase-container visible" id="dPhase0">
+      <div class="card visible">
+        <div class="card-title">
+          <span class="phase-badge">01</span>
+          选择导入方式
+        </div>
+        <div class="card-subtitle">
+          已有 23 章内容待导入到系统，请选择你的导入方式。
+        </div>
+
+        <div class="import-options" id="dImportOptions">
+          <div class="import-option selected" data-option="paste" id="dOptionPaste">
+            <div class="import-option-icon">📋</div>
+            <div class="import-option-title">粘贴文本</div>
+            <div class="import-option-desc">直接复制已写好的章节内容，粘贴到输入框中</div>
+          </div>
+          <div class="import-option" data-option="file" id="dOptionFile">
+            <div class="import-option-icon">📁</div>
+            <div class="import-option-title">上传文件</div>
+            <div class="import-option-desc">上传 .txt 或 .docx 格式的文件，自动读取内容</div>
+          </div>
+        </div>
+
+        <!-- Paste Content -->
+        <div class="import-content visible" id="dPasteContent">
+          <textarea class="paste-area-d" id="dPasteArea" placeholder="将你已有的章节内容粘贴到这里…&#10;&#10;例如：&#10;第1章 星辰陨落&#10;苏铭站在玄天宗的山门前，抬头望着那块刻着古老符文的白玉石碑。今天是他入宗的第七天，也是最关键的一天——灵力考核。&#10;&#10;第2章 初露锋芒&#10;演武场上，数百名新弟子整齐列队。苏铭站在人群中，手心微微冒汗。他的目光扫过场边的几位长老，最终停留在那位身穿青色长袍的中年女子身上——叶青寒。" >这里粘贴小说章节内容</textarea>
+          <div class="paste-hint">
+            <span>建议每章用"第X章"标记分隔</span>
+            <span class="word-count">已输入 <span id="dPasteCount">0</span> 字</span>
+          </div>
+        </div>
+
+        <!-- File Upload Content -->
+        <div class="import-content" id="dFileContent">
+          <div class="upload-area" id="dUploadArea">
+            <div class="upload-icon">📂</div>
+            <div class="upload-title">拖拽文件到此处，或点击上传</div>
+            <div class="upload-desc">支持 .txt 和 .docx 格式的文件</div>
+            <button class="upload-btn" id="dUploadBtn">选择文件</button>
+            <div class="upload-formats">支持的格式：.txt · .docx（最大 50MB）</div>
+          </div>
+          <input type="file" id="dFileInput" accept=".txt,.docx" style="display:none">
+          <div class="upload-file-info" id="dUploadFileInfo">
+            <span class="upload-file-icon">📄</span>
+            <div>
+              <div class="upload-file-name" id="dFileName">星穹之下.txt</div>
+              <div class="upload-file-size" id="dFileSize">168 KB · 23 章</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="continue-row">
+          <button class="btn-continue" id="dStartAnalysisBtn">
+            开始分析
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         Phase 1: 全库分析
+         ═══════════════════════════════════════════════════════ -->
+    <div class="phase-container" id="dPhase1">
+      <div class="card visible">
+        <div class="card-title">
+          <span class="phase-badge">02</span>
+          全库分析 · 四库提取
+        </div>
+        <div class="card-subtitle">
+          LLM 正在分析全部 23 章内容，提取人物库、时间线库、剧情承诺库和世界观库。
+        </div>
+
+        <div class="progress-grid" id="dProgressGrid">
+          <div class="progress-item pending" data-lib="characters">
+            <div class="progress-icon">👥</div>
+            <div class="progress-item-info">
+              <div class="progress-item-label">人物库提取</div>
+              <div class="progress-item-status">等待中...</div>
+            </div>
+          </div>
+          <div class="progress-item pending" data-lib="timeline">
+            <div class="progress-icon">⏱️</div>
+            <div class="progress-item-info">
+              <div class="progress-item-label">时间线库提取</div>
+              <div class="progress-item-status">等待中...</div>
+            </div>
+          </div>
+          <div class="progress-item pending" data-lib="commitments">
+            <div class="progress-icon">📖</div>
+            <div class="progress-item-info">
+              <div class="progress-item-label">剧情承诺库提取</div>
+              <div class="progress-item-status">等待中...</div>
+            </div>
+          </div>
+          <div class="progress-item pending" data-lib="worldview">
+            <div class="progress-icon">🌍</div>
+            <div class="progress-item-info">
+              <div class="progress-item-label">世界观库提取</div>
+              <div class="progress-item-status">等待中...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="overall-progress">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="dProgressFill"></div>
+          </div>
+          <div class="progress-stats">
+            <span>分析进度：<span class="stat-value" id="dProgressText">0/4</span></span>
+            <span><span class="stat-value" id="dPercentText">0%</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         Phase 2: 动态层分析
+         ═══════════════════════════════════════════════════════ -->
+    <div class="phase-container" id="dPhase2">
+      <div class="card visible">
+        <div class="card-title">
+          <span class="phase-badge">03</span>
+          近三章动态分析
+        </div>
+        <div class="card-subtitle">
+          聚焦最后 3 章（第 21-23 章），提取故事当前状态——即动态层数据。
+        </div>
+
+        <div class="dynamic-chapters" id="dDynamicChapters">
+          <div class="dynamic-chapter-card">
+            <div class="dynamic-chapter-number">第 21 章</div>
+            <div class="dynamic-chapter-title">秘境入口</div>
+            <ul class="dynamic-chapter-events">
+              <li>苏铭发现玄天宗秘境入口</li>
+              <li>与叶青寒对峙，得到禁术残卷线索</li>
+              <li>夜无痕暗中跟随</li>
+            </ul>
+          </div>
+          <div class="dynamic-chapter-card">
+            <div class="dynamic-chapter-number">第 22 章</div>
+            <div class="dynamic-chapter-title">禁地交锋</div>
+            <ul class="dynamic-chapter-events">
+              <li>苏铭在秘境中遭遇守护兽</li>
+              <li>叶青寒出手相助，伤势恶化</li>
+              <li>发现王城地下有异响</li>
+            </ul>
+          </div>
+          <div class="dynamic-chapter-card">
+            <div class="dynamic-chapter-number">第 23 章</div>
+            <div class="dynamic-chapter-title">七国密约浮现</div>
+            <ul class="dynamic-chapter-events">
+              <li>苏铭解封部分禁术残卷</li>
+              <li>神秘人现身，警告七国势力已渗入</li>
+              <li>玄天宗掌门召集紧急会议</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Dynamic Insights -->
+        <div class="dynamic-insights" id="dDynamicInsights">
+          <div class="dynamic-insight">
+            <div class="dynamic-insight-icon">🎯</div>
+            <div class="dynamic-insight-content">
+              <div class="dynamic-insight-label">当前 POV</div>
+              <div class="dynamic-insight-value" id="dInsightPov">—</div>
+            </div>
+          </div>
+          <div class="dynamic-insight">
+            <div class="dynamic-insight-icon">📍</div>
+            <div class="dynamic-insight-content">
+              <div class="dynamic-insight-label">主要地点</div>
+              <div class="dynamic-insight-value" id="dInsightLocation">—</div>
+            </div>
+          </div>
+          <div class="dynamic-insight">
+            <div class="dynamic-insight-icon">🪝</div>
+            <div class="dynamic-insight-content">
+              <div class="dynamic-insight-label">活跃钩子</div>
+              <div class="dynamic-insight-value" id="dInsightHooks">—</div>
+            </div>
+          </div>
+          <div class="dynamic-insight">
+            <div class="dynamic-insight-icon">📊</div>
+            <div class="dynamic-insight-content">
+              <div class="dynamic-insight-label">连贯性基线</div>
+              <div class="dynamic-insight-value" id="dInsightBaseline">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         Phase 3: 用户审查
+         ═══════════════════════════════════════════════════════ -->
+    <div class="phase-container" id="dPhase3">
+      <div class="card visible">
+        <div class="card-title">
+          <span class="phase-badge">04</span>
+          审查确认
+        </div>
+        <div class="card-subtitle">
+          以下是系统从 23 章中分析提取的四库数据摘要，请确认无误后导入。
+        </div>
+
+        <div class="review-summary" id="dReviewSummary">
+          <div class="review-item">
+            <div class="review-item-icon">👥</div>
+            <div class="review-item-count">12</div>
+            <div class="review-item-label">人物</div>
+            <div class="review-item-sublabel">苏铭、叶青寒、夜无痕…</div>
+          </div>
+          <div class="review-item">
+            <div class="review-item-icon">⏱️</div>
+            <div class="review-item-count">5</div>
+            <div class="review-item-label">时间节点</div>
+            <div class="review-item-sublabel">第1天 → 第23天</div>
+          </div>
+          <div class="review-item">
+            <div class="review-item-icon">📖</div>
+            <div class="review-item-count">8</div>
+            <div class="review-item-label">剧情承诺</div>
+            <div class="review-item-sublabel">玉佩秘密、禁术残卷…</div>
+          </div>
+          <div class="review-item">
+            <div class="review-item-icon">🌍</div>
+            <div class="review-item-count">6</div>
+            <div class="review-item-label">世界观条目</div>
+            <div class="review-item-sublabel">灵力体系、玄天宗…</div>
+          </div>
+        </div>
+
+        <!-- Conflicts -->
+        <div class="conflicts-section" id="dConflictsSection">
+          <div class="conflicts-title">⚠️ 发现 2 项冲突</div>
+          <div class="conflict-item">
+            <span class="conflict-icon">⚠️</span>
+            <div class="conflict-text">
+              <div class="conflict-text-main">人物「叶青寒」在第 15 章受伤，但第 18 章参与战斗</div>
+              <div class="conflict-text-detail">时间线矛盾：叶青寒伤势较重，按设定第 16-17 章应在养伤，第 18 章突然出现在战场未被解释。</div>
+            </div>
+          </div>
+          <div class="conflict-item">
+            <span class="conflict-icon">⚠️</span>
+            <div class="conflict-text">
+              <div class="conflict-text-main">王城地下异响在第 10 章埋设后未在第 20-23 章回收</div>
+              <div class="conflict-text-detail">剧情承诺未收束：该悬念间隔 10 章未提及，建议在后续章节中适时回收。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="no-conflicts" id="dNoConflicts" style="display:none;">
+          <span>✅</span>
+          <span>未检测到矛盾冲突，四库数据一致性良好。</span>
+        </div>
+
+        <div class="review-actions">
+          <button class="btn-secondary" id="dAbortBtn">放弃导入</button>
+          <button class="btn-primary" id="dConfirmImportBtn">
+            ✓ 确认导入
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         Phase 4: 导入完成
+         ═══════════════════════════════════════════════════════ -->
+    <div class="phase-container" id="dPhaseComplete">
+      <div class="card visible">
+        <div class="completion-card">
+          <div class="completion-icon">✅</div>
+          <div class="completion-title">导入成功</div>
+          <div class="completion-subtitle">
+            已导入 23 章小说内容，系统已完成四库分析和动态层提取。<br>
+            你可以直接进入创作工作台，开始第 24 章的写作。
+          </div>
+          <div class="completion-stats">
+            <div class="completion-stat">
+              <div class="completion-stat-value">23</div>
+              <div class="completion-stat-label">已导入章节</div>
+            </div>
+            <div class="completion-stat">
+              <div class="completion-stat-value">12</div>
+              <div class="completion-stat-label">提取人物</div>
+            </div>
+            <div class="completion-stat">
+              <div class="completion-stat-value">5</div>
+              <div class="completion-stat-label">时间线节点</div>
+            </div>
+            <div class="completion-stat">
+              <div class="completion-stat-value">8</div>
+              <div class="completion-stat-label">剧情承诺</div>
+            </div>
+            <div class="completion-stat">
+              <div class="completion-stat-value">6</div>
+              <div class="completion-stat-label">世界观条目</div>
+            </div>
+          </div>
+          <div class="completion-actions">
+            <button class="btn-secondary" id="dBackToProjectsBtn">← 返回作品列表</button>
+            <a href="moling-workspace-web.html" class="btn-amber" id="dEnterWorkspaceBtn">
+              进入创作工作台 →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-scroll -->
+
+</div><!-- /desktop-shell -->
+
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  MOBILE SHELL (visible < 769px)                     ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div class="mobile-shell">
+
+  <!-- Status Bar -->
+  <div class="m-status-bar">
+    <span class="time">9:41</span>
+    <div class="m-status-icons">
+      <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <!-- Top Nav -->
+  <div class="m-top-nav">
+    <button class="m-back-btn" id="mBackBtn">←</button>
+    <span class="m-nav-title">导入已有小说</span>
+  </div>
+
+  <!-- Step Bar -->
+  <div class="m-step-bar" id="mStepBar">
+    <div class="m-step-item active" data-step="0">
+      <div class="m-step-dot">1</div>
+      <span class="m-step-label">导入方式</span>
+      <div class="m-step-line"></div>
+    </div>
+    <div class="m-step-item" data-step="1">
+      <div class="m-step-dot">2</div>
+      <span class="m-step-label">全库分析</span>
+      <div class="m-step-line"></div>
+    </div>
+    <div class="m-step-item" data-step="2">
+      <div class="m-step-dot">3</div>
+      <span class="m-step-label">动态层</span>
+      <div class="m-step-line"></div>
+    </div>
+    <div class="m-step-item" data-step="3">
+      <div class="m-step-dot">4</div>
+      <span class="m-step-label">审查确认</span>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="m-main-content" id="mMainContent">
+
+    <!-- Phase 0 -->
+    <div class="m-phase visible" id="mPhase0">
+      <div class="m-import-options">
+        <div class="m-import-opt" id="mOptPaste" onclick="mobileSelectImport('paste')">
+          <div class="m-opt-icon">📝</div>
+          <div class="m-opt-title">粘贴文本</div>
+          <div class="m-opt-desc">粘贴章节正文，系统自动识别章节结构</div>
+        </div>
+        <div class="m-paste-area" id="mPasteArea">
+          <textarea id="mPasteInput" placeholder="在此粘贴小说文本…">第21章 禁术残卷
+
+苏铭在玄天宗秘境深处缓步前行，四周弥漫着古老的灵气波动。他指尖轻触石壁上的符文，一段被封印千年的禁术残卷缓缓浮现于识海之中。
+
+"这是……太古禁术？"他低声自语，瞳孔骤然收缩。残卷中记载的力量远超他的想象，而修炼条件之苛刻，几乎等同于以命相搏。
+
+远在王城，叶青寒捂着尚未痊愈的伤臂，凝视着城墙上不断闪烁的异常灵光。王城异响已持续三日，长老会却对此讳莫如深。
+
+"她受了那么重的伤，居然还坚持守夜？"一旁的弟子低声议论。叶青寒充耳不闻，只是握剑的手微微颤抖——不是因为伤痛，而是因为直觉告诉她，有什么东西，正在王城之下苏醒。
+
+第22章 王城异响
+
+王城地底的震动愈发频繁。叶青寒不顾伤势，独自从密道潜入地下灵脉。黑暗中，她听见了那声响——不是地鸣，而是某种古老生物的心跳。
+
+与此同时，苏铭在秘境中解开了残卷的第二层封印。禁术的真面目令他脊背发凉：这并非修炼功法，而是一道封印术——用来镇压某种不可名状的存在。</textarea>
+        </div>
+
+        <div class="m-import-opt" id="mOptFile" onclick="mobileSelectImport('file')">
+          <div class="m-opt-icon">📁</div>
+          <div class="m-opt-title">上传文件</div>
+          <div class="m-opt-desc">支持 .txt / .docx 格式</div>
+        </div>
+        <div class="m-upload-zone" id="mUploadZone">
+          <div class="m-upload-drop">
+            点击选择文件或拖拽至此<br>
+            <span style="font-size:12px;color:var(--color-text-tertiary)">支持 .txt, .docx</span>
+          </div>
+        </div>
+      </div>
+      <button class="m-big-btn brand" id="mStartBtn" disabled onclick="mobileStartAnalysis()">开始分析</button>
+    </div>
+
+    <!-- Phase 1 -->
+    <div class="m-phase" id="mPhase1">
+      <div class="m-analysis-list">
+        <div class="m-analysis-item pending" id="ma0">
+          <div class="m-analysis-icon">👤</div>
+          <span class="m-analysis-text">人物库提取中...</span>
+          <span class="m-analysis-status" id="ma0s">等待</span>
+        </div>
+        <div class="m-analysis-item pending" id="ma1">
+          <div class="m-analysis-icon">📅</div>
+          <span class="m-analysis-text">时间线库提取中...</span>
+          <span class="m-analysis-status" id="ma1s">等待</span>
+        </div>
+        <div class="m-analysis-item pending" id="ma2">
+          <div class="m-analysis-icon">🔗</div>
+          <span class="m-analysis-text">剧情承诺库提取中...</span>
+          <span class="m-analysis-status" id="ma2s">等待</span>
+        </div>
+        <div class="m-analysis-item pending" id="ma3">
+          <div class="m-analysis-icon">🌍</div>
+          <span class="m-analysis-text">世界观库提取中...</span>
+          <span class="m-analysis-status" id="ma3s">等待</span>
+        </div>
+      </div>
+      <div class="m-progress-track">
+        <div class="m-progress-fill" id="mProgressFill"></div>
+      </div>
+      <div class="m-progress-label" id="mProgressLabel">分析进度：0/4</div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="m-phase" id="mPhase2">
+      <div class="m-phase2-title">近三章动态分析（第21-23章）</div>
+      <div class="m-chapter-cards">
+        <div class="m-chapter-card">
+          <div class="m-ch-num">第21章</div>
+          <div class="m-ch-title">禁术残卷</div>
+          <div class="m-ch-summary">苏铭在秘境发现太古禁术残卷；叶青寒带伤守夜王城</div>
+        </div>
+        <div class="m-chapter-card">
+          <div class="m-ch-num">第22章</div>
+          <div class="m-ch-title">王城异响</div>
+          <div class="m-ch-summary">叶青寒潜入地下灵脉；苏铭解开残卷第二层封印</div>
+        </div>
+        <div class="m-chapter-card">
+          <div class="m-ch-num">第23章</div>
+          <div class="m-ch-title">暗流涌动</div>
+          <div class="m-ch-summary">长老会密议；苏铭决定冒险修炼封印术</div>
+        </div>
+      </div>
+      <div class="m-insights">
+        <div class="m-insight-row">
+          <span class="m-insight-icon">👤</span>
+          <span class="m-insight-label">POV</span>
+          <span class="m-insight-value">苏铭</span>
+        </div>
+        <div class="m-insight-row">
+          <span class="m-insight-icon">📍</span>
+          <span class="m-insight-label">地点</span>
+          <span class="m-insight-value">玄天宗秘境</span>
+        </div>
+        <div class="m-insight-row">
+          <span class="m-insight-icon">⚡</span>
+          <span class="m-insight-label">活跃钩子</span>
+          <span class="m-insight-value warn">禁术残卷 · 王城异响</span>
+        </div>
+        <div class="m-insight-row">
+          <span class="m-insight-icon">✅</span>
+          <span class="m-insight-label">连贯性</span>
+          <span class="m-insight-value good">良好</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="m-phase" id="mPhase3">
+      <div class="m-summary-card">
+        <div class="m-summary-header">📊 四库摘要</div>
+        <div class="m-summary-grid">
+          <div class="m-summary-item">
+            <div class="m-si-value">12</div>
+            <div class="m-si-label">人物</div>
+          </div>
+          <div class="m-summary-item">
+            <div class="m-si-value">5</div>
+            <div class="m-si-label">时间线节点</div>
+          </div>
+          <div class="m-summary-item">
+            <div class="m-si-value">8</div>
+            <div class="m-si-label">剧情承诺</div>
+          </div>
+          <div class="m-summary-item">
+            <div class="m-si-value">6</div>
+            <div class="m-si-label">世界观</div>
+          </div>
+        </div>
+      </div>
+      <div class="m-conflict-card">
+        <div class="m-conflict-header">⚠️ 冲突标记</div>
+        <div class="m-conflict-item">
+          <div class="m-conflict-dot"></div>
+          <div class="m-conflict-text">叶青寒受伤后参战<span class="m-conflict-tag">时间线矛盾</span></div>
+        </div>
+        <div class="m-conflict-item">
+          <div class="m-conflict-dot"></div>
+          <div class="m-conflict-text">王城异响未回收<span class="m-conflict-tag">承诺悬置</span></div>
+        </div>
+      </div>
+      <button class="m-big-btn brand" onclick="mobileConfirmImport()">确认导入</button>
+      <a class="m-ghost-link" onclick="mobileCancelImport()">放弃</a>
+    </div>
+
+    <!-- Done -->
+    <div class="m-done-page" id="mDonePage">
+      <div class="m-done-check">✓</div>
+      <div class="m-done-title">导入完成！</div>
+      <div class="m-done-sub">已导入 23 章</div>
+      <div class="m-done-stats">
+        <div class="m-done-stat">
+          <div class="m-ds-value">12</div>
+          <div class="m-ds-label">人物</div>
+        </div>
+        <div class="m-done-stat">
+          <div class="m-ds-value">5</div>
+          <div class="m-ds-label">时间线</div>
+        </div>
+        <div class="m-done-stat">
+          <div class="m-ds-value">8</div>
+          <div class="m-ds-label">承诺</div>
+        </div>
+        <div class="m-done-stat">
+          <div class="m-ds-value">6</div>
+          <div class="m-ds-label">世界观</div>
+        </div>
+      </div>
+      <button class="m-big-btn brand" style="margin-top:0" onclick="location.reload()">进入创作工作台 →</button>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="m-bottom-nav">
+    <button class="m-nav-tab" onclick="void(0)">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>首页</span>
+    </button>
+    <button class="m-nav-tab" onclick="void(0)">
+      <svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+      <span>作品</span>
+    </button>
+    <button class="m-nav-tab active" onclick="void(0)">
+      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      <span>创作</span>
+    </button>
+    <button class="m-nav-tab" onclick="void(0)">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span>我的</span>
+    </button>
+  </div>
+
+</div><!-- /mobile-shell -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     JavaScript
+     ═══════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // ═══════════════════════════════════════════════════════
+  // Mock Data (shared)
+  // ═══════════════════════════════════════════════════════
+  const MOCK = {
+    novelName: '星穹之下',
+    totalChapters: 23,
+    progress: {
+      characters: { label: '人物库提取', icon: '👥', result: '12 人' },
+      timeline: { label: '时间线库提取', icon: '⏱️', result: '5 个节点' },
+      commitments: { label: '剧情承诺库提取', icon: '📖', result: '8 项' },
+      worldview: { label: '世界观库提取', icon: '🌍', result: '6 项' }
+    },
+    characters: ['苏铭', '叶青寒', '夜无痕'],
+    timeline: '第1天 → 第23天',
+    commitmentsList: ['玉佩秘密', '禁术残卷', '七国密约'],
+    worldItems: ['灵力体系', '玄天宗', '后山禁地'],
+    dynamicLayer: {
+      pov: '苏铭',
+      location: '玄天宗秘境',
+      hooks: ['禁术残卷下落', '王城地下的异响'],
+      baseline: '良好（时间线无矛盾）',
+      baselineClass: 'green'
+    },
+    conflicts: [
+      {
+        main: '人物「叶青寒」在第 15 章受伤，但第 18 章参与战斗',
+        detail: '时间线矛盾：叶青寒伤势较重，按设定第 16-17 章应在养伤，第 18 章突然出现在战场未被解释。'
+      },
+      {
+        main: '王城地下异响在第 10 章埋设后未在第 20-23 章回收',
+        detail: '剧情承诺未收束：该悬念间隔 10 章未提及，建议在后续章节中适时回收。'
+      }
+    ]
+  };
+
+  // ═══════════════════════════════════════════════════════
+  // Utility
+  // ═══════════════════════════════════════════════════════
+  const $ = (id) => document.getElementById(id);
+
+  // ╔══════════════════════════════════════════════════════╗
+  // ║  DESKTOP LOGIC                                        ║
+  // ╚══════════════════════════════════════════════════════╝
+  const dPhase0 = $('dPhase0');
+  const dPhase1 = $('dPhase1');
+  const dPhase2 = $('dPhase2');
+  const dPhase3 = $('dPhase3');
+  const dPhaseComplete = $('dPhaseComplete');
+
+  const dStepNodes = document.querySelectorAll('.desktop-shell .step-node');
+  const dStepConnectors = document.querySelectorAll('.desktop-shell .step-connector');
+
+  const dOptionPaste = $('dOptionPaste');
+  const dOptionFile = $('dOptionFile');
+  const dPasteContent = $('dPasteContent');
+  const dFileContent = $('dFileContent');
+  const dPasteArea = $('dPasteArea');
+  const dPasteCount = $('dPasteCount');
+  const dUploadArea = $('dUploadArea');
+  const dFileInput = $('dFileInput');
+  const dUploadBtn = $('dUploadBtn');
+  const dUploadFileInfo = $('dUploadFileInfo');
+  const dFileName = $('dFileName');
+  const dFileSize = $('dFileSize');
+  const dStartAnalysisBtn = $('dStartAnalysisBtn');
+
+  const dProgressItems = document.querySelectorAll('.desktop-shell .progress-item');
+  const dProgressFill = $('dProgressFill');
+  const dProgressText = $('dProgressText');
+  const dPercentText = $('dPercentText');
+
+  const dInsightPov = $('dInsightPov');
+  const dInsightLocation = $('dInsightLocation');
+  const dInsightHooks = $('dInsightHooks');
+  const dInsightBaseline = $('dInsightBaseline');
+  const dConflictsSection = $('dConflictsSection');
+  const dNoConflicts = $('dNoConflicts');
+  const dConfirmImportBtn = $('dConfirmImportBtn');
+  const dAbortBtn = $('dAbortBtn');
+
+  let dIsProcessing = false;
+
+  // ── Step Indicator ──
+  function dUpdateStepIndicator(step) {
+    dStepNodes.forEach((node, i) => {
+      node.classList.remove('active', 'done');
+      if (i < step) node.classList.add('done');
+      else if (i === step) node.classList.add('active');
+    });
+    dStepConnectors.forEach((conn, i) => {
+      conn.classList.toggle('done', i < step);
+    });
+  }
+
+  function dShowPhase(phaseEl) {
+    document.querySelectorAll('.desktop-shell .phase-container').forEach(p => p.classList.remove('visible'));
+    phaseEl.classList.add('visible');
+    const cards = phaseEl.querySelectorAll('.card');
+    cards.forEach(c => {
+      c.classList.remove('visible');
+      void c.offsetWidth;
+      c.classList.add('visible');
+    });
+    $('dMainScroll').scrollTop = 0;
+  }
+
+  function dSetProgressItem(libKey, status) {
+    const item = document.querySelector(`.desktop-shell .progress-item[data-lib="${libKey}"]`);
+    if (!item) return;
+    item.classList.remove('pending', 'active', 'done');
+    const statusEl = item.querySelector('.progress-item-status');
+    const existingSpinner = item.querySelector('.progress-spinner');
+    if (existingSpinner) existingSpinner.remove();
+
+    if (status === 'active') {
+      item.classList.add('active');
+      statusEl.textContent = '正在提取...';
+      const spinner = document.createElement('div');
+      spinner.className = 'progress-spinner';
+      item.appendChild(spinner);
+    } else if (status === 'done') {
+      item.classList.add('done');
+      statusEl.textContent = '✓ 提取完成';
+      item.querySelector('.progress-icon').textContent = '✅';
+    } else {
+      item.classList.add('pending');
+      statusEl.textContent = '等待中...';
+    }
+  }
+
+  // ── Phase 0: Import Method Selection ──
+  function dSelectImportOption(option) {
+    document.querySelectorAll('.desktop-shell .import-option').forEach(o => o.classList.remove('selected'));
+    if (option === 'paste') {
+      dOptionPaste.classList.add('selected');
+      dPasteContent.classList.add('visible');
+      dFileContent.classList.remove('visible');
+    } else {
+      dOptionFile.classList.add('selected');
+      dFileContent.classList.add('visible');
+      dPasteContent.classList.remove('visible');
+    }
+  }
+
+  dOptionPaste.addEventListener('click', () => dSelectImportOption('paste'));
+  dOptionFile.addEventListener('click', () => dSelectImportOption('file'));
+
+  // Text paste word count
+  dPasteArea.addEventListener('input', function() {
+    const text = this.value;
+    const charCount = text.replace(/\s/g, '').length;
+    dPasteCount.textContent = charCount;
+  });
+
+  // File upload
+  dUploadBtn.addEventListener('click', (e) => { e.stopPropagation(); dFileInput.click(); });
+  dUploadArea.addEventListener('click', () => dFileInput.click());
+
+  dUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dUploadArea.classList.add('dragover');
+  });
+  dUploadArea.addEventListener('dragleave', () => dUploadArea.classList.remove('dragover'));
+  dUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dUploadArea.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) dHandleFile(e.dataTransfer.files[0]);
+  });
+  dFileInput.addEventListener('change', function() {
+    if (this.files.length > 0) dHandleFile(this.files[0]);
+  });
+
+  function dHandleFile(file) {
+    const name = file.name;
+    const sizeKB = (file.size / 1024).toFixed(0);
+    dFileName.textContent = name;
+    dFileSize.textContent = `${sizeKB} KB · 23 章（模拟）`;
+    dUploadFileInfo.classList.add('visible');
+  }
+
+  // ── Phase 1: Full Library Analysis ──
+  function dRunPhase1() {
+    return new Promise((resolve) => {
+      const libOrder = ['characters', 'timeline', 'commitments', 'worldview'];
+      let current = 0;
+
+      function processNext() {
+        if (current >= libOrder.length) { resolve(); return; }
+        const lib = libOrder[current];
+        dSetProgressItem(lib, 'active');
+        dUpdateOverallProgress(current, libOrder.length);
+
+        setTimeout(() => {
+          dSetProgressItem(lib, 'done');
+          current++;
+          dUpdateOverallProgress(current, libOrder.length);
+          processNext();
+        }, 800);
+      }
+
+      setTimeout(processNext, 300);
+    });
+  }
+
+  function dUpdateOverallProgress(done, total) {
+    const pct = Math.min(Math.round((done / total) * 100), 100);
+    dProgressFill.style.width = pct + '%';
+    dProgressText.textContent = `${done}/${total}`;
+    dPercentText.textContent = pct + '%';
+  }
+
+  // ── Phase 2: Dynamic Layer Analysis ──
+  function dRunPhase2() {
+    return new Promise((resolve) => {
+      const insights = document.querySelectorAll('.desktop-shell .dynamic-insight');
+      insights.forEach((el, i) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        el.style.transition = `all 0.4s var(--ease-out) ${i * 0.2}s`;
+      });
+
+      dInsightPov.textContent = MOCK.dynamicLayer.pov;
+      dInsightLocation.textContent = MOCK.dynamicLayer.location;
+      dInsightHooks.innerHTML = MOCK.dynamicLayer.hooks.map(h =>
+        `<span class="tag indigo">${h}</span>`
+      ).join('');
+      dInsightBaseline.innerHTML = `<span class="tag green">${MOCK.dynamicLayer.baseline}</span>`;
+
+      setTimeout(() => {
+        insights.forEach((el) => {
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+        });
+      }, 200);
+
+      setTimeout(resolve, 1200);
+    });
+  }
+
+  // ── Main Import Flow ──
+  async function dStartImport() {
+    if (dIsProcessing) return;
+    dIsProcessing = true;
+    dStartAnalysisBtn.disabled = true;
+    dStartAnalysisBtn.textContent = '分析中...';
+
+    dUpdateStepIndicator(1);
+    dShowPhase(dPhase1);
+    await dRunPhase1();
+
+    dUpdateStepIndicator(2);
+    dShowPhase(dPhase2);
+    await dRunPhase2();
+
+    dUpdateStepIndicator(3);
+    dShowPhase(dPhase3);
+
+    dIsProcessing = false;
+    dStartAnalysisBtn.disabled = false;
+    dStartAnalysisBtn.textContent = '开始分析';
+  }
+
+  // ── Confirm Import ──
+  dConfirmImportBtn.addEventListener('click', function() {
+    if (dIsProcessing) return;
+    dIsProcessing = true;
+    this.textContent = '导入中...';
+    this.disabled = true;
+
+    setTimeout(() => {
+      dUpdateStepIndicator(4);
+      dShowPhase(dPhaseComplete);
+      dIsProcessing = false;
+      this.textContent = '✓ 确认导入';
+      this.disabled = false;
+    }, 600);
+  });
+
+  // ── Abort ──
+  dAbortBtn.addEventListener('click', function() {
+    if (confirm('确定放弃导入吗？已分析的数据将不会被保存。')) {
+      dIsProcessing = false;
+      dUpdateStepIndicator(0);
+      dShowPhase(dPhase0);
+      dProgressItems.forEach(item => {
+        item.classList.remove('active', 'done');
+        item.classList.add('pending');
+        const statusEl = item.querySelector('.progress-item-status');
+        statusEl.textContent = '等待中...';
+        const lib = item.dataset.lib;
+        const icons = { characters: '👥', timeline: '⏱️', commitments: '📖', worldview: '🌍' };
+        item.querySelector('.progress-icon').textContent = icons[lib] || '📋';
+        const spinner = item.querySelector('.progress-spinner');
+        if (spinner) spinner.remove();
+      });
+      dProgressFill.style.width = '0%';
+      dProgressText.textContent = '0/4';
+      dPercentText.textContent = '0%';
+      dStartAnalysisBtn.disabled = false;
+      dStartAnalysisBtn.textContent = '开始分析';
+    }
+  });
+
+  // ── Back button ──
+  $('dBackBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    if (confirm('返回后将丢失当前进度，确定返回吗？')) location.reload();
+  });
+
+  // ── Back to projects ──
+  $('dBackToProjectsBtn').addEventListener('click', function() { location.reload(); });
+
+  // ── Bind start button ──
+  dStartAnalysisBtn.addEventListener('click', dStartImport);
+
+  // ── Init: demo paste text ──
+  const dDemoText = `第1章 星辰陨落
+苏铭站在玄天宗的山门前，抬头望着那块刻着古老符文的白玉石碑。今天是他入宗的第七天，也是最关键的一天——灵力考核。
+
+第2章 初露锋芒
+演武场上，数百名新弟子整齐列阵。苏铭站在人群中，手心微微冒汗。
+
+第3章 玉佩之谜
+夜深人静之时，苏铭独自坐在房中，手中握着一枚温润的玉佩——那是母亲留给他的唯一遗物。`;
+
+  dPasteArea.value = dDemoText;
+  dPasteCount.textContent = dDemoText.replace(/\s/g, '').length;
+
+
+  // ╔══════════════════════════════════════════════════════╗
+  // ║  MOBILE LOGIC                                         ║
+  // ╚══════════════════════════════════════════════════════╝
+  let mSelectedImport = null;
+  let mCurrentPhase = 0;
+
+  window.mobileSelectImport = function(type) {
+    mSelectedImport = type;
+    document.getElementById('mOptPaste').classList.toggle('selected', type === 'paste');
+    document.getElementById('mOptFile').classList.toggle('selected', type === 'file');
+    document.getElementById('mPasteArea').classList.toggle('show', type === 'paste');
+    document.getElementById('mUploadZone').classList.toggle('show', type === 'file');
+    document.getElementById('mStartBtn').disabled = false;
+  };
+
+  function mSetPhase(phase) {
+    mCurrentPhase = phase;
+    document.querySelectorAll('.mobile-shell .m-phase').forEach(el => el.classList.remove('visible'));
+    document.getElementById('mDonePage').classList.remove('visible');
+    const target = phase <= 3 ? document.getElementById('mPhase' + phase) : null;
+    if (target) target.classList.add('visible');
+
+    document.querySelectorAll('.mobile-shell .m-step-item').forEach((el, i) => {
+      el.classList.remove('active', 'done');
+      if (i < phase) el.classList.add('done');
+      if (i === phase && phase <= 3) el.classList.add('active');
+    });
+  }
+
+  window.mobileStartAnalysis = function() {
+    mSetPhase(1);
+    const items = [
+      { id: 'ma0', sid: 'ma0s', icon: '👤', text: '人物库' },
+      { id: 'ma1', sid: 'ma1s', icon: '📅', text: '时间线库' },
+      { id: 'ma2', sid: 'ma2s', icon: '🔗', text: '剧情承诺库' },
+      { id: 'ma3', sid: 'ma3s', icon: '🌍', text: '世界观库' }
+    ];
+
+    items.forEach((item, i) => {
+      setTimeout(() => {
+        const el = document.getElementById(item.id);
+        el.classList.remove('pending');
+        el.classList.add('running');
+        document.getElementById(item.sid).innerHTML = '<div class="m-spinner"></div>';
+
+        setTimeout(() => {
+          el.classList.remove('running');
+          el.classList.add('done');
+          el.querySelector('.m-analysis-text').textContent = item.text + '提取完成';
+          document.getElementById(item.sid).textContent = '✓';
+
+          const done = i + 1;
+          document.getElementById('mProgressFill').style.width = (done / 4 * 100) + '%';
+          document.getElementById('mProgressLabel').textContent = '分析进度：' + done + '/4';
+
+          if (done === 4) {
+            setTimeout(() => mSetPhase(2), 600);
+          }
+        }, 800);
+      }, i * 900);
+    });
+  };
+
+  // Phase 2 auto-advance
+  let mPhase2Observer = new MutationObserver(() => {
+    if (document.getElementById('mPhase2').classList.contains('visible')) {
+      setTimeout(() => mSetPhase(3), 1800);
+      mPhase2Observer.disconnect();
+    }
+  });
+  mPhase2Observer.observe(document.getElementById('mPhase2'), { attributes: true, attributeFilter: ['class'] });
+
+  window.mobileConfirmImport = function() {
+    document.querySelectorAll('.mobile-shell .m-phase').forEach(el => el.classList.remove('visible'));
+    document.getElementById('mDonePage').classList.add('visible');
+    document.querySelectorAll('.mobile-shell .m-step-item').forEach(el => {
+      el.classList.remove('active');
+      el.classList.add('done');
+    });
+  };
+
+  window.mobileCancelImport = function() {
+    mSetPhase(0);
+    mSelectedImport = null;
+    document.getElementById('mOptPaste').classList.remove('selected');
+    document.getElementById('mOptFile').classList.remove('selected');
+    document.getElementById('mPasteArea').classList.remove('show');
+    document.getElementById('mUploadZone').classList.remove('show');
+    document.getElementById('mStartBtn').disabled = true;
+
+    const texts = ['人物库提取中...', '时间线库提取中...', '剧情承诺库提取中...', '世界观库提取中...'];
+    for (let i = 0; i < 4; i++) {
+      const el = document.getElementById('ma' + i);
+      el.className = 'm-analysis-item pending';
+      el.querySelector('.m-analysis-text').textContent = texts[i];
+      document.getElementById('ma' + i + 's').textContent = '等待';
+    }
+    document.getElementById('mProgressFill').style.width = '0%';
+    document.getElementById('mProgressLabel').textContent = '分析进度：0/4';
+  };
+
+  // Mobile back button
+  $('mBackBtn').addEventListener('click', function() {
+    if (confirm('返回后将丢失当前进度，确定返回吗？')) location.reload();
+  });
+
+})();
+</script>
+
+</body>
+</html>

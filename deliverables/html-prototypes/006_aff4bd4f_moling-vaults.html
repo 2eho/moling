@@ -1,0 +1,3279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>墨灵 · 四库管理</title>
+  <!-- 设计系统：墨灵 MoLing Vault Dashboard — Dual-Shell Responsive Merge -->
+  <style>
+    /* ============================================
+       1. 共享设计令牌
+       ============================================ */
+    :root {
+      --color-bg: #0d0f1a;
+      --color-surface: #151829;
+      --color-elevated: #111327;
+      --color-text-primary: #e8e9f0;
+      --color-text-secondary: #9ca3c4;
+      --color-text-tertiary: #6b7199;
+      --color-text-disabled: #3d4166;
+      --color-brand-indigo: #6366f1;
+      --color-brand-amber: #d4a843;
+      --color-border: #2a2d45;
+      --color-border-subtle: #1e2138;
+      --color-success: #34d399;
+      --color-warning: #fbbf24;
+      --color-danger: #ef4444;
+      --rarity-common: #9ca3af;
+      --rarity-rare: #67e8f9;
+      --rarity-epic: #a855f7;
+      --rarity-legendary: #d4a843;
+      --font-heading: 'Noto Serif SC', '思源宋体', Georgia, serif;
+      --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --font-ui: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-2xl: 20px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(99,102,241,0.08);
+      --shadow-md: 0 4px 8px rgba(0,0,0,0.25), 0 2px 4px rgba(99,102,241,0.1);
+      --shadow-lg: 0 8px 16px rgba(0,0,0,0.3), 0 4px 8px rgba(99,102,241,0.12);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+      --duration-fast: 100ms;
+      --duration-normal: 200ms;
+      --duration-slow: 300ms;
+      --duration-slower: 500ms;
+      /* Tab category colors */
+      --tab-char: #6366f1;
+      --tab-time: #34d399;
+      --tab-plot: #fbbf24;
+      --tab-world: #a855f7;
+    }
+
+    /* ============================================
+       2. 共享重置
+       ============================================ */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--color-bg);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ============================================
+       3. Shell 显示/隐藏逻辑
+       - Mobile default, Desktop at 769px+
+       ============================================ */
+    #desktop-shell {
+      display: none;
+    }
+    #mobile-shell {
+      display: block;
+    }
+
+    @media (min-width: 769px) {
+      #desktop-shell {
+        display: block;
+      }
+      #mobile-shell {
+        display: none;
+      }
+    }
+
+    /* ============================================
+       4. DESKTOP STYLES (min-width: 769px)
+       ============================================ */
+    @media (min-width: 769px) {
+      body {
+        overflow: hidden;
+        height: 100vh;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--color-text-tertiary);
+      }
+
+      /* ---- Desktop Layout ---- */
+      .d-app-layout {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* ---- Desktop Header ---- */
+      .d-app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 var(--space-6);
+        height: 56px;
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+        z-index: 10;
+      }
+
+      .d-header-left {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+      }
+
+      .d-btn-back {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        transition: all var(--duration-normal) var(--ease-default);
+        font-size: 16px;
+      }
+      .d-btn-back:hover {
+        background: var(--color-border);
+        color: var(--color-text-primary);
+      }
+
+      .d-header-title {
+        font-family: var(--font-heading);
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        letter-spacing: 0.5px;
+      }
+
+      .d-header-project {
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+        padding: 2px 10px;
+        background: var(--color-elevated);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-subtle);
+      }
+
+      .d-header-right {
+        position: relative;
+      }
+
+      .d-search-box {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        background: var(--color-elevated);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-md);
+        padding: 6px 12px;
+        width: 260px;
+        transition: all var(--duration-normal) var(--ease-default);
+      }
+      .d-search-box:focus-within {
+        border-color: var(--color-brand-indigo);
+        box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+      }
+      .d-search-box svg {
+        flex-shrink: 0;
+        color: var(--color-text-tertiary);
+      }
+      .d-search-box input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--color-text-primary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+      }
+      .d-search-box input::placeholder {
+        color: var(--color-text-disabled);
+      }
+      .d-search-box .d-search-shortcut {
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--color-text-disabled);
+        padding: 1px 6px;
+        background: var(--color-surface);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-subtle);
+      }
+
+      /* ---- Desktop Body ---- */
+      .d-app-body {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* ---- Desktop Sidebar ---- */
+      .d-sidebar {
+        width: 240px;
+        background: var(--color-surface);
+        border-right: 1px solid var(--color-border);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        overflow-y: auto;
+      }
+
+      .d-sidebar-section-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-disabled);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: var(--space-6) var(--space-5) var(--space-2);
+      }
+
+      .d-vault-tabs {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 0 var(--space-3);
+      }
+
+      .d-vault-tab {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all var(--duration-normal) var(--ease-default);
+        border: 1px solid transparent;
+        position: relative;
+        user-select: none;
+      }
+      .d-vault-tab:hover {
+        background: rgba(99,102,241,0.06);
+      }
+      .d-vault-tab.active {
+        background: rgba(99,102,241,0.12);
+        border-color: rgba(99,102,241,0.2);
+      }
+
+      .d-vault-tab .d-tab-icon {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        font-size: 18px;
+        flex-shrink: 0;
+        transition: all var(--duration-normal) var(--ease-default);
+      }
+
+      .d-vault-tab[data-tab="character"] .d-tab-icon {
+        background: rgba(99,102,241,0.12);
+        color: var(--color-brand-indigo);
+      }
+      .d-vault-tab[data-tab="timeline"] .d-tab-icon {
+        background: rgba(52,211,153,0.12);
+        color: var(--color-success);
+      }
+      .d-vault-tab[data-tab="commitments"] .d-tab-icon {
+        background: rgba(212,168,67,0.12);
+        color: var(--color-brand-amber);
+      }
+      .d-vault-tab[data-tab="world"] .d-tab-icon {
+        background: rgba(168,85,247,0.12);
+        color: var(--rarity-epic);
+      }
+      .d-vault-tab[data-tab="secrets"] .d-tab-icon {
+        background: rgba(239,68,68,0.12);
+        color: #ef4444;
+      }
+
+      .d-vault-tab.active[data-tab="character"] .d-tab-icon {
+        background: rgba(99,102,241,0.2);
+      }
+      .d-vault-tab.active[data-tab="timeline"] .d-tab-icon {
+        background: rgba(52,211,153,0.2);
+      }
+      .d-vault-tab.active[data-tab="commitments"] .d-tab-icon {
+        background: rgba(212,168,67,0.2);
+      }
+      .d-vault-tab.active[data-tab="world"] .d-tab-icon {
+        background: rgba(168,85,247,0.2);
+      }
+      .d-vault-tab.active[data-tab="secrets"] .d-tab-icon {
+        background: rgba(239,68,68,0.2);
+      }
+
+      .d-tab-text {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+      }
+      .d-tab-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-text-primary);
+        line-height: 1.3;
+      }
+      .d-tab-count {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        line-height: 1.3;
+      }
+      .d-tab-count .d-count-danger {
+        color: var(--color-danger);
+        font-weight: 500;
+      }
+
+      .d-sidebar-divider {
+        height: 1px;
+        background: var(--color-border-subtle);
+        margin: var(--space-4) var(--space-5);
+      }
+
+      .d-sidebar-stats {
+        padding: var(--space-3) var(--space-5);
+      }
+      .d-sidebar-stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-2) 0;
+        font-size: 12px;
+      }
+      .d-sidebar-stat-row .d-stat-label {
+        color: var(--color-text-tertiary);
+      }
+      .d-sidebar-stat-row .d-stat-value {
+        color: var(--color-text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+
+      /* ---- Desktop Content Area ---- */
+      .d-content-area {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-6);
+        background: var(--color-bg);
+      }
+
+      .d-content-panel {
+        display: none;
+        animation: d-fadeIn var(--duration-slow) var(--ease-default);
+      }
+      .d-content-panel.active {
+        display: block;
+      }
+
+      @keyframes d-fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* ---- Desktop Memory Section ---- */
+      .d-memory-section {
+        margin-bottom: var(--space-5);
+      }
+
+      .d-section-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: all var(--duration-normal) var(--ease-default);
+      }
+
+      .d-section-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-5);
+        cursor: pointer;
+        user-select: none;
+        transition: background var(--duration-normal) var(--ease-default);
+      }
+      .d-section-card-header:hover {
+        background: rgba(99,102,241,0.04);
+      }
+
+      .d-section-card-title {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-family: var(--font-heading);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+      .d-section-card-title .d-card-icon {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+      }
+
+      .d-section-card-toggle {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-tertiary);
+        transition: transform var(--duration-normal) var(--ease-default);
+      }
+      .d-section-card.collapsed .d-section-card-toggle {
+        transform: rotate(-90deg);
+      }
+      .d-section-card.collapsed .d-section-card-body {
+        display: none;
+      }
+
+      .d-section-card-body {
+        padding: 0 var(--space-5) var(--space-5);
+      }
+
+      /* ---- Desktop Memory Items ---- */
+      .d-memory-item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: var(--space-3) var(--space-4);
+        background: var(--color-elevated);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-2);
+        border: 1px solid var(--color-border-subtle);
+        transition: all var(--duration-normal) var(--ease-default);
+      }
+      .d-memory-item:hover {
+        border-color: var(--color-border);
+      }
+      .d-memory-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .d-memory-item-text {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        line-height: 1.5;
+        flex: 1;
+      }
+
+      .d-memory-item-actions {
+        display: flex;
+        gap: var(--space-1);
+        opacity: 0;
+        transition: opacity var(--duration-normal) var(--ease-default);
+        flex-shrink: 0;
+        margin-left: var(--space-3);
+      }
+      .d-memory-item:hover .d-memory-item-actions {
+        opacity: 1;
+      }
+
+      .d-action-btn {
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+        transition: all var(--duration-fast) var(--ease-default);
+        font-size: 12px;
+      }
+      .d-action-btn:hover {
+        background: var(--color-border);
+        color: var(--color-text-primary);
+      }
+      .d-action-btn.danger:hover {
+        background: rgba(239,68,68,0.15);
+        color: var(--color-danger);
+      }
+
+      /* ---- Desktop Timeline ---- */
+      .d-timeline {
+        position: relative;
+        padding-left: var(--space-8);
+      }
+      .d-timeline::before {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        background: linear-gradient(to bottom, var(--color-brand-indigo), var(--color-border));
+        border-radius: 1px;
+      }
+
+      .d-timeline-item {
+        position: relative;
+        padding: var(--space-3) 0;
+      }
+      .d-timeline-item:last-child {
+        padding-bottom: 0;
+      }
+
+      .d-timeline-dot {
+        position: absolute;
+        left: -23px;
+        top: 16px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-border);
+        border: 2px solid var(--color-surface);
+      }
+      .d-timeline-item.current .d-timeline-dot {
+        background: var(--color-brand-indigo);
+        box-shadow: 0 0 8px rgba(99,102,241,0.5), 0 0 16px rgba(99,102,241,0.25);
+        animation: d-pulse-glow 2s ease-in-out infinite;
+      }
+      .d-timeline-item.completed .d-timeline-dot {
+        background: var(--color-success);
+      }
+
+      @keyframes d-pulse-glow {
+        0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.5), 0 0 16px rgba(99,102,241,0.25); }
+        50% { box-shadow: 0 0 12px rgba(99,102,241,0.7), 0 0 24px rgba(99,102,241,0.35); }
+      }
+
+      .d-timeline-label {
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--color-text-tertiary);
+        margin-bottom: 2px;
+      }
+      .d-timeline-text {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+      }
+      .d-timeline-item.current .d-timeline-text {
+        color: var(--color-text-primary);
+        font-weight: 500;
+      }
+
+      /* ---- Desktop Scene List ---- */
+      .d-scene-list-item {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        background: var(--color-elevated);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-2);
+        border: 1px solid var(--color-border-subtle);
+        cursor: pointer;
+        transition: all var(--duration-normal) var(--ease-default);
+      }
+      .d-scene-list-item:hover {
+        border-color: var(--color-border);
+        background: rgba(99,102,241,0.04);
+      }
+      .d-scene-list-item:last-child {
+        margin-bottom: 0;
+      }
+      .d-scene-chapter {
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--color-brand-indigo);
+        background: rgba(99,102,241,0.1);
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+        white-space: nowrap;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .d-scene-summary {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        line-height: 1.5;
+      }
+
+      /* ---- Desktop Filter Bar ---- */
+      .d-filter-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-5);
+        flex-wrap: wrap;
+      }
+
+      .d-filter-btn {
+        padding: 5px 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-size: 12px;
+        font-family: var(--font-ui);
+        cursor: pointer;
+        transition: all var(--duration-normal) var(--ease-default);
+        white-space: nowrap;
+      }
+      .d-filter-btn:hover {
+        background: var(--color-elevated);
+        border-color: var(--color-text-tertiary);
+      }
+      .d-filter-btn.active {
+        background: rgba(212,168,67,0.12);
+        border-color: var(--color-brand-amber);
+        color: var(--color-brand-amber);
+        font-weight: 500;
+      }
+
+      /* ---- Desktop Foreshadow List ---- */
+      .d-foreshadow-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+
+      .d-foreshadow-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: all var(--duration-normal) var(--ease-default);
+        position: relative;
+        cursor: pointer;
+      }
+      .d-foreshadow-card:hover {
+        border-color: var(--color-border);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .d-foreshadow-card.status-pending {
+        border-left: 3px solid var(--color-brand-amber);
+      }
+      .d-foreshadow-card.status-pending::before {
+        content: '';
+        position: absolute;
+        left: -3px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--color-brand-amber);
+        animation: d-pulse-border 2s ease-in-out infinite;
+      }
+      @keyframes d-pulse-border {
+        0%, 100% { box-shadow: 0 0 4px rgba(212,168,67,0.3); }
+        50% { box-shadow: 0 0 12px rgba(212,168,67,0.6), 0 0 20px rgba(212,168,67,0.3); }
+      }
+
+      .d-foreshadow-card.status-lost {
+        position: relative;
+        overflow: hidden;
+      }
+      .d-foreshadow-card.status-lost::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(
+          -45deg,
+          transparent,
+          transparent 10px,
+          rgba(239,68,68,0.04) 10px,
+          rgba(239,68,68,0.04) 20px
+        );
+        pointer-events: none;
+      }
+
+      .d-foreshadow-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-5);
+      }
+
+      .d-foreshadow-card-left {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+
+      .d-urgency-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .d-urgency-dot.high { background: var(--color-danger); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+      .d-urgency-dot.medium { background: var(--color-warning); }
+      .d-urgency-dot.low { background: var(--color-text-disabled); }
+
+      .d-foreshadow-title {
+        font-family: var(--font-heading);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+      .d-event-badge {
+        display: inline-block;
+        font-size: 10px;
+        padding: 0 5px;
+        border-radius: 3px;
+        margin-left: 4px;
+        font-weight: 500;
+      }
+      .d-event-badge.foreshadow { background: rgba(99,102,241,0.1); color: var(--color-brand-indigo); }
+      .d-event-badge.advance    { background: rgba(52,211,153,0.1); color: var(--color-success); }
+      .d-event-badge.twist      { background: rgba(245,158,11,0.1); color: #f59e0b; }
+      .d-event-badge.climax     { background: rgba(239,68,68,0.1); color: #ef4444; }
+      .d-event-badge.wrap       { background: rgba(168,85,247,0.1); color: var(--rarity-epic); }
+
+      .d-status-badge {
+        font-size: 11px;
+        padding: 2px 10px;
+        border-radius: var(--radius-sm);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .d-status-badge.active {
+        background: rgba(99,102,241,0.12);
+        color: var(--color-brand-indigo);
+      }
+      .d-status-badge.pending {
+        background: rgba(212,168,67,0.12);
+        color: var(--color-brand-amber);
+      }
+      .d-status-badge.recovered {
+        background: rgba(52,211,153,0.12);
+        color: var(--color-success);
+      }
+      .d-status-badge.lost {
+        background: rgba(239,68,68,0.12);
+        color: var(--color-danger);
+      }
+
+      .d-foreshadow-card-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-5);
+        padding: 0 var(--space-5) var(--space-4);
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+      }
+
+      .d-meta-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+      }
+      .d-meta-item svg {
+        flex-shrink: 0;
+      }
+
+      .d-foreshadow-card-detail {
+        display: none;
+        padding: 0 var(--space-5) var(--space-5);
+        border-top: 1px solid var(--color-border-subtle);
+        margin-top: 0;
+      }
+      .d-foreshadow-card.expanded .d-foreshadow-card-detail {
+        display: block;
+        animation: d-slideDown var(--duration-normal) var(--ease-default);
+      }
+      @keyframes d-slideDown {
+        from { opacity: 0; max-height: 0; }
+        to { opacity: 1; max-height: 200px; }
+      }
+
+      .d-detail-row {
+        display: flex;
+        gap: var(--space-5);
+        padding-top: var(--space-4);
+      }
+      .d-detail-col {
+        flex: 1;
+      }
+      .d-detail-label {
+        font-size: 11px;
+        color: var(--color-text-disabled);
+        margin-bottom: var(--space-1);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .d-detail-value {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        line-height: 1.5;
+      }
+
+      /* ---- Desktop Character Grid ---- */
+      .d-character-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-4);
+      }
+
+      .d-character-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        cursor: pointer;
+        transition: all var(--duration-normal) var(--ease-default);
+        position: relative;
+      }
+      .d-character-card:hover {
+        border-color: var(--color-border);
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-1px);
+      }
+
+      .d-character-card-top {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin-bottom: var(--space-3);
+      }
+
+      .d-character-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-heading);
+        font-size: 18px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .d-character-avatar.protagonist {
+        background: rgba(99,102,241,0.15);
+        color: var(--color-brand-indigo);
+        border: 2px solid rgba(99,102,241,0.3);
+      }
+      .d-character-avatar.ally {
+        background: rgba(52,211,153,0.12);
+        color: var(--color-success);
+        border: 2px solid rgba(52,211,153,0.25);
+      }
+      .d-character-avatar.neutral {
+        background: rgba(156,163,196,0.1);
+        color: var(--color-text-secondary);
+        border: 2px solid rgba(156,163,196,0.2);
+      }
+      .d-character-avatar.opponent {
+        background: rgba(251,191,36,0.12);
+        color: var(--color-warning);
+        border: 2px solid rgba(251,191,36,0.25);
+      }
+      .d-character-avatar.villain {
+        background: rgba(239,68,68,0.12);
+        color: var(--color-danger);
+        border: 2px solid rgba(239,68,68,0.25);
+      }
+
+      .d-character-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .d-character-name {
+        font-family: var(--font-heading);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.3;
+      }
+      .d-character-faction {
+        font-size: 11px;
+        padding: 1px 8px;
+        border-radius: var(--radius-sm);
+        display: inline-block;
+        margin-top: 2px;
+      }
+      .d-character-faction.protagonist {
+        background: rgba(99,102,241,0.1);
+        color: var(--color-brand-indigo);
+      }
+      .d-character-faction.ally {
+        background: rgba(52,211,153,0.1);
+        color: var(--color-success);
+      }
+      .d-character-faction.neutral {
+        background: rgba(156,163,196,0.1);
+        color: var(--color-text-secondary);
+      }
+      .d-character-faction.opponent {
+        background: rgba(251,191,36,0.1);
+        color: var(--color-warning);
+      }
+      .d-character-faction.villain {
+        background: rgba(239,68,68,0.1);
+        color: var(--color-danger);
+      }
+
+      .d-character-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        margin-bottom: var(--space-3);
+      }
+      .d-character-tag {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+        background: var(--color-elevated);
+        color: var(--color-text-tertiary);
+        border: 1px solid var(--color-border-subtle);
+      }
+
+      .d-character-status {
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .d-character-status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color-success);
+        flex-shrink: 0;
+      }
+
+      .d-character-chapters {
+        font-size: 11px;
+        color: var(--color-text-disabled);
+        text-align: right;
+        position: absolute;
+        top: var(--space-4);
+        right: var(--space-5);
+      }
+
+      .d-add-character-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        padding: var(--space-4);
+        background: transparent;
+        border: 2px dashed var(--color-border);
+        border-radius: var(--radius-lg);
+        color: var(--color-text-tertiary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+        cursor: pointer;
+        transition: all var(--duration-normal) var(--ease-default);
+        width: 100%;
+      }
+      .d-add-character-btn:hover {
+        border-color: var(--color-brand-indigo);
+        color: var(--color-brand-indigo);
+        background: rgba(99,102,241,0.04);
+      }
+
+      /* ---- Desktop Detail Modal ---- */
+      .d-detail-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 100;
+        backdrop-filter: blur(4px);
+      }
+      .d-detail-overlay.visible {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .d-detail-modal {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        width: 480px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-lg);
+        animation: d-modalIn var(--duration-slow) var(--ease-spring);
+      }
+      @keyframes d-modalIn {
+        from { opacity: 0; transform: scale(0.95) translateY(8px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+
+      .d-detail-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-5) var(--space-6);
+        border-bottom: 1px solid var(--color-border-subtle);
+      }
+      .d-detail-modal-title {
+        font-family: var(--font-heading);
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .d-detail-modal-close {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+        transition: all var(--duration-fast) var(--ease-default);
+      }
+      .d-detail-modal-close:hover {
+        background: var(--color-border);
+        color: var(--color-text-primary);
+      }
+
+      .d-detail-modal-body {
+        padding: var(--space-5) var(--space-6);
+      }
+      .d-detail-modal-body .d-detail-field {
+        margin-bottom: var(--space-4);
+      }
+      .d-detail-modal-body .d-detail-field-label {
+        font-size: 11px;
+        color: var(--color-text-disabled);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: var(--space-1);
+      }
+      .d-detail-modal-body .d-detail-field-value {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        line-height: 1.6;
+      }
+
+      /* ---- Desktop Responsive tweaks ---- */
+      @media (max-width: 1023px) and (min-width: 769px) {
+        .d-sidebar {
+          width: 200px;
+        }
+        .d-search-box {
+          width: 200px;
+        }
+      }
+    }
+
+    /* ============================================
+       5. MOBILE STYLES (default)
+       ============================================ */
+
+    /* Status Bar */
+    .m-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 24px 4px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      background: var(--color-bg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .m-status-bar .m-time { font-variant-numeric: tabular-nums; }
+    .m-status-bar .m-icons { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+
+    /* Top Nav */
+    .m-top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 16px 12px;
+      background: var(--color-bg);
+      position: sticky;
+      top: 28px;
+      z-index: 99;
+    }
+    .m-top-nav .m-back-btn {
+      background: none; border: none; color: var(--color-brand-indigo); font-size: 22px;
+      cursor: pointer; padding: 4px 4px 4px 0;
+    }
+    .m-top-nav .m-title {
+      font-family: 'Georgia', 'Noto Serif SC', serif;
+      font-size: 17px; font-weight: 600; color: var(--color-text-primary);
+      position: absolute; left: 50%; transform: translateX(-50%);
+    }
+    .m-top-nav .m-search-btn {
+      background: none; border: none; color: var(--color-text-secondary); font-size: 20px; cursor: pointer;
+    }
+
+    /* Tab Bar */
+    .m-tab-bar-wrapper {
+      background: var(--color-bg);
+      position: sticky;
+      top: 76px;
+      z-index: 98;
+      border-bottom: 1px solid var(--color-text-disabled);
+    }
+    .m-tab-bar {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding: 0 4px;
+    }
+    .m-tab-bar::-webkit-scrollbar { display: none; }
+    .m-tab-item {
+      flex: none;
+      padding: 10px 18px 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-tertiary);
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      transition: color 0.2s;
+      text-align: center;
+      min-width: 80px;
+    }
+    .m-tab-item.active { color: var(--color-text-primary); font-weight: 600; }
+    .m-tab-item .m-indicator {
+      position: absolute;
+      bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 0; height: 2.5px;
+      border-radius: 2px;
+      transition: width 0.25s ease, background 0.25s ease;
+    }
+    .m-tab-item.active .m-indicator { width: 24px; }
+
+    /* Tab Content */
+    .m-tab-content {
+      display: none;
+      padding: 16px;
+      padding-bottom: 100px;
+      animation: m-fadeUp 0.3s ease;
+    }
+    .m-tab-content.active { display: block; }
+
+    @keyframes m-fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========== Mobile Tab 1: 人物库 ========== */
+    .m-search-box {
+      display: flex; align-items: center;
+      background: var(--color-surface); border-radius: 10px;
+      padding: 9px 14px; margin-bottom: 14px;
+      border: 1px solid var(--color-text-disabled);
+    }
+    .m-search-box .m-icon { color: var(--color-text-tertiary); margin-right: 8px; font-size: 14px; }
+    .m-search-box input {
+      flex: 1; background: none; border: none; outline: none;
+      color: var(--color-text-primary); font-size: 14px;
+    }
+    .m-search-box input::placeholder { color: var(--color-text-disabled); }
+
+    .m-char-card {
+      background: var(--color-surface);
+      border-radius: 14px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(99,102,241,0.12);
+      transition: border-color 0.3s;
+    }
+    .m-char-card:hover { border-color: rgba(99,102,241,0.25); }
+    .m-char-header {
+      display: flex; align-items: center; padding: 14px;
+      cursor: pointer;
+    }
+    .m-char-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .m-char-avatar.v1 { background: rgba(99,102,241,0.2); color: var(--tab-char); }
+    .m-char-avatar.v2 { background: rgba(52,211,153,0.15); color: var(--tab-time); }
+    .m-char-avatar.v3 { background: rgba(168,85,247,0.18); color: var(--tab-world); }
+    .m-char-info { flex: 1; }
+    .m-char-name { font-size: 15px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 3px; }
+    .m-char-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .m-char-tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 6px;
+      background: rgba(99,102,241,0.1); color: var(--color-brand-indigo);
+    }
+    .m-char-tag.role {
+      background: rgba(212,168,67,0.12); color: var(--color-brand-amber);
+    }
+    .m-char-arrow {
+      color: var(--color-text-disabled); font-size: 12px;
+      transition: transform 0.3s; margin-left: 8px;
+    }
+    .m-char-card.expanded .m-char-arrow { transform: rotate(180deg); }
+    .m-char-detail {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.35s ease;
+      padding: 0 14px;
+    }
+    .m-char-card.expanded .m-char-detail {
+      max-height: 200px;
+      padding: 0 14px 14px;
+    }
+    .m-char-detail-inner {
+      border-top: 1px solid var(--color-text-disabled);
+      padding-top: 12px; font-size: 13px; color: var(--color-text-secondary);
+      line-height: 1.7;
+    }
+    .m-char-traits { margin-bottom: 8px; }
+    .m-char-traits span {
+      display: inline-block; margin-right: 4px;
+      padding: 2px 8px; border-radius: 5px; font-size: 12px;
+      background: rgba(99,102,241,0.08); color: var(--color-text-secondary);
+    }
+    .m-char-desc { color: var(--color-text-tertiary); font-size: 12.5px; line-height: 1.6; }
+
+    /* ========== Mobile Tab 2: 时间线库 ========== */
+    .m-timeline { position: relative; padding-left: 24px; }
+    .m-timeline::before {
+      content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px;
+      width: 2px; background: var(--color-text-disabled);
+    }
+    .m-tl-node { position: relative; padding-bottom: 24px; }
+    .m-tl-node:last-child { padding-bottom: 0; }
+    .m-tl-dot {
+      position: absolute; left: -24px; top: 4px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--color-bg); border: 2.5px solid var(--tab-time);
+      z-index: 1;
+    }
+    .m-tl-node.future .m-tl-dot {
+      border-color: var(--color-text-disabled); background: var(--color-bg);
+    }
+    .m-tl-node.current .m-tl-dot {
+      background: var(--tab-time); box-shadow: 0 0 10px rgba(52,211,153,0.4);
+    }
+    .m-tl-label {
+      font-size: 12px; color: var(--tab-time); font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .m-tl-node.current .m-tl-label { color: var(--tab-time); }
+    .m-tl-node.future .m-tl-label { color: var(--color-text-disabled); }
+    .m-tl-title {
+      font-size: 14px; color: var(--color-text-primary); font-weight: 500;
+      line-height: 1.5;
+    }
+    .m-tl-node.future .m-tl-title {
+      color: var(--color-text-disabled); font-style: italic;
+    }
+    .m-tl-card {
+      background: var(--color-surface); border-radius: 10px;
+      padding: 12px; margin-top: 8px;
+      border: 1px solid rgba(52,211,153,0.1);
+      font-size: 12.5px; color: var(--color-text-secondary); line-height: 1.6;
+    }
+    .m-tl-node.future .m-tl-card {
+      border-style: dashed; border-color: var(--color-text-disabled);
+      color: var(--color-text-disabled);
+    }
+    .m-tl-badge {
+      display: inline-block; font-size: 10px; padding: 1px 7px;
+      border-radius: 4px; background: rgba(52,211,153,0.12); color: var(--tab-time);
+      margin-left: 6px; font-weight: 600;
+    }
+
+    /* ========== Mobile Tab 3: 剧情承诺库 ========== */
+    .m-filter-bar {
+      display: flex; gap: 8px; margin-bottom: 14px;
+    }
+    .m-filter-btn {
+      padding: 6px 14px; border-radius: 20px; border: none;
+      font-size: 13px; cursor: pointer; font-weight: 500;
+      background: var(--color-surface); color: var(--color-text-tertiary);
+      border: 1px solid var(--color-text-disabled);
+      transition: all 0.2s;
+    }
+    .m-filter-btn.active {
+      background: rgba(251,191,36,0.12);
+      color: var(--tab-plot); border-color: rgba(251,191,36,0.3);
+    }
+
+    .m-plot-card {
+      background: var(--color-surface); border-radius: 12px;
+      margin-bottom: 10px; overflow: hidden;
+      border: 1px solid rgba(251,191,36,0.08);
+      transition: border-color 0.3s;
+    }
+    .m-plot-card:hover { border-color: rgba(251,191,36,0.2); }
+    .m-plot-header {
+      display: flex; align-items: center; padding: 13px 14px;
+      cursor: pointer;
+    }
+    .m-plot-icon { font-size: 14px; margin-right: 10px; flex-shrink: 0; }
+    .m-plot-info { flex: 1; }
+    .m-plot-title { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 2px; }
+    .m-plot-meta { font-size: 11.5px; color: var(--color-text-tertiary); }
+    .m-plot-status {
+      font-size: 11px; padding: 3px 9px; border-radius: 6px;
+      font-weight: 600; white-space: nowrap;
+    }
+    .m-plot-status.pending { background: rgba(251,191,36,0.1); color: var(--tab-plot); }
+    .m-plot-status.done { background: rgba(52,211,153,0.1); color: var(--tab-time); }
+    .m-plot-expand {
+      color: var(--color-text-disabled); font-size: 11px; margin-left: 8px;
+      transition: transform 0.3s;
+    }
+    .m-plot-card.expanded .m-plot-expand { transform: rotate(180deg); }
+    .m-plot-detail {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      padding: 0 14px;
+    }
+    .m-plot-card.expanded .m-plot-detail {
+      max-height: 160px; padding: 0 14px 13px;
+    }
+    .m-plot-detail-inner {
+      border-top: 1px solid var(--color-text-disabled); padding-top: 10px;
+      font-size: 12.5px; color: var(--color-text-secondary); line-height: 1.7;
+    }
+    .m-plot-suggest { color: var(--color-brand-amber); font-size: 12px; margin-top: 4px; }
+
+    /* ========== Mobile Tab 4: 世界观库 ========== */
+    .m-cat-bar {
+      display: flex; gap: 6px; margin-bottom: 14px;
+      overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+    }
+    .m-cat-bar::-webkit-scrollbar { display: none; }
+    .m-cat-btn {
+      padding: 6px 13px; border-radius: 20px; border: none;
+      font-size: 12.5px; cursor: pointer; font-weight: 500;
+      background: var(--color-surface); color: var(--color-text-tertiary);
+      border: 1px solid var(--color-text-disabled); white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .m-cat-btn.active {
+      background: rgba(168,85,247,0.12);
+      color: var(--tab-world); border-color: rgba(168,85,247,0.3);
+    }
+
+    .m-world-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .m-world-card {
+      background: var(--color-surface); border-radius: 12px;
+      padding: 14px; cursor: pointer;
+      border: 1px solid rgba(168,85,247,0.08);
+      transition: border-color 0.3s, transform 0.15s;
+    }
+    .m-world-card:active { transform: scale(0.97); }
+    .m-world-card:hover { border-color: rgba(168,85,247,0.22); }
+    .m-world-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; margin-bottom: 10px;
+    }
+    .m-world-icon.geo { background: rgba(99,102,241,0.15); }
+    .m-world-icon.sys { background: rgba(168,85,247,0.15); }
+    .m-world-icon.his { background: rgba(212,168,67,0.15); }
+    .m-world-name { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 4px; }
+    .m-world-cat {
+      font-size: 11px; padding: 2px 8px; border-radius: 4px;
+      display: inline-block; margin-bottom: 6px;
+    }
+    .m-world-cat.geo { background: rgba(99,102,241,0.1); color: var(--color-brand-indigo); }
+    .m-world-cat.sys { background: rgba(168,85,247,0.1); color: var(--tab-world); }
+    .m-world-cat.his { background: rgba(212,168,67,0.1); color: var(--color-brand-amber); }
+    .m-world-desc { font-size: 12px; color: var(--color-text-tertiary); line-height: 1.5; }
+
+    /* Bottom Nav */
+    .m-bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 428px;
+      display: flex; background: var(--color-bg);
+      border-top: 1px solid var(--color-text-disabled);
+      padding: 6px 0 22px; z-index: 100;
+      backdrop-filter: blur(10px);
+      background: rgba(13,15,26,0.92);
+    }
+    .m-nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 2px;
+      padding: 6px 0; cursor: pointer;
+    }
+    .m-nav-icon { font-size: 20px; color: var(--color-text-disabled); transition: color 0.2s; }
+    .m-nav-label { font-size: 10px; color: var(--color-text-disabled); transition: color 0.2s; }
+    .m-nav-item.active .m-nav-icon,
+    .m-nav-item.active .m-nav-label { color: var(--color-brand-indigo); }
+  </style>
+</head>
+<body>
+
+<!-- ====================================================================
+     DESKTOP SHELL (min-width: 769px)
+     ==================================================================== -->
+<div id="desktop-shell">
+  <div class="d-app-layout">
+    <!-- Header -->
+    <header class="d-app-header">
+      <div class="d-header-left">
+        <button class="d-btn-back" title="返回">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="d-header-title">四库管理</span>
+        <span class="d-header-project">苍穹之剑</span>
+      </div>
+      <div class="d-header-right">
+        <div class="d-search-box">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" id="dGlobalSearch" placeholder="搜索人物、时间线、剧情承诺、世界观…" />
+          <span class="d-search-shortcut">⌘K</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Body -->
+    <div class="d-app-body">
+
+      <!-- Sidebar -->
+      <aside class="d-sidebar">
+        <div class="d-sidebar-section-label">知识库</div>
+        <nav class="d-vault-tabs">
+          <div class="d-vault-tab active" data-tab="character" onclick="dSwitchTab('character')">
+            <div class="d-tab-icon">👥</div>
+            <div class="d-tab-text">
+              <span class="d-tab-label">人物库</span>
+              <span class="d-tab-count">18 人</span>
+            </div>
+          </div>
+          <div class="d-vault-tab" data-tab="timeline" onclick="dSwitchTab('timeline')">
+            <div class="d-tab-icon">⏱️</div>
+            <div class="d-tab-text">
+              <span class="d-tab-label">时间线库</span>
+              <span class="d-tab-count">5 个节点</span>
+            </div>
+          </div>
+          <div class="d-vault-tab" data-tab="commitments" onclick="dSwitchTab('commitments')">
+            <div class="d-tab-icon">📖</div>
+            <div class="d-tab-text">
+              <span class="d-tab-label">剧情承诺库</span>
+              <span class="d-tab-count">12 活跃 · <span class="d-count-danger">3 待回收</span></span>
+            </div>
+          </div>
+          <div class="d-vault-tab" data-tab="world" onclick="dSwitchTab('world')">
+            <div class="d-tab-icon">🌍</div>
+            <div class="d-tab-text">
+              <span class="d-tab-label">世界观库</span>
+              <span class="d-tab-count">9 项</span>
+            </div>
+          </div>
+          <div class="d-vault-tab" data-tab="secrets" onclick="dSwitchTab('secrets')">
+            <div class="d-tab-icon">🔐</div>
+            <div class="d-tab-text">
+              <span class="d-tab-label">秘密矩阵</span>
+              <span class="d-tab-count">4 活跃 · <span class="d-count-danger">2 不对称</span></span>
+            </div>
+          </div>
+        </nav>
+
+        <div class="d-sidebar-divider"></div>
+        <div class="d-sidebar-stats">
+          <div class="d-sidebar-stat-row">
+            <span class="d-stat-label">总字数</span>
+            <span class="d-stat-value">124,800</span>
+          </div>
+          <div class="d-sidebar-stat-row">
+            <span class="d-stat-label">已完成章节</span>
+            <span class="d-stat-value">23 / 40</span>
+          </div>
+          <div class="d-sidebar-stat-row">
+            <span class="d-stat-label">承诺回收率</span>
+            <span class="d-stat-value">78.9%</span>
+          </div>
+          <div class="d-sidebar-stat-row" style="color:var(--color-warning)">
+            <span class="d-stat-label">🏥 健康告警</span>
+            <span class="d-stat-value">2</span>
+          </div>
+          <div class="d-sidebar-stat-row">
+            <span class="d-stat-label">🔐 活跃秘密</span>
+            <span class="d-stat-value">4</span>
+          </div>
+          <div class="d-sidebar-stat-row">
+            <span class="d-stat-label">最后同步</span>
+            <span class="d-stat-value">2 分钟前</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="d-content-area">
+
+        <!-- ===== 人物库 Panel ===== -->
+        <div class="d-content-panel active" id="dPanel-character">
+          <div class="d-filter-bar" id="dCharacterFilters">
+            <button class="d-filter-btn active" data-filter="all" onclick="dFilterCharacter('all')">全部 (18)</button>
+            <button class="d-filter-btn" data-filter="protagonist" onclick="dFilterCharacter('protagonist')">主角 (1)</button>
+            <button class="d-filter-btn" data-filter="ally" onclick="dFilterCharacter('ally')">盟友 (5)</button>
+            <button class="d-filter-btn" data-filter="neutral" onclick="dFilterCharacter('neutral')">中立 (3)</button>
+            <button class="d-filter-btn" data-filter="opponent" onclick="dFilterCharacter('opponent')">对手 (6)</button>
+            <button class="d-filter-btn" data-filter="villain" onclick="dFilterCharacter('villain')">反派 (3)</button>
+          </div>
+
+          <div class="d-character-grid" id="dCharacterGrid">
+            <!-- 主角 -->
+            <div class="d-character-card" data-faction="protagonist" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 23 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar protagonist">苏</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">苏铭</div>
+                  <span class="d-character-faction protagonist">主角</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">坚韧</span>
+                <span class="d-character-tag">重情义</span>
+                <span class="d-character-tag">天赋异禀</span>
+                <span class="d-character-tag">直感型</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot"></span>
+                宗门考核秘境中
+              </div>
+            </div>
+
+            <!-- 盟友 -->
+            <div class="d-character-card" data-faction="ally" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 15 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar ally">长</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">长风</div>
+                  <span class="d-character-faction ally">盟友</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">沉稳</span>
+                <span class="d-character-tag">博学</span>
+                <span class="d-character-tag">神秘</span>
+                <span class="d-character-tag">金灵使</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot"></span>
+                与主角同行
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="ally" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 8 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar ally">叶</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">叶灵溪</div>
+                  <span class="d-character-faction ally">盟友</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">机敏</span>
+                <span class="d-character-tag">毒舌</span>
+                <span class="d-character-tag">木灵使</span>
+                <span class="d-character-tag">医术</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot"></span>
+                秘境中东区探索
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="ally" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 6 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar ally">萧</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">萧远</div>
+                  <span class="d-character-faction ally">盟友</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">豪爽</span>
+                <span class="d-character-tag">老兵</span>
+                <span class="d-character-tag">忠诚</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot"></span>
+                镇守王城东门
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="ally" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 4 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar ally">白</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">白鹿</div>
+                  <span class="d-character-faction ally">盟友</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">温柔</span>
+                <span class="d-character-tag">水灵使</span>
+                <span class="d-character-tag">占卜</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot"></span>
+                宗门内殿待命
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="ally" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 3 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar ally">顾</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">顾云栖</div>
+                  <span class="d-character-faction ally">盟友</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">少言</span>
+                <span class="d-character-tag">工匠</span>
+                <span class="d-character-tag">机关术</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot"></span>
+                修缮灵脉阵法
+              </div>
+            </div>
+
+            <!-- 中立 -->
+            <div class="d-character-card" data-faction="neutral" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 5 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar neutral">灵</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">灵脉师·无崖</div>
+                  <span class="d-character-faction neutral">中立</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">超然</span>
+                <span class="d-character-tag">洞察</span>
+                <span class="d-character-tag">守序</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-warning);"></span>
+                灵脉观测站
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="neutral" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 3 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar neutral">商</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">商会主·柳如烟</div>
+                  <span class="d-character-faction neutral">中立</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">精明</span>
+                <span class="d-character-tag">八面玲珑</span>
+                <span class="d-character-tag">逐利</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-warning);"></span>
+                各方势力间斡旋
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="neutral" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 2 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar neutral">酒</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">醉道人</div>
+                  <span class="d-character-faction neutral">中立</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">癫狂</span>
+                <span class="d-character-tag">深藏不露</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-warning);"></span>
+                行踪不定
+              </div>
+            </div>
+
+            <!-- 对手 -->
+            <div class="d-character-card" data-faction="opponent" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 7 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar opponent">楚</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">楚天行</div>
+                  <span class="d-character-faction opponent">对手</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">傲慢</span>
+                <span class="d-character-tag">金灵天才</span>
+                <span class="d-character-tag">世家</span>
+                <span class="d-character-tag">争强好胜</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-warning);"></span>
+                秘境南区竞争
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="opponent" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 5 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar opponent">寒</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">寒月</div>
+                  <span class="d-character-faction opponent">对手</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">冷酷</span>
+                <span class="d-character-tag">水灵使</span>
+                <span class="d-character-tag">孤傲</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-warning);"></span>
+                秘境西区独立行动
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="opponent" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 4 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar opponent">赵</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">赵无极</div>
+                  <span class="d-character-faction opponent">对手</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">阴狠</span>
+                <span class="d-character-tag">权谋</span>
+                <span class="d-character-tag">御灵级</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-danger);"></span>
+                暗中操纵考核
+              </div>
+            </div>
+
+            <!-- 反派 -->
+            <div class="d-character-card" data-faction="villain" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 6 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar villain">帝</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">帝师·冥渊</div>
+                  <span class="d-character-faction villain">反派</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">野心勃勃</span>
+                <span class="d-character-tag">宗灵级</span>
+                <span class="d-character-tag">操控者</span>
+                <span class="d-character-tag">融灵禁忌</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-danger);"></span>
+                帝宫密室修炼
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="villain" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 4 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar villain">血</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">血衣使</div>
+                  <span class="d-character-faction villain">反派</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">残暴</span>
+                <span class="d-character-tag">执行者</span>
+                <span class="d-character-tag">不死之身</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-danger);"></span>
+                追踪主角行踪
+              </div>
+            </div>
+
+            <div class="d-character-card" data-faction="villain" onclick="dShowCharacterDetail(this)">
+              <div class="d-character-chapters">出场 3 章</div>
+              <div class="d-character-card-top">
+                <div class="d-character-avatar villain">蛊</div>
+                <div class="d-character-info">
+                  <div class="d-character-name">蛊母</div>
+                  <span class="d-character-faction villain">反派</span>
+                </div>
+              </div>
+              <div class="d-character-tags">
+                <span class="d-character-tag">诡秘</span>
+                <span class="d-character-tag">虫术</span>
+                <span class="d-character-tag">隐匿</span>
+              </div>
+              <div class="d-character-status">
+                <span class="d-character-status-dot" style="background:var(--color-danger);"></span>
+                南疆潜伏
+              </div>
+            </div>
+
+            <!-- 添加角色按钮 -->
+            <button class="d-add-character-btn" onclick="dShowAddCharacter()">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              添加角色
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== 时间线库 Panel ===== -->
+        <div class="d-content-panel" id="dPanel-timeline">
+          <!-- 时间线 -->
+          <section class="d-memory-section">
+            <div class="d-section-card" id="dCard-timeline">
+              <div class="d-section-card-header" onclick="dToggleSection('dCard-timeline')">
+                <div class="d-section-card-title">
+                  <span class="d-card-icon" style="background:rgba(52,211,153,0.1);color:var(--color-success);">⏳</span>
+                  时间线
+                  <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);font-weight:400;">5 个节点</span>
+                </div>
+                <div class="d-section-card-toggle">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div class="d-section-card-body">
+                <div class="d-timeline">
+                  <div class="d-timeline-item completed">
+                    <div class="d-timeline-dot"></div>
+                    <div class="d-timeline-label">第 1 天</div>
+                    <div class="d-timeline-text">主角觉醒灵力，在村中引发异象</div>
+                  </div>
+                  <div class="d-timeline-item completed">
+                    <div class="d-timeline-dot"></div>
+                    <div class="d-timeline-label">第 3 天</div>
+                    <div class="d-timeline-text">离开村庄，跟随引路人前往王城</div>
+                  </div>
+                  <div class="d-timeline-item completed">
+                    <div class="d-timeline-dot"></div>
+                    <div class="d-timeline-label">第 7 天</div>
+                    <div class="d-timeline-text">抵达王城，初遇宗门考核使</div>
+                  </div>
+                  <div class="d-timeline-item current">
+                    <div class="d-timeline-dot"></div>
+                    <div class="d-timeline-label">第 15 天 · 当前</div>
+                    <div class="d-timeline-text">宗门考核开始，进入试炼秘境</div>
+                  </div>
+                  <div class="d-timeline-item">
+                    <div class="d-timeline-dot"></div>
+                    <div class="d-timeline-label">第 20 天</div>
+                    <div class="d-timeline-text" style="color:var(--color-text-disabled);font-style:italic;">考核结束，宗门入门仪式（未写）</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 场景摘要 -->
+          <section class="d-memory-section">
+            <div class="d-section-card" id="dCard-scenes">
+              <div class="d-section-card-header" onclick="dToggleSection('dCard-scenes')">
+                <div class="d-section-card-title">
+                  <span class="d-card-icon" style="background:rgba(212,168,67,0.1);color:var(--color-brand-amber);">🎬</span>
+                  场景摘要
+                  <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);font-weight:400;">12 个场景</span>
+                </div>
+                <div class="d-section-card-toggle">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div class="d-section-card-body">
+                <div class="d-scene-list-item">
+                  <span class="d-scene-chapter">Ch.1</span>
+                  <span class="d-scene-summary">山村少年日常，夜晚灵力意外觉醒，村中水井沸腾</span>
+                </div>
+                <div class="d-scene-list-item">
+                  <span class="d-scene-chapter">Ch.3</span>
+                  <span class="d-scene-summary">神秘老者造访，揭示主角体质特殊，留下玉佩离去</span>
+                </div>
+                <div class="d-scene-list-item">
+                  <span class="d-scene-chapter">Ch.5</span>
+                  <span class="d-scene-summary">告别村人，踏上前往王城的旅途</span>
+                </div>
+                <div class="d-scene-list-item">
+                  <span class="d-scene-chapter">Ch.8</span>
+                  <span class="d-scene-summary">途经古镇遭遇伏击，首次实战使用水灵力退敌</span>
+                </div>
+                <div class="d-scene-list-item">
+                  <span class="d-scene-chapter">Ch.12</span>
+                  <span class="d-scene-summary">地下城战斗，主角在绝境中领悟水灵变化之法</span>
+                </div>
+                <div class="d-scene-list-item">
+                  <span class="d-scene-chapter">Ch.15</span>
+                  <span class="d-scene-summary">宗门考核开始，进入试炼秘境，遇见同行对手</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===== 剧情承诺库 Panel ===== -->
+        <div class="d-content-panel" id="dPanel-commitments">
+          <div class="d-filter-bar" id="dForeshadowFilters">
+            <button class="d-filter-btn active" data-filter="all" onclick="dFilterForeshadow('all')">全部 (31)</button>
+            <button class="d-filter-btn" data-filter="active" onclick="dFilterForeshadow('active')">活跃 (12)</button>
+            <button class="d-filter-btn" data-filter="pending" onclick="dFilterForeshadow('pending')">待回收 (3)</button>
+            <button class="d-filter-btn" data-filter="recovered" onclick="dFilterForeshadow('recovered')">已回收 (15)</button>
+            <button class="d-filter-btn" data-filter="lost" onclick="dFilterForeshadow('lost')">遗落 (1)</button>
+          </div>
+
+          <div class="d-foreshadow-list" id="dForeshadowList">
+            <!-- 待回收伏笔 -->
+            <div class="d-foreshadow-card status-pending" data-status="pending" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot high"></span>
+                  <span class="d-foreshadow-title">神秘玉佩</span>
+                  <span class="d-event-badge foreshadow">伏笔</span>
+                </div>
+                <span class="d-status-badge pending">待回收</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第3章 · 古墓探索
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 10v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  主角、神秘老者
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 3V2M11 3V2M2 7h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  建议第15-20章回收
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">埋设内容</div>
+                    <div class="d-detail-value">神秘老者临终前将一枚刻有奇异纹路的玉佩交给主角，称"此物关乎你身世之谜"。玉佩在月光下会发出微弱荧光。</div>
+                  </div>
+                </div>
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">预期效果</div>
+                    <div class="d-detail-value">揭示主角真实身份，连接帝国皇室暗线</div>
+                  </div>
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">关联线索</div>
+                    <div class="d-detail-value">玉佩纹路与宫中密室符文一致</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-foreshadow-card status-pending" data-status="pending" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot high"></span>
+                  <span class="d-foreshadow-title">金灵禁术残卷</span>
+                  <span class="d-event-badge foreshadow">伏笔</span>
+                </div>
+                <span class="d-status-badge pending">待回收</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第7章 · 地下书阁
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 10v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  主角、长风
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 3V2M11 3V2M2 7h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  建议第18-22章回收
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">埋设内容</div>
+                    <div class="d-detail-value">主角在地下书阁发现残破卷轴，记载了一种可融合金灵与水灵的禁术，但关键页被撕去</div>
+                  </div>
+                </div>
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">预期效果</div>
+                    <div class="d-detail-value">主角在关键战斗中补全禁术，扭转战局</div>
+                  </div>
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">关联线索</div>
+                    <div class="d-detail-value">残卷笔迹与老者遗物吻合</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-foreshadow-card status-pending" data-status="pending" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot medium"></span>
+                  <span class="d-foreshadow-title">王城地下的异响</span>
+                  <span class="d-event-badge twist">转折</span>
+                </div>
+                <span class="d-status-badge pending">待回收</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第10章 · 王城夜行
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 10v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  主角
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 3V2M11 3V2M2 7h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  建议第20-25章回收
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">埋设内容</div>
+                    <div class="d-detail-value">主角夜巡王城时听到地下传来规律的低频震动，像是某种巨大生物的心跳</div>
+                  </div>
+                </div>
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">预期效果</div>
+                    <div class="d-detail-value">引出大陆灵脉危机主线</div>
+                  </div>
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">关联线索</div>
+                    <div class="d-detail-value">震动频率与灵脉波动吻合</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 活跃伏笔 -->
+            <div class="d-foreshadow-card status-active" data-status="active" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot medium"></span>
+                  <span class="d-foreshadow-title">七国密约</span>
+                  <span class="d-event-badge advance">推进</span>
+                </div>
+                <span class="d-status-badge active">活跃</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第2章 · 旧档室
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 10v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  长风、萧远
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 3V2M11 3V2M2 7h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  建议第25-30章回收
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">埋设内容</div>
+                    <div class="d-detail-value">七国之间曾有一份密约，约定在灵脉枯竭时共同开启「灵源」。但密约内容各执一词</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-foreshadow-card status-active" data-status="active" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot low"></span>
+                  <span class="d-foreshadow-title">长风的真实身份</span>
+                  <span class="d-event-badge foreshadow">伏笔</span>
+                </div>
+                <span class="d-status-badge active">活跃</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第5章 · 旅途对话
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 10v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  长风
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">埋设内容</div>
+                    <div class="d-detail-value">长风对王城地形极为熟悉，且对宗门内幕了解过多，暗示其身份不简单</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-foreshadow-card status-active" data-status="active" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot low"></span>
+                  <span class="d-foreshadow-title">消失的第八条灵脉</span>
+                  <span class="d-event-badge advance">推进</span>
+                </div>
+                <span class="d-status-badge active">活跃</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第4章 · 灵脉图
+                </span>
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 10v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  主角、灵脉师
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">埋设内容</div>
+                    <div class="d-detail-value">古灵脉图上标注了八条灵脉，但当代只知七条。第八条灵脉的位置被刻意抹去</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 已回收伏笔 -->
+            <div class="d-foreshadow-card status-recovered" data-status="recovered" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot low"></span>
+                  <span class="d-foreshadow-title">客栈中的密语</span>
+                  <span class="d-event-badge wrap">收束</span>
+                </div>
+                <span class="d-status-badge recovered">✓ 已回收</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第2章 · 古镇客栈
+                </span>
+                <span class="d-meta-item" style="color:var(--color-success);">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12 13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  第8章回收
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">回收说明</div>
+                    <div class="d-detail-value">客栈中听到的密语实际是追杀者传递的暗号，主角在第8章遭遇伏击时恍然大悟</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-foreshadow-card status-recovered" data-status="recovered" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot low"></span>
+                  <span class="d-foreshadow-title">村长的异常举动</span>
+                  <span class="d-event-badge twist">转折</span>
+                </div>
+                <span class="d-status-badge recovered">✓ 已回收</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第1章 · 山村
+                </span>
+                <span class="d-meta-item" style="color:var(--color-success);">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12 13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  第5章回收
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">回收说明</div>
+                    <div class="d-detail-value">村长一直阻止主角离开，是因为受人之托暗中保护。告别时村长说的"别回头"实为忠告</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 遗落伏笔 -->
+            <div class="d-foreshadow-card status-lost" data-status="lost" onclick="dToggleForeshadow(this)">
+              <div class="d-foreshadow-card-header">
+                <div class="d-foreshadow-card-left">
+                  <span class="d-urgency-dot high"></span>
+                  <span class="d-foreshadow-title">断桥上的符文</span>
+                  <span class="d-event-badge foreshadow">伏笔</span>
+                </div>
+                <span class="d-status-badge lost">遗落</span>
+              </div>
+              <div class="d-foreshadow-card-meta">
+                <span class="d-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1M5 7v4M8 7v4M11 7v4M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  第6章 · 断桥遗迹
+                </span>
+                <span class="d-meta-item" style="color:var(--color-danger);">
+                  ⚠ 已过回收窗口
+                </span>
+              </div>
+              <div class="d-foreshadow-card-detail">
+                <div class="d-detail-row">
+                  <div class="d-detail-col">
+                    <div class="d-detail-label">遗落说明</div>
+                    <div class="d-detail-value">主角经过断桥时看到石柱上的古老符文，但之后剧情未再提及。建议在后续章节补充呼应或标记为废弃</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 世界观库 Panel ===== -->
+        <div class="d-content-panel" id="dPanel-world">
+          <div class="d-filter-bar">
+            <button class="d-filter-btn active" data-filter="all">全部 (9)</button>
+            <button class="d-filter-btn" data-filter="geography">地理 (3)</button>
+            <button class="d-filter-btn" data-filter="history">历史 (2)</button>
+            <button class="d-filter-btn" data-filter="magic">体系 (2)</button>
+            <button class="d-filter-btn" data-filter="faction">势力 (2)</button>
+          </div>
+
+          <!-- 世界观设定 -->
+          <section class="d-memory-section">
+            <div class="d-section-card" id="dCard-worldview">
+              <div class="d-section-card-header" onclick="dToggleSection('dCard-worldview')">
+                <div class="d-section-card-title">
+                  <span class="d-card-icon" style="background:rgba(99,102,241,0.1);color:var(--color-brand-indigo);">🌐</span>
+                  世界观设定
+                  <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);font-weight:400;">6 项</span>
+                </div>
+                <div class="d-section-card-toggle">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div class="d-section-card-body">
+                <div class="d-memory-item">
+                  <span class="d-memory-item-text">这个世界存在三种灵力：金、木、水。灵力修炼者被称为「灵使」</span>
+                  <div class="d-memory-item-actions">
+                    <button class="d-action-btn" title="编辑">✏️</button>
+                    <button class="d-action-btn danger" title="删除">🗑</button>
+                  </div>
+                </div>
+                <div class="d-memory-item">
+                  <span class="d-memory-item-text">帝国历 1037 年，大陆分裂为七国，中央帝国名存实亡</span>
+                  <div class="d-memory-item-actions">
+                    <button class="d-action-btn" title="编辑">✏️</button>
+                    <button class="d-action-btn danger" title="删除">🗑</button>
+                  </div>
+                </div>
+                <div class="d-memory-item">
+                  <span class="d-memory-item-text">灵力等级划分：初灵 → 通灵 → 御灵 → 宗灵 → 圣灵，每级三阶</span>
+                  <div class="d-memory-item-actions">
+                    <button class="d-action-btn" title="编辑">✏️</button>
+                    <button class="d-action-btn danger" title="删除">🗑</button>
+                  </div>
+                </div>
+                <div class="d-memory-item">
+                  <span class="d-memory-item-text">金灵主攻伐，木灵主生机，水灵主变化。三者可相生相克</span>
+                  <div class="d-memory-item-actions">
+                    <button class="d-action-btn" title="编辑">✏️</button>
+                    <button class="d-action-btn danger" title="删除">🗑</button>
+                  </div>
+                </div>
+                <div class="d-memory-item">
+                  <span class="d-memory-item-text">「灵脉」是天地灵力汇聚之地，七国各据一条主脉</span>
+                  <div class="d-memory-item-actions">
+                    <button class="d-action-btn" title="编辑">✏️</button>
+                    <button class="d-action-btn danger" title="删除">🗑</button>
+                  </div>
+                </div>
+                <div class="d-memory-item">
+                  <span class="d-memory-item-text">禁忌之术「融灵」可融合不同灵力属性，但成功率不足万一</span>
+                  <div class="d-memory-item-actions">
+                    <button class="d-action-btn" title="编辑">✏️</button>
+                    <button class="d-action-btn danger" title="删除">🗑</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 世界观卡片网格 -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--space-4);padding:var(--space-4) 0">
+            <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-2)">
+                <span style="font-size:13px;font-weight:600;color:var(--color-text-primary)">玄天宗宗门</span>
+                <span class="d-character-faction protagonist" style="font-size:10px;padding:1px 6px">地理</span>
+              </div>
+              <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0">位于苍云山脉主峰，占地三百里。宗门分七峰十二堂，以剑道与符法闻名南疆。护山大阵每甲子重启一次，需七峰首座合力催动。</p>
+              <div style="margin-top:var(--space-3);display:flex;gap:var(--space-2);flex-wrap:wrap">
+                <span class="d-character-tag">剑修发源地</span>
+                <span class="d-character-tag">七峰十二堂</span>
+                <span class="d-character-tag">护山大阵</span>
+              </div>
+              <div style="margin-top:var(--space-2);font-size:10px;color:var(--color-text-disabled)">关联章节: 1-23 · 最后更新: 第14章</div>
+            </div>
+            <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-2)">
+                <span style="font-size:13px;font-weight:600;color:var(--color-text-primary)">灵力体系</span>
+                <span class="d-character-faction ally" style="font-size:10px;padding:1px 6px">体系</span>
+              </div>
+              <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0">修炼分九境：凝气→筑基→开光→融合→心动→金丹→元婴→化神→渡劫。每境分前中后三期。灵力属性分金木水火土五行，变异属性有雷、冰、风、暗。</p>
+              <div style="margin-top:var(--space-3);display:flex;gap:var(--space-2);flex-wrap:wrap">
+                <span class="d-character-tag">九境体系</span>
+                <span class="d-character-tag">五行灵力</span>
+                <span class="d-character-tag">变异属性</span>
+              </div>
+              <div style="margin-top:var(--space-2);font-size:10px;color:var(--color-text-disabled)">关联章节: 3-21 · 最后更新: 第12章</div>
+            </div>
+            <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-2)">
+                <span style="font-size:13px;font-weight:600;color:var(--color-text-primary)">后山禁地</span>
+                <span class="d-character-faction opponent" style="font-size:10px;padding:1px 6px">地理</span>
+              </div>
+              <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0">宗门后山深处一处古老遗迹，被层层阵法封印。传闻每甲子阵眼松动，曾有弟子误入后再未归来。林霄在第12章听闻此禁地，引发后续剧情。</p>
+              <div style="margin-top:var(--space-3);display:flex;gap:var(--space-2);flex-wrap:wrap">
+                <span class="d-character-tag">古老遗迹</span>
+                <span class="d-character-tag">阵法封印</span>
+                <span class="d-character-tag">剧情触发点</span>
+              </div>
+              <div style="margin-top:var(--space-2);font-size:10px;color:var(--color-text-disabled)">关联章节: 12 · 最后更新: 第12章</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🔐 秘密矩阵面板 -->
+        <div class="d-content-panel" id="dPanel-secrets">
+          <div class="d-filter-bar">
+            <button class="d-filter-btn active" data-filter="all">全部 (4)</button>
+            <button class="d-filter-btn" data-filter="absolute">绝对秘密 (2)</button>
+            <button class="d-filter-btn" data-filter="partial">部分公开 (1)</button>
+            <button class="d-filter-btn" data-filter="open">已公开 (1)</button>
+          </div>
+
+          <!-- 知识矩阵概览 -->
+          <section class="d-memory-section">
+            <div class="d-section-card" id="dCard-secrets-overview">
+              <div class="d-section-card-header" onclick="dToggleSection('dCard-secrets-overview')">
+                <div class="d-section-card-title">
+                  <span class="d-card-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">🔐</span>
+                  信息不对称矩阵
+                  <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);font-weight:400;">角色知识状态</span>
+                </div>
+                <div class="d-section-card-toggle">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div class="d-section-card-body">
+                <div style="overflow-x:auto;font-size:12px">
+                  <table style="width:100%;border-collapse:collapse">
+                    <thead>
+                      <tr style="border-bottom:2px solid var(--color-border)">
+                        <th style="padding:8px 12px;text-align:left;color:var(--color-text-tertiary);font-weight:500">秘密</th>
+                        <th style="padding:8px 12px;text-align:center;color:var(--color-text-tertiary);font-weight:500">林夜</th>
+                        <th style="padding:8px 12px;text-align:center;color:var(--color-text-tertiary);font-weight:500">苏晚晴</th>
+                        <th style="padding:8px 12px;text-align:center;color:var(--color-text-tertiary);font-weight:500">叶灵</th>
+                        <th style="padding:8px 12px;text-align:center;color:var(--color-text-tertiary);font-weight:500">青袍老者</th>
+                        <th style="padding:8px 12px;text-align:center;color:var(--color-text-tertiary);font-weight:500">层级</th>
+                        <th style="padding:8px 12px;text-align:center;color:var(--color-text-tertiary);font-weight:500">债务</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style="border-bottom:1px solid var(--color-border-light)">
+                        <td style="padding:8px 12px;font-weight:500">林夜是苏晚晴失散多年的弟弟</td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#ef4444;font-weight:600">✓ 知</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#ef4444;font-weight:600">✓ 知</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#6b7280">?</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#ef4444;font-weight:600">✓ 知</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:2px 8px;border-radius:4px;font-size:11px">partial</span></td>
+                        <td style="padding:8px 12px;text-align:center;color:#f59e0b;font-weight:600">15</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid var(--color-border-light)">
+                        <td style="padding:8px 12px;font-weight:500">叶灵是反派派来的卧底</td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#6b7280">?</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#6b7280">?</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#ef4444;font-weight:600">✓ 知</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#ef4444;font-weight:600">✓ 知</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:2px 8px;border-radius:4px;font-size:11px">absolute</span></td>
+                        <td style="padding:8px 12px;text-align:center;color:#ef4444;font-weight:600">35</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid var(--color-border-light)">
+                        <td style="padding:8px 12px;font-weight:500">天象核心是一把钥匙</td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#ef4444;font-weight:600">✓ 知</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#6b7280">?</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#6b7280">?</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#ef4444;font-weight:600">✓ 知</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:2px 8px;border-radius:4px;font-size:11px">absolute</span></td>
+                        <td style="padding:8px 12px;text-align:center;color:#ef4444;font-weight:600">45</td>
+                      </tr>
+                      <tr style="border-bottom:1px solid var(--color-border-light)">
+                        <td style="padding:8px 12px;font-weight:500">林夜的真实身世是帝国遗孤</td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#10b981;font-weight:600">✓</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#10b981;font-weight:600">✓</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#10b981;font-weight:600">✓</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="color:#10b981;font-weight:600">✓</span></td>
+                        <td style="padding:8px 12px;text-align:center"><span style="background:rgba(16,185,129,0.1);color:#10b981;padding:2px 8px;border-radius:4px;font-size:11px">open</span></td>
+                        <td style="padding:8px 12px;text-align:center;color:#6b7280">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div style="margin-top:var(--space-3);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)">
+                  <div style="padding:var(--space-3);background:rgba(245,158,11,0.08);border-radius:var(--radius-md)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2)">
+                      <span style="font-size:12px;font-weight:600;color:var(--color-text-primary)">📊 秘密债务总览</span>
+                      <span style="font-size:11px;color:var(--color-text-tertiary)">平均债务: 24</span>
+                    </div>
+                    <!-- 债务进度条 -->
+                    <div style="margin-bottom:var(--space-2)">
+                      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                        <span style="color:var(--color-text-secondary)">天象核心是一把钥匙</span>
+                        <span style="color:#ef4444;font-weight:600">45 ⚠️</span>
+                      </div>
+                      <div style="height:6px;background:var(--color-border);border-radius:3px;overflow:hidden">
+                        <div style="height:100%;width:90%;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:3px"></div>
+                      </div>
+                    </div>
+                    <div style="margin-bottom:var(--space-2)">
+                      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                        <span style="color:var(--color-text-secondary)">叶灵是反派派来的卧底</span>
+                        <span style="color:#f59e0b;font-weight:600">35</span>
+                      </div>
+                      <div style="height:6px;background:var(--color-border);border-radius:3px;overflow:hidden">
+                        <div style="height:100%;width:70%;background:#f59e0b;border-radius:3px"></div>
+                      </div>
+                    </div>
+                    <div style="margin-bottom:var(--space-2)">
+                      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                        <span style="color:var(--color-text-secondary)">林夜是苏晚晴失散多年的弟弟</span>
+                        <span style="color:#eab308;font-weight:600">15</span>
+                      </div>
+                      <div style="height:6px;background:var(--color-border);border-radius:3px;overflow:hidden">
+                        <div style="height:100%;width:30%;background:#eab308;border-radius:3px"></div>
+                      </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:var(--space-2)">
+                      债务 = (当前章 - 埋设章) × 未知角色数 · 阈值 30 建议揭露
+                    </div>
+                  </div>
+                  <div style="padding:var(--space-3);background:rgba(16,185,129,0.06);border-radius:var(--radius-md)">
+                    <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);margin-bottom:var(--space-2)">✅ 秘密健康状态</div>
+                    <div style="font-size:11px;color:var(--color-text-secondary);line-height:2">
+                      <div>🟢 已公开秘密: 1 (无需追踪)</div>
+                      <div>🟡 活跃秘密: 3</div>
+                      <div>🔴 高债务 (&gt;30): 2</div>
+                      <div>📈 建议揭露: 1 (天象核心)</div>
+                    </div>
+                    <div style="margin-top:var(--space-2);padding:var(--space-2);background:rgba(239,68,68,0.08);border-radius:var(--radius-sm);font-size:11px;color:#ef4444">
+                      💡 建议在第 16 章安排关于"天象核心"的秘密揭露
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 角色知识卡片 -->
+          <section class="d-memory-section" style="margin-top:var(--space-4)">
+            <div class="d-section-card" id="dCard-character-knowledge">
+              <div class="d-section-card-header" onclick="dToggleSection('dCard-character-knowledge')">
+                <div class="d-section-card-title">
+                  <span class="d-card-icon" style="background:rgba(99,102,241,0.1);color:var(--color-brand-indigo);">👤</span>
+                  角色知识状态
+                </div>
+                <div class="d-section-card-toggle">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div class="d-section-card-body">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--space-3)">
+                  <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)">
+                    <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)">
+                      <div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.12);display:flex;align-items:center;justify-content:center;font-size:16px">🌲</div>
+                      <div>
+                        <div style="font-weight:600;font-size:13px">林夜</div>
+                        <div style="font-size:11px;color:var(--color-text-tertiary)">知道 3 / 总 4 个秘密</div>
+                      </div>
+                    </div>
+                    <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.8">
+                      <div>✅ 林夜是苏晚晴失散多年的弟弟</div>
+                      <div>✅ 天象核心是一把钥匙</div>
+                      <div>✅ 林夜的真实身世是帝国遗孤</div>
+                      <div style="color:#ef4444">❌ 叶灵是反派派来的卧底</div>
+                    </div>
+                  </div>
+                  <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)">
+                    <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)">
+                      <div style="width:36px;height:36px;border-radius:50%;background:rgba(236,72,153,0.12);display:flex;align-items:center;justify-content:center;font-size:16px">🌸</div>
+                      <div>
+                        <div style="font-weight:600;font-size:13px">苏晚晴</div>
+                        <div style="font-size:11px;color:var(--color-text-tertiary)">知道 2 / 总 4 个秘密</div>
+                      </div>
+                    </div>
+                    <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.8">
+                      <div>✅ 林夜是苏晚晴失散多年的弟弟</div>
+                      <div>✅ 林夜的真实身世是帝国遗孤</div>
+                      <div style="color:#ef4444">❌ 天象核心是一把钥匙</div>
+                      <div style="color:#ef4444">❌ 叶灵是反派派来的卧底</div>
+                    </div>
+                  </div>
+                  <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4)">
+                    <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)">
+                      <div style="width:36px;height:36px;border-radius:50%;background:rgba(52,211,153,0.12);display:flex;align-items:center;justify-content:center;font-size:16px">🍃</div>
+                      <div>
+                        <div style="font-weight:600;font-size:13px">叶灵</div>
+                        <div style="font-size:11px;color:var(--color-text-tertiary)">知道 1 / 总 4 个秘密</div>
+                      </div>
+                    </div>
+                    <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.8">
+                      <div style="color:#ef4444">❌ 林夜是苏晚晴失散多年的弟弟</div>
+                      <div style="color:#ef4444">❌ 天象核心是一把钥匙</div>
+                      <div style="color:#ef4444">❌ 林夜的真实身世是帝国遗孤</div>
+                      <div>✅ 叶灵是反派派来的卧底</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- 人物详情弹窗 -->
+  <div class="d-detail-overlay" id="dCharacterOverlay" onclick="dCloseCharacterDetail(event)">
+    <div class="d-detail-modal" onclick="event.stopPropagation()">
+      <div class="d-detail-modal-header">
+        <span class="d-detail-modal-title" id="dModalCharName">—</span>
+        <button class="d-detail-modal-close" onclick="dCloseCharacterDetail()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="d-detail-modal-body" id="dModalCharBody">
+        <!-- 动态填充 -->
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END DESKTOP SHELL -->
+
+
+<!-- ====================================================================
+     MOBILE SHELL (default)
+     ==================================================================== -->
+<div id="mobile-shell">
+
+  <!-- Status Bar -->
+  <div class="m-status-bar">
+    <span class="m-time">9:41</span>
+    <span class="m-icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><rect x="0" y="6" width="3" height="6" rx="0.5"/><rect x="4" y="4" width="3" height="8" rx="0.5"/><rect x="8" y="2" width="3" height="10" rx="0.5"/><rect x="12" y="0" width="3" height="12" rx="0.5" opacity="0.3"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2C5.5 2 3.2 3 1.5 4.6L0 3.1C2.1 1.1 4.9 0 8 0s5.9 1.1 8 3.1L14.5 4.6C12.8 3 10.5 2 8 2z" opacity="0.3"/><path d="M8 5c1.6 0 3 .6 4.1 1.7L10.6 8.2C9.9 7.5 9 7 8 7s-1.9.5-2.6 1.2L3.9 6.7C5 5.6 6.4 5 8 5z" opacity="0.6"/><circle cx="8" cy="10.5" r="1.5"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor"><rect x="0" y="1" width="21" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1"/><rect x="1.5" y="2.5" width="14" height="7" rx="1" fill="#34d399"/><rect x="22" y="4" width="2" height="4" rx="0.5"/></svg>
+    </span>
+  </div>
+
+  <!-- Top Nav -->
+  <div class="m-top-nav">
+    <button class="m-back-btn" onclick="history.back()">&#8592;</button>
+    <span class="m-title">星穹之下</span>
+    <button class="m-search-btn">&#128269;</button>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="m-tab-bar-wrapper">
+    <div class="m-tab-bar" id="mTabBar">
+      <div class="m-tab-item active" data-tab="0" onclick="mSwitchTab(0)">
+        人物库
+        <span class="m-indicator" style="background:var(--tab-char);width:24px"></span>
+      </div>
+      <div class="m-tab-item" data-tab="1" onclick="mSwitchTab(1)">
+        时间线库
+        <span class="m-indicator" style="background:var(--tab-time)"></span>
+      </div>
+      <div class="m-tab-item" data-tab="2" onclick="mSwitchTab(2)">
+        剧情承诺库
+        <span class="m-indicator" style="background:var(--tab-plot)"></span>
+      </div>
+      <div class="m-tab-item" data-tab="3" onclick="mSwitchTab(3)">
+        世界观库
+        <span class="m-indicator" style="background:var(--tab-world)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Mobile Tab 1: 人物库 ====== -->
+  <div class="m-tab-content active" id="mTab0">
+    <div class="m-search-box">
+      <span class="m-icon">&#128269;</span>
+      <input type="text" placeholder="搜索角色..." id="mCharSearch" oninput="mFilterChars()">
+    </div>
+
+    <div class="m-char-card" data-char="0" onclick="mToggleChar(this)">
+      <div class="m-char-header">
+        <div class="m-char-avatar v1">苏</div>
+        <div class="m-char-info">
+          <div class="m-char-name">苏铭</div>
+          <div class="m-char-tags">
+            <span class="m-char-tag role">主角</span>
+            <span class="m-char-tag">坚韧</span>
+            <span class="m-char-tag">重情义</span>
+            <span class="m-char-tag">天赋异禀</span>
+          </div>
+        </div>
+        <span class="m-char-arrow">&#9660;</span>
+      </div>
+      <div class="m-char-detail">
+        <div class="m-char-detail-inner">
+          <div class="m-char-traits">
+            <span>坚韧</span><span>重情义</span><span>天赋异禀</span>
+          </div>
+          <div class="m-char-desc">出身平凡村庄的少年，体内蕴藏着未被觉醒的灵力。性格坚韧不屈，对身边之人极为珍视。在灵力觉醒后踏上修行之路，逐渐发现自己与星穹之间的隐秘联系。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-char-card" data-char="1" onclick="mToggleChar(this)">
+      <div class="m-char-header">
+        <div class="m-char-avatar v2">叶</div>
+        <div class="m-char-info">
+          <div class="m-char-name">叶青寒</div>
+          <div class="m-char-tags">
+            <span class="m-char-tag role">盟友</span>
+            <span class="m-char-tag">冷傲</span>
+            <span class="m-char-tag">剑术天才</span>
+            <span class="m-char-tag">神秘身世</span>
+          </div>
+        </div>
+        <span class="m-char-arrow">&#9660;</span>
+      </div>
+      <div class="m-char-detail">
+        <div class="m-char-detail-inner">
+          <div class="m-char-traits">
+            <span>冷傲</span><span>剑术天才</span><span>神秘身世</span>
+          </div>
+          <div class="m-char-desc">玄天宗内门弟子，剑术造诣远超同辈。性格孤傲冷淡，实则内心有着不为人知的柔软。身世成谜，似乎与某个没落的世家有关。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-char-card" data-char="2" onclick="mToggleChar(this)">
+      <div class="m-char-header">
+        <div class="m-char-avatar v3">夜</div>
+        <div class="m-char-info">
+          <div class="m-char-name">夜无痕</div>
+          <div class="m-char-tags">
+            <span class="m-char-tag role">对手</span>
+            <span class="m-char-tag">亦正亦邪</span>
+            <span class="m-char-tag">实力深不可测</span>
+          </div>
+        </div>
+        <span class="m-char-arrow">&#9660;</span>
+      </div>
+      <div class="m-char-detail">
+        <div class="m-char-detail-inner">
+          <div class="m-char-traits">
+            <span>亦正亦邪</span><span>实力深不可测</span>
+          </div>
+          <div class="m-char-desc">来历不明的神秘修行者，行事无章可循。时而相助，时而对立，令人难以捉摸。其实力远超表面所见，似乎在暗中推动着某些事件的发展。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Mobile Tab 2: 时间线库 ====== -->
+  <div class="m-tab-content" id="mTab1">
+    <div class="m-timeline">
+      <div class="m-tl-node">
+        <div class="m-tl-dot"></div>
+        <div class="m-tl-label">第 1 天</div>
+        <div class="m-tl-title">主角觉醒灵力</div>
+        <div class="m-tl-card">苏铭在村庄后山的古井旁意外觉醒灵力，引发了一场小型灵力风暴。村中长者意识到这个少年的不凡之处。</div>
+      </div>
+
+      <div class="m-tl-node">
+        <div class="m-tl-dot"></div>
+        <div class="m-tl-label">第 3 天</div>
+        <div class="m-tl-title">离开村庄前往王城</div>
+        <div class="m-tl-card">在村长的指引下，苏铭告别故乡，踏上前往王城的路途。临行前获赠一枚神秘玉佩。</div>
+      </div>
+
+      <div class="m-tl-node">
+        <div class="m-tl-dot"></div>
+        <div class="m-tl-label">第 7 天</div>
+        <div class="m-tl-title">抵达王城，初遇考核使</div>
+        <div class="m-tl-card">历经波折抵达王城，恰逢玄天宗三年一度的宗门考核。叶青寒作为考核使首次登场。</div>
+      </div>
+
+      <div class="m-tl-node current">
+        <div class="m-tl-dot"></div>
+        <div class="m-tl-label">第 15 天 <span class="m-tl-badge">当前</span></div>
+        <div class="m-tl-title">宗门考核，进入秘境</div>
+        <div class="m-tl-card">宗门考核进入关键阶段——秘境试炼。苏铭与众多考生一同踏入未知空间，面对前所未有的挑战。</div>
+      </div>
+
+      <div class="m-tl-node future">
+        <div class="m-tl-dot"></div>
+        <div class="m-tl-label" style="color:var(--color-text-disabled)">第 20 天</div>
+        <div class="m-tl-title">考核结束</div>
+        <div class="m-tl-card">秘境试炼结束，考核结果揭晓。各考生命运将走向何方…（未写）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Mobile Tab 3: 剧情承诺库 ====== -->
+  <div class="m-tab-content" id="mTab2">
+    <div class="m-filter-bar">
+      <button class="m-filter-btn active" onclick="mFilterPlot('all', this)">全部</button>
+      <button class="m-filter-btn" onclick="mFilterPlot('pending', this)">待回收</button>
+      <button class="m-filter-btn" onclick="mFilterPlot('done', this)">已回收</button>
+    </div>
+
+    <div class="m-plot-card pending" onclick="mTogglePlot(this)">
+      <div class="m-plot-header">
+        <span class="m-plot-icon">&#128308;</span>
+        <div class="m-plot-info">
+          <div class="m-plot-title">神秘玉佩</div>
+          <div class="m-plot-meta">第3章埋设</div>
+        </div>
+        <span class="m-plot-status pending">待回收</span>
+        <span class="m-plot-expand">&#9660;</span>
+      </div>
+      <div class="m-plot-detail">
+        <div class="m-plot-detail-inner">
+          苏铭离开村庄时获赠的神秘玉佩，蕴含着未知力量。村长称其为"故人所托"，暗示玉佩与苏铭的身世有关。<div class="m-plot-suggest">建议回收：第15-20章</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-plot-card pending" onclick="mTogglePlot(this)">
+      <div class="m-plot-header">
+        <span class="m-plot-icon">&#128308;</span>
+        <div class="m-plot-info">
+          <div class="m-plot-title">禁术残卷</div>
+          <div class="m-plot-meta">第7章埋设</div>
+        </div>
+        <span class="m-plot-status pending">待回收</span>
+        <span class="m-plot-expand">&#9660;</span>
+      </div>
+      <div class="m-plot-detail">
+        <div class="m-plot-detail-inner">
+          苏铭在王城旧书店中意外发现的残破卷轴，记载着一种被明令禁止的古老术法。残卷仅存三分之一，其余部分下落不明。<div class="m-plot-suggest">建议回收：第18-22章</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-plot-card pending" onclick="mTogglePlot(this)">
+      <div class="m-plot-header">
+        <span class="m-plot-icon">&#128992;</span>
+        <div class="m-plot-info">
+          <div class="m-plot-title">王城地下的异响</div>
+          <div class="m-plot-meta">第10章埋设</div>
+        </div>
+        <span class="m-plot-status pending">待回收</span>
+        <span class="m-plot-expand">&#9660;</span>
+      </div>
+      <div class="m-plot-detail">
+        <div class="m-plot-detail-inner">
+          多名王城居民反映深夜地下传来异响，玄天宗派人调查却毫无发现。异响出现的规律似乎与月相有关。<div class="m-plot-suggest">建议回收：第20-25章</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-plot-card done" onclick="mTogglePlot(this)">
+      <div class="m-plot-header">
+        <span class="m-plot-icon">&#128994;</span>
+        <div class="m-plot-info">
+          <div class="m-plot-title">客栈密语</div>
+          <div class="m-plot-meta">第8章已回收</div>
+        </div>
+        <span class="m-plot-status done">已回收</span>
+        <span class="m-plot-expand">&#9660;</span>
+      </div>
+      <div class="m-plot-detail">
+        <div class="m-plot-detail-inner">
+          苏铭在客栈中偷听到的神秘对话，指向了玄天宗内部的一股暗流。此线索在第8章帮助他识破了考核中的一次暗算。
+        </div>
+      </div>
+    </div>
+
+    <div class="m-plot-card done" onclick="mTogglePlot(this)">
+      <div class="m-plot-header">
+        <span class="m-plot-icon">&#9989;</span>
+        <div class="m-plot-info">
+          <div class="m-plot-title">村长的异常</div>
+          <div class="m-plot-meta">第5章已回收</div>
+        </div>
+        <span class="m-plot-status done">已回收</span>
+        <span class="m-plot-expand">&#9660;</span>
+      </div>
+      <div class="m-plot-detail">
+        <div class="m-plot-detail-inner">
+          村长在苏铭觉醒灵力后的异常反应暗示他早已知晓一切。此伏笔在第5章得到回收——村长揭示了与苏铭父亲的旧日约定。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Mobile Tab 4: 世界观库 ====== -->
+  <div class="m-tab-content" id="mTab3">
+    <div class="m-cat-bar">
+      <button class="m-cat-btn active" onclick="mFilterWorld('all', this)">全部</button>
+      <button class="m-cat-btn" onclick="mFilterWorld('geo', this)">地理</button>
+      <button class="m-cat-btn" onclick="mFilterWorld('his', this)">历史</button>
+      <button class="m-cat-btn" onclick="mFilterWorld('sys', this)">体系</button>
+      <button class="m-cat-btn" onclick="mFilterWorld('power', this)">势力</button>
+    </div>
+
+    <div class="m-world-grid" id="mWorldGrid">
+      <div class="m-world-card" data-cat="geo">
+        <div class="m-world-icon geo">&#127963;</div>
+        <div class="m-world-name">玄天宗</div>
+        <span class="m-world-cat geo">地理</span>
+        <div class="m-world-desc">天下第一宗门，坐落于天玄山脉之巅，占据三条主灵脉交汇之处。</div>
+      </div>
+
+      <div class="m-world-card" data-cat="sys">
+        <div class="m-world-icon sys">&#9881;</div>
+        <div class="m-world-name">灵力体系</div>
+        <span class="m-world-cat sys">体系</span>
+        <div class="m-world-desc">九境：凝气→筑基→开脉→通玄→化神→归真→合道→造化→破天。</div>
+      </div>
+
+      <div class="m-world-card" data-cat="geo">
+        <div class="m-world-icon geo">&#9968;</div>
+        <div class="m-world-name">后山禁地</div>
+        <span class="m-world-cat geo">地理</span>
+        <div class="m-world-desc">玄天宗后山被列为禁地的古老遗迹，据传是上古大能的陨落之所。</div>
+      </div>
+
+      <div class="m-world-card" data-cat="his">
+        <div class="m-world-icon his">&#128214;</div>
+        <div class="m-world-name">七国局势</div>
+        <span class="m-world-cat his">历史</span>
+        <div class="m-world-desc">天下七国割据百年，表面和平之下暗流涌动，各国均暗中蓄力。</div>
+      </div>
+
+      <div class="m-world-card" data-cat="sys">
+        <div class="m-world-icon sys">&#9883;</div>
+        <div class="m-world-name">融灵禁术</div>
+        <span class="m-world-cat sys">体系</span>
+        <div class="m-world-desc">以极端手段融合不同属性灵力的禁忌之术，修炼者九死一生。</div>
+      </div>
+
+      <div class="m-world-card" data-cat="geo">
+        <div class="m-world-icon geo">&#127756;</div>
+        <div class="m-world-name">灵脉分布</div>
+        <span class="m-world-cat geo">地理</span>
+        <div class="m-world-desc">天下九条主灵脉贯穿大陆，灵脉节点处皆建有重镇或宗门。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="m-bottom-nav">
+    <div class="m-nav-item">
+      <span class="m-nav-icon">&#127968;</span>
+      <span class="m-nav-label">首页</span>
+    </div>
+    <div class="m-nav-item active">
+      <span class="m-nav-icon">&#128214;</span>
+      <span class="m-nav-label">作品</span>
+    </div>
+    <div class="m-nav-item">
+      <span class="m-nav-icon">&#9997;</span>
+      <span class="m-nav-label">创作</span>
+    </div>
+    <div class="m-nav-item">
+      <span class="m-nav-icon">&#128100;</span>
+      <span class="m-nav-label">我的</span>
+    </div>
+  </div>
+</div>
+<!-- END MOBILE SHELL -->
+
+
+<!-- ====================================================================
+     JAVASCRIPT — Desktop + Mobile
+     ==================================================================== -->
+<script>
+  /* ============================================
+     DESKTOP JavaScript
+     ============================================ */
+
+  /* ---- Desktop Tab Switching ---- */
+  function dSwitchTab(tabName) {
+    document.querySelectorAll('.d-vault-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.d-content-panel').forEach(panel => {
+      panel.classList.remove('active');
+    });
+    const targetPanel = document.getElementById('dPanel-' + tabName);
+    if (targetPanel) {
+      targetPanel.classList.add('active');
+    }
+  }
+
+  /* ---- Desktop Section Toggle ---- */
+  function dToggleSection(cardId) {
+    const card = document.getElementById(cardId);
+    if (card) {
+      card.classList.toggle('collapsed');
+    }
+  }
+
+  /* ---- Desktop Foreshadow Filter ---- */
+  function dFilterForeshadow(status) {
+    document.querySelectorAll('#dForeshadowFilters .d-filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === status);
+    });
+    const cards = document.querySelectorAll('#dForeshadowList .d-foreshadow-card');
+    cards.forEach(card => {
+      if (status === 'all') {
+        card.style.display = '';
+      } else {
+        card.style.display = card.dataset.status === status ? '' : 'none';
+      }
+    });
+  }
+
+  /* ---- Desktop Foreshadow Expand/Collapse ---- */
+  function dToggleForeshadow(card) {
+    const wasExpanded = card.classList.contains('expanded');
+    document.querySelectorAll('#dForeshadowList .d-foreshadow-card.expanded').forEach(c => {
+      c.classList.remove('expanded');
+    });
+    if (!wasExpanded) {
+      card.classList.add('expanded');
+    }
+  }
+
+  /* ---- Desktop Character Filter ---- */
+  function dFilterCharacter(faction) {
+    document.querySelectorAll('#dCharacterFilters .d-filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === faction);
+    });
+    const cards = document.querySelectorAll('#dCharacterGrid .d-character-card');
+    cards.forEach(card => {
+      if (faction === 'all') {
+        card.style.display = '';
+      } else {
+        card.style.display = card.dataset.faction === faction ? '' : 'none';
+      }
+    });
+  }
+
+  /* ---- Desktop Character Detail Modal ---- */
+  const dCharacterData = {
+    '苏铭': {
+      name: '苏铭',
+      faction: '主角',
+      background: '山村少年，父母早亡，由村长抚养长大。觉醒水灵力后离开村庄，踏上前往王城的旅途。体内灵力异常纯粹，疑似与消失的第八条灵脉有关。',
+      ability: '水灵使 · 初灵三阶（觉醒中）\n特殊能力：水灵变化——可临时改变灵力属性，但代价未知',
+      relationships: '长风（引路人/同伴）· 叶灵溪（考核同伴）· 楚天行（竞争者）· 神秘老者（恩人/谜团）',
+      arc: '觉醒 → 启程 → 考核 → 入宗 → 真相（当前：考核阶段）'
+    },
+    '长风': {
+      name: '长风',
+      faction: '盟友',
+      background: '自称游历四方的散修，主动担任苏铭的引路人。对王城和宗门的了解远超常人，真实身份成谜。',
+      ability: '金灵使 · 御灵一阶\n战斗风格以精准打击为主，极少全力出手',
+      relationships: '苏铭（引路对象）· 萧远（旧识？）· 冥渊（立场不明）',
+      arc: '引路人 → 身份揭露 → 立场抉择（当前：潜伏期）'
+    },
+    '叶灵溪': {
+      name: '叶灵溪',
+      faction: '盟友',
+      background: '宗门内门弟子，木灵世家出身。表面冷漠，实际热心。擅长以木灵力疗伤。',
+      ability: '木灵使 · 通灵三阶\n擅长治疗和辅助，战斗能力不弱但极少主动进攻',
+      relationships: '苏铭（考核同伴）· 白鹿（闺蜜）· 楚天行（同门，关系冷淡）',
+      arc: '冷漠同伴 → 信任建立 → 并肩作战（当前：信任建立期）'
+    },
+    '楚天行': {
+      name: '楚天行',
+      faction: '对手',
+      background: '楚家嫡子，金灵天赋极高，自幼被视为宗门新星。对苏铭这种"山野之人"嗤之以鼻。',
+      ability: '金灵使 · 通灵二阶（实际战力接近通灵三阶）\n招式凌厉，攻击性极强',
+      relationships: '苏铭（竞争对手）· 寒月（搭档）· 叶灵溪（同门）',
+      arc: '轻视对手 → 逐渐重视 → 尊重/嫉妒（当前：重视期）'
+    },
+    '帝师·冥渊': {
+      name: '帝师·冥渊',
+      faction: '反派',
+      background: '帝国帝师，表面辅佐幼帝，实则是大陆最大的幕后黑手。暗中研究融灵禁术，意图掌控所有灵脉。',
+      ability: '宗灵级（疑似接近圣灵）\n精通金灵与暗灵，暗中掌握融灵之术',
+      relationships: '血衣使（直属部下）· 蛊母（合作者）· 长风（关系成谜）',
+      arc: '幕后操控 → 浮出水面 → 最终对决（当前：幕后操控期）'
+    }
+  };
+
+  function dShowCharacterDetail(cardEl) {
+    const name = cardEl.querySelector('.d-character-name').textContent;
+    const data = dCharacterData[name];
+    if (!data) {
+      const faction = cardEl.dataset.faction;
+      const status = cardEl.querySelector('.d-character-status').textContent.trim();
+      const chapters = cardEl.querySelector('.d-character-chapters').textContent;
+      document.getElementById('dModalCharName').textContent = name;
+      document.getElementById('dModalCharBody').innerHTML = `
+        <div class="d-detail-field">
+          <div class="d-detail-field-label">阵营</div>
+          <div class="d-detail-field-value">${faction}</div>
+        </div>
+        <div class="d-detail-field">
+          <div class="d-detail-field-label">当前状态</div>
+          <div class="d-detail-field-value">${status}</div>
+        </div>
+        <div class="d-detail-field">
+          <div class="d-detail-field-label">${chapters}</div>
+          <div class="d-detail-field-value" style="color:var(--color-text-disabled);font-style:italic;">详细档案待完善</div>
+        </div>
+      `;
+    } else {
+      document.getElementById('dModalCharName').textContent = data.name;
+      document.getElementById('dModalCharBody').innerHTML = `
+        <div class="d-detail-field">
+          <div class="d-detail-field-label">背景</div>
+          <div class="d-detail-field-value">${data.background}</div>
+        </div>
+        <div class="d-detail-field">
+          <div class="d-detail-field-label">能力</div>
+          <div class="d-detail-field-value">${data.ability.replace(/\n/g, '<br>')}</div>
+        </div>
+        <div class="d-detail-field">
+          <div class="d-detail-field-label">人物关系</div>
+          <div class="d-detail-field-value">${data.relationships}</div>
+        </div>
+        <div class="d-detail-field">
+          <div class="d-detail-field-label">角色弧线</div>
+          <div class="d-detail-field-value" style="font-family:var(--font-mono);font-size:12px;">${data.arc}</div>
+        </div>
+      `;
+    }
+    document.getElementById('dCharacterOverlay').classList.add('visible');
+  }
+
+  function dCloseCharacterDetail(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('dCharacterOverlay').classList.remove('visible');
+  }
+
+  function dShowAddCharacter() {
+    document.getElementById('dModalCharName').textContent = '添加新角色';
+    document.getElementById('dModalCharBody').innerHTML = `
+      <div class="d-detail-field">
+        <div class="d-detail-field-label">角色姓名</div>
+        <div class="d-detail-field-value" style="color:var(--color-text-disabled);font-style:italic;">输入角色名称…</div>
+      </div>
+      <div class="d-detail-field">
+        <div class="d-detail-field-label">阵营</div>
+        <div class="d-detail-field-value" style="color:var(--color-text-disabled);font-style:italic;">选择阵营…</div>
+      </div>
+      <div class="d-detail-field">
+        <div class="d-detail-field-label">背景描述</div>
+        <div class="d-detail-field-value" style="color:var(--color-text-disabled);font-style:italic;">输入角色背景…</div>
+      </div>
+      <div style="text-align:right;margin-top:var(--space-4);">
+        <button style="padding:8px 20px;background:var(--color-brand-indigo);color:#fff;border:none;border-radius:var(--radius-md);cursor:pointer;font-family:var(--font-ui);font-size:13px;transition:all var(--duration-normal) var(--ease-default);">确认添加</button>
+      </div>
+    `;
+    document.getElementById('dCharacterOverlay').classList.add('visible');
+  }
+
+  /* ---- Desktop Global Search ---- */
+  const dSearchInput = document.getElementById('dGlobalSearch');
+  dSearchInput.addEventListener('input', function() {
+    const query = this.value.trim().toLowerCase();
+    if (!query) {
+      document.querySelectorAll('.d-memory-item, .d-scene-list-item').forEach(el => {
+        el.style.display = '';
+      });
+      document.querySelectorAll('#dForeshadowList .d-foreshadow-card').forEach(el => {
+        el.style.display = '';
+      });
+      document.querySelectorAll('#dCharacterGrid .d-character-card').forEach(el => {
+        el.style.display = '';
+      });
+      document.querySelectorAll('#dPanel-world .world-card, #dPanel-world div[style]').forEach(el => {
+        el.style.display = '';
+      });
+      return;
+    }
+
+    document.querySelectorAll('.d-memory-item').forEach(el => {
+      const text = el.textContent.toLowerCase();
+      el.style.display = text.includes(query) ? '' : 'none';
+    });
+    document.querySelectorAll('.d-scene-list-item').forEach(el => {
+      const text = el.textContent.toLowerCase();
+      el.style.display = text.includes(query) ? '' : 'none';
+    });
+    document.querySelectorAll('#dForeshadowList .d-foreshadow-card').forEach(el => {
+      const text = el.textContent.toLowerCase();
+      el.style.display = text.includes(query) ? '' : 'none';
+    });
+    document.querySelectorAll('#dCharacterGrid .d-character-card').forEach(el => {
+      const text = el.textContent.toLowerCase();
+      el.style.display = text.includes(query) ? '' : 'none';
+    });
+  });
+
+  /* ---- Desktop Keyboard Shortcuts ---- */
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      dSearchInput.focus();
+    }
+    if (e.key === 'Escape') {
+      dSearchInput.blur();
+      dCloseCharacterDetail();
+    }
+  });
+
+
+  /* ============================================
+     MOBILE JavaScript
+     ============================================ */
+
+  let mCurrentTab = 0;
+
+  function mSwitchTab(index) {
+    mCurrentTab = index;
+    document.querySelectorAll('.m-tab-item').forEach((t, i) => {
+      t.classList.toggle('active', i === index);
+      const ind = t.querySelector('.m-indicator');
+      ind.style.width = i === index ? '24px' : '0';
+    });
+    document.querySelectorAll('.m-tab-content').forEach((c, i) => {
+      c.classList.toggle('active', i === index);
+    });
+  }
+
+  /* ---- Mobile Swipe Support ---- */
+  let mStartX = 0, mStartY = 0;
+
+  document.addEventListener('touchstart', e => {
+    mStartX = e.touches[0].clientX;
+    mStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - mStartX;
+    const dy = e.changedTouches[0].clientY - mStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx < 0 && mCurrentTab < 3) mSwitchTab(mCurrentTab + 1);
+      else if (dx > 0 && mCurrentTab > 0) mSwitchTab(mCurrentTab - 1);
+    }
+  }, { passive: true });
+
+  /* ---- Mobile Character Card Expand ---- */
+  function mToggleChar(card) {
+    card.classList.toggle('expanded');
+  }
+
+  /* ---- Mobile Character Search ---- */
+  function mFilterChars() {
+    const q = document.getElementById('mCharSearch').value.toLowerCase();
+    document.querySelectorAll('.m-char-card').forEach(card => {
+      const name = card.querySelector('.m-char-name').textContent.toLowerCase();
+      const tags = card.querySelector('.m-char-tags').textContent.toLowerCase();
+      card.style.display = (name.includes(q) || tags.includes(q)) ? '' : 'none';
+    });
+  }
+
+  /* ---- Mobile Plot Card Expand ---- */
+  function mTogglePlot(card) {
+    card.classList.toggle('expanded');
+  }
+
+  /* ---- Mobile Plot Filter ---- */
+  function mFilterPlot(type, btn) {
+    document.querySelectorAll('#mTab2 .m-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.m-plot-card').forEach(card => {
+      if (type === 'all') card.style.display = '';
+      else if (type === 'pending') card.style.display = card.classList.contains('pending') ? '' : 'none';
+      else card.style.display = card.classList.contains('done') ? '' : 'none';
+    });
+  }
+
+  /* ---- Mobile World Filter ---- */
+  function mFilterWorld(cat, btn) {
+    document.querySelectorAll('.m-cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.m-world-card').forEach(card => {
+      if (cat === 'all') card.style.display = '';
+      else card.style.display = card.dataset.cat === cat ? '' : 'none';
+    });
+  }
+</script>
+
+</body>
+</html>

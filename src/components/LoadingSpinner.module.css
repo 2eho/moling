@@ -1,0 +1,74 @@
+/* LoadingSpinner 样式 */
+/* 品牌色：indigo (#6366f1) + amber (#d4a843) */
+
+.spinnerContainer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 旋转动画 */
+.spinner {
+  animation: spin 0.8s linear infinite;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 50%;
+}
+
+/* 品牌色变体 */
+.indigo {
+  border-top-color: #6366f1;
+  border-right-color: #6366f1;
+}
+
+.amber {
+  border-top-color: #d4a843;
+  border-right-color: #d4a843;
+}
+
+.white {
+  border-top-color: #ffffff;
+  border-right-color: #ffffff;
+}
+
+/* 尺寸变体 */
+.sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.md {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+
+.lg {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+.xl {
+  width: 56px;
+  height: 56px;
+  border-width: 5px;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 容器尺寸适配 */
+.inline {
+  display: inline-flex;
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}

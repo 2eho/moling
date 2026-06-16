@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>定价 · 墨灵</title>
+<style>
+:root {
+  --color-bg: #0d0f1a;
+  --color-surface: #151829;
+  --color-elevated: #1a1d31;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #9ca3c4;
+  --color-text-tertiary: #6b7199;
+  --color-brand-indigo: #6366f1;
+  --color-brand-amber: #d4a843;
+  --color-success: #34d399;
+  --color-border: #2a2d45;
+  --color-border-subtle: #1e2138;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --font-heading: 'Noto Serif SC', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+/* 导航 */
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+  max-width: 1100px; margin: 0 auto;
+}
+.nav-brand { font-family: var(--font-heading); font-size: 20px; }
+.nav-brand span { color: var(--color-brand-indigo); }
+.nav-links { display: flex; gap: var(--space-6); align-items: center; }
+.nav-links a { color: var(--color-text-tertiary); text-decoration: none; font-size: 13px; }
+.nav-links a:hover { color: var(--color-text-primary); }
+.nav-btn {
+  padding: 8px 20px; background: var(--color-brand-indigo); color: #fff;
+  border-radius: var(--radius-md); text-decoration: none; font-size: 13px;
+}
+/* 头部 */
+.hero { text-align: center; padding: var(--space-10) var(--space-5) var(--space-8); }
+.hero h1 { font-size: 32px; font-weight: 700; margin-bottom: var(--space-3); }
+.hero p { color: var(--color-text-tertiary); font-size: 15px; max-width: 500px; margin: 0 auto; line-height: 1.6; }
+/* 计费切换 */
+.billing-toggle {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+  margin-bottom: var(--space-8); font-size: 13px; color: var(--color-text-secondary);
+}
+.billing-toggle .toggle-track {
+  width: 44px; height: 24px; background: var(--color-border); border-radius: 12px;
+  position: relative; cursor: pointer; transition: background 0.2s;
+}
+.billing-toggle .toggle-track.active { background: var(--color-brand-indigo); }
+.billing-toggle .toggle-knob {
+  width: 18px; height: 18px; background: #fff; border-radius: 50%;
+  position: absolute; top: 3px; left: 3px; transition: left 0.2s;
+}
+.billing-toggle .toggle-track.active .toggle-knob { left: 23px; }
+.billing-toggle .save-badge {
+  background: rgba(52,211,153,0.15); color: var(--color-success);
+  padding: 2px 8px; border-radius: 10px; font-size: 11px;
+}
+/* 套餐卡片 */
+.plans {
+  display: flex; gap: var(--space-5); justify-content: center;
+  padding: 0 var(--space-5) var(--space-10); max-width: 960px; margin: 0 auto; flex-wrap: wrap;
+}
+.plan-card {
+  flex: 1; min-width: 260px; max-width: 320px;
+  background: var(--color-surface); border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl); padding: var(--space-6);
+  display: flex; flex-direction: column;
+  transition: border-color 0.2s;
+}
+.plan-card:hover { border-color: var(--color-border); }
+.plan-card.popular {
+  border-color: var(--color-brand-indigo); position: relative;
+}
+.plan-card.popular::before {
+  content: '最受欢迎'; position: absolute; top: -12px; left: 50%;
+  transform: translateX(-50%); background: var(--color-brand-indigo);
+  color: #fff; font-size: 11px; padding: 3px 14px; border-radius: 12px; font-weight: 500;
+}
+.plan-name { font-size: 16px; font-weight: 600; margin-bottom: var(--space-1); }
+.plan-desc { font-size: 12px; color: var(--color-text-tertiary); margin-bottom: var(--space-5); }
+.plan-price { margin-bottom: var(--space-5); }
+.plan-price .amount { font-size: 36px; font-weight: 700; }
+.plan-price .period { font-size: 13px; color: var(--color-text-tertiary); }
+.plan-price .original { font-size: 12px; color: var(--color-text-disabled); text-decoration: line-through; margin-left: 8px; }
+.plan-features { flex: 1; list-style: none; margin-bottom: var(--space-6); }
+.plan-features li {
+  padding: 6px 0; font-size: 13px; color: var(--color-text-secondary);
+  display: flex; align-items: center; gap: 8px;
+}
+.plan-features li::before { content: '✓'; color: var(--color-success); font-weight: 700; }
+.plan-features li.disabled { color: var(--color-text-disabled); }
+.plan-features li.disabled::before { content: '—'; color: var(--color-text-disabled); }
+.plan-cta {
+  display: block; text-align: center; padding: 11px; border-radius: var(--radius-md);
+  text-decoration: none; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--color-border); color: var(--color-text-primary);
+  transition: all 0.2s;
+}
+.plan-cta:hover { border-color: var(--color-text-tertiary); }
+.plan-cta.primary { background: var(--color-brand-indigo); border-color: var(--color-brand-indigo); color: #fff; }
+.plan-cta.primary:hover { opacity: 0.9; }
+.plan-cta.current { background: transparent; border-color: var(--color-text-disabled); color: var(--color-text-disabled); cursor: default; }
+/* 特性对比表 */
+.features-compare {
+  max-width: 860px; margin: 0 auto var(--space-10); padding: 0 var(--space-5);
+}
+.features-compare h2 { text-align: center; font-size: 20px; margin-bottom: var(--space-6); }
+.f-table { width: 100%; border-collapse: collapse; }
+.f-table th, .f-table td { padding: 12px 16px; text-align: center; border-bottom: 1px solid var(--color-border-subtle); font-size: 13px; }
+.f-table th:first-child, .f-table td:first-child { text-align: left; color: var(--color-text-secondary); }
+.f-table th { color: var(--color-text-primary); font-weight: 600; }
+.f-table .yes { color: var(--color-success); }
+.f-table .no { color: var(--color-text-disabled); }
+/* 页脚 */
+.footer { text-align: center; padding: var(--space-8); border-top: 1px solid var(--color-border-subtle); color: var(--color-text-disabled); font-size: 12px; }
+.footer a { color: var(--color-text-tertiary); text-decoration: none; margin: 0 8px; }
+@media (max-width: 768px) {
+  .plans { flex-direction: column; align-items: center; }
+  .plan-card { max-width: 100%; }
+  .hero h1 { font-size: 24px; }
+  .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand"><span>墨</span>灵</div>
+  <div class="nav-links">
+    <a href="/">首页</a>
+    <a href="/pricing" style="color:var(--color-text-primary)">定价</a>
+    <a href="/auth">登录</a>
+    <a href="/auth" class="nav-btn">开始创作</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>选择适合你的创作方案</h1>
+  <p>免费版让你体验核心功能，Pro 版释放全部创作力，团队版支持多人协作。</p>
+</section>
+
+<div class="billing-toggle">
+  <span id="lblMonthly">月付</span>
+  <div class="toggle-track" id="billingToggle" onclick="toggleBilling()">
+    <div class="toggle-knob"></div>
+  </div>
+  <span id="lblYearly">年付</span>
+  <span class="save-badge">省 2 个月</span>
+</div>
+
+<div class="plans" id="plans">
+  <!-- 免费版 -->
+  <div class="plan-card">
+    <div class="plan-name">免费版</div>
+    <div class="plan-desc">适合初次体验墨灵的创作者</div>
+    <div class="plan-price"><span class="amount">¥0</span> <span class="period">/ 月</span></div>
+    <ul class="plan-features">
+      <li>最多 3 个项目</li>
+      <li>每月 50 章</li>
+      <li>基础写作 + 卡牌池</li>
+      <li>四库管理</li>
+      <li class="disabled">优先生成队列</li>
+      <li class="disabled">全量重新分析</li>
+      <li class="disabled">团队协作</li>
+    </ul>
+    <a class="plan-cta" href="/auth">当前方案</a>
+  </div>
+
+  <!-- Pro -->
+  <div class="plan-card popular">
+    <div class="plan-name">Pro</div>
+    <div class="plan-desc">专业作者的首选</div>
+    <div class="plan-price">
+      <span class="amount" id="proPrice">¥29.9</span>
+      <span class="period" id="proPeriod">/ 月</span>
+      <span class="original" id="proOriginal" style="display:none">¥358.8</span>
+    </div>
+    <ul class="plan-features">
+      <li>无限项目</li>
+      <li>无限章节</li>
+      <li>优先生成队列</li>
+      <li>全量重新分析</li>
+      <li>专属技术支持</li>
+      <li class="disabled">团队协作</li>
+    </ul>
+    <a class="plan-cta primary" href="/api/v1/subscriptions/create-checkout?plan=pro" onclick="showToast('跳转支付中...');return false">立即订阅</a>
+  </div>
+
+  <!-- 团队版 -->
+  <div class="plan-card">
+    <div class="plan-name">团队版</div>
+    <div class="plan-desc">工作室和创作团队</div>
+    <div class="plan-price">
+      <span class="amount" id="teamPrice">¥99.9</span>
+      <span class="period" id="teamPeriod">/ 月</span>
+      <span class="original" id="teamOriginal" style="display:none">¥1,198.8</span>
+    </div>
+    <ul class="plan-features">
+      <li>Pro 全部功能</li>
+      <li>多人实时协作</li>
+      <li>权限管理</li>
+      <li>共享四库和卡牌池</li>
+      <li>专属客户经理</li>
+      <li>99.9% SLA</li>
+    </ul>
+    <a class="plan-cta" href="/auth">联系销售</a>
+  </div>
+</div>
+
+<section class="features-compare">
+  <h2>完整功能对比</h2>
+  <table class="f-table">
+    <thead><tr><th>功能</th><th>免费版</th><th>Pro</th><th>团队版</th></tr></thead>
+    <tbody>
+      <tr><td>项目数</td><td>3 个</td><td class="yes">无限</td><td class="yes">无限</td></tr>
+      <tr><td>月章节上限</td><td>50 章</td><td class="yes">无限</td><td class="yes">无限</td></tr>
+      <tr><td>AI 写作</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>卡牌池 + 抽卡</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>四库管理</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>优先生成</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>全量重新分析</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>多人协作</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+      <tr><td>API 访问</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+      <tr><td>专属支持</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer class="footer">
+  <div>
+    <a href="/">首页</a>
+    <a href="/pricing">定价</a>
+    <a href="/help">帮助</a>
+    <a href="#">服务协议</a>
+    <a href="#">隐私政策</a>
+  </div>
+  <div style="margin-top:var(--space-3)">© 2026 墨灵 · AI 驱动创作平台</div>
+</footer>
+
+<div class="toast" id="toast" style="position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--color-elevated);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 20px;font-size:13px;opacity:0;transition:all 0.3s;z-index:1000;white-space:nowrap"></div>
+
+<script>
+function showToast(msg) {
+  var t = document.getElementById('toast'); t.textContent = msg;
+  t.className = 'toast'; t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(function() { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(-80px)'; }, 2500);
+}
+var yearly = false;
+function toggleBilling() {
+  yearly = !yearly;
+  document.getElementById('billingToggle').classList.toggle('active', yearly);
+  if (yearly) {
+    document.getElementById('proPrice').textContent = '¥299';
+    document.getElementById('proPeriod').textContent = '/ 年';
+    document.getElementById('proOriginal').style.display = 'inline';
+    document.getElementById('teamPrice').textContent = '¥999';
+    document.getElementById('teamPeriod').textContent = '/ 年';
+    document.getElementById('teamOriginal').style.display = 'inline';
+  } else {
+    document.getElementById('proPrice').textContent = '¥29.9';
+    document.getElementById('proPeriod').textContent = '/ 月';
+    document.getElementById('proOriginal').style.display = 'none';
+    document.getElementById('teamPrice').textContent = '¥99.9';
+    document.getElementById('teamPeriod').textContent = '/ 月';
+    document.getElementById('teamOriginal').style.display = 'none';
+  }
+}
+</script>
+</body>
+</html>

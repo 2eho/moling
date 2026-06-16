@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 · 墨灵</title>
+<style>
+:root {
+  --color-bg: #0d0f1a;
+  --color-surface: #151829;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #9ca3c4;
+  --color-text-tertiary: #6b7199;
+  --color-brand-indigo: #6366f1;
+  --color-border: #2a2d45;
+  --font-heading: 'Noto Serif SC', '思源宋体', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+}
+.container { text-align: center; padding: 32px; max-width: 480px; }
+.code { font-family: var(--font-heading); font-size: 96px; color: var(--color-brand-indigo); line-height: 1; margin-bottom: 8px; opacity: 0.6; }
+.icon { font-size: 48px; margin-bottom: 16px; }
+.title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+.desc { font-size: 14px; color: var(--color-text-tertiary); line-height: 1.6; margin-bottom: 32px; }
+.btn {
+  display: inline-block;
+  padding: 10px 24px;
+  background: var(--color-brand-indigo);
+  color: #fff;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: 14px;
+  transition: opacity 0.2s;
+}
+.btn:hover { opacity: 0.9; }
+.links { margin-top: 24px; font-size: 13px; }
+.links a { color: var(--color-text-tertiary); text-decoration: none; margin: 0 12px; }
+.links a:hover { color: var(--color-text-secondary); }
+@media (max-width: 480px) {
+  .code { font-size: 72px; }
+  .container { padding: 24px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="icon">🖋️</div>
+  <div class="code">404</div>
+  <div class="title">这章还没写</div>
+  <div class="desc">你找的页面不在墨灵的世界观里。<br>可能是链接错了，或者它还在构思中。</div>
+  <a class="btn" href="/projects">← 回我的作品</a>
+  <div class="links">
+    <a href="/">首页</a>
+    <a href="/auth">登录</a>
+  </div>
+</div>
+</body>
+</html>

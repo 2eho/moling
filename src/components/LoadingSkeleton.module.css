@@ -1,0 +1,141 @@
+/* LoadingSkeleton 样式 */
+/* 骨架屏 + 动画效果 */
+
+/* 骨架容器 */
+.skeletonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 骨架元素基础样式 */
+.skeletonItem {
+  background: linear-gradient(
+    90deg,
+    #1e293b 0%,
+    #334155 50%,
+    #1e293b 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* 动画效果 */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 预设形状 */
+.text {
+  composes: skeletonItem;
+  height: 16px;
+  width: 100%;
+}
+
+.title {
+  composes: skeletonItem;
+  height: 24px;
+  width: 60%;
+}
+
+.circle {
+  composes: skeletonItem;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+}
+
+.rectangle {
+  composes: skeletonItem;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.avatar {
+  composes: skeletonItem;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+}
+
+.button {
+  composes: skeletonItem;
+  height: 40px;
+  width: 120px;
+  border-radius: 12px;
+}
+
+/* 自定义宽度 */
+.width25 {
+  width: 25%;
+}
+
+.width50 {
+  width: 50%;
+}
+
+.width75 {
+  width: 75%;
+}
+
+.width100 {
+  width: 100%;
+}
+
+/* 自定义高度 */
+.heightSm {
+  height: 12px;
+}
+
+.heightMd {
+  height: 16px;
+}
+
+.heightLg {
+  height: 24px;
+}
+
+/* 卡片骨架 */
+.card {
+  composes: skeletonItem;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 12px;
+}
+
+/* 列表项骨架 */
+.listItem {
+  composes: skeletonItem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .circle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .listItem {
+    height: 56px;
+  }
+}

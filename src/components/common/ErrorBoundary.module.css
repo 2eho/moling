@@ -1,0 +1,181 @@
+/* ErrorBoundary 错误边界样式 */
+/* 深色主题，与404页面保持一致的设计语言 */
+
+.errorBoundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background-color: #0d0f1a;
+  color: #e2e8f0;
+  text-align: center;
+}
+
+.contentWrapper {
+  max-width: 600px;
+  width: 100%;
+}
+
+/* 错误图标 */
+.iconWrapper {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(239, 68, 68, 0.2);
+}
+
+.icon {
+  font-size: 40px;
+}
+
+/* 错误标题 */
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: #f1f5f9;
+}
+
+/* 错误描述 */
+.description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0 0 16px;
+}
+
+/* 错误详情（可折叠） */
+.errorDetails {
+  margin: 0 0 32px;
+  text-align: left;
+}
+
+.errorDetailsSummary {
+  cursor: pointer;
+  color: #6366f1;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0;
+  display: inline-block;
+}
+
+.errorDetailsSummary:hover {
+  color: #818cf8;
+}
+
+.errorStack {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #fca5a5;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* 按钮容器 */
+.buttonGroup {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 重新加载按钮 */
+.reloadButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+}
+
+.reloadButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
+}
+
+.reloadButton:active {
+  transform: translateY(0);
+}
+
+/* 返回首页按钮 */
+.homeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 16px;
+  font-weight: 600;
+  border: 2px solid #334155;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.homeButton:hover {
+  border-color: #6366f1;
+  color: #e2e8f0;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .title {
+    font-size: 22px;
+  }
+
+  .description {
+    font-size: 14px;
+  }
+
+  .buttonGroup {
+    flex-direction: column;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .reloadButton,
+  .homeButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 18px;
+  }
+
+  .iconWrapper {
+    width: 64px;
+    height: 64px;
+  }
+
+  .icon {
+    font-size: 32px;
+  }
+}

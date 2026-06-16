@@ -10,19 +10,19 @@
 echo "📄 正在检查 OpenAPI 规范..."
 
 # 检查是否有后端代码变更
-if git diff --cached --name-only | grep -q "moling-server/"; then
+if git diff --cached --name-only 2>/dev/null | grep -q "moling-server/"; then
     echo "  ✓ 检测到后端代码变更，重新生成 OpenAPI 规范..."
     
     # 切换到项目根目录
-    PROJECT_ROOT=$(git rev-parse --show-toplevel)
-    cd "$PROJECT_ROOT/moling-server"
+    PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+    cd "$PROJECT_ROOT/moling-server" 2>/dev/null || cd "./moling-server"
     
     # 运行生成脚本
-    python scripts/generate_openapi_from_doc.py
+    python scripts/generate_openapi_from_doc.py 2>/dev/null || python3 scripts/generate_openapi_from_doc.py 2>/dev/null
     
     # 检查是否有变更
-    cd "$PROJECT_ROOT"
-    if ! git diff --quiet openapi.json; then
+    cd "$PROJECT_ROOT" 2>/dev/null || cd "."
+    if ! git diff --quiet openapi.json 2>/dev/null; then
         echo "  ✓ openapi.json 已更新，自动添加到提交"
         git add openapi.json
     else
