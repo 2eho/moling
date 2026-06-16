@@ -4,11 +4,15 @@ on:
   push:
     paths:
       - 'moling-server/**'
-      - 'openapi.json'
       - '015_*.md'
+    branches: [main, master]
   pull_request:
+  workflow_dispatch:
 
 jobs:
+  # ==========================================================================
+  # Job 1: 验证 OpenAPI 规范（始终运行）
+  # ==========================================================================
   check-openapi:
     runs-on: ubuntu-latest
     steps:
@@ -19,22 +23,24 @@ jobs:
         with:
           python-version: "3.13"
 
-      # 方案1：从接口文档生成（无依赖，100% 可靠）
+      # 从接口文档生成（无依赖，100% 可靠）
       - name: Generate OpenAPI spec from doc
         run: |
           cd moling-server
           python scripts/generate_openapi_from_doc.py
 
-      # 方案2：验证 openapi.json 是否合法 JSON
+      # 验证 JSON 合法性 + 路径数检查
       - name: Validate openapi.json format
         run: |
           python -m json.tool openapi.json > /dev/null && echo "✅ openapi.json 是合法的 JSON"
           python -c "
 import json
 d = json.load(open('openapi.json'))
-print(f'✅ 路径数：{len(d.get(\"paths\", {}))}')
-print(f'✅ Tag 数：{len(d.get(\"tags\", []))}')
-if len(d.get('paths', {})) < 50:
+paths = d.get('paths', {})
+tags = d.get('tags', [])
+print(f'✅ 路径数：{len(paths)}')
+print(f'✅ Tag 数：{len(tags)}')
+if len(paths) < 50:
     print('⚠️ 路径数量异常少，请检查接口文档')
 "
 
@@ -45,10 +51,11 @@ if len(d.get('paths', {})) < 50:
           name: openapi-spec
           path: openapi.json
 
+  # ==========================================================================
+  # Job 2: 自动更新（仅 main 分支 push 触发，且不依赖 Job 1）
+  # ==========================================================================
   auto-update:
     runs-on: ubuntu-latest
-    needs: check-openapi
-    # 仅在 main 分支且由推送触发时自动更新
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
@@ -62,25 +69,21 @@ if len(d.get('paths', {})) < 50:
         with:
           python-version: "3.13"
 
-      - name: Regenerate OpenAPI spec from doc
+      - name: Generate OpenAPI spec from doc
         run: cd moling-server && python scripts/generate_openapi_from_doc.py
 
       - name: Check if changed
         id: check
         run: |
-          if git diff --quiet openapi.json 2>/dev/null; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
+          git diff --quiet openapi.json && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push if changed
         if: steps.check.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add openapi.json
           git commit -m "auto: 更新 OpenAPI 规范 [skip ci]"
           git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
