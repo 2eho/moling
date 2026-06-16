@@ -515,17 +515,8 @@ export const settingsApi = {
     return apiClient.put<ApiResponse<UserSettings>>("/settings", globalSettings);
   },
 
-  async updateProjectSettings(projectId: string, projectSettings: {
-    aiSpeed?: number;
-    writingStyle?: number;
-    notificationEnabled?: boolean;
-  }) {
-    return apiClient.patch<ApiResponse<UserSettings>>(`/settings/project/${projectId}`, projectSettings);
-  },
-
-  async getProjectSettings(projectId: string) {
-    return apiClient.get<ApiResponse<Record<string, unknown>>>(`/settings/project/${projectId}`);
-  },
+  // updateProjectSettings 和 getProjectSettings 已移除
+  // 后端没有项目级别的设置端点
 };
 
 // ---- Notifications API (D2) ----
@@ -556,10 +547,6 @@ export const notificationsApi = {
   async deleteNotification(notificationId: string) {
     return apiClient.delete<ApiResponse<{ success: boolean }>>(`/notifications/${notificationId}`);
   },
-
-  async deleteAllRead() {
-    return apiClient.delete<ApiResponse<{ success: boolean }>>("/notifications/delete-read");
-  },
 };
 
 // ---- Subscription API (D3) ----
@@ -580,9 +567,7 @@ export const subscriptionApi = {
     return apiClient.get<ApiResponse<Subscription>>("/subscriptions/current");
   },
 
-  async cancel() {
-    return apiClient.post<ApiResponse<Subscription>>("/subscriptions/cancel", {});
-  },
+  // cancel 已移除：后端没有取消订阅端点
 };
 
 // ---- Secrets API (D4) ----
@@ -644,16 +629,17 @@ export const templatesApi = {
 };
 
 // ---- Weave API (D8) ----
+// list 端点：GET /weave/patterns
 // apply 端点：POST /weave/apply（project_id 放在请求体中）
+// 注意：后端没有 getById 端点，已移除
 
 export const weaveApi = {
   async list() {
     return apiClient.get<ApiResponse<WeavePattern[]>>("/weave/patterns");
   },
 
-  async getById(patternId: string) {
-    return apiClient.get<ApiResponse<WeavePattern>>(`/weave/patterns/${patternId}`);
-  },
+  // getById 已移除：后端没有单个 pattern 详情端点
+  // 如需获取 pattern 详情，可在前端从 list 结果中查找
 
   async apply(
     projectId: string,
@@ -669,6 +655,8 @@ export const weaveApi = {
 
 // ---- Import API (D9) ----
 // 注意：导入 API 的路径是 /projects/:pid/import，不是 /ingest/
+// 后端目前只支持文本导入（POST /import，传递 text 参数）
+// 文件上传功能待后端实现
 
 export const importApi = {
   async createJob(projectId: string, data: { text?: string; source_type?: string }) {
@@ -678,50 +666,21 @@ export const importApi = {
     );
   },
 
+  // 文件上传功能待后端实现，当前仅支持文本导入
+  // 如需上传文件，请先读取文件内容为文本，再调用 createJob
   async uploadAndImport(
     projectId: string,
     file: File,
-    options?: {
+    _options?: {
       analyze_characters?: boolean;
       analyze_timeline?: boolean;
       analyze_commitments?: boolean;
       analyze_worldview?: boolean;
     }
   ): Promise<{ job_id: string; status: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    if (options) {
-      Object.entries(options).forEach(([key, value]) => {
-        if (value !== undefined) {
-          formData.append(key, value.toString());
-        }
-      });
-    }
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('moling_token') : null;
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      ?? process.env.NEXT_PUBLIC_API_URL
-      ?? 'http://124.222.163.79:8080/moling/api/v1';
-    
-    const response = await fetch(`${baseUrl}/projects/${projectId}/import/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.message || 'Upload failed');
-    }
-
-    const result = await response.json();
-    return result.data;
+    // 读取文件内容为文本
+    const text = await file.text();
+    return this.createJob(projectId, { text, source_type: 'file' });
   },
 
   async getJobStatus(projectId: string, jobId: string) {
@@ -754,13 +713,10 @@ export const importApi = {
     );
   },
 
+  // 获取导入结果：使用 getJobStatus 返回的数据，无需单独的结果端点
   async getImportResult(projectId: string, jobId: string) {
-    return apiClient.get<ApiResponse<{
-      characters_created: number;
-      events_created: number;
-      commitments_created: number;
-      entries_created: number;
-    }>>(`/projects/${projectId}/import/${jobId}/result`);
+    const res = await this.getJobStatus(projectId, jobId);
+    return res.data;
   },
 
   async confirmImport(projectId: string, jobId: string) {
@@ -770,33 +726,23 @@ export const importApi = {
     );
   },
 
+  // 获取导入历史：使用 GET /import（列表）
   async getImportHistory(projectId: string) {
     const res = await apiClient.get<ApiResponse<Array<{
       id: string;
       file_name: string;
       status: string;
       created_at: string;
-    }>>>(`/projects/${projectId}/import-history`);
+    }>>>(`/projects/${projectId}/import`);
     return res.data;
   },
 };
 
-// ---- Save Draft API (D10) ----
+// ---- Draft API (D10) ----
+// 注意：后端没有独立的 draft 端点
+// 保存草稿请直接使用 chapterApi.update()，传入 status: "draft"
 
-export const draftApi = {
-  async save(projectId: string, chapterId: string, content: string) {
-    return apiClient.post<ApiResponse<{ saved: boolean; draft_id: string }>>(
-      `/projects/${projectId}/chapters/${chapterId}/draft`,
-      { content },
-    );
-  },
-
-  async get(projectId: string, chapterId: string) {
-    return apiClient.get<ApiResponse<{ content: string; updated_at: string }>>(
-      `/projects/${projectId}/chapters/${chapterId}/draft`,
-    );
-  },
-};
+// 已移除 draftApi，请使用 chapterApi.update 保存草稿
 
 // ---- Chapter Suggestions/Agent API (D11) ----
 // 根据接口映射文档 4.8 和 4.9 节
@@ -913,10 +859,6 @@ export const adminApi = {
     return apiClient.get<ApiResponse<AdminProject[]>>("/admin/projects", params);
   },
 
-  async updateUser(userId: string, data: Partial<AdminUser>) {
-    return apiClient.put<ApiResponse<AdminUser>>(`/admin/users/${userId}`, data);
-  },
-
   // ── LLM Config ──
   async getLlmConfig() {
     return apiClient.get<ApiResponse<{
@@ -933,24 +875,5 @@ export const adminApi = {
 
   async testLlmConnection() {
     return apiClient.post<ApiResponse<{ success: boolean; message: string }>>("/admin/llm-config/test", {});
-  },
-
-  async getLlmPools() {
-    return apiClient.get<ApiResponse<{
-      pro_pool: { total: number; used: number; available: number; status: "healthy" | "degraded" | "down" };
-      flash_pool: { total: number; used: number; available: number; status: "healthy" | "degraded" | "down" };
-    }>>("/admin/llm-config/pools");
-  },
-
-  async addApiKey(data: { name: string; key: string }) {
-    return apiClient.post<ApiResponse<{ id: string; prefix: string }>>("/admin/llm-config/keys", data);
-  },
-
-  async deleteApiKey(keyId: string) {
-    return apiClient.delete<ApiResponse<{ deleted: boolean }>>(`/admin/llm-config/keys/${keyId}`);
-  },
-
-  async toggleApiKey(keyId: string, enabled: boolean) {
-    return apiClient.patch<ApiResponse<{ enabled: boolean }>>(`/admin/llm-config/keys/${keyId}`, { enabled });
   },
 };

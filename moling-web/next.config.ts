@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -50,4 +51,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry 配置
+  org: "moling",
+  project: "moling-web",
+  
+  // 仅在 CI 环境中输出版本信息
+  silent: !process.env.CI,
+  
+  // 自动上传 Source Maps 到 Sentry
+  widenClientFileUpload: true,
+  
+  // 自动包装 App Router 的路由
+  automaticVercelMonitors: true,
+  
+  // 禁用 Sentry 遥测
+  telemetry: false,
+});

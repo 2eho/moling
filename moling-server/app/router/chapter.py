@@ -167,3 +167,26 @@ async def generate_chapter_content(
         db, current_user["id"], project_id, chapter_id, generate_req
     )
     return result
+
+
+@router.post("/chapters/{chapter_id}/redraw", response_model=dict)
+async def redraw_chapter_cards(
+    project_id: int,
+    chapter_id: int,
+    data: dict = ...,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> dict:
+    """重抽卡牌（接口映射文档 4.4.3 节).
+    
+    排除本章已抽卡，重新抽取。
+    请求参数：{keep_card_ids: list[int], draw_count: int = 3}
+    响应：{cards: list, remaining_redraws: int}
+    """
+    # TODO: 实现重抽逻辑，调用 card_service.redraw()
+    # 当前返回占位符响应
+    return {
+        "cards": [],
+        "remaining_redraws": 3,
+        "message": "重抽功能待实现",
+    }

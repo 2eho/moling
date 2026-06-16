@@ -1,0 +1,31 @@
+# 墨灵项目备份调度配置
+# 将此文件复制到 /etc/cron.d/moling-backup
+# 或者将此文件内容添加到 crontab (使用: sudo crontab -e)
+
+# 注意：
+# 1. 请确保脚本具有可执行权限
+# 2. 请确保环境变量已配置（DATABASE_URL, BACKUP_DIR 等）
+# 3. 日志将输出到 /var/log/moling/backup.log
+
+# 每天凌晨 2:00 执行全量备份
+0 2 * * * postgres /usr/bin/python3 /opt/moling/moling-server/scripts/backup_pg_dump.py --type full --backup-dir /var/backups/moling --encrypt >> /var/log/moling/backup.log 2>&1
+
+# 每 30 分钟执行增量备份（使用 pgBackRest 或 WAL-E）
+*/30 * * * * postgres /usr/bin/python3 /opt/moling/moling-server/scripts/backup_pg_dump.py --type incremental --backup-dir /var/backups/moling >> /var/log/moling/backup_incremental.log 2>&1
+
+# 每天凌晨 3:00 执行备份监控（检查备份是否过期）
+0 3 * * * postgres /usr/bin/python3 /opt/moling/moling-server/scripts/monitor_backup.py --notify-email --notify-slack >> /var/log/moling/monitor.log 2>&1
+
+# 每周日凌晨 4:00 执行灾备演练
+0 4 * * 0 postgres /usr/bin/python3 /opt/moling/moling-server/scripts/disaster_recovery_drill.py --notify-email --notify-slack --report-file /var/log/moling/drill_report_$(date +\%Y\%m\%d).md >> /var/log/moling/drill.log 2>&1
+
+# 注意：
+# 1. 请根据实际情况修改路径和用户
+# 2. 确保日志目录存在: sudo mkdir -p /var/log/moling
+# 3. 确保备份目录存在: sudo mkdir -p /var/backups/moling
+# 4. 确保 PostgreSQL 用户可以访问这些目录
+#
+# 安装方法：
+# sudo cp moling-backup /etc/cron.d/
+# sudo chmod 644 /etc/cron.d/moling-backup
+# sudo systemctl restart cron  # 或 sudo service cron restart

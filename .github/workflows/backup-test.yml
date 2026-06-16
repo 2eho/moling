@@ -1,0 +1,220 @@
+name: Backup Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'moling-server/scripts/backup_pg_dump.py'
+      - 'moling-server/scripts/disaster_recovery_drill.py'
+      - 'moling-server/scripts/monitor_backup.py'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'moling-server/scripts/backup_pg_dump.py'
+      - 'moling-server/scripts/disaster_recovery_drill.py'
+      - 'moling-server/scripts/monitor_backup.py'
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日凌晨运行
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  test-backup:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: moling_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install psycopg2-binary sqlalchemy python-dotenv
+          # 安装可选依赖（用于云存储测试）
+          pip install boto3 || true
+          pip install azure-storage-blob || true
+          pip install google-cloud-storage || true
+          pip install requests || true
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create test database schema
+        run: |
+          # 创建测试表
+          PGPASSWORD=postgres psql -h localhost -U postgres -d moling_test -c "
+            CREATE TABLE IF NOT EXISTS test_table (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO test_table (name) VALUES ('test1'), ('test2'), ('test3');
+          "
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/moling_test
+
+      - name: Test backup script (full backup)
+        run: |
+          cd moling-server
+          python scripts/backup_pg_dump.py \
+            --type full \
+            --db-url "postgresql://postgres:postgres@localhost:5432/moling_test" \
+            --backup-dir /tmp/backups \
+            --no-cleanup
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/moling_test
+
+      - name: Verify backup file exists
+        run: |
+          ls -lh /tmp/backups/
+          test -f /tmp/backups/*.sql.gz && echo "✓ 备份文件已创建" || exit 1
+
+      - name: Test backup verification
+        run: |
+          cd moling-server
+          python scripts/backup_pg_dump.py \
+            --type full \
+            --db-url "postgresql://postgres:postgres@localhost:5432/moling_test" \
+            --backup-dir /tmp/backups \
+            --verify \
+            --no-cleanup
+
+      - name: Test disaster recovery drill
+        run: |
+          cd moling-server
+          python scripts/disaster_recovery_drill.py \
+            --db-url "postgresql://postgres:postgres@localhost:5432/moling_test" \
+            --backup-dir /tmp/backups \
+            --target-db moling_test_restored \
+            --report-file /tmp/drill_report.md \
+            --detailed
+
+      - name: Verify drill report
+        run: |
+          test -f /tmp/drill_report.md && echo "✓ 演练报告已生成" || exit 1
+          cat /tmp/drill_report.md
+
+      - name: Test backup monitor
+        run: |
+          cd moling-server
+          python scripts/monitor_backup.py \
+            --backup-dir /tmp/backups \
+            --backup-type full \
+            --max-age-hours 1 \
+            --quiet
+
+      - name: Upload backup artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: backup-test-artifacts
+          path: |
+            /tmp/backups/
+            /tmp/drill_report.md
+          retention-days: 7
+
+  test-backup-encryption:
+    runs-on: ubuntu-latest
+    needs: test-backup
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install psycopg2-binary sqlalchemy python-dotenv
+
+      - name: Install GPG
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg
+
+      - name: Generate GPG key for testing
+        run: |
+          # 生成测试用 GPG 密钥
+          cat > /tmp/gpg-key.params <<EOF
+          %echo Generating test GPG key
+          Key-Type: RSA
+          Key-Length: 2048
+          Subkey-Type: RSA
+          Subkey-Length: 2048
+          Name-Real: Test User
+          Name-Email: test@example.com
+          Expire-Date: 0
+          %no-protection
+          %commit
+          %echo done
+          EOF
+          gpg --batch --gen-key /tmp/gpg-key.params
+          echo "GPG_RECIPIENT=test@example.com" >> $GITHUB_ENV
+
+      - name: Test backup encryption
+        run: |
+          cd moling-server
+          python scripts/backup_pg_dump.py \
+            --type full \
+            --db-url "postgresql://postgres:postgres@localhost:5432/moling_test" \
+            --backup-dir /tmp/backups-encrypted \
+            --encrypt \
+            --gpg-recipient "${{ env.GPG_RECIPIENT }}" \
+            --no-cleanup
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/moling_test
+          GPG_RECIPIENT: test@example.com
+
+      - name: Verify encrypted backup
+        run: |
+          ls -lh /tmp/backups-encrypted/
+          test -f /tmp/backups-encrypted/*.gpg && echo "✓ 加密备份文件已创建" || exit 1
+
+  lint-and-format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black
+
+      - name: Lint with flake8
+        run: |
+          cd moling-server
+          flake8 scripts/backup_pg_dump.py scripts/disaster_recovery_drill.py scripts/monitor_backup.py --max-line-length=120 --ignore=E203,W503
+
+      - name: Check formatting with black
+        run: |
+          cd moling-server
+          black --check --line-length=120 scripts/backup_pg_dump.py scripts/disaster_recovery_drill.py scripts/monitor_backup.py

@@ -221,7 +221,7 @@ def get_current_user(
 ):
     """Extract and validate the JWT, returning the authenticated user.
 
-    Raises 401 if the token is missing, expired, or invalid.
+    Raises 401 if the token is missing, expired, invalid, or blacklisted.
     NOTE: Uses sync DB to avoid Windows + aiosqlite greenlet issues.
     """
     if credentials is None:
@@ -244,6 +244,18 @@ def get_current_user(
             detail="无效的认证令牌",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Check if token is blacklisted
+    jti = payload.get("jti")
+    if jti is not None:
+        from app.auth.blacklist import is_blacklisted
+        
+        if is_blacklisted(jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="令牌已失效，请重新登录",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     user_id: Optional[int] = payload.get("sub")
     if user_id is None:

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { AppShell } from '@/components/layout/AppShell';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: {
@@ -14,6 +15,19 @@ export const metadata: Metadata = {
   // 预连接 API 服务端以减少 DNS/SSL 握手耗时
   other: {
     'Cache-Control': 'no-cache',
+    // Content Security Policy (CSP) - 防止 XSS 攻击
+    // 注意：生产环境请根据实际使用的外部资源调整
+    'Content-Security-Policy': `
+      default-src 'self';
+      script-src 'self' 'unsafe-eval' https://www.googletagmanager.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      img-src 'self' data: https: blob:;
+      font-src 'self' https://fonts.gstatic.com;
+      connect-src 'self' https://api.yourdomain.com https://www.googletagmanager.com wss://api.yourdomain.com;
+      frame-src 'self';
+      media-src 'self' blob:;
+      object-src 'none';
+    `.replace(/\s+/g, ' ').trim(),
   },
 };
 
@@ -60,9 +74,21 @@ export default function RootLayout({
           跳过导航，直达内容
         </a>
         <Providers>
-          <AppShell>
-            <div id="main-content">{children}</div>
-          </AppShell>
+          <Suspense fallback={
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              height: '100vh',
+              background: 'var(--color-bg)'
+            }}>
+              加载中...
+            </div>
+          }>
+            <AppShell>
+              <div id="main-content">{children}</div>
+            </AppShell>
+          </Suspense>
         </Providers>
       </body>
     </html>

@@ -146,3 +146,39 @@ jobs:
         with:
           name: bandit-report
           path: moling-server/bandit-report.json
+
+  performance:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          cd moling-server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install requests
+      - name: Start backend
+        env:
+          DATABASE_URL: sqlite+aiosqlite://
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          ALGORITHM: HS256
+        run: |
+          cd moling-server
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+      - name: Run performance tests
+        run: |
+          cd moling-server/tests/performance
+          python simple_performance_test.py --all --host http://localhost:8000 --output performance_report.json
+      - name: Upload performance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report
+          path: moling-server/tests/performance/performance_report.json

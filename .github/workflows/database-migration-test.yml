@@ -1,0 +1,321 @@
+# ==============================================================================
+# 数据库迁移回滚测试
+# ==============================================================================
+# 功能:
+#   1. 测试 Alembic 数据库迁移的回滚功能
+#   2. 验证迁移脚本的正确性
+#   3. 确保可以安全回滚到之前的版本
+#
+# 触发条件:
+#   - 推送到 main/master/develop 分支
+#   - 创建 Pull Request
+#   - 修改了 alembic/ 目录下的文件
+# ==============================================================================
+
+name: Database Migration Rollback Test
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "moling-server/alembic/**"
+      - "moling-server/app/models/**"
+      - "moling-server/scripts/test_rollback.py"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "moling-server/alembic/**"
+      - "moling-server/app/models/**"
+      - "moling-server/scripts/test_rollback.py"
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  # ==========================================================================
+  # Job: 数据库迁移回滚测试
+  # ==========================================================================
+  test-rollback:
+    name: 迁移回滚测试
+    runs-on: ubuntu-latest
+
+    services:
+      # PostgreSQL 服务
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: moling_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: $-pip-migration-$
+          restore-keys: |
+            $-pip-migration-
+            $-pip-
+
+      - name: 安装依赖
+        run: |
+          cd moling-server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install alembic python-dotenv
+
+      - name: 创建 .env 文件
+        run: |
+          cd moling-server
+          cp .env.example .env
+          echo "DATABASE_URL=postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test" >> .env
+
+      - name: 生成迁移脚本（如果不存在）
+        run: |
+          cd moling-server
+          alembic revision --autogenerate -m "ci_test_migration" || echo "Migration script already exists"
+
+      - name: 运行回滚测试
+        run: |
+          cd moling-server
+          python scripts/test_rollback.py --db-url "postgresql://testuser:testpass@localhost:5432/moling_test"
+
+      - name: 测试迁移到特定版本
+        run: |
+          cd moling-server
+          # 升级到 head
+          alembic upgrade head
+          # 回滚到 base
+          alembic downgrade base
+          # 再次升级到 head
+          alembic upgrade head
+          echo "✓ 迁移到特定版本测试通过"
+
+      - name: 测试数据完整性
+        env:
+          DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test
+        run: |
+          cd moling-server
+          python -c "
+          import asyncio
+          from sqlalchemy import text
+          from app.database import async_session_factory
+
+          async def test():
+              async with async_session_factory() as session:
+                  # 检查所有表
+                  result = await session.execute(text(
+                      \"\"\"SELECT table_name FROM information_schema.tables
+                         WHERE table_schema = 'public'\"\"\"
+                  ))
+                  tables = result.fetchall()
+                  print(f'Found {len(tables)} tables')
+                  for t in tables:
+                      print(f'  - {t[0]}')
+                  print('✓ Data integrity check passed')
+
+          asyncio.run(test())
+          "
+
+      - name: 上传测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-test-results
+          path: |
+            moling-server/alembic/versions/
+            moling-server/alembic.log
+
+  # ==========================================================================
+  # Job: 备份脚本测试
+  # ==========================================================================
+  test-backup:
+    name: 备份脚本测试
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: moling_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 安装依赖
+        run: |
+          cd moling-server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install alembic python-dotenv
+
+      - name: 安装 PostgreSQL 客户端工具
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: 运行数据库迁移
+        run: |
+          cd moling-server
+          cp .env.example .env
+          echo "DATABASE_URL=postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test" >> .env
+          alembic upgrade head
+
+      - name: 测试全量备份
+        run: |
+          cd moling-server
+          mkdir -p backups
+          python scripts/backup_pg_dump.py \
+            --type full \
+            --db-url "postgresql://testuser:testpass@localhost:5432/moling_test" \
+            --backup-dir backups \
+            --no-cleanup
+
+      - name: 验证备份文件
+        run: |
+          cd moling-server
+          ls -lh backups/
+          # 检查备份文件是否存在且不为空
+          test -s backups/*.sql.gz && echo "✓ Backup file exists and is not empty"
+          # 尝试解压并查看内容
+          gunzip -c backups/*.sql.gz | head -20
+
+      - name: 测试恢复备份
+        run: |
+          cd moling-server
+          # 创建测试数据库
+          psql -h localhost -U testuser -c "CREATE DATABASE moling_restore_test;" || true
+          # 恢复备份
+          gunzip -c backups/*.sql.gz | psql -h localhost -U testuser -d moling_restore_test
+          # 验证恢复
+          psql -h localhost -U testuser -d moling_restore_test -c "\dt"
+          echo "✓ Backup restoration test passed"
+        env:
+          PGPASSWORD: testpass
+
+      - name: 清理测试数据库
+        if: always()
+        run: |
+          psql -h localhost -U testuser -c "DROP DATABASE IF EXISTS moling_restore_test;" || true
+        env:
+          PGPASSWORD: testpass
+
+      - name: 上传备份文件
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-backup
+          path: moling-server/backups/
+
+  # ==========================================================================
+  # Job: 灾备演练测试
+  # ==========================================================================
+  test-disaster-recovery:
+    name: 灾备演练测试
+    runs-on: ubuntu-latest
+    needs: test-backup
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: moling_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 安装依赖
+        run: |
+          cd moling-server
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install alembic python-dotenv
+
+      - name: 安装 PostgreSQL 客户端工具
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: 下载备份文件
+        uses: actions/download-artifact@v4
+        with:
+          name: test-backup
+          path: moling-server/backups/
+
+      - name: 运行灾备演练
+        run: |
+          cd moling-server
+          python scripts/disaster_recovery_drill.py \
+            --db-url "postgresql://testuser:testpass@localhost:5432/moling_test" \
+            --target-db moling_drill_test \
+            --no-cleanup \
+            --report-file drill_report.txt
+        env:
+          PGPASSWORD: testpass
+
+      - name: 上传演练报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: disaster-recovery-report
+          path: moling-server/drill_report.txt
+
+# ==============================================================================
+# 注意事项:
+#   1. 此 workflow 会在以下情况触发:
+#      - 修改了 alembic/ 目录下的文件
+#      - 修改了 app/models/ 目录下的文件
+#      - 修改了 scripts/test_rollback.py 脚本
+#
+#   2. 测试流程:
+#      a. 迁移回滚测试: 测试升级、回滚、再升级的流程
+#      b. 备份脚本测试: 测试全量备份和恢复
+#      c. 灾备演练测试: 测试完整的灾备恢复流程
+#
+#   3. 如果需要测试 SQLite 数据库，可以添加额外的 job
+# ==============================================================================

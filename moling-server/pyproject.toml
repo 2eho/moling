@@ -30,6 +30,8 @@ dependencies = [
     # 监控和错误追踪
     "prometheus-fastapi-instrumentator>=7.0.0",
     "sentry-sdk[fastapi]>=2.0.0",
+    # 安全加固依赖
+    "slowapi>=0.1.9",  # Rate limiting
 ]
 
 [project.optional-dependencies]

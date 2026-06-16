@@ -135,8 +135,15 @@ from app.middleware import (
 )
 from app.config import get_settings
 from app import __version__
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.middleware import SlowAPIMiddleware
 
 settings = get_settings()
+
+# 初始化 slowapi limiter（用于端点级速率限制）
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+app.state.limiter = limiter
 
 # 1. Request ID — 为每个请求注入唯一标识（必须在最外层）
 app.add_middleware(RequestIDMiddleware)
@@ -166,6 +173,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 2.5 SlowAPI Middleware — 支持端点级速率限制装饰器
+app.add_middleware(SlowAPIMiddleware)
 
 # 3. Rate Limit — 请求频率限制（从配置读取）
 rate_limit_calls = getattr(settings, 'RATE_LIMIT_CALLS', 1000)
@@ -263,27 +273,41 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Sentry — 错误监控
+# Sentry — 错误监控和性能监控
 # ---------------------------------------------------------------------------
 
 try:
-    from sentry_sdk.integrations.fastapi import FastApiIntegration
     import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
     from app.config import get_settings
     
     settings = get_settings()
     sentry_dsn = getattr(settings, 'SENTRY_DSN', None)
     
     if sentry_dsn:
+        # 根据环境设置采样率
+        # 生产环境建议 0.2，开发环境可以设为 1.0
+        if settings.ENVIRONMENT == "production":
+            traces_sample_rate = 0.2
+            profiles_sample_rate = 0.2
+        else:
+            traces_sample_rate = 1.0
+            profiles_sample_rate = 1.0
+        
         sentry_sdk.init(
             dsn=sentry_dsn,
-            integrations=[FastApiIntegration()],
+            integrations=[
+                FastApiIntegration(),
+                SqlalchemyIntegration(),
+            ],
             environment=settings.ENVIRONMENT,
-            release=__version__,
-            traces_sample_rate=0.1,
-            send_default_pii=False,
+            release=f"moling@{__version__}",
+            traces_sample_rate=traces_sample_rate,
+            profiles_sample_rate=profiles_sample_rate,
+            send_default_pii=True,  # 捕获用户 IP 等基本信息
         )
-        print(f"[OK] Sentry initialized (env: {settings.ENVIRONMENT})")
+        print(f"[OK] Sentry initialized (env: {settings.ENVIRONMENT}, traces: {traces_sample_rate})")
     else:
         print("[INFO] Sentry DSN not configured, error tracking disabled")
 except ImportError:

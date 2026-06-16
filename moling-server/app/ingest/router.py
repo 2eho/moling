@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
@@ -28,6 +28,7 @@ router = APIRouter(prefix="/projects/{project_id}/import", tags=["Import"])
 async def submit_import(
     project_id: int,
     text: Optional[str] = Query(default=None, description="粘贴文本导入"),
+    file: Optional[UploadFile] = File(default=None, description="上传文件导入"),
     split_strategies: Optional[str] = Query(
         default=None,
         description="拆分策略，逗号分隔，如 'chapter_regex,paragraph'",
@@ -39,10 +40,23 @@ async def submit_import(
     提交导入任务。
     
     - 粘贴文本：传入 text 参数
+    - 上传文件：传入 file 参数（multipart/form-data）
     - 对应 Phase 0 的采集与分章
     """
-    if not text:
-        raise HTTPException(status_code=400, detail="请提供 text 参数")
+    # 如果没有 text，尝试从 file 读取
+    if not text and not file:
+        raise HTTPException(status_code=400, detail="请提供 text 参数或上传文件")
+    
+    # 如果从文件上传，读取文件内容
+    if file:
+        try:
+            # 读取上传的文件内容
+            content = await file.read()
+            text = content.decode("utf-8")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"读取文件失败: {str(e)}")
+        finally:
+            await file.close()
     
     strategies = split_strategies.split(",") if split_strategies else None
     

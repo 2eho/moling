@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     # 生产环境应在 .env 中配置具体的允许域名
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
 
+    # ---- Sentry ----
+    # Sentry DSN（从 Sentry 后台获取）
+    # 格式: https://<key>@<organization>.ingest.sentry.io/<project>
+    SENTRY_DSN: str | None = None
+
     # ---- Rate Limiting ----
     RATE_LIMIT_CALLS: int = 1000  # 每个周期允许的请求数（开发环境设为 1000）
     RATE_LIMIT_PERIOD: int = 60  # 周期（秒）

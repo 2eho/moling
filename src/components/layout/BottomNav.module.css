@@ -1,0 +1,267 @@
+/* BottomNav.module.css */
+
+/* 底部导航容器 */
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  
+  /* 半透明背景 + 毛玻璃效果 */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  
+  /* 边框和阴影 */
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04);
+  
+  /* 布局 */
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  
+  /* 尺寸 */
+  height: 56px;
+  padding-bottom: env(safe-area-inset-bottom);
+  
+  /* 过渡动画 */
+  transition: transform var(--transition-normal, 0.3s ease),
+              opacity var(--transition-normal, 0.3s ease);
+  
+  /* 响应式：默认显示 */
+  display: flex;
+}
+
+/* 导航显示/隐藏状态 */
+.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.hidden {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 导航项 */
+.navItem {
+  /* 重置按钮样式 */
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  
+  /* 布局 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  
+  /* 尺寸 */
+  flex: 1;
+  height: 100%;
+  padding: 6px 12px;
+  
+  /* 文字 */
+  color: #6b7280;
+  
+  /* 过渡 */
+  transition: color var(--transition-normal, 0.2s ease),
+              transform var(--transition-normal, 0.2s ease);
+  
+  /* 触摸优化 */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.navItem:active {
+  transform: scale(0.95);
+}
+
+/* 导航图标 */
+.navIcon {
+  font-size: 22px;
+  line-height: 1;
+  transition: transform var(--transition-normal, 0.2s ease);
+}
+
+.navItem:active .navIcon {
+  transform: scale(0.9);
+}
+
+/* 导航标签 */
+.navLabel {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+/* 活跃状态 - indigo 品牌色 */
+.navItem.active {
+  color: #4f46e5; /* indigo-600 */
+}
+
+.navItem.active .navIcon {
+  filter: drop-shadow(0 0 4px rgba(79, 70, 229, 0.3));
+}
+
+.navItem.active .navLabel {
+  font-weight: 600;
+}
+
+/* 更多菜单遮罩 */
+.moreMenuOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  
+  /* 动画 */
+  animation: fadeIn 0.2s ease;
+}
+
+/* 更多菜单 */
+.moreMenu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+  
+  /* 背景 */
+  background: #ffffff;
+  
+  /* 圆角 */
+  border-radius: 20px 20px 0 0;
+  
+  /* 阴影 */
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+  
+  /* 内边距 - 包含安全区适配 */
+  padding: 8px 0;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  
+  /* 动画 */
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 菜单项 */
+.menuItem {
+  /* 重置按钮样式 */
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  
+  /* 布局 */
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  
+  /* 尺寸 */
+  width: 100%;
+  padding: 14px 24px;
+  
+  /* 文字 */
+  font-size: 16px;
+  color: #1f2937;
+  text-align: left;
+  
+  /* 过渡 */
+  transition: background-color 0.15s ease;
+  
+  /* 触摸优化 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menuItem:active {
+  background-color: #f3f4f6;
+}
+
+/* 菜单图标 */
+.menuIcon {
+  font-size: 22px;
+  line-height: 1;
+  width: 28px;
+  text-align: center;
+}
+
+/* 菜单标签 */
+.menuLabel {
+  font-weight: 500;
+  flex: 1;
+}
+
+/* 动画关键帧 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 响应式：> 768px 时隐藏底部导航 */
+@media (min-width: 769px) {
+  .bottomNav {
+    display: none;
+  }
+  
+  .moreMenuOverlay,
+  .moreMenu {
+    display: none;
+  }
+}
+
+/* 暗色模式支持（预留） */
+@media (prefers-color-scheme: dark) {
+  .bottomNav {
+    background: rgba(17, 24, 39, 0.9);
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  .navItem {
+    color: #9ca3af;
+  }
+  
+  .navItem.active {
+    color: #818cf8; /* indigo-400 for dark mode */
+  }
+  
+  .moreMenu {
+    background: #1f2937;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  }
+  
+  .menuItem {
+    color: #f3f4f6;
+  }
+  
+  .menuItem:active {
+    background-color: #374151;
+  }
+  
+  .moreMenuOverlay {
+    background: rgba(0, 0, 0, 0.5);
+  }
+}

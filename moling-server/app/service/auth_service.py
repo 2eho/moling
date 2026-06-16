@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session as SyncSession
 from app.config import get_settings
 from app.dao import user_dao
 from app.errors import AuthError, ConflictError, ErrorCode, NotFoundError
-from app.schemas.auth import LoginReq, PasswordResetReq, PasswordResetRequestReq, RegisterReq, TokenResp, UserResp
+from app.schemas.auth import LoginReq, LogoutReq, PasswordResetReq, PasswordResetRequestReq, RegisterReq, TokenResp, UserResp
 
 settings = get_settings()
 
@@ -43,19 +43,34 @@ def _verify_password(plain: str, hashed: str) -> bool:
 # JWT helpers
 # ---------------------------------------------------------------------------
 
-
-def _create_access_token(user_id: int) -> str:
-    """Create a short-lived access token (15 min)."""
+def _create_access_token(user_id: int) -> tuple[str, str, int]:
+    """Create a short-lived access token (15 min).
+    
+    Returns:
+        tuple: (token, jti, expires_in)
+    """
+    import uuid
+    
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode = {"sub": str(user_id), "type": "access", "exp": expire}
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    jti = str(uuid.uuid4())
+    to_encode = {"sub": str(user_id), "type": "access", "exp": expire, "jti": jti}
+    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return token, jti, 15 * 60
 
 
-def _create_refresh_token(user_id: int) -> str:
-    """Create a long-lived refresh token (30 days)."""
+def _create_refresh_token(user_id: int) -> tuple[str, str, int]:
+    """Create a long-lived refresh token (30 days).
+    
+    Returns:
+        tuple: (token, jti, expires_in)
+    """
+    import uuid
+    
     expire = datetime.now(timezone.utc) + timedelta(days=30)
-    to_encode = {"sub": str(user_id), "type": "refresh", "exp": expire}
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    jti = str(uuid.uuid4())
+    to_encode = {"sub": str(user_id), "type": "refresh", "exp": expire, "jti": jti}
+    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return token, jti, 30 * 24 * 60 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +131,11 @@ async def reset_password(db: AsyncSession, req: PasswordResetReq) -> dict:
 async def update_profile(db: AsyncSession, user_id: int, req) -> UserResp:
     """Update user profile."""
     return await _get_auth_service().update_profile(db, user_id, req)
+
+
+async def logout(access_token: str, refresh_token: str) -> dict:
+    """Logout user by adding tokens to blacklist."""
+    return await _get_auth_service().logout(access_token, refresh_token)
 
 
 # ---------------------------------------------------------------------------
@@ -240,14 +260,14 @@ class AuthService:
         await db.refresh(user)
 
         # Create tokens
-        access_token = _create_access_token(user.id)
-        refresh_token = _create_refresh_token(user.id)
+        access_token, access_jti, access_expires = _create_access_token(user.id)
+        refresh_token, refresh_jti, refresh_expires = _create_refresh_token(user.id)
 
         return TokenResp(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",  # nosec B106
-            expires_in=15 * 60,
+            expires_in=access_expires,
             user=UserResp.model_validate(user),
         )
 
@@ -287,14 +307,14 @@ class AuthService:
         db.refresh(user)
 
         # Create tokens
-        access_token = _create_access_token(user.id)
-        refresh_token = _create_refresh_token(user.id)
+        access_token, access_jti, access_expires = _create_access_token(user.id)
+        refresh_token, refresh_jti, refresh_expires = _create_refresh_token(user.id)
 
         return TokenResp(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
-            expires_in=15 * 60,
+            expires_in=access_expires,
             user=UserResp.model_validate(user),
         )
 
@@ -321,14 +341,14 @@ class AuthService:
                 detail="Account is disabled",
             )
 
-        access_token = _create_access_token(user.id)
-        refresh_token = _create_refresh_token(user.id)
+        access_token, access_jti, access_expires = _create_access_token(user.id)
+        refresh_token, refresh_jti, refresh_expires = _create_refresh_token(user.id)
 
         return TokenResp(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
-            expires_in=15 * 60,
+            expires_in=access_expires,
             user=UserResp.model_validate(user),
         )
 
@@ -354,14 +374,14 @@ class AuthService:
             )
 
         # Create tokens
-        access_token = _create_access_token(user.id)
-        refresh_token = _create_refresh_token(user.id)
+        access_token, access_jti, access_expires = _create_access_token(user.id)
+        refresh_token, refresh_jti, refresh_expires = _create_refresh_token(user.id)
 
         return TokenResp(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",  # nosec B106
-            expires_in=15 * 60,
+            expires_in=access_expires,
             user=UserResp.model_validate(user),
         )
 
@@ -392,16 +412,59 @@ class AuthService:
             )
 
         # Create new tokens
-        access_token = _create_access_token(user.id)
-        new_refresh_token = _create_refresh_token(user.id)
+        access_token, access_jti, access_expires = _create_access_token(user.id)
+        new_refresh_token, refresh_jti, refresh_expires = _create_refresh_token(user.id)
 
         return TokenResp(
             access_token=access_token,
             refresh_token=new_refresh_token,
             token_type="bearer",  # nosec B106
-            expires_in=15 * 60,
+            expires_in=access_expires,
             user=UserResp.model_validate(user),
         )
+
+    async def logout(self, access_token: str, refresh_token: str) -> dict:
+        """Logout user by adding tokens to blacklist.
+        
+        Args:
+            access_token: JWT access token
+            refresh_token: JWT refresh token
+            
+        Returns:
+            dict: Success message
+        """
+        from app.auth.blacklist import add_to_blacklist
+        
+        # Decode tokens to get JTI and expiry
+        try:
+            access_payload = jwt.decode(
+                access_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+            refresh_payload = jwt.decode(
+                refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+            
+            # Add to blacklist with remaining TTL
+            access_jti = access_payload.get("jti")
+            refresh_jti = refresh_payload.get("jti")
+            
+            if access_jti:
+                # Calculate remaining TTL for access token
+                access_exp = access_payload.get("exp", 0)
+                access_ttl = max(0, int(access_exp - datetime.now(timezone.utc).timestamp()))
+                add_to_blacklist(access_jti, access_ttl)
+            
+            if refresh_jti:
+                # Calculate remaining TTL for refresh token
+                refresh_exp = refresh_payload.get("exp", 0)
+                refresh_ttl = max(0, int(refresh_exp - datetime.now(timezone.utc).timestamp()))
+                add_to_blacklist(refresh_jti, refresh_ttl)
+                
+        except JWTError:
+            # Token already invalid, nothing to do
+            pass
+        
+        return {"message": "Successfully logged out"}
 
     async def get_current_user(self, db: AsyncSession, user_id: int) -> UserResp:
         """Return full user info from the database by user id."""

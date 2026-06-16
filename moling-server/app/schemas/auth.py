@@ -75,3 +75,10 @@ class PasswordResetReq(BaseModel):
 
     token: str = Field(..., min_length=32, max_length=128, description="重置令牌")
     new_password: str = Field(..., min_length=8, max_length=128, description="新密码 (至少 8 位)")
+
+
+class LogoutReq(BaseModel):
+    """User logout request body."""
+
+    access_token: str = Field(..., description="访问令牌")
+    refresh_token: str = Field(..., description="刷新令牌")
