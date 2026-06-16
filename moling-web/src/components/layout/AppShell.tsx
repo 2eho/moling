@@ -131,7 +131,6 @@ export const AppShell = memo(function AppShell({ children }: { children: React.R
         }
       },
     },
-    { swipeThreshold: 50 },
   );
 
   const isSimplePage =

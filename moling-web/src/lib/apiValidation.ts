@@ -13,7 +13,7 @@ export const baseResponseSchema = z.object({
   code: z.number(),
   message: z.string(),
   data: z.unknown(),  // 具体类型由调用方指定
-  meta: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ── Paginated Response Schema ──
@@ -76,7 +76,7 @@ export const userSettingsSchema = z.object({
   editor_font_size: z.number().optional(),
   generation_preference: z.object({
     default_mode: z.string().optional(),
-    default_weights: z.record(z.number()).optional(),
+    default_weights: z.record(z.string(), z.number()).optional(),
     auto_confirm: z.boolean().optional(),
   }).optional(),
   health_rules: z.object({
@@ -108,7 +108,7 @@ export function validateResponse<T>(
     return schema.parse(response);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error("[Zod] API response validation failed:", error.errors);
+      console.error("[Zod] API response validation failed:", error.issues);
       throw new Error(`API response validation failed: ${error.message}`);
     }
     throw error;

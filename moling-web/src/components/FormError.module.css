@@ -1,62 +1,73 @@
-/* 错误提示组件样式 */
+﻿/* ============================================
+   墨灵 (Moling) — FormError 样式
+   ============================================ */
 
 .container {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.alert {
+  display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  margin: 1rem 0;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 0.5rem;
-  color: #ef4444;
-  font-size: 0.875rem;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.danger {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+  color: var(--color-danger);
+}
+
+.warning {
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent);
+  color: var(--color-warning);
 }
 
 .icon {
-  font-size: 1.25rem;
-  line-height: 1;
   flex-shrink: 0;
+  font-size: var(--font-size-base);
+  line-height: 1.5;
 }
 
-.content {
+.message {
   flex: 1;
 }
 
-.apiError {
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.apiError:last-child {
-  margin-bottom: 0;
-}
-
-.fieldErrors {
+.fieldList {
+  list-style: none;
+  padding: 0;
   margin: 0;
-  padding-left: 1.5rem;
-  list-style-type: disc;
-}
-
-.fieldError {
-  margin-bottom: 0.25rem;
-}
-
-.fieldError:last-child {
-  margin-bottom: 0;
-}
-
-/* 字段级错误（输入框下方） */
-.fieldErrorInline {
-  margin-top: 0.25rem;
-  font-size: 0.8125rem;
-  color: #ef4444;
   display: flex;
-  align-items: center;
-  gap: 0.25rem;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.fieldErrorInline::before {
-  content: '⚠';
-  font-size: 0.875rem;
+.fieldItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.fieldDot {
+  flex-shrink: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-top: 0.55rem;
+}
+
+/* 单字段行内错误提示 */
+.inlineError {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  line-height: 1.4;
 }

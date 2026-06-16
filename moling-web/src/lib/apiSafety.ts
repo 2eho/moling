@@ -140,7 +140,7 @@ export async function safeAsync<T>(
     if (process.env.NODE_ENV === "development") {
       console.error("[safeAsync] Promise rejected:", error);
     }
-    return [defaultValue, error instanceof Error ? error : new Error(String(error))];
+    return [defaultValue, error instanceof Error ? error : new Error(String(error))] as [T, null] | [null, Error];
   }
 }
 

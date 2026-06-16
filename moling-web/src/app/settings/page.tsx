@@ -65,7 +65,7 @@ export default function SettingsPage() {
       try {
         const res = await settingsApi.get();
         // ✅ 修复：使用 safeObject 确保 data 不会是 undefined
-        const data: UserSettings = safeObject<UserSettings>(res.data, {} as UserSettings);
+        const data = safeObject<UserSettings>(res.data, {} as UserSettings)!;
         setSettings(data);
         setTheme(data.theme || 'dark');
         setAutoSave(data.auto_save_interval > 0);

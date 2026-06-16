@@ -1,83 +1,79 @@
-/**
- * 统一错误提示组件
- * 
- * 显示表单验证错误和API调用错误
- */
+﻿"use client";
 
-import styles from './FormError.module.css';
+import styles from "./FormError.module.css";
 
 export interface FormErrorProps {
-  /** API级别的错误信息（如"创建项目失败"） */
+  /** 单个错误信息字符串 */
   error?: string;
-  /** 字段级别的错误信息（如 {title: "作品书名不能为空"}） */
+  /** 多字段错误对象（来自 validateForm） */
   errors?: Record<string, string>;
-  /** 是否显示错误图标 */
-  showIcon?: boolean;
-  /** 自定义样式类名 */
-  className?: string;
+  /** 是否显示（默认 true） */
+  show?: boolean;
+  /** 警告样式（默认 danger） */
+  variant?: "danger" | "warning";
 }
 
 /**
- * 错误提示组件
- * 
- * 使用方式：
- * 1. 只显示API错误：<FormError error={apiError} />
- * 2. 只显示字段错误：<FormError errors={errors} />
- * 3. 同时显示：<FormError error={apiError} errors={errors} />
+ * 表单错误提示组件
+ * - 支持显示单个错误信息
+ * - 支持显示多个字段错误（对象）
+ * - 使用 Alert 样式
+ * - 可被所有表单页面复用
  */
 export function FormError({
   error,
   errors,
-  showIcon = true,
-  className = '',
+  show = true,
+  variant = "danger",
 }: FormErrorProps) {
-  // 如果没有错误，不渲染
-  if (!error && !errors) {
-    return null;
-  }
+  if (!show) return null;
+
+  const hasError = error || (errors && Object.keys(errors).length > 0);
+  if (!hasError) return null;
+
+  const variantClass = variant === "warning" ? styles.warning : styles.danger;
 
   return (
-    <div className={`${styles.container} ${className}`} role="alert">
-      {showIcon && <span className={styles.icon}>⚠️</span>}
-      
-      <div className={styles.content}>
-        {/* API级别错误 */}
-        {error && (
-          <div className={styles.apiError}>{error}</div>
-        )}
+    <div className={styles.container} role="alert">
+      {/* 单个错误信息 */}
+      {error && (
+        <div className={`${styles.alert} ${variantClass}`}>
+          <span className={styles.icon}>⚠</span>
+          <span className={styles.message}>{error}</span>
+        </div>
+      )}
 
-        {/* 字段级别错误 */}
-        {errors && Object.keys(errors).length > 0 && (
-          <ul className={styles.fieldErrors}>
-            {Object.entries(errors).map(([field, message]) => (
-              <li key={field} className={styles.fieldError}>
-                {message}
+      {/* 多字段错误列表 */}
+      {errors && Object.keys(errors).length > 0 && (
+        <div className={`${styles.alert} ${variantClass}`}>
+          <span className={styles.icon}>⚠</span>
+          <ul className={styles.fieldList}>
+            {Object.entries(errors).map(([field, msg]) => (
+              <li key={field} className={styles.fieldItem}>
+                <span className={styles.fieldDot} />
+                <span className={styles.message}>{msg}</span>
               </li>
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
+}
+
+export interface FieldErrorProps {
+  /** 该字段的错误信息（空则不显示） */
+  error?: string;
 }
 
 /**
- * 字段级错误提示（用于单个输入框下方）
- * 
- * 使用方式：
- * <input ... />
- * <FieldError error={errors.title} />
+ * 单字段行内错误提示（用于表单项下方）
  */
-export function FieldError({ error }: { error?: string }) {
-  if (!error) {
-    return null;
-  }
-
+export function FieldError({ error }: FieldErrorProps) {
+  if (!error) return null;
   return (
-    <div className={styles.fieldErrorInline} role="alert">
+    <p className={styles.inlineError} role="alert">
       {error}
-    </div>
+    </p>
   );
 }
-
-export default FormError;
