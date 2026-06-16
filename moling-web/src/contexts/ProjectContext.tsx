@@ -54,20 +54,31 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [currentProject]);
 
   const loadProjects = useCallback(async () => {
-    const res = await projectApi.list();
-    setProjects(res.data);
+    try {
+      const res = await projectApi.list();
+      // ✅ 确保安全：如果 res.data 是 undefined，使用空数组
+      setProjects(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+      setProjects([]); // ✅ 确保 projects 始终是数组
+    }
   }, []);
 
   const loadProject = useCallback(async (id: string) => {
     const res = await projectApi.getById(id);
-    setCurrentProject(res.data);
+    setCurrentProject(res.data || null);
   }, []);
 
   const loadStats = useCallback(async (projectId?: string) => {
     const id = projectId ?? currentProjectIdRef.current;
     if (!id) return;
-    const res = await projectApi.getStats(id);
-    setStats(res.data);
+    try {
+      const res = await projectApi.getStats(id);
+      setStats(res.data || null);
+    } catch (error) {
+      console.error("Failed to load stats:", error);
+      setStats(null);
+    }
   }, []); // ✅ 使用 ref 替代 currentProject state 依赖
 
   const createProject = useCallback(async (data: Partial<Project>) => {
