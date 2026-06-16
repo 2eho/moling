@@ -69,6 +69,32 @@
   color: var(--color-text-secondary);
 }
 
+/* ── Panel Toggle Buttons (Obsidian-style) ── */
+.panelToggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+  font-size: 16px;
+}
+
+.panelToggle:hover {
+  background: var(--color-elevated);
+  color: var(--color-text-secondary);
+}
+
+.panelToggleActive {
+  color: var(--color-brand-indigo);
+  background: var(--color-brand-indigo-dim);
+}
+
 /* ── Progress Bar (generation) ── */
 .progressBar {
   flex-shrink: 0;
@@ -93,8 +119,16 @@
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   flex-shrink: 0;
+  transition: margin-left var(--duration-slow) var(--ease-spring),
+              opacity var(--duration-slow) var(--ease-default);
+}
+
+.leftPanelCollapsed {
+  margin-left: calc(-1 * var(--sidebar-width));
+  opacity: 0;
+  pointer-events: none;
 }
 
 .leftPanelHeader {
@@ -190,12 +224,23 @@
   background: rgba(99,102,241,0.04);
 }
 
-/* ── Center: Editor ── */
+/* ── Center: Editor (Obsidian-style centered) ── */
 .editorArea {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
+  align-items: center;
+  background: var(--color-bg);
+}
+
+.editorCenter {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -208,6 +253,7 @@
   background: var(--color-surface);
   flex-shrink: 0;
   gap: var(--space-2);
+  width: 100%;
 }
 
 .toolbarLeft, .toolbarRight {
@@ -251,8 +297,8 @@
 .editorContent {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-6);
-  background: var(--color-bg);
+  padding: var(--space-6) var(--space-8);
+  width: 100%;
 }
 
 /* ── Editor text styling ── */
@@ -313,8 +359,16 @@
   border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   flex-shrink: 0;
+  transition: margin-right var(--duration-slow) var(--ease-spring),
+              opacity var(--duration-slow) var(--ease-default);
+}
+
+.rightPanelCollapsed {
+  margin-right: calc(-1 * 300px);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .rightPanelTabs {
@@ -416,33 +470,70 @@
   padding: 0 var(--space-2);
 }
 
+/* ── Mobile Drawer Overlay ── */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-default);
+}
+
+.overlayVisible {
+  opacity: 1;
+}
+
 @media (max-width: 768px) {
   .leftPanel {
-    display: none;
     position: fixed;
-    inset: 0;
-    width: 100%;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
     height: 100%;
     z-index: 200;
     border-right: none;
+    box-shadow: var(--shadow-xl);
+    transform: translateX(-100%);
+    transition: transform var(--duration-slow) var(--ease-spring);
+    margin-left: 0;
   }
 
   .leftPanelOpen {
-    display: flex;
+    transform: translateX(0);
+  }
+
+  .leftPanelCollapsed {
+    margin-left: 0;
   }
 
   .rightPanel {
-    display: none;
     position: fixed;
-    inset: 0;
-    width: 100%;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
     height: 100%;
     z-index: 200;
     border-left: none;
+    box-shadow: var(--shadow-xl);
+    transform: translateX(100%);
+    transition: transform var(--duration-slow) var(--ease-spring);
+    margin-right: 0;
   }
 
   .rightPanelOpen {
-    display: flex;
+    transform: translateX(0);
+  }
+
+  .rightPanelCollapsed {
+    margin-right: 0;
+  }
+
+  .overlay {
+    display: block;
   }
 
   .bottomToolbar {
@@ -461,6 +552,10 @@
 
   .toolbarRight .toolBtn {
     display: none;
+  }
+
+  .editorCenter {
+    max-width: 100%;
   }
 }
 

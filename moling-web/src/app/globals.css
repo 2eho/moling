@@ -232,3 +232,159 @@ main, section, .page, .shell, .main-content {
 :focus:not(:focus-visible) {
   outline: none;
 }
+
+/* ═══════════════════════════════════════════════════════
+   页面切换动画 · Page Transition Animations
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 页面进入动画 ── */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── 页面淡入动画 ── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── 页面滑入（从左侧）── */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── 页面滑入（从右侧）── */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── 缩放进入动画 ── */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── 应用动画的类 ── */
+.pageEnter {
+  animation: slideIn 0.3s var(--ease-spring);
+}
+
+.pageFadeIn {
+  animation: fadeIn 0.2s var(--ease-default);
+}
+
+.pageSlideInLeft {
+  animation: slideInLeft 0.3s var(--ease-spring);
+}
+
+.pageSlideInRight {
+  animation: slideInRight 0.3s var(--ease-spring);
+}
+
+.scaleIn {
+  animation: scaleIn 0.2s var(--ease-spring);
+}
+
+/* ── 组件过渡动画 ── */
+.fadeEnter {
+  animation: fadeIn 0.2s var(--ease-default);
+}
+
+.slideDown {
+  animation: slideIn 0.3s var(--ease-spring);
+}
+
+/* ── 工作台布局动画 ── */
+.workspaceEnter {
+  animation: fadeIn 0.3s var(--ease-default);
+}
+
+.editorEnter {
+  animation: slideIn 0.4s var(--ease-spring);
+}
+
+.panelEnter {
+  animation: slideInLeft 0.3s var(--ease-spring);
+}
+
+.panelEnterRight {
+  animation: slideInRight 0.3s var(--ease-spring);
+}
+
+/* ── 卡牌动画 ── */
+@keyframes cardDraw {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cardDraw {
+  animation: cardDraw 0.5s var(--ease-spring);
+}
+
+/* ── 脉冲动画（用于提示）── */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── 旋转动画（加载指示器）── */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
