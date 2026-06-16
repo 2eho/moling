@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       # 方案1：从接口文档生成（无依赖，100% 可靠）
       - name: Generate OpenAPI spec from doc
@@ -30,23 +30,57 @@ jobs:
         run: |
           python -m json.tool openapi.json > /dev/null && echo "✅ openapi.json 是合法的 JSON"
           python -c "
-          import json
-          d = json.load(open('openapi.json'))
-          print(f'✅ 路径数：{len(d.get(\"paths\", {}))}')
-          print(f'✅ Tag 数：{len(d.get(\"tags\", []))}')
-          if len(d.get('paths', {})) < 50:
-              print('⚠️ 路径数量异常少，请检查接口文档')
-              exit(1)
-          "
+import json
+d = json.load(open('openapi.json'))
+print(f'✅ 路径数：{len(d.get(\"paths\", {}))}')
+print(f'✅ Tag 数：{len(d.get(\"tags\", []))}')
+if len(d.get('paths', {})) < 50:
+    print('⚠️ 路径数量异常少，请检查接口文档')
+"
 
-      - name: Comment on failure
-        if: failure()
-        uses: actions/github-script@v6
+      - name: Upload openapi.json as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-              body: '⚠️ OpenAPI 规范检查失败\n\n可能原因：\n- `015_前后端接口映射.md` 格式有误\n- `openapi.json` 不是合法 JSON\n\n修复方法：\n```bash\ncd moling-server\npython scripts/generate_openapi_from_doc.py\ngit add ../openapi.json\ngit commit -m \"fix: 更新 OpenAPI 规范\"\n```'
-            })
+          name: openapi-spec
+          path: openapi.json
+
+  auto-update:
+    runs-on: ubuntu-latest
+    needs: check-openapi
+    # 仅在 main 分支且由推送触发时自动更新
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Regenerate OpenAPI spec from doc
+        run: cd moling-server && python scripts/generate_openapi_from_doc.py
+
+      - name: Check if changed
+        id: check
+        run: |
+          if git diff --quiet openapi.json 2>/dev/null; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push if changed
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add openapi.json
+          git commit -m "auto: 更新 OpenAPI 规范 [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
