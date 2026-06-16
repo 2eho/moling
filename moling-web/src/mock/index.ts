@@ -593,18 +593,10 @@ registerMock("GET:/projects/{projectId}/secrets", (_, params) => {
   return ok(secretsState.filter((s) => s.project_id === projectId));
 });
 
-registerMock("GET:/projects/{projectId}/secrets/character/{characterId}", (_, params) => {
-  const { projectId, characterId } = params as Record<string, string>;
-  const secret = secretsState.find((s) => s.project_id === projectId && s.character_id === characterId);
+registerMock("GET:/projects/{projectId}/secrets/character/{characterName}", (_, params) => {
+  const { projectId, characterName } = params as Record<string, string>;
+  const secret = secretsState.find((s) => s.project_id === projectId && s.character_name === characterName);
   if (!secret) throw new Error("Secret not found");
-  return ok(secret);
-});
-
-registerMock("PATCH:/projects/{projectId}/secrets/character/{characterId}", (body, params) => {
-  const { projectId, characterId } = params as Record<string, string>;
-  const secret = secretsState.find((s) => s.project_id === projectId && s.character_id === characterId);
-  if (!secret) throw new Error("Secret not found");
-  Object.assign(secret, body as Record<string, unknown>);
   return ok(secret);
 });
 

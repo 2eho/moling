@@ -25,16 +25,18 @@ async def get_suggestions(
     return result
 
 
-@router.get("/suggestions/{chapter_id}", response_model=Phase4SuggestionResp, deprecated=True, tags=["phase4 (deprecated)"])
-async def get_suggestions_legacy(
+# 兼容层：旧路径（已弃用）
+@router.get("/suggestions/{chapter_id}", deprecated=True)
+async def get_suggestions_deprecated(
     chapter_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> Phase4SuggestionResp:
-    """获取章节的精修建议（弃用路径，请使用 /chapters/{cid}/suggestions）。"""
+    """【已弃用】请使用 /chapters/{chapter_id}/suggestions。"""
     import warnings
-    warnings.warn("Use /phase4/chapters/{cid}/suggestions instead", DeprecationWarning)
-    return await phase4_service.get_suggestions(db, chapter_id)
+    warnings.warn("路径 /suggestions/{chapter_id} 已弃用，请使用 /chapters/{chapter_id}/suggestions", DeprecationWarning)
+    result = await phase4_service.get_suggestions(db, chapter_id)
+    return result
 
 
 @router.post("/apply", status_code=200)
