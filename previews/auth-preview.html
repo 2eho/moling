@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 — 登录</title>
+<style>
+/* ═══ Reset ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0d0f1a;
+  color: #e8e9f0;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+:root {
+  --bg: #0d0f1a;
+  --surface: #151829;
+  --elevated: #111327;
+  --text-primary: #e8e9f0;
+  --text-secondary: #9ca3c4;
+  --text-tertiary: #6b7199;
+  --indigo: #6366f1;
+  --amber: #d4a843;
+  --border: #2a2d45;
+  --border-subtle: #1e2138;
+  --danger: #ef4444;
+  --success: #34d399;
+}
+
+/* ═══ Layout ═══ */
+.auth-page {
+  display: flex;
+  min-height: 100vh;
+}
+.auth-brand {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 30%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 80%, rgba(212, 168, 67, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #0d0f1a 0%, #0a0c16 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 48px;
+}
+.auth-brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 40% 80%, rgba(99,102,241,0.12) 0%, transparent 100%);
+  background-size: 300px 300px;
+  pointer-events: none;
+}
+.brand-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.brand-logo svg { width: 48px; height: 48px; }
+.brand-name {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.brand-name span { color: var(--indigo); }
+.brand-tagline {
+  font-size: 15px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.brand-desc {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  max-width: 320px;
+  line-height: 1.7;
+}
+.brand-features {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bf-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.bf-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99,102,241,0.1);
+  color: var(--indigo);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.auth-form-section {
+  flex: 0 0 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: var(--surface);
+  border-left: 1px solid var(--border-subtle);
+}
+.form-card {
+  width: 100%;
+  max-width: 400px;
+}
+.form-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.form-logo {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 28px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.form-logo span { color: var(--indigo); }
+.form-subtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* ═══ Tabs ═══ */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.tab-btn {
+  position: relative;
+  flex: 1;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.tab-btn:hover { color: var(--text-secondary); }
+.tab-btn.active {
+  color: var(--indigo);
+  font-weight: 600;
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--indigo), var(--amber));
+  border-radius: 2px;
+}
+
+/* ═══ Forms ═══ */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.form-input.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+.input-wrap {
+  position: relative;
+}
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  font-size: 14px;
+  pointer-events: none;
+}
+.input-wrap .form-input { padding-left: 40px; }
+.field-error {
+  font-size: 12px;
+  color: var(--danger);
+  min-height: 16px;
+}
+.form-error {
+  font-size: 13px;
+  color: var(--danger);
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+}
+
+/* ═══ Buttons ═══ */
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--indigo), #4f46e5);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.6s;
+}
+.btn-primary:hover::before { left: 100%; }
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Options */
+.form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.remember-me input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--indigo);
+}
+.forgot-link {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.forgot-link:hover { color: var(--indigo); }
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 8px 0;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.divider span {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* Social Buttons */
+.social-buttons {
+  display: flex;
+  gap: 12px;
+}
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: inherit;
+}
+.social-btn:hover {
+  border-color: var(--indigo);
+  background: rgba(99, 102, 241, 0.06);
+}
+.social-btn svg { width: 18px; height: 18px; }
+
+/* Password Strength */
+.password-strength {
+  margin-top: 4px;
+}
+.strength-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.strength-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-subtle);
+  transition: background 0.2s;
+}
+.strength-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* Footer Text */
+.form-footer-text {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 768px) {
+  .auth-page { flex-direction: column; }
+  .auth-brand { padding: 32px 24px; flex: none; }
+  .auth-form-section {
+    flex: none;
+    padding: 32px 24px;
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .form-card { max-width: 100%; }
+  .brand-features { display: none; }
+  .brand-logo svg { width: 36px; height: 36px; }
+  .brand-name { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="auth-page">
+  <!-- ═══ Left: Brand ═══ -->
+  <div class="auth-brand">
+    <div class="brand-content">
+      <div class="brand-logo">
+        <svg viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.3"/>
+          <path d="M16 6C16 6 10 14 10 20C10 23.3 12.7 26 16 26C19.3 26 22 23.3 22 20C22 14 16 6 16 6Z" fill="#6366f1" opacity="0.8"/>
+          <path d="M16 10L20 22" stroke="#d4a843" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="16" cy="22" r="1.5" fill="#d4a843"/>
+        </svg>
+      </div>
+      <h1 class="brand-name"><span>墨</span>灵</h1>
+      <p class="brand-tagline">AI 驱动的网文创作平台</p>
+      <p class="brand-desc">让灵感如墨般流淌，用 AI 的力量写出属于你的故事。</p>
+      <div class="brand-features">
+        <div class="bf-item"><span class="bf-icon">&#9830;</span>灵感抽卡 · 解锁创作方向</div>
+        <div class="bf-item"><span class="bf-icon">&#10022;</span>AI 生文 · 智能编织剧情</div>
+        <div class="bf-item"><span class="bf-icon">&#9783;</span>四库记忆 · 长篇叙事保障</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Right: Form ═══ -->
+  <div class="auth-form-section">
+    <div class="form-card">
+      <div class="form-header">
+        <div class="form-logo"><span>墨</span>灵</div>
+        <p class="form-subtitle">AI 驱动的网文创作平台</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="tabs">
+        <button class="tab-btn active" data-tab="login">登录</button>
+        <button class="tab-btn" data-tab="register">注册</button>
+        <button class="tab-btn" data-tab="reset">重置密码</button>
+      </div>
+
+      <!-- Login Panel -->
+      <div class="tab-panel active" id="panel-login">
+        <form class="form" id="login-form">
+          <div id="login-error" class="form-error" style="display:none"></div>
+          <div class="form-group">
+            <label class="form-label">邮箱 *</label>
+            <div class="input-wrap">
+              <span class="input-icon">&#9993;</span>
+              <input type="email" class="form-input" id="login-email" placeholder="请输入邮箱地址">
+            </div>
+            <span class="field-error" id="login-email-error"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">密码 *</label>
+            <div class="input-wrap">
+              <span class="input-icon">&#128274;</span>
+              <input type="password" class="form-input" id="login-password" placeholder="请输入密码">
+            </div>
+            <span class="field-error" id="login-password-error"></span>
+          </div>
+          <div class="form-options">
+            <label class="remember-me">
+              <input type="checkbox"> 记住我
+            </label>
+            <button type="button" class="forgot-link" onclick="switchTab('reset')">忘记密码？</button>
+          </div>
+          <button type="submit" class="btn-primary">登录</button>
+        </form>
+        <div class="divider"><span>或</span></div>
+        <div class="social-buttons">
+          <button class="social-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            GitHub
+          </button>
+          <button class="social-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Google
+          </button>
+        </div>
+      </div>
+
+      <!-- Register Panel -->
+      <div class="tab-panel" id="panel-register">
+        <form class="form" id="register-form">
+          <div id="register-error" class="form-error" style="display:none"></div>
+          <div class="form-group">
+            <label class="form-label">昵称 *</label>
+            <div class="input-wrap">
+              <span class="input-icon">&#128100;</span>
+              <input type="text" class="form-input" id="reg-nickname" placeholder="请输入昵称">
+            </div>
+            <span class="field-error" id="reg-nickname-error"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">邮箱 *</label>
+            <div class="input-wrap">
+              <span class="input-icon">&#9993;</span>
+              <input type="email" class="form-input" id="reg-email" placeholder="请输入邮箱地址">
+            </div>
+            <span class="field-error" id="reg-email-error"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">密码 *</label>
+            <div class="input-wrap">
+              <span class="input-icon">&#128274;</span>
+              <input type="password" class="form-input" id="reg-password" placeholder="请输入密码（至少8个字符）" oninput="updatePasswordStrength()">
+            </div>
+            <span class="field-error" id="reg-password-error"></span>
+            <div class="password-strength" id="strength-indicator" style="display:none">
+              <div class="strength-bar">
+                <div class="strength-seg" id="str-seg-1"></div>
+                <div class="strength-seg" id="str-seg-2"></div>
+                <div class="strength-seg" id="str-seg-3"></div>
+              </div>
+              <div class="strength-label" id="strength-label"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">确认密码 *</label>
+            <div class="input-wrap">
+              <span class="input-icon">&#128274;</span>
+              <input type="password" class="form-input" id="reg-confirm-password" placeholder="请再次输入密码">
+            </div>
+            <span class="field-error" id="reg-confirm-error"></span>
+          </div>
+          <button type="submit" class="btn-primary">注册</button>
+        </form>
+        <p class="form-footer-text">注册即表示同意服务条款和隐私政策</p>
+      </div>
+
+      <!-- Reset Panel -->
+      <div class="tab-panel" id="panel-reset">
+        <form class="form" id="reset-form">
+          <div id="reset-error" class="form-error" style="display:none"></div>
+          <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px">输入您注册时使用的邮箱地址，我们将向您发送密码重置链接。</p>
+          <div class="form-group">
+            <label class="form-label">邮箱</label>
+            <div class="input-wrap">
+              <span class="input-icon">&#9993;</span>
+              <input type="email" class="form-input" id="reset-email" placeholder="请输入注册邮箱">
+            </div>
+            <span class="field-error" id="reset-email-error"></span>
+          </div>
+          <button type="submit" class="btn-primary">发送重置链接</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tabId));
+}
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+  if (e.target.classList.contains('tab-btn')) switchTab(e.target.dataset.tab);
+});
+
+// Clear errors helper
+function clearErrors(prefix) {
+  document.getElementById(prefix + '-error').style.display = 'none';
+  ['email','password','nickname','confirm'].forEach(f => {
+    const el = document.getElementById(prefix + '-' + f + '-error');
+    if (el) el.textContent = '';
+  });
+  document.querySelectorAll('#panel-' + prefix + ' .form-input').forEach(i => i.classList.remove('error'));
+}
+
+function showFieldError(prefix, field, msg) {
+  const el = document.getElementById(prefix + '-' + field + '-error');
+  if (el) el.textContent = msg;
+  const input = document.getElementById(prefix + '-' + field);
+  if (input) input.classList.add('error');
+}
+
+function showFormError(prefix, msg) {
+  const el = document.getElementById(prefix + '-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// Login Validation
+document.getElementById('login-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  clearErrors('login');
+  let hasError = false;
+  const email = document.getElementById('login-email').value.trim();
+  const pwd = document.getElementById('login-password').value;
+  if (!email) { showFieldError('login', 'email', '请输入邮箱地址'); hasError = true; }
+  if (!pwd) { showFieldError('login', 'password', '请输入密码'); hasError = true; }
+  if (hasError) return;
+  // Simulate success
+  const btn = this.querySelector('.btn-primary');
+  btn.textContent = '登录中...';
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = '登录'; btn.disabled = false; alert('登录成功！'); }, 1500);
+});
+
+// Register Validation
+document.getElementById('register-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  clearErrors('reg');
+  let hasError = false;
+  const nickname = document.getElementById('reg-nickname').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pwd = document.getElementById('reg-password').value;
+  const confirm = document.getElementById('reg-confirm-password').value;
+
+  if (!nickname || nickname.length < 2) { showFieldError('reg', 'nickname', '昵称至少2个字符'); hasError = true; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFieldError('reg', 'email', '请输入有效的邮箱地址'); hasError = true; }
+  if (!pwd || pwd.length < 8) { showFieldError('reg', 'password', '密码至少8个字符'); hasError = true; }
+  if (pwd !== confirm) { showFieldError('reg', 'confirm', '两次输入的密码不一致'); hasError = true; }
+  if (hasError) return;
+
+  const btn = this.querySelector('.btn-primary');
+  btn.textContent = '注册中...';
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = '注册'; btn.disabled = false; alert('注册成功！'); }, 1500);
+});
+
+// Password strength
+function updatePasswordStrength() {
+  const pwd = document.getElementById('reg-password').value;
+  const ind = document.getElementById('strength-indicator');
+  if (!pwd) { ind.style.display = 'none'; return; }
+  ind.style.display = 'block';
+
+  let score = 0;
+  if (pwd.length >= 6) score++;
+  if (pwd.length >= 10) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+  const levels = [
+    { label: '弱', color: '#ef4444', count: 1 },
+    { label: '中', color: '#fbbf24', count: 2 },
+    { label: '强', color: '#34d399', count: 3 }
+  ];
+  let level = score <= 1 ? levels[0] : score <= 3 ? levels[1] : levels[2];
+
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById('str-seg-' + i).style.background = i <= level.count ? level.color : '';
+  }
+  document.getElementById('strength-label').textContent = '密码强度：' + level.label;
+  document.getElementById('strength-label').style.color = level.color;
+}
+
+// Reset Validation
+document.getElementById('reset-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  clearErrors('reset');
+  const email = document.getElementById('reset-email').value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showFieldError('reset', 'email', '请输入有效的邮箱地址');
+    return;
+  }
+  const btn = this.querySelector('.btn-primary');
+  btn.textContent = '发送中...';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = '发送重置链接';
+    btn.disabled = false;
+    alert('重置链接已发送到 ' + email);
+  }, 1500);
+});
+</script>
+
+</body>
+</html>

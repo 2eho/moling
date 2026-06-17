@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=900">
+<title>墨灵 · Phase4 任务历史</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:#0d0f1a;color:#e8e9f0;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+input,select{font-family:inherit;border:none;outline:none;background:none;color:inherit}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a2d45;border-radius:3px}
+
+/* Layout */
+.container{max-width:900px;margin:0 auto;padding:24px 20px}
+
+/* Breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7199;margin-bottom:20px}
+.breadcrumb a{color:#6b7199;text-decoration:none;transition:color .15s}
+.breadcrumb a:hover{color:#9ca3c4}
+.breadcrumb-sep{color:#3d4166}
+.breadcrumb-current{color:#e8e9f0}
+
+/* Header */
+.page-header{margin-bottom:24px}
+.page-header h1{font-family:'Noto Serif SC',Georgia,serif;font-size:22px;font-weight:600}
+.page-header p{font-size:13px;color:#6b7199;margin-top:2px}
+
+/* Filter tabs */
+.filter-tabs{display:flex;gap:2px;background:#151829;border-radius:10px;padding:3px;margin-bottom:20px;border:1px solid #1e2138}
+.filter-tab{padding:7px 18px;border-radius:8px;font-size:13px;font-weight:500;color:#6b7199;transition:all .15s}
+.filter-tab:hover{color:#9ca3c4}
+.filter-tab.active{background:rgba(99,102,241,.12);color:#6366f1}
+
+/* Section Card */
+.section-card{background:#151829;border:1px solid #1e2138;border-radius:12px;overflow:hidden;margin-bottom:20px}
+
+/* Data Table */
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead{background:#111327}
+.data-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#6b7199;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #1e2138;white-space:nowrap;user-select:none}
+.data-table td{padding:12px 16px;font-size:13px;border-bottom:1px solid #1e2138;vertical-align:top}
+.data-table tbody tr{transition:background .1s;cursor:pointer}
+.data-table tbody tr:hover{background:rgba(99,102,241,.04)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table tbody tr.expanded{background:rgba(99,102,241,.06)}
+.col-id{font-family:'JetBrains Mono',Consolas,monospace;font-size:12px;color:#6366f1;min-width:100px}
+.col-type{min-width:100px}
+.col-time{color:#9ca3c4;font-size:12px}
+.col-duration{font-family:'JetBrains Mono',Consolas,monospace;font-size:12px}
+.col-expand{width:40px;text-align:center}
+
+/* Status Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-dot{width:6px;height:6px;border-radius:50%}
+.badge-running{background:rgba(99,102,241,.12);color:#6366f1}
+.badge-running .badge-dot{background:#6366f1;animation:pulse 2s infinite}
+.badge-completed{background:rgba(52,211,153,.12);color:#34d399}
+.badge-completed .badge-dot{background:#34d399}
+.badge-failed{background:rgba(239,68,68,.12);color:#ef4444}
+.badge-failed .badge-dot{background:#ef4444}
+.badge-pending{background:rgba(156,163,196,.1);color:#9ca3c4}
+.badge-pending .badge-dot{background:#9ca3c4}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 4px transparent}}
+
+/* Expand row */
+.expand-row{display:none;background:#0d0f1a}
+.expand-row.open{display:table-row}
+.expand-row td{padding:0 16px 16px;color:#9ca3c4}
+.expand-content{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;background:#111327;border-radius:10px;border:1px solid #1e2138}
+.expand-section h4{font-size:12px;font-weight:500;color:#6b7199;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.expand-detail{display:grid;grid-template-columns:80px 1fr;gap:6px 12px;font-size:12px}
+.expand-label{color:#6b7199}
+.expand-value{color:#e8e9f0}
+.expand-log{font-family:'JetBrains Mono',Consolas,monospace;font-size:11px;color:#6b7199;background:#0d0f1a;padding:8px 12px;border-radius:8px;white-space:pre-wrap;line-height:1.7}
+
+.expand-chevron{display:inline-block;transition:transform .2s}
+tr.expanded .expand-chevron{transform:rotate(90deg)}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #1e2138;background:#111327}
+.pagination-info{font-size:12px;color:#6b7199}
+.pagination-btns{display:flex;gap:4px}
+.page-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;font-weight:500;color:#6b7199;transition:all .1s}
+.page-btn:hover{background:rgba(99,102,241,.08);color:#e8e9f0}
+.page-btn.active{background:rgba(99,102,241,.12);color:#6366f1}
+.page-btn.disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+
+/* Empty state */
+.empty-state{text-align:center;padding:64px 20px;color:#6b7199}
+.empty-state p{font-size:13px}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="#">工作台</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="#">Phase 4</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">任务历史</span>
+  </div>
+
+  <!-- Header -->
+  <div class="page-header">
+    <h1>Phase 4 任务历史</h1>
+    <p>质检阶段的所有任务执行记录</p>
+  </div>
+
+  <!-- Status Filter -->
+  <div class="filter-tabs" id="filterTabs">
+    <button class="filter-tab active" data-filter="all" onclick="filterTasks('all',this)">全部</button>
+    <button class="filter-tab" data-filter="running" onclick="filterTasks('running',this)">运行中</button>
+    <button class="filter-tab" data-filter="completed" onclick="filterTasks('completed',this)">已完成</button>
+    <button class="filter-tab" data-filter="failed" onclick="filterTasks('failed',this)">失败</button>
+  </div>
+
+  <!-- Tasks Table -->
+  <div class="section-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="col-expand"></th>
+          <th>任务 ID</th>
+          <th>类型</th>
+          <th>状态</th>
+          <th>创建时间</th>
+          <th>耗时</th>
+        </tr>
+      </thead>
+      <tbody id="taskTableBody">
+        <tr data-status="completed" onclick="toggleExpand(this)">
+          <td class="col-expand"><span class="expand-chevron">&#9654;</span></td>
+          <td class="col-id">TASK-0042</td>
+          <td class="col-type">角色一致性审核</td>
+          <td><span class="badge badge-completed"><span class="badge-dot"></span>已完成</span></td>
+          <td class="col-time">2026-06-18 10:30</td>
+          <td class="col-duration" style="color:#34d399">8.2s</td>
+        </tr>
+        <tr class="expand-row" id="expand-0">
+          <td colspan="6">
+            <div class="expand-content">
+              <div class="expand-section">
+                <h4>任务详情</h4>
+                <div class="expand-detail">
+                  <span class="expand-label">任务 ID</span><span class="expand-value">TASK-0042</span>
+                  <span class="expand-label">类型</span><span class="expand-value">角色一致性审核</span>
+                  <span class="expand-label">章节</span><span class="expand-value">第15章·宗门考核</span>
+                  <span class="expand-label">触发规则</span><span class="expand-value">R1 / R2</span>
+                  <span class="expand-label">创建时间</span><span class="expand-value">2026-06-18 10:30:15</span>
+                  <span class="expand-label">完成时间</span><span class="expand-value">2026-06-18 10:30:23</span>
+                </div>
+              </div>
+              <div class="expand-section">
+                <h4>执行日志</h4>
+                <div class="expand-log">[10:30:15] 任务创建 - R1角色一致性检测
+[10:30:16] 加载角色数据库 - 共检测 12 名角色
+[10:30:18] 分析章节内容 - 检测角色言行一致性
+[10:30:20] R2剧情逻辑验证 - 通过
+[10:30:22] 生成审核报告 - 未发现异常
+[10:30:23] 任务完成 ✓</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <tr data-status="completed" onclick="toggleExpand(this)">
+          <td class="col-expand"><span class="expand-chevron">&#9654;</span></td>
+          <td class="col-id">TASK-0041</td>
+          <td class="col-type">伏笔回收检测</td>
+          <td><span class="badge badge-completed"><span class="badge-dot"></span>已完成</span></td>
+          <td class="col-time">2026-06-18 09:15</td>
+          <td class="col-duration" style="color:#34d399">5.6s</td>
+        </tr>
+        <tr class="expand-row" id="expand-1">
+          <td colspan="6">
+            <div class="expand-content">
+              <div class="expand-section">
+                <h4>任务详情</h4>
+                <div class="expand-detail">
+                  <span class="expand-label">任务 ID</span><span class="expand-value">TASK-0041</span>
+                  <span class="expand-label">类型</span><span class="expand-value">伏笔回收检测</span>
+                  <span class="expand-label">章节</span><span class="expand-value">第14章·暗夜密谈</span>
+                  <span class="expand-label">触发规则</span><span class="expand-value">R3</span>
+                  <span class="expand-label">创建时间</span><span class="expand-value">2026-06-18 09:15:00</span>
+                  <span class="expand-label">完成时间</span><span class="expand-value">2026-06-18 09:15:05</span>
+                </div>
+              </div>
+              <div class="expand-section">
+                <h4>执行日志</h4>
+                <div class="expand-log">[09:15:00] 任务创建 - R3伏笔回收检测
+[09:15:01] 加载伏笔索引库 - 检索到 23 条伏笔
+[09:15:03] 交叉匹配章节内容 - 发现 2 条可回收伏笔
+[09:15:04] 生成回收建议 - 建议在第14章中回收伏笔#7
+[09:15:05] 任务完成 ✓</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <tr data-status="running" onclick="toggleExpand(this)">
+          <td class="col-expand"><span class="expand-chevron">&#9654;</span></td>
+          <td class="col-id">TASK-0043</td>
+          <td class="col-type">全文一致性检测</td>
+          <td><span class="badge badge-running"><span class="badge-dot"></span>运行中</span></td>
+          <td class="col-time">2026-06-18 10:32</td>
+          <td class="col-duration" style="color:#6366f1">处理中...</td>
+        </tr>
+        <tr class="expand-row" id="expand-2">
+          <td colspan="6">
+            <div class="expand-content">
+              <div class="expand-section">
+                <h4>任务详情</h4>
+                <div class="expand-detail">
+                  <span class="expand-label">任务 ID</span><span class="expand-value">TASK-0043</span>
+                  <span class="expand-label">类型</span><span class="expand-value">全文一致性检测</span>
+                  <span class="expand-label">章节</span><span class="expand-value">全卷扫描</span>
+                  <span class="expand-label">触发规则</span><span class="expand-value">R1 / R2 / R3</span>
+                  <span class="expand-label">创建时间</span><span class="expand-value">2026-06-18 10:32:00</span>
+                  <span class="expand-label">预计完成</span><span class="expand-value">约 2 分钟后</span>
+                </div>
+              </div>
+              <div class="expand-section">
+                <h4>执行日志</h4>
+                <div class="expand-log">[10:32:00] 任务创建 - 全文一致性扫描
+[10:32:05] 加载全卷内容 (15章节, 48,200 字)
+[10:32:12] R1角色一致性检查中 - 进度 45%
+[10:32:30] R2剧情逻辑链验证中 - 进度 23%</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <tr data-status="failed" onclick="toggleExpand(this)">
+          <td class="col-expand"><span class="expand-chevron">&#9654;</span></td>
+          <td class="col-id">TASK-0039</td>
+          <td class="col-type">角色一致性审核</td>
+          <td><span class="badge badge-failed"><span class="badge-dot"></span>失败</span></td>
+          <td class="col-time">2026-06-17 20:15</td>
+          <td class="col-duration" style="color:#ef4444">超时</td>
+        </tr>
+        <tr class="expand-row" id="expand-3">
+          <td colspan="6">
+            <div class="expand-content">
+              <div class="expand-section">
+                <h4>任务详情</h4>
+                <div class="expand-detail">
+                  <span class="expand-label">任务 ID</span><span class="expand-value">TASK-0039</span>
+                  <span class="expand-label">类型</span><span class="expand-value">角色一致性审核</span>
+                  <span class="expand-label">章节</span><span class="expand-value">第13章·后山禁地</span>
+                  <span class="expand-label">触发规则</span><span class="expand-value">R1</span>
+                  <span class="expand-label">创建时间</span><span class="expand-value">2026-06-17 20:15:00</span>
+                  <span class="expand-label">失败原因</span><span class="expand-value" style="color:#ef4444">API 调用超时</span>
+                </div>
+              </div>
+              <div class="expand-section">
+                <h4>执行日志</h4>
+                <div class="expand-log">[20:15:00] 任务创建 - R1角色一致性检测
+[20:15:02] 请求 LLM 分析 - 调用 DeepSeek API
+[20:15:05] 连接中...
+[20:16:00] 重试 1/3
+[20:17:00] 重试 2/3
+[20:18:00] 重试 3/3
+[20:18:30] 错误: API 调用超时 (err_code: ETIMEOUT)
+[20:18:30] 任务失败 ✗</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <tr data-status="completed" onclick="toggleExpand(this)">
+          <td class="col-expand"><span class="expand-chevron">&#9654;</span></td>
+          <td class="col-id">TASK-0038</td>
+          <td class="col-type">剧情矛盾检测</td>
+          <td><span class="badge badge-completed"><span class="badge-dot"></span>已完成</span></td>
+          <td class="col-time">2026-06-17 18:00</td>
+          <td class="col-duration" style="color:#34d399">12.4s</td>
+        </tr>
+        <tr class="expand-row" id="expand-4">
+          <td colspan="6">
+            <div class="expand-content">
+              <div class="expand-section">
+                <h4>任务详情</h4>
+                <div class="expand-detail">
+                  <span class="expand-label">任务 ID</span><span class="expand-value">TASK-0038</span>
+                  <span class="expand-label">类型</span><span class="expand-value">剧情矛盾检测</span>
+                  <span class="expand-label">章节</span><span class="expand-value">第12章·天梯试炼</span>
+                  <span class="expand-label">触发规则</span><span class="expand-value">R2</span>
+                  <span class="expand-label">创建时间</span><span class="expand-value">2026-06-17 18:00:00</span>
+                  <span class="expand-label">完成时间</span><span class="expand-value">2026-06-17 18:00:12</span>
+                </div>
+              </div>
+              <div class="expand-section">
+                <h4>执行日志</h4>
+                <div class="expand-log">[18:00:00] 任务创建 - R2剧情矛盾检测
+[18:00:02] 建立剧情因果图 - 15个事件节点
+[18:00:05] 检测矛盾 - 发现 1 处潜在矛盾
+[18:00:08] 矛盾详情: 主角在第8章获取的"玄铁剑"在本章未提及
+[18:00:10] 生成修复建议
+[18:00:12] 任务完成 ✓ (发现 1 个警告)</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <span class="pagination-info">显示 1-5 条，共 42 条记录</span>
+      <div class="pagination-btns">
+        <button class="page-btn disabled">&#8249;</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <button class="page-btn">...</button>
+        <button class="page-btn">9</button>
+        <button class="page-btn">&#8250;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function filterTasks(filter, btn) {
+  // Update active tab
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Filter rows
+  const rows = document.querySelectorAll('#taskTableBody > tr[data-status]');
+  rows.forEach(row => {
+    if (filter === 'all' || row.dataset.status === filter) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+      // Also hide the corresponding expand row
+      const nextRow = row.nextElementSibling;
+      if (nextRow && nextRow.classList.contains('expand-row')) {
+        nextRow.style.display = 'none';
+        nextRow.classList.remove('open');
+      }
+      row.classList.remove('expanded');
+    }
+  });
+}
+
+function toggleExpand(row) {
+  const expandRow = row.nextElementSibling;
+  if (expandRow && expandRow.classList.contains('expand-row')) {
+    row.classList.toggle('expanded');
+    expandRow.classList.toggle('open');
+    if (expandRow.classList.contains('open')) {
+      expandRow.style.display = 'table-row';
+    } else {
+      expandRow.style.display = 'none';
+    }
+  }
+}
+</script>
+</body>
+</html>

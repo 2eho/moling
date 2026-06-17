@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=900">
+<title>墨灵 · 生成历史</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:#0d0f1a;color:#e8e9f0;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+input,select{font-family:inherit;border:none;outline:none;background:none;color:inherit}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a2d45;border-radius:3px}
+
+/* Layout */
+.container{max-width:860px;margin:0 auto;padding:24px 20px}
+
+/* Breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7199;margin-bottom:20px}
+.breadcrumb a{color:#6b7199;text-decoration:none;transition:color .15s}
+.breadcrumb a:hover{color:#9ca3c4}
+.breadcrumb-sep{color:#3d4166}
+.breadcrumb-current{color:#e8e9f0}
+
+/* Header */
+.page-header{margin-bottom:24px}
+.page-header h1{font-family:'Noto Serif SC',Georgia,serif;font-size:22px;font-weight:600}
+.page-header p{font-size:13px;color:#6b7199;margin-top:2px}
+
+/* Filter bar */
+.filter-bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 16px;background:#151829;border:1px solid #1e2138;border-radius:12px;margin-bottom:20px}
+.filter-group{display:flex;align-items:center;gap:8px}
+.filter-label{font-size:12px;color:#6b7199;white-space:nowrap}
+.filter-select{background:#111327;border:1px solid #2a2d45;border-radius:8px;padding:6px 28px 6px 12px;font-size:12px;color:#9ca3c4;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7199' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-width:100px;cursor:pointer}
+.filter-select:focus{border-color:#6366f1}
+
+/* Timeline */
+.timeline{position:relative;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:#1e2138}
+
+.timeline-item{position:relative;margin-bottom:24px}
+.timeline-item:last-child{margin-bottom:0}
+.timeline-dot{position:absolute;left:-32px;top:6px;width:12px;height:12px;border-radius:50%;border:2px solid;z-index:1}
+.timeline-dot.completed{border-color:#34d399;background:#34d399}
+.timeline-dot.failed{border-color:#ef4444;background:#ef4444}
+.timeline-dot.generating{border-color:#6366f1;background:#6366f1;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}50%{box-shadow:0 0 0 6px rgba(99,102,241,0)}}
+
+.record-card{background:#151829;border:1px solid #1e2138;border-radius:12px;padding:18px 20px;transition:all .2s}
+.record-card:hover{border-color:#2a2d45;background:#111327}
+
+.record-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.record-title{font-size:15px;font-weight:600;font-family:'Noto Serif SC',Georgia,serif}
+.record-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+.record-status.completed{color:#34d399}
+.record-status.failed{color:#ef4444}
+.record-status.generating{color:#6366f1}
+.status-dot{width:6px;height:6px;border-radius:50%}
+.status-dot.completed{background:#34d399}
+.status-dot.failed{background:#ef4444}
+.status-dot.generating{background:#6366f1;animation:pulse 2s infinite}
+
+.record-meta{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px}
+.meta-item{display:flex;align-items:center;gap:4px;font-size:12px;color:#6b7199}
+.meta-item svg{width:12px;height:12px}
+.meta-model{display:inline-block;padding:1px 8px;border-radius:100px;font-size:10px;font-weight:500;background:rgba(99,102,241,.12);color:#6366f1}
+
+.record-prompt{font-size:12px;color:#6b7199;background:#0d0f1a;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-family:'JetBrains Mono',Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.record-actions{display:flex;gap:8px}
+.record-actions button{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:500;transition:all .15s}
+.btn-detail{border:1px solid #2a2d45;color:#9ca3c4}
+.btn-detail:hover{border-color:#6366f1;color:#6366f1}
+.btn-rollback{border:1px solid rgba(212,168,67,.3);color:#d4a843}
+.btn-rollback:hover{background:rgba(212,168,67,.1);border-color:#d4a843}
+.btn-regenerate{border:1px solid rgba(99,102,241,.3);color:#6366f1}
+.btn-regenerate:hover{background:rgba(99,102,241,.1);border-color:#6366f1}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;animation:fadeIn .2s}
+.modal{background:#151829;border:1px solid #2a2d45;border-radius:14px;width:600px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.4);animation:scaleIn .2s cubic-bezier(.34,1.56,.64,1)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #1e2138}
+.modal-header h3{font-size:15px;font-weight:600}
+.modal-close{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#6b7199;transition:all .15s}
+.modal-close:hover{background:rgba(239,68,68,.1);color:#ef4444}
+.modal-body{padding:20px;overflow-y:auto;flex:1}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #1e2138}
+
+.detail-grid{display:grid;grid-template-columns:80px 1fr;gap:10px 16px;font-size:13px;margin-bottom:20px}
+.detail-label{color:#6b7199}
+.detail-value{color:#e8e9f0}
+.compare-section{margin-top:16px}
+.compare-section h4{font-size:13px;font-weight:500;color:#9ca3c4;margin-bottom:8px}
+.compare-box{background:#0d0f1a;border:1px solid #1e2138;border-radius:8px;padding:12px;font-size:12px;color:#6b7199;line-height:1.7;max-height:150px;overflow-y:auto;font-family:'JetBrains Mono',Consolas,monospace}
+
+.btn-modal{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;transition:all .15s}
+.btn-cancel{border:1px solid #2a2d45;color:#9ca3c4}
+.btn-cancel:hover{border-color:#6366f1;color:#6366f1}
+.btn-primary{background:#6366f1;color:#fff}
+.btn-primary:hover{background:#4f46e5}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid #1e2138}
+.page-btn{padding:6px 14px;border-radius:8px;border:1px solid #2a2d45;font-size:12px;color:#9ca3c4;transition:all .15s}
+.page-btn:hover{border-color:#6366f1;color:#6366f1}
+.page-btn:disabled{opacity:.3;cursor:not-allowed}
+.page-info{font-size:12px;color:#6b7199}
+
+/* Loading */
+.loading{text-align:center;padding:48px;color:#6b7199;font-size:13px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="#">工作台</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">生成历史</span>
+  </div>
+
+  <!-- Header -->
+  <div class="page-header">
+    <h1>生成历史</h1>
+    <p>查看所有 AI 生成记录，支持回滚与重新生成</p>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">时间范围</span>
+      <select class="filter-select">
+        <option>全部时间</option>
+        <option>今天</option>
+        <option>本周</option>
+        <option>本月</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">生成类型</span>
+      <select class="filter-select">
+        <option>全部类型</option>
+        <option>续写</option>
+        <option>大纲</option>
+        <option>人物卡</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">AI 模型</span>
+      <select class="filter-select">
+        <option>全部模型</option>
+        <option>GPT-4</option>
+        <option>Claude</option>
+        <option>DeepSeek</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline" id="timeline">
+    <div class="timeline-item">
+      <div class="timeline-dot completed"></div>
+      <div class="record-card">
+        <div class="record-header">
+          <span class="record-title">第15章·宗门考核</span>
+          <span class="record-status completed"><span class="status-dot completed"></span>已完成</span>
+        </div>
+        <div class="record-meta">
+          <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> 3,200 字</span>
+          <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 13.2s</span>
+          <span class="meta-model">GPT-4</span>
+          <span class="meta-item">2026-06-18 10:30</span>
+        </div>
+        <div class="record-prompt">续写主角林凡在宗门考核中的表现，突出其隐藏实力并意外觉醒新能力的过程...</div>
+        <div class="record-actions">
+          <button class="btn-detail" onclick="openDetail(this)" data-detail='{"title":"第15章·宗门考核","status":"completed","words":3200,"time":"13.2s","model":"GPT-4","date":"2026-06-18 10:30","taskId":"task-001","prompt":"续写主角林凡在宗门考核中的表现，突出其隐藏实力并意外觉醒新能力的过程...","output":"第一段输出内容示例：林凡站在考核场中央，周围数百名弟子屏息凝神..."}'>查看详情</button>
+          <button class="btn-rollback" onclick="alert('已回滚到该版本（演示）')">回滚到该版本</button>
+          <button class="btn-regenerate" onclick="alert('重新生成中...（演示）')">重新生成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-dot completed"></div>
+      <div class="record-card">
+        <div class="record-header">
+          <span class="record-title">第14章·暗夜密谈</span>
+          <span class="record-status completed"><span class="status-dot completed"></span>已完成</span>
+        </div>
+        <div class="record-meta">
+          <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> 2,800 字</span>
+          <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 11.5s</span>
+          <span class="meta-model">Claude</span>
+          <span class="meta-item">2026-06-17 22:15</span>
+        </div>
+        <div class="record-prompt">描写主角与神秘人在深夜密谈的场景，对话要充满张力和暗示...</div>
+        <div class="record-actions">
+          <button class="btn-detail" onclick="openDetail(this)" data-detail='{"title":"第14章·暗夜密谈","status":"completed","words":2800,"time":"11.5s","model":"Claude","date":"2026-06-17 22:15","taskId":"task-002","prompt":"描写主角与神秘人在深夜密谈的场景...","output":"夜深了，月色朦胧..."}'>查看详情</button>
+          <button class="btn-rollback" onclick="alert('已回滚到该版本（演示）')">回滚到该版本</button>
+          <button class="btn-regenerate" onclick="alert('重新生成中...（演示）')">重新生成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-dot failed"></div>
+      <div class="record-card">
+        <div class="record-header">
+          <span class="record-title">第13章·后山禁地</span>
+          <span class="record-status failed"><span class="status-dot failed"></span>生成失败</span>
+        </div>
+        <div class="record-meta">
+          <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> 0 字</span>
+          <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 0s</span>
+          <span class="meta-model">DeepSeek</span>
+          <span class="meta-item">2026-06-16 18:45</span>
+        </div>
+        <div class="record-prompt">生成主角在后山禁地发现上古遗迹的场景...</div>
+        <div class="record-actions">
+          <button class="btn-detail" onclick="openDetail(this)" data-detail='{"title":"第13章·后山禁地","status":"failed","words":0,"time":"0s","model":"DeepSeek","date":"2026-06-16 18:45","taskId":"task-003","prompt":"生成主角在后山禁地发现上古遗迹的场景...","output":"生成超时，请检查 API 配置后重试。"}'>查看详情</button>
+          <button class="btn-regenerate" onclick="alert('重新生成中...（演示）')">重新生成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <button class="page-btn" disabled>上一页</button>
+    <span class="page-info">第 1 页 / 共 5 页</span>
+    <button class="page-btn">下一页</button>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">生成详情</h3>
+      <button class="modal-close" onclick="closeDetail()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-modal btn-cancel" onclick="closeDetail()">关闭</button>
+      <button class="btn-modal btn-primary" onclick="alert('已回滚到该版本（演示）');closeDetail()">回滚到该版本</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openDetail(btn) {
+  const data = JSON.parse(btn.getAttribute('data-detail'));
+  document.getElementById('modalTitle').textContent = '生成详情 · ' + data.title;
+  const statusColor = data.status === 'completed' ? '#34d399' : '#ef4444';
+  const statusText = data.status === 'completed' ? '已完成' : '失败';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="detail-grid">
+      <span class="detail-label">章节</span><span class="detail-value">${data.title}</span>
+      <span class="detail-label">状态</span><span class="detail-value" style="color:${statusColor}">${statusText}</span>
+      <span class="detail-label">字数</span><span class="detail-value">${data.words} 字</span>
+      <span class="detail-label">耗时</span><span class="detail-value">${data.time}</span>
+      <span class="detail-label">模型</span><span class="detail-value">${data.model}</span>
+      <span class="detail-label">时间</span><span class="detail-value">${data.date}</span>
+      <span class="detail-label">任务 ID</span><span class="detail-value" style="font-family:monospace;font-size:11px">${data.taskId}</span>
+    </div>
+    <div class="compare-section">
+      <h4>输入提示词</h4>
+      <div class="compare-box">${data.prompt}</div>
+    </div>
+    <div class="compare-section">
+      <h4>AI 输出结果</h4>
+      <div class="compare-box">${data.output}</div>
+    </div>
+  `;
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+function closeDetail() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+</script>
+</body>
+</html>

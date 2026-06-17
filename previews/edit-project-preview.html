@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 · 编辑项目</title>
+<style>
+/* ═══════════ 设计令牌 ═══════════ */
+:root {
+  --bg: #0d0f1a; --surface: #151829; --elevated: #111327;
+  --text-primary: #e8e9f0; --text-secondary: #9ca3c4; --text-tertiary: #6b7199; --text-disabled: #3d4166;
+  --brand: #6366f1; --brand-hover: #4f46e5; --brand-dim: rgba(99,102,241,0.12);
+  --border: #2a2d45; --border-subtle: #1e2138;
+  --success: #34d399; --danger: #ef4444;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 18px; --radius-2xl: 24px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3),0 4px 8px rgba(99,102,241,0.1);
+  --ease-default: cubic-bezier(0.4,0,0.2,1);
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg);color:var(--text-primary);
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px;
+}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-xl);padding:32px;
+  width:100%;max-width:560px;
+  box-shadow:var(--shadow-lg);
+  animation:scaleIn 0.4s var(--ease-spring);
+}
+
+.title{
+  font-family:'Noto Serif SC','思源宋体',Georgia,serif;
+  font-size:22px;font-weight:700;margin-bottom:24px;
+  color:var(--text-primary);
+}
+
+.field{margin-bottom:20px}
+.field-label{
+  display:block;font-size:13px;font-weight:500;
+  color:var(--text-secondary);margin-bottom:6px;
+}
+.field-label .required{color:var(--danger);margin-left:2px}
+
+/* Large title input */
+.title-input{
+  width:100%;padding:14px 16px;background:var(--elevated);
+  border:1px solid var(--border-subtle);border-radius:var(--radius-md);
+  font-size:20px;font-weight:600;color:var(--text-primary);
+  font-family:'Noto Serif SC','思源宋体',Georgia,serif;outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.title-input::placeholder{color:var(--text-disabled);font-weight:400;font-size:16px}
+.title-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(99,102,241,0.1)}
+
+/* Normal inputs */
+.form-input,.form-textarea{
+  width:100%;padding:10px 14px;background:var(--elevated);
+  border:1px solid var(--border-subtle);border-radius:var(--radius-md);
+  font-size:14px;color:var(--text-primary);font-family:inherit;outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--text-disabled)}
+.form-input:focus,.form-textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(99,102,241,0.1)}
+.form-textarea{resize:vertical;min-height:100px;line-height:1.7}
+
+/* Genre chips */
+.chips-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  padding:4px 12px;border:1px solid var(--border-subtle);
+  border-radius:20px;font-size:13px;color:var(--text-tertiary);
+  cursor:pointer;transition:all 0.2s;user-select:none;
+}
+.chip:hover{border-color:var(--border);color:var(--text-secondary)}
+.chip.selected{background:rgba(99,102,241,0.15);border-color:var(--brand);color:var(--brand);font-weight:500}
+
+/* Cover upload */
+.cover-section{display:flex;gap:20px;align-items:flex-start}
+.cover-preview{
+  width:140px;height:190px;border-radius:var(--radius-lg);
+  background:linear-gradient(135deg,#1e1b4b,#312e81);
+  border:1px solid var(--border-subtle);display:flex;
+  align-items:center;justify-content:center;font-size:40px;
+  flex-shrink:0;position:relative;overflow:hidden;
+}
+.cover-preview .overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.4);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity 0.2s;
+  cursor:pointer;
+}
+.cover-preview:hover .overlay{opacity:1}
+.overlay-text{color:#fff;font-size:12px;font-weight:500}
+
+.drop-zone{
+  flex:1;border:2px dashed var(--border);border-radius:var(--radius-lg);
+  padding:32px 20px;text-align:center;
+  transition:all 0.3s;cursor:pointer;
+  min-height:190px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--brand);background:rgba(99,102,241,0.04)}
+.drop-zone .dz-icon{font-size:32px;margin-bottom:8px}
+.drop-zone .dz-text{font-size:14px;color:var(--text-secondary);margin-bottom:4px}
+.drop-zone .dz-hint{font-size:12px;color:var(--text-tertiary)}
+.drop-zone .dz-formats{font-size:11px;color:var(--text-disabled);margin-top:8px}
+
+/* Meta info */
+.meta-row{display:flex;gap:16px}
+.meta-row .field{flex:1}
+
+/* Actions */
+.actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border-subtle)}
+.btn-primary{
+  padding:10px 24px;background:linear-gradient(135deg,var(--brand),var(--brand-hover));
+  color:#fff;font-size:14px;font-weight:600;border:none;
+  border-radius:var(--radius-md);cursor:pointer;
+  transition:transform 0.2s var(--ease-spring),box-shadow 0.2s;
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,0.3)}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-secondary{
+  padding:10px 24px;background:transparent;color:var(--text-secondary);
+  font-size:14px;font-weight:500;border:1px solid var(--border);
+  border-radius:var(--radius-md);cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-secondary:hover{border-color:var(--text-tertiary);color:var(--text-primary)}
+
+/* Toast */
+.toast{position:fixed;top:24px;right:24px;z-index:3000;padding:12px 20px;border-radius:var(--radius-md);font-size:13px;font-weight:500;display:none}
+.toast.visible{display:block;animation:fadeSlideIn 0.3s var(--ease-spring)}
+.toast.success{background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.25);color:var(--success)}
+.toast.error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);color:var(--danger)}
+
+/* Animations */
+@keyframes scaleIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}}
+
+.saved-indicator{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--success);margin-left:12px;
+  animation:fadeSlideIn 0.3s var(--ease-spring);
+  opacity:0;transition:opacity 0.3s;
+}
+.saved-indicator.show{opacity:1}
+.saved-indicator .dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 1.5s infinite}
+
+@media(max-width:600px){
+  .card{padding:20px}
+  .cover-section{flex-direction:column}
+  .cover-preview{width:100%;height:200px}
+  .meta-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1 class="title">编辑项目</h1>
+
+  <!-- Title -->
+  <div class="field">
+    <label class="field-label">书名 <span class="required">*</span></label>
+    <input class="title-input" type="text" id="titleInput" value="星穹之下" placeholder="输入作品名称" oninput="onFieldChange()">
+  </div>
+
+  <!-- Cover Upload -->
+  <div class="field">
+    <label class="field-label">封面</label>
+    <div class="cover-section">
+      <div class="cover-preview" id="coverPreview" onclick="simulateNewCover()">
+        ✨
+        <div class="overlay"><span class="overlay-text">点击更换</span></div>
+      </div>
+      <div class="drop-zone" id="dropZone" onclick="simulateNewCover()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');simulateNewCover()">
+        <div class="dz-icon">🖼️</div>
+        <div class="dz-text">拖拽图片到此处</div>
+        <div class="dz-hint">或点击上传</div>
+        <div class="dz-formats">支持 JPG、PNG · 推荐 600×800</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Genre -->
+  <div class="field">
+    <label class="field-label">类型 <span class="required">*</span></label>
+    <div class="chips-wrap">
+      <span class="chip selected" data-genre="玄幻" onclick="selectChip(this)">玄幻</span>
+      <span class="chip" data-genre="仙侠" onclick="selectChip(this)">仙侠</span>
+      <span class="chip" data-genre="都市" onclick="selectChip(this)">都市</span>
+      <span class="chip" data-genre="科幻" onclick="selectChip(this)">科幻</span>
+      <span class="chip" data-genre="悬疑" onclick="selectChip(this)">悬疑</span>
+      <span class="chip" data-genre="历史" onclick="selectChip(this)">历史</span>
+      <span class="chip" data-genre="网游" onclick="selectChip(this)">网游</span>
+      <span class="chip" data-genre="轻小说" onclick="selectChip(this)">轻小说</span>
+      <span class="chip" data-genre="奇幻" onclick="selectChip(this)">奇幻</span>
+      <span class="chip" data-genre="军事" onclick="selectChip(this)">军事</span>
+    </div>
+  </div>
+
+  <!-- Meta Row -->
+  <div class="meta-row">
+    <div class="field">
+      <label class="field-label">总章节</label>
+      <input class="form-input" type="number" value="23" min="0" oninput="onFieldChange()">
+    </div>
+    <div class="field">
+      <label class="field-label">总字数</label>
+      <input class="form-input" type="text" value="128,000" placeholder="自动计算" readonly style="opacity:0.6">
+    </div>
+  </div>
+
+  <!-- Synopsis -->
+  <div class="field">
+    <label class="field-label">简介</label>
+    <textarea class="form-textarea" placeholder="简短的描述，让读者快速了解你的故事..." oninput="onFieldChange()">少年苏铭踏入玄天宗修行之路，意外获得母亲遗留的神秘玉佩，揭开尘封万年的修真界秘辛。在各方势力的角力中，他必须不断突破自我，守护心中所爱。</textarea>
+  </div>
+
+  <!-- Saved indicator -->
+  <div class="saved-indicator" id="savedBadge">
+    <span class="dot"></span> 已自动保存
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn-secondary" onclick="showToast('已取消，返回上一页','success')">取消</button>
+    <button class="btn-primary" id="saveBtn" onclick="handleSave()">保存修改</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+let saveTimeout;
+
+function selectChip(el) {
+  const parent = el.parentElement;
+  parent.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  onFieldChange();
+}
+
+function simulateNewCover() {
+  const gradients = [
+    'linear-gradient(135deg,#1e1b4b,#312e81)',
+    'linear-gradient(135deg,#1a2e1a,#166534)',
+    'linear-gradient(135deg,#2e1a2e,#86198f)',
+    'linear-gradient(135deg,#1e1a1a,#7c2d12)',
+    'linear-gradient(135deg,#1a1e2e,#1e3a5f)',
+  ];
+  const random = gradients[Math.floor(Math.random() * gradients.length)];
+  document.getElementById('coverPreview').style.background = random;
+  onFieldChange();
+}
+
+function onFieldChange() {
+  document.getElementById('saveBtn').style.boxShadow = '0 0 0 3px rgba(99,102,241,0.3)';
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    document.getElementById('saveBtn').style.boxShadow = 'none';
+    const badge = document.getElementById('savedBadge');
+    badge.classList.add('show');
+    setTimeout(() => badge.classList.remove('show'), 2000);
+  }, 1500);
+}
+
+function handleSave() {
+  const title = document.getElementById('titleInput').value.trim();
+  if (!title) {
+    showToast('请输入作品名称', 'error');
+    return;
+  }
+  showToast('保存成功！正在跳转到创作工作台...', 'success');
+}
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type + ' visible';
+  setTimeout(() => { toast.classList.remove('visible'); }, 2500);
+}
+
+// Initial auto-save indicator
+onFieldChange();
+</script>
+
+</body>
+</html>

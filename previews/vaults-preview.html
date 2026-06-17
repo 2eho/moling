@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 · 四库全貌</title>
+<style>
+:root {
+  --color-bg: #0d0f1a;
+  --color-surface: #151829;
+  --color-elevated: #111327;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #9ca3c4;
+  --color-text-tertiary: #6b7199;
+  --color-text-disabled: #3d4166;
+  --color-brand-indigo: #6366f1;
+  --color-brand-amber: #d4a843;
+  --color-brand-indigo-dim: rgba(99,102,241,0.12);
+  --color-brand-amber-dim: rgba(212,168,67,0.15);
+  --color-border: #2a2d45;
+  --color-border-subtle: #1e2138;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --rarity-common: #9ca3af;
+  --rarity-rare: #67e8f9;
+  --rarity-epic: #a855f7;
+  --rarity-legendary: #d4a843;
+  --font-heading: 'Noto Serif SC', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3);
+  --shadow-modal: 0 16px 48px rgba(0,0,0,0.4);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font-body);background:var(--color-bg);
+  color:var(--color-text-primary);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+input{font-family:inherit;border:none;outline:none;background:none;color:inherit}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--color-border);border-radius:3px}
+
+/* ── App Layout ── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--color-bg)}
+
+/* Header */
+.header{
+  background:var(--color-elevated);border-bottom:1px solid var(--color-border);
+  padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.headerLeft{display:flex;align-items:center;gap:12px}
+.headerTitle{font-family:var(--font-heading);font-size:16px;font-weight:700}
+.headerProject{font-size:13px;color:var(--color-text-tertiary);padding:2px 10px;background:var(--color-surface);border-radius:6px}
+.headerRight{display:flex;align-items:center;gap:12px}
+
+.searchBox{
+  display:flex;align-items:center;gap:8px;
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:6px 12px;width:320px
+}
+.searchBox svg{flex-shrink:0;color:var(--color-text-tertiary)}
+.searchInput{flex:1;font-size:13px;color:var(--color-text-primary)}
+.searchInput::placeholder{color:var(--color-text-disabled)}
+.searchShortcut{font-size:10px;color:var(--color-text-tertiary);background:var(--color-elevated);padding:2px 8px;border-radius:4px}
+
+/* Body */
+.body{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{
+  width:240px;min-width:240px;flex-shrink:0;
+  background:var(--color-surface);border-right:1px solid var(--color-border);
+  display:flex;flex-direction:column;overflow-y:auto
+}
+.sidebarSectionLabel{
+  padding:16px 16px 8px;font-size:11px;font-weight:700;
+  color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:1px
+}
+.sidebarNav{display:flex;flex-direction:column}
+.sidebarTab{
+  display:flex;align-items:center;gap:10px;padding:10px 16px;
+  cursor:pointer;transition:all 0.1s;border-left:2px solid transparent
+}
+.sidebarTab:hover{background:rgba(255,255,255,0.02)}
+.sidebarTab.active{
+  background:var(--color-brand-indigo-dim);
+  border-left-color:var(--color-brand-indigo);
+  color:var(--color-brand-indigo);
+}
+.sidebarTabIcon{font-size:16px;flex-shrink:0}
+.sidebarTabText{min-width:0}
+.sidebarTabLabel{font-size:13px;font-weight:500;display:block}
+.sidebarTabCount{font-size:11px;color:var(--color-text-tertiary)}
+
+.sidebarDivider{height:1px;background:var(--color-border);margin:12px 0}
+.sidebarStats{padding:0 16px 16px;display:flex;flex-direction:column;gap:8px}
+.statRow{display:flex;justify-content:space-between;font-size:12px}
+.statLabel{color:var(--color-text-tertiary)}
+.statValue{color:var(--color-text-secondary);font-family:var(--font-mono);font-weight:500}
+
+/* Content */
+.contentArea{flex:1;overflow-y:auto;padding:24px;min-width:0}
+.contentPanel{display:none}
+.contentPanel.active{display:block}
+
+/* Filter */
+.filterBar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.filterBtn{
+  padding:5px 14px;border-radius:var(--radius-sm);font-size:12px;
+  background:var(--color-surface);border:1px solid var(--color-border);
+  color:var(--color-text-secondary);transition:all 0.1s
+}
+.filterBtn:hover{border-color:var(--color-text-tertiary);color:var(--color-text-primary)}
+.filterBtn.active{background:var(--color-brand-indigo);color:#fff;border-color:var(--color-brand-indigo)}
+
+/* Character Grid */
+.charGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.charCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:16px;cursor:pointer;
+  transition:all 0.15s;position:relative
+}
+.charCard:hover{border-color:var(--color-text-tertiary);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.charCardTop{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.charAvatar{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:16px;flex-shrink:0
+}
+.charAvatar.protagonist{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+.charAvatar.ally{background:linear-gradient(135deg,#34d399,#059669);color:#fff}
+.charAvatar.neutral{background:linear-gradient(135deg,#6b7199,#3d4166);color:#fff}
+.charAvatar.opponent{background:linear-gradient(135deg,#fbbf24,#d97706);color:#111}
+.charAvatar.villain{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff}
+.charChapters{position:absolute;top:12px;right:12px;font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono)}
+.charInfo{min-width:0}
+.charName{font-size:14px;font-weight:600;color:var(--color-text-primary)}
+.charFaction{display:inline-block;font-size:10px;padding:1px 8px;border-radius:4px;margin-top:2px;font-weight:500}
+.charFaction.protagonist{background:rgba(99,102,241,0.1);color:var(--color-brand-indigo)}
+.charFaction.ally{background:rgba(52,211,153,0.1);color:var(--color-success)}
+.charFaction.neutral{background:rgba(107,113,153,0.1);color:var(--color-text-tertiary)}
+.charFaction.opponent{background:rgba(251,191,36,0.1);color:var(--color-warning)}
+.charFaction.villain{background:rgba(239,68,68,0.1);color:var(--color-danger)}
+.charTags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.charTag{
+  padding:2px 8px;border-radius:4px;font-size:11px;
+  background:var(--color-elevated);color:var(--color-text-secondary);
+  border:1px solid var(--color-border-subtle);
+}
+.charStatus{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-tertiary)}
+.charStatusDot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* Timeline */
+.timelineList{display:flex;flex-direction:column;gap:0;padding-left:20px;border-left:2px solid var(--color-border)}
+.timelineItem{padding:14px 0 14px 16px;position:relative}
+.timelineItem::before{
+  content:'';position:absolute;left:-25px;top:18px;
+  width:10px;height:10px;border-radius:50%;background:var(--color-border);border:2px solid var(--color-elevated)
+}
+.timelineItem.completed::before{background:var(--color-success)}
+.timelineItem.current::before{background:var(--color-brand-indigo);box-shadow:0 0 0 4px rgba(99,102,241,0.2)}
+.timelineDay{font-size:11px;color:var(--color-text-tertiary);font-weight:600;margin-bottom:2px}
+.timelineText{font-size:13px;color:var(--color-text-secondary)}
+.timelineItem.current .timelineText{color:var(--color-text-primary);font-weight:500}
+
+/* Foreshadow Cards */
+.foreshadowList{display:flex;flex-direction:column;gap:10px}
+.foreshadowCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:14px 16px;cursor:pointer;
+  transition:all 0.15s;
+}
+.foreshadowCard:hover{border-color:var(--color-text-tertiary)}
+.foreshadowCard.statusPending{border-left:3px solid var(--color-warning)}
+.foreshadowCard.statusActive{border-left:3px solid var(--color-brand-indigo)}
+.foreshadowCard.statusRecovered{border-left:3px solid var(--color-success)}
+.foreshadowCard.statusLost{border-left:3px solid var(--color-danger)}
+.foreshadowHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.foreshadowLeft{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.urgencyDot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.urgencyDot.high{background:var(--color-danger)}
+.urgencyDot.medium{background:var(--color-warning)}
+.urgencyDot.low{background:var(--color-text-tertiary)}
+.foreshadowTitle{font-size:14px;font-weight:600;color:var(--color-text-primary)}
+.badge{font-size:10px;padding:1px 8px;border-radius:4px;font-weight:500}
+.badge.foreshadow{background:rgba(99,102,241,0.12);color:#818cf8}
+.badge.twist{background:rgba(168,85,247,0.12);color:#a855f7}
+.badge.advance{background:rgba(52,211,153,0.12);color:#34d399}
+.statusBadge{font-size:11px;padding:2px 10px;border-radius:8px;font-weight:500;white-space:nowrap}
+.statusBadge.pending{background:rgba(251,191,36,0.1);color:var(--color-warning)}
+.statusBadge.active{background:rgba(99,102,241,0.1);color:#818cf8}
+.statusBadge.recovered{background:rgba(52,211,153,0.1);color:var(--color-success)}
+.statusBadge.lost{background:rgba(239,68,68,0.1);color:var(--color-danger)}
+.foreshadowMeta{display:flex;gap:16px;font-size:11px;color:var(--color-text-tertiary);align-items:center;flex-wrap:wrap}
+.foreshadowMeta span{display:flex;align-items:center;gap:4px}
+
+/* World */
+.worldGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.worldCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:16px;transition:all 0.15s
+}
+.worldCard:hover{border-color:var(--color-text-tertiary)}
+.worldCardHeader{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.worldCardName{font-size:15px;font-weight:600;color:var(--color-text-primary)}
+.worldCardCat{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500}
+.worldCardCat.geo{background:rgba(99,102,241,0.1);color:var(--color-brand-indigo)}
+.worldCardCat.sys{background:rgba(52,211,153,0.1);color:var(--color-success)}
+.worldCardCat.his{background:rgba(251,191,36,0.1);color:var(--color-warning)}
+.worldCardDesc{font-size:12px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:10px}
+.worldCardTags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.worldCardFooter{font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono)}
+
+/* Secrets Table */
+.secretsTable{overflow-x:auto;margin-bottom:16px}
+.secretsTable table{width:100%;border-collapse:collapse;font-size:13px}
+.secretsTable th{
+  padding:10px 14px;text-align:left;font-size:11px;font-weight:700;
+  color:var(--color-text-tertiary);border-bottom:1px solid var(--color-border);
+  white-space:nowrap
+}
+.secretsTable td{
+  padding:10px 14px;border-bottom:1px solid var(--color-border-subtle);
+  color:var(--color-text-secondary)
+}
+.secretKnown{color:var(--color-success);font-size:11px;font-weight:500}
+.secretNotKnown{color:var(--color-text-disabled);font-size:12px}
+.secretUnknown{color:var(--color-text-tertiary);font-size:12px}
+.secretLevel{display:inline-block;padding:2px 10px;border-radius:8px;font-size:11px;font-weight:500}
+.secretLevel.open{background:rgba(52,211,153,0.1);color:#34d399}
+.secretLevel.partial{background:rgba(251,191,36,0.1);color:#fbbf24}
+.secretLevel.absolute{background:rgba(239,68,68,0.1);color:#ef4444}
+.secretDebt{font-family:var(--font-mono);font-size:12px;font-weight:500}
+.secretDebt.high{color:var(--color-danger)}
+.secretDebt.medium{color:var(--color-warning)}
+.debtPanel{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px
+}
+.debtCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:16px
+}
+.debtCardTitle{font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:12px}
+.debtItem{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;color:var(--color-text-secondary)}
+.debtBar{flex:1;height:6px;background:var(--color-border-subtle);border-radius:3px;margin:4px 0;position:relative}
+.debtBarFill{height:100%;border-radius:3px;transition:width 0.3s}
+.debtSuggestion{
+  background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.1);
+  border-radius:var(--radius-md);padding:12px;margin-top:12px;font-size:12px;color:var(--color-text-secondary)
+}
+
+/* Modal */
+.modalOverlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
+  z-index:100;align-items:center;justify-content:center
+}
+.modalOverlay.visible{display:flex}
+.modal{
+  background:var(--color-elevated);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);padding:24px;max-width:480px;width:90%;
+  box-shadow:var(--shadow-modal);max-height:80vh;overflow-y:auto
+}
+.modalHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modalTitle{font-family:var(--font-heading);font-size:18px;font-weight:700}
+.modalClose{
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-sm);color:var(--color-text-tertiary);transition:all 0.1s
+}
+.modalClose:hover{background:var(--color-surface);color:var(--color-text-primary)}
+.modalField{margin-bottom:14px}
+.modalFieldLabel{font-size:11px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px;text-transform:uppercase}
+.modalFieldValue{font-size:13px;color:var(--color-text-secondary);line-height:1.7}
+
+/* Section Cards */
+.sectionCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);margin-bottom:16px;overflow:hidden
+}
+.sectionCardHeader{
+  padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;transition:background 0.1s
+}
+.sectionCardHeader:hover{background:rgba(255,255,255,0.02)}
+.sectionCardTitle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.sectionCardIcon{padding:6px;border-radius:var(--radius-sm);font-size:14px}
+.sectionCardCount{font-size:11px;color:var(--color-text-tertiary);font-weight:400}
+.sectionCardBody{padding:0 16px 16px}
+.memoryItem{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0;border-bottom:1px solid var(--color-border-subtle);
+  font-size:12px;color:var(--color-text-secondary)
+}
+.memoryItem:last-child{border-bottom:none}
+.sceneItem{display:flex;gap:8px;padding:6px 0;font-size:12px}
+.sceneChap{font-family:var(--font-mono);font-size:11px;color:var(--color-text-tertiary);min-width:50px}
+
+/* Back button */
+.backBtn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:6px 12px;border-radius:var(--radius-sm);
+  font-size:12px;color:var(--color-text-secondary);
+  background:var(--color-surface);border:1px solid var(--color-border);
+  transition:all 0.1s;text-decoration:none
+}
+.backBtn:hover{color:var(--color-text-primary);border-color:var(--color-text-tertiary)}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ── Header ── -->
+  <div class="header">
+    <div class="headerLeft">
+      <a href="#" class="backBtn">← 返回</a>
+      <span class="headerTitle">四库管理</span>
+      <span class="headerProject">苍穹之剑</span>
+    </div>
+    <div class="headerRight">
+      <div class="searchBox">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input class="searchInput" placeholder="搜索人物、时间线、剧情承诺、世界观..." id="globalSearch">
+        <span class="searchShortcut">Ctrl+K</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Body ── -->
+  <div class="body">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebarSectionLabel">知识库</div>
+      <nav class="sidebarNav" id="sidebarNav">
+        <div class="sidebarTab active" data-tab="character">
+          <span class="sidebarTabIcon">👥</span>
+          <div class="sidebarTabText">
+            <span class="sidebarTabLabel">人物库</span>
+            <span class="sidebarTabCount">14 人</span>
+          </div>
+        </div>
+        <div class="sidebarTab" data-tab="timeline">
+          <span class="sidebarTabIcon">⏱️</span>
+          <div class="sidebarTabText">
+            <span class="sidebarTabLabel">时间线库</span>
+            <span class="sidebarTabCount">5 个节点 · 12 个场景</span>
+          </div>
+        </div>
+        <div class="sidebarTab" data-tab="commitments">
+          <span class="sidebarTabIcon">📖</span>
+          <div class="sidebarTabText">
+            <span class="sidebarTabLabel">剧情承诺库</span>
+            <span class="sidebarTabCount">4 活跃 · 3 待回收</span>
+          </div>
+        </div>
+        <div class="sidebarTab" data-tab="world">
+          <span class="sidebarTabIcon">🌍</span>
+          <div class="sidebarTabText">
+            <span class="sidebarTabLabel">世界观库</span>
+            <span class="sidebarTabCount">6 项</span>
+          </div>
+        </div>
+        <div class="sidebarTab" data-tab="secrets">
+          <span class="sidebarTabIcon">🔐</span>
+          <div class="sidebarTabText">
+            <span class="sidebarTabLabel">秘密矩阵</span>
+            <span class="sidebarTabCount">4 活跃 · 2 不对称</span>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebarDivider"></div>
+
+      <div class="sidebarStats">
+        <div class="statRow"><span class="statLabel">总字数</span><span class="statValue">124,800</span></div>
+        <div class="statRow"><span class="statLabel">已完成章节</span><span class="statValue">23 / 40</span></div>
+        <div class="statRow"><span class="statLabel">承诺回收率</span><span class="statValue">78.9%</span></div>
+        <div class="statRow" style="color:var(--color-warning)"><span class="statLabel">🏥 健康告警</span><span class="statValue">2</span></div>
+        <div class="statRow"><span class="statLabel">最后同步</span><span class="statValue">2 分钟前</span></div>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="contentArea">
+      <!-- Characters -->
+      <div class="contentPanel active" id="panel-character">
+        <div class="filterBar" id="charFilterBar">
+          <button class="filterBtn active">全部 (14)</button>
+          <button class="filterBtn">主角 (1)</button>
+          <button class="filterBtn">盟友 (5)</button>
+          <button class="filterBtn">中立 (3)</button>
+          <button class="filterBtn">对手 (2)</button>
+          <button class="filterBtn">反派 (3)</button>
+        </div>
+        <div class="charGrid">
+          <div class="charCard" onclick="openDetail('苏铭','主角','山村少年，父母早亡。觉醒水灵力后踏上前往王城的旅途。体内灵力异常纯粹，疑似与消失的第八条灵脉有关。','水灵使 · 初灵三阶（觉醒中）。特殊能力：水灵变化——可临时改变灵力属性，但代价未知。','长风（引路人/同伴）· 叶灵溪（考核同伴）· 楚天行（竞争者）','觉醒 → 启程 → 考核 → 入宗 → 真相')">
+            <span class="charChapters">出场 23 章</span>
+            <div class="charCardTop">
+              <div class="charAvatar protagonist">苏</div>
+              <div class="charInfo">
+                <div class="charName">苏铭</div>
+                <span class="charFaction protagonist">主角</span>
+              </div>
+            </div>
+            <div class="charTags">
+              <span class="charTag">坚韧</span><span class="charTag">重情义</span><span class="charTag">天赋异禀</span><span class="charTag">直感型</span>
+            </div>
+            <div class="charStatus"><span class="charStatusDot" style="background:var(--color-success)"></span>宗门考核秘境中</div>
+          </div>
+          <div class="charCard" onclick="openDetail('长风','盟友','自称游历四方的散修，主动担任苏铭的引路人。对王城和宗门的了解远超常人，真实身份成谜。','金灵使 · 御灵一阶。战斗风格以精准打击为主，极少全力出手。','苏铭（引路对象）· 萧远（旧识？）· 冥渊（立场不明）','引路人 → 身份揭露 → 立场抉择')">
+            <span class="charChapters">出场 15 章</span>
+            <div class="charCardTop">
+              <div class="charAvatar ally">长</div>
+              <div class="charInfo">
+                <div class="charName">长风</div>
+                <span class="charFaction ally">盟友</span>
+              </div>
+            </div>
+            <div class="charTags">
+              <span class="charTag">沉稳</span><span class="charTag">博学</span><span class="charTag">神秘</span><span class="charTag">金灵使</span>
+            </div>
+            <div class="charStatus"><span class="charStatusDot" style="background:var(--color-success)"></span>与主角同行</div>
+          </div>
+          <div class="charCard" onclick="openDetail('楚天行','对手','楚家嫡子，金灵天赋极高，自幼被视为宗门新星。对苏铭这种\"山野之人\"嗤之以鼻。','金灵使 · 通灵二阶（实际战力接近通灵三阶）。招式凌厉，攻击性极强。','苏铭（竞争对手）· 寒月（搭档）· 叶灵溪（同门）','轻视对手 → 逐渐重视 → 尊重/嫉妒')">
+            <span class="charChapters">出场 7 章</span>
+            <div class="charCardTop">
+              <div class="charAvatar opponent">楚</div>
+              <div class="charInfo">
+                <div class="charName">楚天行</div>
+                <span class="charFaction opponent">对手</span>
+              </div>
+            </div>
+            <div class="charTags">
+              <span class="charTag">傲慢</span><span class="charTag">金灵天才</span><span class="charTag">世家</span><span class="charTag">争强好胜</span>
+            </div>
+            <div class="charStatus"><span class="charStatusDot" style="background:var(--color-warning)"></span>秘境南区竞争</div>
+          </div>
+          <div class="charCard" onclick="openDetail('帝师·冥渊','反派','帝国帝师，表面辅佐幼帝，实则是大陆最大的幕后黑手。暗中研究融灵禁术，意图掌控所有灵脉。','宗灵级（疑似接近圣灵）。精通金灵与暗灵，暗中掌握融灵之术。','血衣使（直属部下）· 蛊母（合作者）· 长风（关系成谜）','幕后操控 → 浮出水面 → 最终对决')">
+            <span class="charChapters">出场 6 章</span>
+            <div class="charCardTop">
+              <div class="charAvatar villain">帝</div>
+              <div class="charInfo">
+                <div class="charName">帝师·冥渊</div>
+                <span class="charFaction villain">反派</span>
+              </div>
+            </div>
+            <div class="charTags">
+              <span class="charTag">野心勃勃</span><span class="charTag">宗灵级</span><span class="charTag">操控者</span><span class="charTag">融灵禁忌</span>
+            </div>
+            <div class="charStatus"><span class="charStatusDot" style="background:var(--color-danger)"></span>帝宫密室修炼</div>
+          </div>
+          <div class="charCard">
+            <span class="charChapters">出场 5 章</span>
+            <div class="charCardTop">
+              <div class="charAvatar opponent">寒</div>
+              <div class="charInfo">
+                <div class="charName">寒月</div>
+                <span class="charFaction opponent">对手</span>
+              </div>
+            </div>
+            <div class="charTags"><span class="charTag">冷酷</span><span class="charTag">水灵使</span><span class="charTag">孤傲</span></div>
+            <div class="charStatus"><span class="charStatusDot" style="background:var(--color-warning)"></span>秘境西区独立行动</div>
+          </div>
+          <div class="charCard">
+            <span class="charChapters">出场 4 章</span>
+            <div class="charCardTop">
+              <div class="charAvatar villain">血</div>
+              <div class="charInfo">
+                <div class="charName">血衣使</div>
+                <span class="charFaction villain">反派</span>
+              </div>
+            </div>
+            <div class="charTags"><span class="charTag">残暴</span><span class="charTag">执行者</span><span class="charTag">不死之身</span></div>
+            <div class="charStatus"><span class="charStatusDot" style="background:var(--color-danger)"></span>追踪主角行踪</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="contentPanel" id="panel-timeline">
+        <div class="sectionCard">
+          <div class="sectionCardHeader">
+            <div class="sectionCardTitle">
+              <span class="sectionCardIcon" style="background:rgba(52,211,153,0.1);color:var(--color-success)">⏳</span>
+              时间线 <span class="sectionCardCount">5 个节点</span>
+            </div>
+          </div>
+          <div class="sectionCardBody">
+            <div class="timelineList">
+              <div class="timelineItem completed"><div class="timelineDay">第 1 天</div><div class="timelineText">主角觉醒灵力，在村中引发异象</div></div>
+              <div class="timelineItem completed"><div class="timelineDay">第 3 天</div><div class="timelineText">离开村庄，跟随引路人前往王城</div></div>
+              <div class="timelineItem completed"><div class="timelineDay">第 7 天</div><div class="timelineText">抵达王城，初遇宗门考核使</div></div>
+              <div class="timelineItem current"><div class="timelineDay">第 15 天 · 当前</div><div class="timelineText">宗门考核开始，进入试炼秘境</div></div>
+              <div class="timelineItem" style="--status:future"><div class="timelineDay">第 20 天</div><div class="timelineText">考核结束，宗门入门仪式（未写）</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="sectionCard">
+          <div class="sectionCardHeader">
+            <div class="sectionCardTitle">
+              <span class="sectionCardIcon" style="background:rgba(212,168,67,0.1);color:var(--color-brand-amber)">🎬</span>
+              场景摘要 <span class="sectionCardCount">6 个场景</span>
+            </div>
+          </div>
+          <div class="sectionCardBody">
+            <div class="sceneItem"><span class="sceneChap">Ch.1</span><span>山村少年日常，夜晚灵力意外觉醒，村中水井沸腾</span></div>
+            <div class="sceneItem"><span class="sceneChap">Ch.3</span><span>神秘老者造访，揭示主角体质特殊，留下玉佩离去</span></div>
+            <div class="sceneItem"><span class="sceneChap">Ch.5</span><span>告别村人，踏上前往王城的旅途</span></div>
+            <div class="sceneItem"><span class="sceneChap">Ch.8</span><span>途经古镇遭遇伏击，首次实战使用水灵力退敌</span></div>
+            <div class="sceneItem"><span class="sceneChap">Ch.12</span><span>地下城战斗，主角在绝境中领悟水灵变化之法</span></div>
+            <div class="sceneItem"><span class="sceneChap">Ch.15</span><span>宗门考核开始，进入试炼秘境，遇见同行对手</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Commitments -->
+      <div class="contentPanel" id="panel-commitments">
+        <div class="filterBar">
+          <button class="filterBtn active">全部 (9)</button>
+          <button class="filterBtn">活跃 (4)</button>
+          <button class="filterBtn">待回收 (3)</button>
+          <button class="filterBtn">已回收 (2)</button>
+          <button class="filterBtn">遗落 (1)</button>
+        </div>
+        <div class="foreshadowList">
+          <div class="foreshadowCard statusPending">
+            <div class="foreshadowHeader">
+              <div class="foreshadowLeft">
+                <span class="urgencyDot high"></span>
+                <span class="foreshadowTitle">神秘玉佩</span>
+                <span class="badge foreshadow">伏笔</span>
+              </div>
+              <span class="statusBadge pending">待回收</span>
+            </div>
+            <div class="foreshadowMeta">
+              <span>📅 第3章 · 古墓探索</span>
+              <span>👤 主角、神秘老者</span>
+              <span>💡 建议第15-20章回收</span>
+            </div>
+          </div>
+          <div class="foreshadowCard statusPending">
+            <div class="foreshadowHeader">
+              <div class="foreshadowLeft">
+                <span class="urgencyDot high"></span>
+                <span class="foreshadowTitle">金灵禁术残卷</span>
+                <span class="badge foreshadow">伏笔</span>
+              </div>
+              <span class="statusBadge pending">待回收</span>
+            </div>
+            <div class="foreshadowMeta">
+              <span>📅 第7章 · 地下书阁</span>
+              <span>👤 主角、长风</span>
+              <span>💡 建议第18-22章回收</span>
+            </div>
+          </div>
+          <div class="foreshadowCard statusActive">
+            <div class="foreshadowHeader">
+              <div class="foreshadowLeft">
+                <span class="urgencyDot medium"></span>
+                <span class="foreshadowTitle">王城地下的异响</span>
+                <span class="badge twist">转折</span>
+              </div>
+              <span class="statusBadge active">活跃</span>
+            </div>
+            <div class="foreshadowMeta">
+              <span>📅 第10章 · 王城夜行</span>
+              <span>👤 主角</span>
+              <span>💡 引出灵脉危机主线</span>
+            </div>
+          </div>
+          <div class="foreshadowCard statusActive">
+            <div class="foreshadowHeader">
+              <div class="foreshadowLeft">
+                <span class="urgencyDot low"></span>
+                <span class="foreshadowTitle">长风的真实身份</span>
+                <span class="badge advance">推进</span>
+              </div>
+              <span class="statusBadge active">活跃</span>
+            </div>
+            <div class="foreshadowMeta">
+              <span>📅 第5章 · 旅途对话</span>
+              <span>👤 长风</span>
+            </div>
+          </div>
+          <div class="foreshadowCard statusRecovered">
+            <div class="foreshadowHeader">
+              <div class="foreshadowLeft">
+                <span class="urgencyDot low"></span>
+                <span class="foreshadowTitle">客栈中的密语</span>
+                <span class="badge advance">推进</span>
+              </div>
+              <span class="statusBadge recovered">已回收</span>
+            </div>
+            <div class="foreshadowMeta">
+              <span>📅 第8章回收</span><span>主角识破追杀暗号</span>
+            </div>
+          </div>
+          <div class="foreshadowCard statusRecovered">
+            <div class="foreshadowHeader">
+              <div class="foreshadowLeft">
+                <span class="urgencyDot low"></span>
+                <span class="foreshadowTitle">村长的异常举动</span>
+                <span class="badge advance">推进</span>
+              </div>
+              <span class="statusBadge recovered">已回收</span>
+            </div>
+            <div class="foreshadowMeta">
+              <span>📅 第5章回收</span><span>"别回头"实为忠告</span>
+            </div>
+          </div>
+          <div class="foreshadowCard statusLost">
+            <div class="foreshadowHeader">
+              <div class="foreshadowLeft">
+                <span class="urgencyDot high"></span>
+                <span class="foreshadowTitle">断桥上的符文</span>
+                <span class="badge twist">转折</span>
+              </div>
+              <span class="statusBadge lost">遗落</span>
+            </div>
+            <div class="foreshadowMeta">
+              <span>📅 第6章 · 断桥遗迹</span>
+              <span>⚠ 后续未再提及，建议补充</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- World -->
+      <div class="contentPanel" id="panel-world">
+        <div class="filterBar">
+          <button class="filterBtn active">全部 (6)</button>
+          <button class="filterBtn">地理 (3)</button>
+          <button class="filterBtn">体系 (2)</button>
+          <button class="filterBtn">历史 (1)</button>
+        </div>
+        <div class="sectionCard">
+          <div class="sectionCardHeader">
+            <div class="sectionCardTitle">
+              <span class="sectionCardIcon" style="background:rgba(99,102,241,0.1);color:var(--color-brand-indigo)">🌐</span>
+              世界观设定 <span class="sectionCardCount">6 项</span>
+            </div>
+          </div>
+          <div class="sectionCardBody">
+            <div class="memoryItem"><span>这个世界存在三种灵力：金、木、水。修炼者被称为「灵使」</span></div>
+            <div class="memoryItem"><span>帝国历1037年，大陆分裂为七国，中央帝国名存实亡</span></div>
+            <div class="memoryItem"><span>灵力等级：初灵→通灵→御灵→宗灵→圣灵，每级三阶</span></div>
+            <div class="memoryItem"><span>金灵主攻伐，木灵主生机，水灵主变化。三者可相生相克</span></div>
+            <div class="memoryItem"><span>「灵脉」是天地灵力汇聚之地，七国各据一条主脉</span></div>
+            <div class="memoryItem"><span>禁忌之术「融灵」可融合不同灵力属性，成功率不足万一</span></div>
+          </div>
+        </div>
+        <div class="worldGrid">
+          <div class="worldCard">
+            <div class="worldCardHeader"><span class="worldCardName">玄天宗宗门</span><span class="worldCardCat geo">地理</span></div>
+            <div class="worldCardDesc">位于苍云山脉主峰，占地三百里。宗门分七峰十二堂，护山大阵每甲子重启一次。</div>
+            <div class="worldCardTags"><span class="charTag">剑修发源地</span><span class="charTag">七峰十二堂</span><span class="charTag">护山大阵</span></div>
+            <div class="worldCardFooter">关联章节: 1-23 · 最后更新: 第14章</div>
+          </div>
+          <div class="worldCard">
+            <div class="worldCardHeader"><span class="worldCardName">灵力体系</span><span class="worldCardCat sys">体系</span></div>
+            <div class="worldCardDesc">九境：凝气→筑基→开光→融合→心动→金丹→元婴→化神→渡劫。五行灵力+变异属性。</div>
+            <div class="worldCardTags"><span class="charTag">九境体系</span><span class="charTag">五行灵力</span></div>
+            <div class="worldCardFooter">关联章节: 3-21 · 最后更新: 第12章</div>
+          </div>
+          <div class="worldCard">
+            <div class="worldCardHeader"><span class="worldCardName">七国局势</span><span class="worldCardCat his">历史</span></div>
+            <div class="worldCardDesc">天下七国割据百年，表面和平之下暗流涌动，各国均暗中蓄力，等待时机。</div>
+            <div class="worldCardTags"><span class="charTag">分裂</span><span class="charTag">灵脉争夺</span></div>
+            <div class="worldCardFooter">关联章节: 5-20 · 最后更新: 第9章</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secrets -->
+      <div class="contentPanel" id="panel-secrets">
+        <div class="filterBar">
+          <button class="filterBtn active">全部 (4)</button>
+          <button class="filterBtn">绝对秘密 (2)</button>
+          <button class="filterBtn">部分公开 (1)</button>
+          <button class="filterBtn">已公开 (1)</button>
+        </div>
+        <div class="secretsTable">
+          <table>
+            <thead><tr><th>秘密</th><th>林夜</th><th>苏晚晴</th><th>叶灵</th><th>青袍老者</th><th>层级</th><th>债务</th></tr></thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:500">林夜是苏晚晴失散多年的弟弟</td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretUnknown">?</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretLevel partial">部分公开</span></td>
+                <td><span class="secretDebt medium">15</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:500">叶灵是反派派来的卧底</td>
+                <td><span class="secretUnknown">?</span></td>
+                <td><span class="secretUnknown">?</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretLevel absolute">绝对秘密</span></td>
+                <td><span class="secretDebt high">35 ⚠</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:500">天象核心是一把钥匙</td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretUnknown">?</span></td>
+                <td><span class="secretUnknown">?</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretLevel absolute">绝对秘密</span></td>
+                <td><span class="secretDebt high">45 ⚠</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:500">林夜的真实身世是帝国遗孤</td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretKnown">✓ 知</span></td>
+                <td><span class="secretLevel open">已公开</span></td>
+                <td><span class="secretDebt" style="color:var(--color-text-tertiary)">—</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="debtPanel">
+          <div class="debtCard">
+            <div class="debtCardTitle">📊 秘密债务总览</div>
+            <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:12px">平均债务: 24 · 阈值 30 建议揭露</div>
+            <div class="debtItem"><span>天象核心是一把钥匙</span><span class="secretDebt high">45</span></div>
+            <div class="debtBar"><div class="debtBarFill" style="width:90%;background:linear-gradient(90deg,#f59e0b,#ef4444)"></div></div>
+            <div class="debtItem"><span>叶灵是卧底</span><span class="secretDebt high">35</span></div>
+            <div class="debtBar"><div class="debtBarFill" style="width:70%;background:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
+            <div class="debtItem"><span>林夜是苏晚晴弟弟</span><span class="secretDebt medium">15</span></div>
+            <div class="debtBar"><div class="debtBarFill" style="width:30%;background:#f59e0b"></div></div>
+          </div>
+          <div class="debtCard">
+            <div class="debtCardTitle">✅ 秘密健康状态</div>
+            <div style="font-size:12px;color:var(--color-text-secondary);line-height:2;margin-bottom:12px">
+              🟢 已公开: 1 · 🟡 活跃: 3 · 🔴 高债务: 2
+            </div>
+            <div class="debtSuggestion">
+              💡 建议在第16章安排关于"天象核心"的秘密揭露，该秘密债务已达45，远超建议阈值30。
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Character Detail Modal -->
+  <div class="modalOverlay" id="charModal">
+    <div class="modal">
+      <div class="modalHeader">
+        <span class="modalTitle" id="modalName"></span>
+        <button class="modalClose" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modalField"><div class="modalFieldLabel">阵营</div><div class="modalFieldValue" id="modalFaction"></div></div>
+      <div class="modalField"><div class="modalFieldLabel">背景</div><div class="modalFieldValue" id="modalBackground"></div></div>
+      <div class="modalField"><div class="modalFieldLabel">能力</div><div class="modalFieldValue" id="modalAbility"></div></div>
+      <div class="modalField"><div class="modalFieldLabel">人物关系</div><div class="modalFieldValue" id="modalRelations"></div></div>
+      <div class="modalField"><div class="modalFieldLabel">角色弧线</div><div class="modalFieldValue" id="modalArc" style="font-family:var(--font-mono);font-size:12px"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tab switching
+document.getElementById('sidebarNav').addEventListener('click', function(e) {
+  const tab = e.target.closest('.sidebarTab');
+  if (!tab) return;
+  const tabName = tab.dataset.tab;
+  document.querySelectorAll('.sidebarTab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.contentPanel').forEach(p => p.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('panel-' + tabName).classList.add('active');
+});
+
+// Detail modal
+function openDetail(name, faction, background, ability, relations, arc) {
+  document.getElementById('modalName').textContent = name;
+  document.getElementById('modalFaction').textContent = faction;
+  document.getElementById('modalBackground').textContent = background;
+  document.getElementById('modalAbility').textContent = ability;
+  document.getElementById('modalRelations').textContent = relations;
+  document.getElementById('modalArc').textContent = arc;
+  document.getElementById('charModal').classList.add('visible');
+}
+function closeModal() {
+  document.getElementById('charModal').classList.remove('visible');
+}
+document.getElementById('charModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Ctrl+K focus search
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('globalSearch').focus();
+  }
+});
+</script>
+
+</body>
+</html>

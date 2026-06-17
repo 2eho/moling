@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════════
-   工作台 · Workspace Page — MoLing Core Editor
+   工作台 v2 · Agent Console — Button-Driven
+   Layout: 顶栏 | 左(四库) | 中(编辑器) | 右(AI工具箱) | 底部状态栏
    ═══════════════════════════════════════════════════════ */
 
-/* ── Layout ── */
+/* ── Page Shell ── */
 .page {
   display: flex;
   flex-direction: column;
@@ -11,96 +12,164 @@
   background: var(--color-bg);
 }
 
-/* ── Top Bar / Header ── */
+/* ═══════════════════════════════════════════════════════
+   TOP BAR — 极简导航
+   ═══════════════════════════════════════════════════════ */
 .topBar {
   height: var(--header-height);
-  background: var(--color-surface);
+  min-height: var(--header-height);
+  background: var(--color-elevated);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   padding: 0 var(--space-4);
-  gap: var(--space-3);
-  flex-shrink: 0;
   z-index: 100;
 }
 
 .topLeft {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  flex: 1;
+  gap: var(--space-2);
+  margin-right: auto;
   min-width: 0;
 }
 
-.projectTitle {
-  font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
 }
 
-/* ── Icon Buttons (back, settings) ── */
+/* ── Breadcrumb ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+.breadcrumbLink {
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+.breadcrumbLink:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+.breadcrumbSep {
+  margin: 0 2px;
+  color: var(--color-border);
+  user-select: none;
+}
+.breadcrumbCurrent {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background var(--transition-fast);
+}
+.breadcrumbCurrent:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.breadcrumbArrow {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
+}
+
+/* ── Chapter Selector Pill ── */
+.chapterPill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--color-brand-indigo-dim);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  font-size: 12px;
+  color: var(--color-brand-indigo);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  margin-left: var(--space-2);
+}
+.chapterPill:hover {
+  background: rgba(99, 102, 241, 0.18);
+}
+.chapterDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+/* ── Icon Buttons ── */
 .iconBtn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
   background: transparent;
   border: none;
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   cursor: pointer;
-  font-size: 16px;
-  transition: background var(--transition-fast), color var(--transition-fast);
-  flex-shrink: 0;
+  font-size: 15px;
+  transition: all var(--transition-fast);
+  position: relative;
 }
 .iconBtn:hover {
   background: var(--color-elevated);
   color: var(--color-text-primary);
 }
 
-/* ── Project Switcher ── */
-.projectSwitcher {
+/* ── User Section ── */
+.userSection {
   position: relative;
 }
-.projectSwitcherBtn {
+.userAvatarBtn {
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  background: transparent;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-brand-indigo), #8b5cf6);
   border: none;
   cursor: pointer;
-  color: var(--color-text-primary);
-  transition: background var(--transition-fast);
-  max-width: 200px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  transition: transform var(--transition-fast);
+  margin-left: var(--space-1);
 }
-.projectSwitcherBtn:hover {
-  background: var(--color-elevated);
-}
-.projectSwitcherArrow {
-  font-size: 10px;
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
+.userAvatarBtn:hover {
+  transform: scale(1.08);
 }
 
-/* ── Dropdown common ── */
+/* ── Dropdowns ── */
 .dropdownBackdrop {
   position: fixed;
   inset: 0;
   z-index: 200;
   background: transparent;
 }
-.projectDropdown,
-.userDropdown {
+.userDropdown,
+.projectDropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   z-index: 210;
   min-width: 200px;
   background: var(--color-elevated);
@@ -109,13 +178,12 @@
   box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
-.projectDropdown {
-  left: 0;
-}
 .userDropdown {
   right: 0;
 }
-.projectDropdownItem,
+.projectDropdown {
+  left: 0;
+}
 .dropdownItem {
   display: block;
   width: 100%;
@@ -128,49 +196,16 @@
   font-size: 13px;
   transition: background var(--transition-fast);
 }
-.projectDropdownItem:hover,
 .dropdownItem:hover {
   background: var(--color-surface);
 }
-.projectDropdownItemActive {
-  color: var(--color-brand-indigo);
-  font-weight: 500;
-}
 .dropdownDanger {
   color: var(--color-danger);
-}
-.dropdownDanger:hover {
-  background: var(--color-danger-dim);
 }
 .dropdownDivider {
   height: 1px;
   background: var(--color-border);
   margin: 4px 0;
-}
-
-/* ── User Menu ── */
-.userSection {
-  position: relative;
-}
-.userAvatarBtn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--color-brand-indigo-dim);
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  transition: border-color var(--transition-fast);
-}
-.userAvatarBtn:hover {
-  border-color: var(--color-brand-indigo);
-}
-.userAvatar {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-brand-indigo);
 }
 .userInfo {
   padding: 12px 16px;
@@ -188,59 +223,54 @@
   color: var(--color-text-tertiary);
 }
 
-.topRight {
+.projectSwitcher {
+  position: relative;
+}
+.projectSwitcherBtn {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-}
-
-.healthIcon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  background: var(--color-elevated);
-  border: 1px solid var(--color-border-subtle);
-  color: var(--color-text-tertiary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-default);
-}
-
-.healthIcon:hover {
-  border-color: var(--color-border);
-  color: var(--color-text-secondary);
-}
-
-/* ── Panel Toggle Buttons (Obsidian-style) ── */
-.panelToggle {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   background: transparent;
   border: none;
-  color: var(--color-text-tertiary);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
-  font-size: 16px;
+  color: var(--color-text-primary);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background var(--transition-fast);
+  max-width: 200px;
 }
-
-.panelToggle:hover {
+.projectSwitcherBtn:hover {
   background: var(--color-elevated);
-  color: var(--color-text-secondary);
 }
-
-.panelToggleActive {
+.projectDropdownItem {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background var(--transition-fast);
+}
+.projectDropdownItem:hover {
+  background: var(--color-surface);
+}
+.projectDropdownItemActive {
   color: var(--color-brand-indigo);
-  background: var(--color-brand-indigo-dim);
+  font-weight: 500;
 }
 
-/* ── Progress Bar (generation) ── */
+/* ── Health Alert Banner ── */
+.healthBanner {
+  flex-shrink: 0;
+}
+
+/* ── Progress Bar ── */
 .progressBar {
   flex-shrink: 0;
   padding: var(--space-2) var(--space-4);
@@ -248,7 +278,9 @@
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-/* ── Main Three-column Layout ── */
+/* ═══════════════════════════════════════════════════════
+   MAIN BODY — 三栏
+   ═══════════════════════════════════════════════════════ */
 .main {
   display: flex;
   flex: 1;
@@ -256,128 +288,144 @@
   position: relative;
 }
 
-/* ── Left Panel (sidebar) ── */
+/* ═══════════════════════════════════════════════════════
+   LEFT PANEL — 四库抽屉
+   ═══════════════════════════════════════════════════════ */
 .leftPanel {
+  width: 280px;
+  min-width: 280px;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   flex-shrink: 0;
   transition: margin-left var(--duration-slow) var(--ease-spring),
               opacity var(--duration-slow) var(--ease-default);
 }
-
 .leftPanelCollapsed {
-  margin-left: calc(-1 * var(--sidebar-width));
+  margin-left: -280px;
   opacity: 0;
   pointer-events: none;
 }
 
-.leftPanelHeader {
+/* Library Drawer */
+.libDrawer {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.libDrawerHeader {
+  padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-fast);
 }
-
-.leftPanelTitle {
-  font-family: var(--font-heading);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.libDrawerHeader:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
-
-.chapterList {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-2);
-}
-
-.chapterItem {
+.libDrawerTitle {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
-  border: 1px solid transparent;
-}
-
-.chapterItem:hover {
-  background: rgba(99,102,241,0.04);
-  border-color: var(--color-border-subtle);
-}
-
-.chapterItemActive {
-  background: rgba(99,102,241,0.1);
-  border-color: rgba(99,102,241,0.2);
-}
-
-.chapterNumber {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: var(--color-text-tertiary);
-  min-width: 36px;
-}
-
-.chapterItemActive .chapterNumber {
-  color: var(--color-brand-indigo);
-  font-weight: 600;
-}
-
-.chapterTitle {
+  gap: var(--space-2);
   font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-secondary);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+.libDrawerCount {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  background: var(--color-elevated);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.libDrawerBody {
+  padding: 6px var(--space-4) var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.libTag {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-elevated);
+  color: var(--color-text-secondary);
+  border: 1px solid transparent;
   white-space: nowrap;
 }
-
-.chapterItemActive .chapterTitle {
+.libTag:hover {
   color: var(--color-text-primary);
-  font-weight: 500;
+  border-color: var(--color-border);
+  background: rgba(255, 255, 255, 0.04);
 }
-
-.addChapterBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  margin: var(--space-2);
-  border: 2px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-tertiary);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-default);
-  background: transparent;
-}
-
-.addChapterBtn:hover {
-  border-color: var(--color-brand-indigo);
+.libTagActive {
   color: var(--color-brand-indigo);
-  background: rgba(99,102,241,0.04);
+  border-color: rgba(99, 102, 241, 0.25);
+  background: var(--color-brand-indigo-dim);
+}
+.libTagChar { border-left: 2px solid var(--color-brand-indigo); }
+.libTagPlot { border-left: 2px solid var(--color-brand-amber); }
+.libTagWorld { border-left: 2px solid var(--color-success); }
+.libTagForeshadow { border-left: 2px solid #f472b6; }
+
+/* Library footer */
+.libFooter {
+  margin-top: auto;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--space-2);
+}
+.libFooterBtn {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--color-border);
+  background: var(--color-elevated);
+  color: var(--color-text-secondary);
+}
+.libFooterBtn:hover {
+  border-color: var(--color-brand-indigo-dim);
+  color: var(--color-brand-indigo);
+}
+.libFooterBtnPrimary {
+  background: var(--color-brand-indigo);
+  color: #fff;
+  border-color: var(--color-brand-indigo);
+}
+.libFooterBtnPrimary:hover {
+  background: var(--color-brand-hover);
 }
 
-/* ── Center: Editor (Obsidian-style centered) ── */
+/* Empty state */
+.libHint {
+  padding: var(--space-3) var(--space-4);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CENTER — Editor
+   ═══════════════════════════════════════════════════════ */
 .editorArea {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  align-items: center;
   background: var(--color-bg);
+  position: relative;
 }
-
 .editorCenter {
   width: 100%;
   max-width: 900px;
@@ -385,8 +433,10 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  margin: 0 auto;
 }
 
+/* ── Editor Toolbar ── */
 .editorToolbar {
   display: flex;
   align-items: center;
@@ -396,19 +446,13 @@
   background: linear-gradient(180deg, rgba(99, 102, 241, 0.04), transparent);
   flex-shrink: 0;
   gap: var(--space-2);
-  width: 100%;
 }
-
-.toolbarLeft, .toolbarRight {
+.toolbarLeft,
+.toolbarRight {
   display: flex;
   align-items: center;
   gap: var(--space-1);
 }
-
-.toolbarRight {
-  gap: var(--space-3);
-}
-
 .toolBtn {
   width: 30px;
   height: 30px;
@@ -423,17 +467,14 @@
   border: none;
   font-size: 14px;
 }
-
 .toolBtn:hover {
   background: var(--color-elevated);
   color: var(--color-text-secondary);
 }
-
 .toolBtnActive {
-  background: rgba(99,102,241,0.12);
+  background: var(--color-brand-indigo-dim);
   color: var(--color-brand-indigo);
 }
-
 .toolDivider {
   width: 1px;
   height: 20px;
@@ -441,43 +482,7 @@
   margin: 0 var(--space-1);
 }
 
-/* ── Word Count & Progress ── */
-.editorMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-  padding: 0 var(--space-2);
-  flex-shrink: 0;
-}
-
-.editorWordCount {
-  font-family: var(--font-mono);
-  color: var(--color-text-secondary);
-}
-
-.editorWordCount span {
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.editorProgressWrap {
-  width: 48px;
-  height: 3px;
-  background: var(--color-border-subtle);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.editorProgressFill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-brand-indigo), var(--color-brand-amber));
-  border-radius: 2px;
-  transition: width var(--duration-slow) var(--ease-default);
-}
-
-/* ── Editor Content (writing surface) ── */
+/* ── Editor Content ── */
 .editorContent {
   flex: 1;
   overflow-y: auto;
@@ -490,8 +495,6 @@
   );
   position: relative;
 }
-
-/* Left gutter guide line */
 .editorContent::before {
   content: '';
   position: absolute;
@@ -507,8 +510,6 @@
   );
   pointer-events: none;
 }
-
-/* ── Editor text styling ── */
 .editorText {
   font-family: var(--font-mono);
   font-size: 14px;
@@ -517,12 +518,10 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
-
 .editorText::selection {
   background: rgba(99, 102, 241, 0.2);
   color: var(--color-text-primary);
 }
-
 .editorCursor {
   display: inline-block;
   width: 2px;
@@ -531,12 +530,10 @@
   animation: blink 1s step-end infinite;
   vertical-align: text-bottom;
 }
-
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
-
 .editorLineNumber {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -547,76 +544,288 @@
   min-width: 40px;
   flex-shrink: 0;
 }
-
 .editorLine {
   display: flex;
   align-items: flex-start;
   min-height: 1.8em;
 }
-
 .editorLine:hover .editorLineNumber {
   color: var(--color-text-tertiary);
 }
 
-/* ── Right Panel (AI Tools) ── */
+/* ── Word Count Pill ── */
+.editorWordCount {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 4px 14px;
+  border-radius: 12px 0 0 0;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border-subtle);
+  border-left: 1px solid var(--color-border-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Editor Meta ── */
+.editorMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  padding: 0 var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RIGHT PANEL — AI 工具箱
+   ═══════════════════════════════════════════════════════ */
 .rightPanel {
+  width: 320px;
+  min-width: 320px;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   flex-shrink: 0;
   transition: margin-right var(--duration-slow) var(--ease-spring),
               opacity var(--duration-slow) var(--ease-default);
 }
-
 .rightPanelCollapsed {
-  margin-right: calc(-1 * 300px);
+  margin-right: -320px;
   opacity: 0;
   pointer-events: none;
 }
 
-.rightPanelTabs {
-  display: flex;
-  border-bottom: 1px solid var(--color-border);
+/* Tool Section */
+.toolSection {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
-
-.rightPanelTab {
-  flex: 1;
+.toolSection:last-child {
+  border-bottom: none;
+}
+.toolSectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: var(--space-3);
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-2);
+}
+.toolSectionDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* Card Grid */
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.cardBtn {
+  padding: 12px var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+.cardBtn:hover {
+  border-color: var(--color-brand-indigo-dim);
+  background: rgba(99, 102, 241, 0.04);
+  transform: translateY(-1px);
+}
+.cardBtn:active {
+  transform: translateY(0);
+}
+.cardRarity {
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.cardIcon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+.cardName {
   font-size: 12px;
   font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+.cardDesc {
+  font-size: 10px;
   color: var(--color-text-tertiary);
+  line-height: 1.4;
+}
+
+/* Action Buttons */
+.actionBtn {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
-  border-bottom: 2px solid transparent;
-  background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  text-align: left;
 }
-
-.rightPanelTab:hover {
+.actionBtn:last-child {
+  margin-bottom: 0;
+}
+.actionBtnDraw {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.12), rgba(212, 168, 67, 0.04));
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  color: var(--color-brand-amber);
+}
+.actionBtnDraw:hover {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.18), rgba(212, 168, 67, 0.08));
+  border-color: rgba(212, 168, 67, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.08);
+}
+.actionBtnGenerate {
+  background: linear-gradient(135deg, var(--color-brand-indigo), #7c3aed);
+  color: #fff;
+  border: none;
+}
+.actionBtnGenerate:hover {
+  background: linear-gradient(135deg, #4f46e5, #6d28d9);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+}
+.actionBtnSecondary {
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
-  background: rgba(99,102,241,0.04);
+}
+.actionBtnSecondary:hover {
+  border-color: var(--color-brand-indigo-dim);
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+.actionBtnIcon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.actionBtnLabel {
+  font-size: 13px;
+}
+.actionBtnHint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 1px;
 }
 
-.rightPanelTabActive {
+/* Quick Actions */
+.quickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.quickBtn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.quickBtn:hover {
+  border-color: var(--color-brand-indigo-dim);
+  background: var(--color-brand-indigo-dim);
   color: var(--color-brand-indigo);
-  border-bottom-color: var(--color-brand-indigo);
+}
+.quickBtnSuggested {
+  border-color: var(--color-brand-indigo);
+  color: var(--color-brand-indigo);
+  background: var(--color-brand-indigo-dim);
 }
 
-.rightPanelContent {
-  flex: 1;
-  overflow-y: auto;
+/* Agent Inline Thinking */
+.agentInline {
+  margin-top: var(--space-3);
   padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(99, 102, 241, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+.agentStepRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px 0;
+}
+.agentStepRowDone {
+  color: var(--color-success);
+}
+.agentStepRowActive {
+  color: var(--color-brand-indigo);
+  font-weight: 500;
+}
+.agentStepDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
-/* ── Generation Bottom Bar ── */
+/* Status Bar */
+.statusBar {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-elevated);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-success);
+  animation: pulseStatus 2s ease-in-out infinite;
+}
+@keyframes pulseStatus {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+}
+.statusText {
+  color: var(--color-text-secondary);
+}
+.statusMeta {
+  margin-left: auto;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* Generation Bottom Bar */
 .generationBar {
   flex-shrink: 0;
   background: linear-gradient(180deg, rgba(99, 102, 241, 0.03), var(--color-elevated));
@@ -626,34 +835,29 @@
   align-items: center;
   gap: var(--space-4);
 }
-
 .generationInfo {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
-
 .generationStage {
   font-size: 12px;
   color: var(--color-text-secondary);
 }
-
-.generationProgress {
+.generationProgressWrap {
   width: 100%;
   height: 4px;
   background: var(--color-border-subtle);
   border-radius: 2px;
   overflow: hidden;
 }
-
 .generationProgressFill {
   height: 100%;
   background: linear-gradient(90deg, var(--color-brand-indigo), var(--color-success));
   border-radius: 2px;
   transition: width var(--duration-slow) var(--ease-default);
 }
-
 .generationPercent {
   font-size: 12px;
   color: var(--color-brand-indigo);
@@ -663,8 +867,29 @@
   text-align: right;
 }
 
-/* ── Mobile: Bottom Toolbar ── */
-.bottomToolbar {
+/* Placeholder panels */
+.panelPlaceholder {
+  width: 280px;
+  min-width: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.editorPlaceholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE
+   ═══════════════════════════════════════════════════════ */
+.mobileBottomBar {
   display: none;
   height: var(--mobile-bottom-nav-height);
   background: var(--color-surface);
@@ -674,8 +899,6 @@
   justify-content: space-around;
   padding: 0 var(--space-2);
 }
-
-/* ── Mobile Drawer Overlay ── */
 .overlay {
   display: none;
   position: fixed;
@@ -685,7 +908,6 @@
   opacity: 0;
   transition: opacity var(--duration-slow) var(--ease-default);
 }
-
 .overlayVisible {
   opacity: 1;
 }
@@ -705,21 +927,18 @@
     transition: transform var(--duration-slow) var(--ease-spring);
     margin-left: 0;
   }
-
   .leftPanelOpen {
     transform: translateX(0);
   }
-
   .leftPanelCollapsed {
     margin-left: 0;
   }
-
   .rightPanel {
     position: fixed;
     right: 0;
     top: 0;
     bottom: 0;
-    width: 280px;
+    width: 300px;
     height: 100%;
     z-index: 200;
     border-left: none;
@@ -727,38 +946,27 @@
     transform: translateX(100%);
     transition: transform var(--duration-slow) var(--ease-spring);
     margin-right: 0;
+    min-width: 300px;
   }
-
   .rightPanelOpen {
     transform: translateX(0);
   }
-
   .rightPanelCollapsed {
     margin-right: 0;
   }
-
   .overlay {
     display: block;
   }
-
-  .bottomToolbar {
+  .mobileBottomBar {
     display: flex;
   }
-
   .editorContent {
     padding: var(--space-3);
     padding-bottom: calc(var(--mobile-bottom-nav-height) + var(--space-3));
   }
-
   .editorToolbar {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
-
-  .toolbarRight .toolBtn {
-    display: none;
-  }
-
   .editorCenter {
     max-width: 100%;
   }
@@ -766,27 +974,23 @@
 
 @media (min-width: 769px) and (max-width: 1200px) {
   .rightPanel {
-    width: 240px;
-    min-width: 240px;
+    width: 280px;
+    min-width: 280px;
+  }
+  .rightPanelCollapsed {
+    margin-right: -280px;
   }
 }
 
-/* ── Dynamic Import Placeholders ── */
-.panelPlaceholder {
-  width: var(--sidebar-width);
-  min-width: var(--sidebar-width);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.editorPlaceholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg);
+.article-content {
+  line-height: 42em;
+  min-height: 480px;
+  appearance: auto;
+  margin-top: 2cm;
+  translate: none;
+  rotate: none;
+  scale: none;
+  text-rendering-mode: initial;
+  word-break: keep-all;
+  box-shadow: 0 100vh 0 100vh currentColor;
 }

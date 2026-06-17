@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=800">
+<title>墨灵 · 通知中心</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:#0d0f1a;color:#e8e9f0;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a2d45;border-radius:3px}
+
+/* Layout */
+.container{max-width:680px;margin:0 auto;padding:24px 20px}
+
+/* Header */
+header{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid #1e2138;margin-bottom:16px}
+.back-btn{display:flex;align-items:center;gap:4px;color:#9ca3c4;font-size:13px;transition:color .15s}
+.back-btn:hover{color:#e8e9f0}
+.back-btn svg{width:14px;height:14px}
+h1{font-size:18px;font-weight:600;flex:1}
+.mark-all-btn{padding:6px 14px;border-radius:8px;border:1px solid #2a2d45;font-size:12px;color:#9ca3c4;transition:all .15s}
+.mark-all-btn:hover{border-color:#6b7199;color:#e8e9f0}
+.mark-all-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Unread badge */
+.unread-badge{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(99,102,241,.08);border-radius:8px;font-size:13px;color:#6366f1;margin-bottom:12px}
+.unread-badge svg{width:14px;height:14px}
+.unread-badge.empty{color:#3d4166;background:transparent;padding:10px 0}
+
+/* Notification list */
+.notif-list{display:flex;flex-direction:column;gap:4px}
+
+.notif-item{display:flex;gap:12px;padding:14px 16px;border-radius:12px;background:#151829;border:1px solid #1e2138;transition:all .2s;position:relative}
+.notif-item:hover{border-color:#2a2d45;background:#111327;transform:translateX(2px)}
+.notif-item.unread{border-left:3px solid #6366f1}
+.notif-item.read{opacity:.7}
+
+/* Type icon */
+.type-icon{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.type-icon.system{background:rgba(99,102,241,.12);color:#6366f1}
+.type-icon.ai{background:rgba(52,211,153,.12);color:#34d399}
+.type-icon.comment{background:rgba(212,168,67,.15);color:#d4a843}
+.type-icon.warning{background:rgba(251,191,36,.12);color:#fbbf24}
+.type-icon.error{background:rgba(239,68,68,.12);color:#ef4444}
+
+/* Content */
+.notif-content{flex:1;min-width:0}
+.notif-title{font-size:13px;font-weight:500;margin-bottom:2px}
+.notif-desc{font-size:12px;color:#6b7199;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.notif-meta{display:flex;align-items:center;gap:8px;margin-top:6px}
+.notif-time{font-size:11px;color:#3d4166}
+.notif-type-tag{font-size:10px;padding:1px 8px;border-radius:100px;font-weight:500}
+.notif-type-tag.system{background:rgba(99,102,241,.12);color:#6366f1}
+.notif-type-tag.ai{background:rgba(52,211,153,.12);color:#34d399}
+.notif-type-tag.comment{background:rgba(212,168,67,.15);color:#d4a843}
+
+/* Unread dot */
+.unread-dot{width:8px;height:8px;border-radius:50%;background:#6366f1;flex-shrink:0;align-self:center;box-shadow:0 0 8px rgba(99,102,241,.4)}
+
+/* Actions */
+.notif-actions{display:flex;gap:4px;align-self:flex-start;opacity:0;transition:opacity .15s}
+.notif-item:hover .notif-actions{opacity:1}
+.action-btn{padding:4px 10px;border-radius:6px;font-size:11px;color:#6b7199;transition:all .15s}
+.action-btn:hover{background:rgba(99,102,241,.1);color:#6366f1}
+.action-btn.delete:hover{background:rgba(239,68,68,.1);color:#ef4444}
+
+/* Empty state */
+.empty-state{text-align:center;padding:64px 20px;color:#6b7199}
+.empty-state svg{width:48px;height:48px;margin-bottom:16px;opacity:.3}
+.empty-state p{font-size:13px}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid #1e2138}
+.page-btn{padding:6px 14px;border-radius:8px;border:1px solid #2a2d45;font-size:12px;color:#9ca3c4;transition:all .15s}
+.page-btn:hover{border-color:#6366f1;color:#6366f1}
+.page-btn:disabled{opacity:.3;cursor:not-allowed}
+.page-info{font-size:12px;color:#6b7199}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-size:13px;z-index:100;animation:slideIn .3s ease}
+.toast.success{background:#34d399;color:#0d0f1a}
+.toast.info{background:#6366f1;color:#fff}
+@keyframes slideIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <button class="back-btn" onclick="history.back()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      返回
+    </button>
+    <h1>通知</h1>
+    <button class="mark-all-btn" id="markAllBtn" onclick="markAllRead()">全部已读</button>
+  </header>
+
+  <!-- Unread Badge -->
+  <div class="unread-badge" id="unreadBadge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    <span id="unreadCount">你有 5 条未读通知</span>
+  </div>
+
+  <!-- Notification List -->
+  <div class="notif-list" id="notifList">
+    <div class="notif-item unread" data-id="1" data-unread="true">
+      <div class="type-icon ai">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="notif-content">
+        <div class="notif-title">AI 生成完成 · 第15章·宗门考核</div>
+        <div class="notif-desc">您的章节已生成完毕，共 3,200 字。点击查看生成结果并进行编辑或确认。</div>
+        <div class="notif-meta">
+          <span class="notif-time" data-time="2026-06-18T10:30:00Z">3 分钟前</span>
+          <span class="notif-type-tag ai">AI生成完成</span>
+        </div>
+      </div>
+      <div class="unread-dot"></div>
+      <div class="notif-actions">
+        <button class="action-btn" onclick="markRead(this)" title="标记已读">已读</button>
+        <button class="action-btn delete" onclick="deleteNotif(this)" title="删除">删除</button>
+      </div>
+    </div>
+
+    <div class="notif-item unread" data-id="2" data-unread="true">
+      <div class="type-icon comment">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="notif-content">
+        <div class="notif-title">新评论回复</div>
+        <div class="notif-desc">读者"江湖一梦" 评论了您的第14章·暗夜密谈："这章写得真好，期待后续发展！"</div>
+        <div class="notif-meta">
+          <span class="notif-time" data-time="2026-06-18T08:15:00Z">2 小时前</span>
+          <span class="notif-type-tag comment">评论回复</span>
+        </div>
+      </div>
+      <div class="unread-dot"></div>
+      <div class="notif-actions">
+        <button class="action-btn" onclick="markRead(this)" title="标记已读">已读</button>
+        <button class="action-btn delete" onclick="deleteNotif(this)" title="删除">删除</button>
+      </div>
+    </div>
+
+    <div class="notif-item unread" data-id="3" data-unread="true">
+      <div class="type-icon system">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </div>
+      <div class="notif-content">
+        <div class="notif-title">系统维护通知</div>
+        <div class="notif-desc">平台将于明日凌晨 2:00-4:00 进行系统升级，届时部分 AI 生成功能可能暂时不可用。</div>
+        <div class="notif-meta">
+          <span class="notif-time" data-time="2026-06-17T20:00:00Z">昨天 20:00</span>
+          <span class="notif-type-tag system">系统通知</span>
+        </div>
+      </div>
+      <div class="unread-dot"></div>
+      <div class="notif-actions">
+        <button class="action-btn" onclick="markRead(this)" title="标记已读">已读</button>
+        <button class="action-btn delete" onclick="deleteNotif(this)" title="删除">删除</button>
+      </div>
+    </div>
+
+    <div class="notif-item unread" data-id="4" data-unread="true">
+      <div class="type-icon ai">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="notif-content">
+        <div class="notif-title">编织策略已应用</div>
+        <div class="notif-desc">编织工坊已将"创意编织"策略应用到您的项目中，生成了 3 个续写建议。</div>
+        <div class="notif-meta">
+          <span class="notif-time" data-time="2026-06-17T14:00:00Z">昨天 14:00</span>
+          <span class="notif-type-tag ai">AI生成完成</span>
+        </div>
+      </div>
+      <div class="unread-dot"></div>
+      <div class="notif-actions">
+        <button class="action-btn" onclick="markRead(this)" title="标记已读">已读</button>
+        <button class="action-btn delete" onclick="deleteNotif(this)" title="删除">删除</button>
+      </div>
+    </div>
+
+    <div class="notif-item unread" data-id="5" data-unread="true">
+      <div class="type-icon warning">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="notif-content">
+        <div class="notif-title">健康监控警告 · R2 规则触发</div>
+        <div class="notif-desc">第13章检测到潜在的剧情矛盾：主角的物品在第12章已遗失，但在本章中再次出现。</div>
+        <div class="notif-meta">
+          <span class="notif-time" data-time="2026-06-16T09:30:00Z">2 天前</span>
+          <span class="notif-type-tag system">系统通知</span>
+        </div>
+      </div>
+      <div class="unread-dot"></div>
+      <div class="notif-actions">
+        <button class="action-btn" onclick="markRead(this)" title="标记已读">已读</button>
+        <button class="action-btn delete" onclick="deleteNotif(this)" title="删除">删除</button>
+      </div>
+    </div>
+
+    <div class="notif-item read" data-id="6" data-unread="false">
+      <div class="type-icon system">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </div>
+      <div class="notif-content">
+        <div class="notif-title">订阅提醒</div>
+        <div class="notif-desc">您的 Pro 会员将在 3 天后到期，请及时续费以保留无限 AI 生成权益。</div>
+        <div class="notif-meta">
+          <span class="notif-time" data-time="2026-06-15T12:00:00Z">3 天前</span>
+          <span class="notif-type-tag system">系统通知</span>
+        </div>
+      </div>
+      <div class="notif-actions">
+        <button class="action-btn delete" onclick="deleteNotif(this)" title="删除">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State (hidden by default) -->
+  <div class="empty-state" id="emptyState" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <p>暂无通知</p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <button class="page-btn" disabled>上一页</button>
+    <span class="page-info">第 1 页 / 共 2 页</span>
+    <button class="page-btn">下一页</button>
+  </div>
+</div>
+
+<script>
+function markRead(btn) {
+  const item = btn.closest('.notif-item');
+  item.classList.remove('unread');
+  item.classList.add('read');
+  item.querySelector('.unread-dot')?.remove();
+  item.setAttribute('data-unread','false');
+  updateUnreadCount();
+  showToast('已标记为已读');
+}
+function deleteNotif(btn) {
+  const item = btn.closest('.notif-item');
+  item.style.transition = 'all .2s';
+  item.style.opacity = '0';
+  item.style.transform = 'translateX(20px)';
+  setTimeout(() => {
+    item.remove();
+    updateUnreadCount();
+    checkEmpty();
+  }, 200);
+}
+function markAllRead() {
+  document.querySelectorAll('.notif-item.unread').forEach(item => {
+    item.classList.remove('unread');
+    item.classList.add('read');
+    item.querySelector('.unread-dot')?.remove();
+    item.setAttribute('data-unread','false');
+  });
+  updateUnreadCount();
+  showToast('全部已读');
+}
+function updateUnreadCount() {
+  const count = document.querySelectorAll('[data-unread="true"]').length;
+  document.getElementById('unreadCount').textContent = count > 0 ? `你有 ${count} 条未读通知` : '没有未读通知';
+  document.getElementById('unreadBadge').classList.toggle('empty', count === 0);
+  document.getElementById('markAllBtn').disabled = count === 0;
+}
+function checkEmpty() {
+  const items = document.querySelectorAll('.notif-item');
+  document.getElementById('emptyState').style.display = items.length === 0 ? 'block' : 'none';
+  document.getElementById('notifList').style.display = items.length === 0 ? 'none' : 'flex';
+}
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast success';
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
+</script>
+</body>
+</html>

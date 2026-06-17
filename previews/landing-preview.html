@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 — AI 驱动的小说创作工坊</title>
+<style>
+/* ═══ Reset & Base ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0d0f1a;
+  color: #e8e9f0;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ═══ Variables ═══ */
+:root {
+  --bg: #0d0f1a;
+  --surface: #151829;
+  --elevated: #111327;
+  --text-primary: #e8e9f0;
+  --text-secondary: #9ca3c4;
+  --text-tertiary: #6b7199;
+  --indigo: #6366f1;
+  --amber: #d4a843;
+  --amber-dark: #c99a30;
+  --border: #2a2d45;
+  --border-subtle: #1e2138;
+  --success: #34d399;
+  --common: #9ca3af;
+  --rare: #67e8f9;
+  --epic: #a855f7;
+  --legendary: #d4a843;
+  --max-width: 1200px;
+}
+
+/* ═══ Navigation ═══ */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 64px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.nav.scrolled {
+  background: rgba(13, 15, 26, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 1px 0 rgba(99, 102, 241, 0.08);
+}
+.nav-inner {
+  max-width: var(--max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+.nav-logo { width: 32px; height: 32px; }
+.nav-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.nav-title span { color: var(--amber); }
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  position: relative;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text-primary); }
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: 0;
+  width: 0; height: 2px;
+  background: var(--amber);
+  transition: width 0.2s;
+}
+.nav-links a:hover::after { width: 100%; }
+.nav-cta {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0d0f1a;
+  background: linear-gradient(135deg, var(--amber), var(--amber-dark));
+  padding: 8px 20px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.nav-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.3);
+}
+.menu-btn {
+  display: none;
+  width: 36px; height: 36px;
+  align-items: center; justify-content: center;
+  background: transparent;
+  border: none; color: var(--text-secondary);
+  cursor: pointer; border-radius: 10px;
+}
+
+/* ═══ Hero ═══ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px 64px;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(212, 168, 67, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, #0d0f1a 0%, #0a0c16 100%);
+  z-index: 0;
+}
+.hero-bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 65%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,0.12) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.1) 0%, transparent 100%);
+  background-size: 200px 200px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Floating Cards */
+.floating-cards {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fcard {
+  position: absolute;
+  border-radius: 14px;
+  border: 1px solid;
+  opacity: 0.08;
+  animation: floatAnim 20s infinite ease-in-out;
+}
+@keyframes floatAnim {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-18px) rotate(3deg); }
+  50% { transform: translateY(-8px) rotate(-2deg); }
+  75% { transform: translateY(-22px) rotate(1deg); }
+}
+.fcard-1 { top: 15%; left: 8%; width: 60px; height: 84px; border-color: var(--common); background: linear-gradient(135deg, rgba(156,163,175,0.05), transparent); animation-duration: 22s; }
+.fcard-2 { top: 25%; right: 12%; width: 50px; height: 70px; border-color: var(--rare); background: linear-gradient(135deg, rgba(103,232,249,0.05), transparent); animation-delay: -5s; animation-duration: 18s; }
+.fcard-3 { bottom: 20%; left: 15%; width: 70px; height: 98px; border-color: var(--epic); background: linear-gradient(135deg, rgba(168,85,247,0.05), transparent); animation-delay: -10s; animation-duration: 25s; }
+.fcard-4 { bottom: 30%; right: 8%; width: 60px; height: 84px; border-color: var(--legendary); background: linear-gradient(135deg, rgba(212,168,67,0.05), transparent); animation-delay: -15s; animation-duration: 20s; }
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 100px;
+  font-size: 13px;
+  color: var(--indigo);
+  margin-bottom: 32px;
+  animation: fadeInUp 0.8s ease both 0.1s;
+}
+.hero-badge-dot {
+  width: 6px; height: 6px;
+  background: var(--indigo);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.hero-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.8s ease both 0.2s;
+}
+.hero-highlight {
+  background: linear-gradient(135deg, var(--amber) 0%, #e8c76a 50%, var(--amber) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 6s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+.hero-tagline {
+  font-size: clamp(16px, 2.5vw, 20px);
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  animation: fadeInUp 0.8s ease both 0.35s;
+}
+.hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 40px;
+  animation: fadeInUp 0.8s ease both 0.45s;
+}
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  border-radius: 100px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0d0f1a;
+  background: linear-gradient(135deg, var(--amber), var(--amber-dark));
+  padding: 16px 40px;
+  border-radius: 18px;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: fadeInUp 0.8s ease both 0.55s;
+}
+.hero-cta::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -100%;
+  width: 200%; height: 200%;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+  animation: ctaShine 3s ease-in-out infinite;
+}
+@keyframes ctaShine {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  20% { transform: translateX(100%) rotate(25deg); }
+  100% { transform: translateX(100%) rotate(25deg); }
+}
+.hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(212,168,67,0.3), 0 0 48px rgba(212,168,67,0.12);
+}
+.hero-cta svg { transition: transform 0.2s; }
+.hero-cta:hover svg { transform: translateX(3px); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ Sections ═══ */
+.section-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+.section-header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+.section-label {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+/* ═══ Features ═══ */
+.features {
+  position: relative;
+  padding: 96px 24px;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.feature-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid rgba(99, 102, 241, 0.08);
+  border-radius: 18px;
+  padding: 32px;
+  overflow: hidden;
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.15), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 4px 8px rgba(99,102,241,0.1), 0 0 30px rgba(99,102,241,0.06);
+}
+.feature-card:hover::before { opacity: 1; }
+.feature-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.fi-amber { background: rgba(212,168,67,0.15); color: var(--amber); }
+.fi-indigo { background: rgba(99,102,241,0.12); color: var(--indigo); }
+.fi-green { background: rgba(52,211,153,0.1); color: var(--success); }
+.feature-card h3 {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.feature-card p {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* ═══ Stats ═══ */
+.social-proof {
+  position: relative;
+  padding: 96px 24px;
+  background: linear-gradient(180deg, transparent 0%, rgba(99,102,241,0.03) 50%, transparent 100%);
+}
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+  margin-bottom: 64px;
+  flex-wrap: wrap;
+}
+.stat-item { text-align: center; }
+.stat-value {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 700;
+  color: var(--amber);
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+/* ═══ Testimonials ═══ */
+.testimonials {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.testimonial-card {
+  background: var(--surface);
+  border: 1px solid rgba(99, 102, 241, 0.08);
+  border-radius: 18px;
+  padding: 24px;
+  transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+.testimonial-card:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25), 0 2px 4px rgba(99,102,241,0.08);
+}
+.test-quote {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+.test-quote::before {
+  content: '\201C';
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 32px;
+  color: var(--indigo);
+  opacity: 0.3;
+  line-height: 1;
+  display: block;
+  margin-bottom: 8px;
+}
+.test-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.test-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(99,102,241,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 14px;
+  color: var(--indigo);
+  flex-shrink: 0;
+}
+.test-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.test-role {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ═══ CTA Section ═══ */
+.cta-section {
+  position: relative;
+  padding: 96px 24px;
+  text-align: center;
+}
+.cta-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 64px 32px;
+  background: var(--surface);
+  border: 1px solid rgba(212, 168, 67, 0.15);
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+}
+.cta-inner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212,168,67,0.4), transparent);
+}
+.cta-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: clamp(24px, 3.5vw, 32px);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.cta-desc {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0d0f1a;
+  background: linear-gradient(135deg, var(--amber), var(--amber-dark));
+  padding: 16px 40px;
+  border-radius: 18px;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.cta-btn::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -100%;
+  width: 200%; height: 200%;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+  animation: ctaShine 3s ease-in-out infinite;
+}
+.cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(212,168,67,0.3);
+}
+
+/* ═══ Footer ═══ */
+.footer {
+  padding: 48px 24px;
+  border-top: 1px solid rgba(99, 102, 241, 0.06);
+}
+.footer-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.footer-logo { width: 24px; height: 24px; }
+.footer-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.footer-title span { color: var(--amber); }
+.footer-links {
+  display: flex;
+  gap: 24px;
+  list-style: none;
+}
+.footer-links a {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--text-secondary); }
+.footer-copy { font-size: 12px; color: var(--text-tertiary); }
+
+/* ═══ Scroll Reveal ═══ */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══ Counter Animation ═══ */
+.counter { transition: all 0.1s ease-out; }
+
+/* ═══ Responsive ═══ */
+@media (max-width: 1024px) {
+  .features-grid,
+  .testimonials {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin-left: auto; margin-right: auto;
+  }
+  .stats-row { gap: 32px; }
+}
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .menu-btn { display: flex; }
+  .hero { padding: 64px 20px 48px; }
+  .features,
+  .social-proof,
+  .cta-section { padding: 64px 20px; }
+  .footer-inner { flex-direction: column; text-align: center; }
+  .fcard { opacity: 0.04 !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Navigation ═══ -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-brand">
+      <svg class="nav-logo" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.3"/>
+        <path d="M16 6C16 6 10 14 10 20C10 23.3 12.7 26 16 26C19.3 26 22 23.3 22 20C22 14 16 6 16 6Z" fill="#6366f1" opacity="0.8"/>
+        <path d="M16 10L20 22" stroke="#d4a843" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="16" cy="22" r="1.5" fill="#d4a843"/>
+      </svg>
+      <span class="nav-title">墨<span>灵</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">核心功能</a></li>
+      <li><a href="#stats">创作者社区</a></li>
+      <li><a href="#testimonials">作者评价</a></li>
+      <li><a href="#cta" class="nav-cta">免费开始</a></li>
+    </ul>
+    <button class="menu-btn" aria-label="切换菜单">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══ Hero ═══ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="floating-cards">
+    <div class="fcard fcard-1"></div>
+    <div class="fcard fcard-2"></div>
+    <div class="fcard fcard-3"></div>
+    <div class="fcard fcard-4"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      <span>AI 驱动的创意写作引擎</span>
+    </div>
+    <h1 class="hero-title">
+      墨灵 — <span class="hero-highlight">AI 驱动</span>的小说创作工坊
+    </h1>
+    <p class="hero-tagline">
+      灵感抽卡 · 多卡组合 · 四库记忆 · 智能创作
+    </p>
+    <div class="hero-tags">
+      <span class="hero-tag">小说创作Agent</span>
+      <span class="hero-tag">抽卡生文</span>
+      <span class="hero-tag">四库记忆</span>
+    </div>
+    <a href="#" class="hero-cta">
+      开始创作
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+  </div>
+</section>
+
+<!-- ═══ Features ═══ -->
+<section id="features" class="features">
+  <div class="section-inner">
+    <div class="section-header scroll-reveal">
+      <p class="section-label">核心能力</p>
+      <h2 class="section-title">为小说创作者打造</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card scroll-reveal">
+        <div class="feature-icon fi-amber">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <h3>灵感抽卡</h3>
+        <p>抽取灵感卡牌，获取章节方向与情节转折。每次抽卡都是一次与灵感的邂逅，让创作不再空白。</p>
+      </div>
+      <div class="feature-card scroll-reveal">
+        <div class="feature-icon fi-indigo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <h3>AI 生文</h3>
+        <p>多张卡牌组合，AI 智能编织连贯剧情。卡牌越稀有，生成越惊艳，让文字流淌出你想要的故事。</p>
+      </div>
+      <div class="feature-card scroll-reveal">
+        <div class="feature-icon fi-green">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        </div>
+        <h3>四库记忆</h3>
+        <p>人物库 · 时间线 · 剧情承诺 · 世界观四库联动，确保长篇叙事的一致性与深度，永不矛盾。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Stats ═══ -->
+<section id="stats" class="social-proof">
+  <div class="section-inner">
+    <div class="section-header scroll-reveal">
+      <p class="section-label">创作者社区</p>
+      <h2 class="section-title">被万千作者信赖</h2>
+    </div>
+    <div class="stats-row scroll-reveal">
+      <div class="stat-item">
+        <div class="stat-value counter" data-target="10000" data-suffix="+">0</div>
+        <div class="stat-label">创作者入驻</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value counter" data-target="5000000" data-suffix="+">0</div>
+        <div class="stat-label">累计创作字数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value counter" data-target="92" data-suffix="%">0</div>
+        <div class="stat-label">日更完成率提升</div>
+      </div>
+    </div>
+
+    <!-- ═══ Testimonials ═══ -->
+    <div id="testimonials" class="testimonials">
+      <div class="testimonial-card scroll-reveal">
+        <div class="test-quote">墨灵彻底改变了我的创作流程。以前写一个章节需要半天，现在15秒就能得到高质量草稿，只需要微调即可。</div>
+        <div class="test-author">
+          <div class="test-avatar">林</div>
+          <div>
+            <div class="test-name">林作家</div>
+            <div class="test-role">网文作者 · 连载作品3部</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card scroll-reveal">
+        <div class="test-quote">四库管理功能太强了！自动追踪伏笔和剧情承诺，再也不用担心挖坑不填的问题，长篇创作终于有了保障。</div>
+        <div class="test-author">
+          <div class="test-avatar">苏</div>
+          <div>
+            <div class="test-name">苏编辑</div>
+            <div class="test-role">出版编辑 · 10年经验</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card scroll-reveal">
+        <div class="test-quote">灵感卡牌系统非常有创意，三种方向让我能从不同角度思考剧情发展，打破了创作瓶颈，每次抽卡都充满期待。</div>
+        <div class="test-author">
+          <div class="test-avatar">陈</div>
+          <div>
+            <div class="test-name">陈写手</div>
+            <div class="test-role">剧本作家 · 影视改编</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section id="cta" class="cta-section scroll-reveal">
+  <div class="cta-inner">
+    <h2 class="cta-title">准备好开始创作了吗？</h2>
+    <p class="cta-desc">加入万千创作者的行列，用 AI 的力量释放你的想象力。</p>
+    <a href="#" class="cta-btn">
+      免费开始体验
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ═══ Footer ═══ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <svg class="footer-logo" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.3"/>
+        <path d="M16 6C16 6 10 14 10 20C10 23.3 12.7 26 16 26C19.3 26 22 23.3 22 20C22 14 16 6 16 6Z" fill="#6366f1" opacity="0.8"/>
+        <path d="M16 10L20 22" stroke="#d4a843" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="16" cy="22" r="1.5" fill="#d4a843"/>
+      </svg>
+      <span class="footer-title">墨<span>灵</span></span>
+    </div>
+    <ul class="footer-links">
+      <li><a href="#features">核心功能</a></li>
+      <li><a href="#stats">创作者社区</a></li>
+      <li><a href="#testimonials">作者评价</a></li>
+    </ul>
+    <p class="footer-copy">&copy; 2026 墨灵 MoLing. All rights reserved.</p>
+  </div>
+</footer>
+
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+
+// Nav scroll effect
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// Counter animation
+let countersStarted = false;
+const counterObserver = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting && !countersStarted) {
+    countersStarted = true;
+    document.querySelectorAll('.counter').forEach(counter => {
+      const target = parseInt(counter.dataset.target);
+      const suffix = counter.dataset.suffix || '';
+      const duration = 2000;
+      const startTime = performance.now();
+
+      function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(eased * target);
+        counter.textContent = current.toLocaleString() + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    });
+  }
+}, { threshold: 0.3 });
+const statsSection = document.querySelector('.stats-row');
+if (statsSection) counterObserver.observe(statsSection);
+</script>
+
+</body>
+</html>

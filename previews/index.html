@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 — 全部页面预览</title>
+<style>
+  :root {
+    --bg: #0d0f1a;
+    --surface: #151829;
+    --elevated: #111327;
+    --text-primary: #e8e9f0;
+    --text-secondary: #9ca3c4;
+    --text-tertiary: #6b7199;
+    --brand: #6366f1;
+    --amber: #d4a843;
+    --border: #2a2d45;
+    --success: #34d399;
+    --radius-lg: 14px;
+    --radius-md: 10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hero {
+    text-align: center;
+    padding: 80px 24px 40px;
+    background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99, 102, 241, 0.15), transparent);
+  }
+  .hero h1 {
+    font-family: 'Noto Serif SC', '思源宋体', Georgia, serif;
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .hero h1 span { background: linear-gradient(135deg, #6366f1, #d4a843); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--text-secondary); font-size: 16px; }
+  .hero .stats { display: flex; gap: 32px; justify-content: center; margin-top: 24px; }
+  .hero .stat { text-align: center; }
+  .hero .stat-num { font-size: 28px; font-weight: 700; color: var(--brand); font-variant-numeric: tabular-nums; }
+  .hero .stat-label { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; }
+
+  .section { margin-top: 48px; }
+  .section-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .icon { font-size: 22px; }
+  .section-title .badge {
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 10px;
+    border-radius: 100px;
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--brand);
+    margin-left: 12px;
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+
+  .card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: var(--brand);
+    background: var(--elevated);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+  }
+  .card-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .card-icon.core { background: rgba(99, 102, 241, 0.12); }
+  .card-icon.proj { background: rgba(52, 211, 153, 0.12); }
+  .card-icon.pub { background: rgba(212, 168, 67, 0.12); }
+  .card-icon.aux { background: rgba(139, 92, 246, 0.12); }
+  .card-icon.admin { background: rgba(239, 68, 68, 0.12); }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .card-desc { font-size: 12px; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-size { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; text-align: right; }
+  .card-arrow { opacity: 0; transform: translateX(-4px); transition: all 200ms ease; font-size: 14px; color: var(--brand); }
+  .card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+
+  .footer { text-align: center; padding: 40px 24px; border-top: 1px solid var(--border); color: var(--text-tertiary); font-size: 12px; }
+  .footer a { color: var(--brand); text-decoration: none; }
+
+  @media (max-width: 768px) {
+    .grid { grid-template-columns: 1fr; }
+    .hero { padding: 48px 16px 32px; }
+    .hero .stats { gap: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1><span>墨灵</span> · 页面预览合集</h1>
+  <p>基于 Linear + Raycast + Notion 暗色专业风格的全套 UI 重设计预览</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">19</div><div class="stat-label">页面</div></div>
+    <div class="stat"><div class="stat-num">93</div><div class="stat-label">设计评分</div></div>
+    <div class="stat"><div class="stat-num">530K</div><div class="stat-label">总 HTML</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="section">
+  <div class="section-title"><span class="icon">⚡</span> 核心工作台 <span class="badge">P0</span></div>
+  <div class="grid">
+    <a class="card" href="workspace-preview.html" target="_blank">
+      <div class="card-icon core">✒️</div>
+      <div class="card-info"><div class="card-name">创作工作台</div><div class="card-desc">三栏布局 · 编辑器 + 四库面板 + AI 工具箱</div></div>
+      <div class="card-size">33 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="phase4-preview.html" target="_blank">
+      <div class="card-icon core">📊</div>
+      <div class="card-info"><div class="card-name">四库管理</div><div class="card-desc">人物库 · 时间线 · 伏笔 · 世界观 · 卡牌</div></div>
+      <div class="card-size">32 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="vaults-preview.html" target="_blank">
+      <div class="card-icon core">📖</div>
+      <div class="card-info"><div class="card-name">四库全貌</div><div class="card-desc">侧边栏导航 · 卡片列表 · 详情弹窗 · 秘密矩阵</div></div>
+      <div class="card-size">43 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="health-preview.html" target="_blank">
+      <div class="card-icon core">💚</div>
+      <div class="card-info"><div class="card-name">健康监控</div><div class="card-desc">R1/R2/R3 告警 · 章节健康表 · 评分仪表盘</div></div>
+      <div class="card-size">26 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="history-preview.html" target="_blank">
+      <div class="card-icon core">📜</div>
+      <div class="card-info"><div class="card-name">生成历史</div><div class="card-desc">时间线列表 · 输入/输出对比 · 版本回滚</div></div>
+      <div class="card-size">16 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="weave-preview.html" target="_blank">
+      <div class="card-icon core">🧶</div>
+      <div class="card-info"><div class="card-name">编织工坊</div><div class="card-desc">策略选择 · 参数滑块 · AI 编织预览</div></div>
+      <div class="card-size">17 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="phase4-tasks-preview.html" target="_blank">
+      <div class="card-icon core">📋</div>
+      <div class="card-info"><div class="card-name">任务历史</div><div class="card-desc">Phase4 任务列表 · 状态过滤 · 执行日志</div></div>
+      <div class="card-size">18 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="icon">📚</span> 项目管理 <span class="badge">P0</span></div>
+  <div class="grid">
+    <a class="card" href="projects-preview.html" target="_blank">
+      <div class="card-icon proj">📚</div>
+      <div class="card-info"><div class="card-name">我的作品</div><div class="card-desc">项目卡片网格 · 搜索筛选 · 统计面板 · 详情弹窗</div></div>
+      <div class="card-size">34 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="new-project-preview.html" target="_blank">
+      <div class="card-icon proj">✨</div>
+      <div class="card-info"><div class="card-name">新建作品</div><div class="card-desc">3 步向导 · 模式选择 · 表单填写 · 确认创建</div></div>
+      <div class="card-size">19 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="edit-project-preview.html" target="_blank">
+      <div class="card-icon proj">✏️</div>
+      <div class="card-info"><div class="card-name">编辑项目</div><div class="card-desc">封面拖拽 · 类型标签 · 自动保存指示器</div></div>
+      <div class="card-size">12 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="import-preview.html" target="_blank">
+      <div class="card-icon proj">📥</div>
+      <div class="card-info"><div class="card-name">导入小说</div><div class="card-desc">4 阶段向导 · 四库提取 · 冲突审查 · 动态层</div></div>
+      <div class="card-size">33 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="icon">🌐</span> 公共页面 <span class="badge">P1</span></div>
+  <div class="grid">
+    <a class="card" href="landing-preview.html" target="_blank">
+      <div class="card-icon pub">🏠</div>
+      <div class="card-info"><div class="card-name">Landing Page</div><div class="card-desc">全屏 Hero · 浮动卡牌动画 · 功能展示 · CTA</div></div>
+      <div class="card-size">25 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="auth-preview.html" target="_blank">
+      <div class="card-icon pub">🔐</div>
+      <div class="card-info"><div class="card-name">登录 / 注册</div><div class="card-desc">分栏布局 · Tab 切换 · 密码强度 · 社交登录</div></div>
+      <div class="card-size">21 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="pricing-preview.html" target="_blank">
+      <div class="card-icon pub">💎</div>
+      <div class="card-info"><div class="card-name">定价方案</div><div class="card-desc">月付/年付切换 · 3 方案对比 · FAQ 折叠</div></div>
+      <div class="card-size">20 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="home-preview.html" target="_blank">
+      <div class="card-icon pub">⏳</div>
+      <div class="card-info"><div class="card-name">加载过渡页</div><div class="card-desc">Logo 光环动画 · 渐变进度条 · 粒子背景</div></div>
+      <div class="card-size">7 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="icon">⚙️</span> 辅助功能 + 管理 <span class="badge">P1-P2</span></div>
+  <div class="grid">
+    <a class="card" href="settings-preview.html" target="_blank">
+      <div class="card-icon aux">⚙️</div>
+      <div class="card-info"><div class="card-name">设置中心</div><div class="card-desc">5 个 Tab · 个人信息 · 主题切换 · 安全 · 数据管理</div></div>
+      <div class="card-size">23 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="notifications-preview.html" target="_blank">
+      <div class="card-icon aux">🔔</div>
+      <div class="card-info"><div class="card-name">通知中心</div><div class="card-desc">未读计数 · 类型标识 · 已读/删除 · 分页</div></div>
+      <div class="card-size">14 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a class="card" href="admin-preview.html" target="_blank">
+      <div class="card-icon admin">🛡️</div>
+      <div class="card-info"><div class="card-name">管理后台</div><div class="card-desc">导航面板 · 指标卡片 · 用户表格 · SVG 折线图</div></div>
+      <div class="card-size">35 KB</div>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <p>墨灵 (Moling) — AI 驱动网络小说创作平台 | 设计系统 v3.1 · 评分 93/100</p>
+  <p style="margin-top:4px"><a href="file:///C:/Users/Admin/Desktop/MolingProject/DESIGN.md">查看 DESIGN.md 设计规范 →</a></p>
+</div>
+</body>
+</html>

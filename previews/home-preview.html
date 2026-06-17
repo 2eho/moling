@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 — 加载中</title>
+<style>
+/* ═══ Reset ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0d0f1a;
+  color: #e8e9f0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+:root {
+  --indigo: #6366f1;
+  --amber: #d4a843;
+}
+
+/* ═══ Background ═══ */
+.bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 30%, rgba(99, 102, 241, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 20% 70%, rgba(212, 168, 67, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #0d0f1a 0%, #0a0c16 100%);
+  z-index: 0;
+}
+.bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 30% 40%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 50%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 80%, rgba(99,102,241,0.12) 0%, transparent 100%);
+  background-size: 300px 300px;
+  pointer-events: none;
+}
+
+/* ═══ Content ═══ */
+.content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  animation: fadeIn 0.6s ease both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo */
+.logo-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+  position: relative;
+}
+.logo-ring {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(99, 102, 241, 0.3);
+  border-right-color: rgba(212, 168, 67, 0.3);
+  animation: logoSpin 3s linear infinite;
+}
+@keyframes logoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.logo-ring:nth-child(2) {
+  inset: -24px;
+  border-top-color: rgba(99, 102, 241, 0.15);
+  border-right-color: rgba(212, 168, 67, 0.1);
+  animation-duration: 5s;
+  animation-direction: reverse;
+}
+.logo-svg {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Name */
+.brand-name {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #e8e9f0;
+  animation: fadeIn 0.6s ease 0.3s both;
+}
+.brand-name span {
+  color: var(--indigo);
+  position: relative;
+}
+.brighter {
+  color: var(--amber);
+}
+.tagline {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 16px;
+  color: #9ca3c4;
+  margin-bottom: 40px;
+  letter-spacing: 0.05em;
+  animation: fadeIn 0.6s ease 0.5s both;
+}
+
+/* Loading Text */
+.loading-text {
+  font-size: 15px;
+  color: #6b7199;
+  margin-bottom: 32px;
+  animation: fadeIn 0.6s ease 0.7s both;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.loading-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.loading-dots span {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--indigo);
+  animation: dotBounce 1.2s ease-in-out infinite;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Progress Bar */
+.progress-wrap {
+  width: 280px;
+  height: 3px;
+  margin: 0 auto 24px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  animation: fadeIn 0.6s ease 0.9s both;
+}
+.progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--indigo), var(--amber));
+  transition: width 0.1s linear;
+}
+
+/* Redirect hint */
+.redirect-hint {
+  font-size: 12px;
+  color: #52525b;
+  margin-top: 40px;
+  animation: fadeIn 0.6s ease 1.2s both;
+}
+
+/* ═══ Floating particles ═══ */
+.particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.3);
+  animation: particleFloat 8s ease-in-out infinite;
+}
+@keyframes particleFloat {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+  20% { opacity: 0.5; }
+  50% { transform: translateY(-40px) translateX(10px); opacity: 0; }
+}
+.particle:nth-child(1) { left: 20%; top: 60%; animation-delay: 0s; }
+.particle:nth-child(2) { left: 40%; top: 50%; animation-delay: 2s; }
+.particle:nth-child(3) { left: 60%; top: 55%; animation-delay: 4s; }
+.particle:nth-child(4) { left: 80%; top: 65%; animation-delay: 1s; }
+.particle:nth-child(5) { left: 30%; top: 45%; animation-delay: 3s; }
+.particle:nth-child(6) { left: 70%; top: 40%; animation-delay: 5s; }
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg"></div>
+
+<!-- Particles -->
+<div class="particles">
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+</div>
+
+<!-- Content -->
+<div class="content">
+  <!-- Logo -->
+  <div class="logo-wrap">
+    <div class="logo-ring"></div>
+    <div class="logo-ring"></div>
+    <svg class="logo-svg" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="14" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.3"/>
+      <path d="M16 6C16 6 10 14 10 20C10 23.3 12.7 26 16 26C19.3 26 22 23.3 22 20C22 14 16 6 16 6Z" fill="#6366f1" opacity="0.8"/>
+      <path d="M16 10L20 22" stroke="#d4a843" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="16" cy="22" r="1.5" fill="#d4a843"/>
+    </svg>
+  </div>
+
+  <!-- Brand Name -->
+  <h1 class="brand-name">墨<span>灵</span> <span class="brighter">·</span> MoLing</h1>
+  <p class="tagline">灵感如墨 · 灵性如泉</p>
+
+  <!-- Loading -->
+  <p class="loading-text">
+    正在进入创作空间
+    <span class="loading-dots">
+      <span></span><span></span><span></span>
+    </span>
+  </p>
+
+  <!-- Progress -->
+  <div class="progress-wrap">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+
+  <!-- Hint -->
+  <p class="redirect-hint" id="redirect-hint">即将自动跳转至工作台...</p>
+</div>
+
+<script>
+// Progress simulation
+const fill = document.getElementById('progress-fill');
+const hint = document.getElementById('redirect-hint');
+const DURATION = 3000;
+const startTime = performance.now();
+
+function update() {
+  const elapsed = performance.now() - startTime;
+  const progress = Math.min(elapsed / DURATION, 1);
+  fill.style.width = (progress * 100) + '%';
+
+  if (progress < 1) {
+    requestAnimationFrame(update);
+  } else {
+    hint.textContent = '跳转完成，欢迎回来！';
+    hint.style.color = '#6366f1';
+  }
+}
+requestAnimationFrame(update);
+
+// 3 seconds later redirect simulation
+setTimeout(() => {
+  // In real app: window.location.href = '/projects';
+  console.log('Redirect to workspace...');
+}, DURATION);
+</script>
+
+</body>
+</html>

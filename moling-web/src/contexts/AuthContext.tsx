@@ -65,6 +65,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   useEffect(() => {
+    // ✅ DEV MODE: auto-login as fake dev user — no backend needed
+    if (process.env.NEXT_PUBLIC_SKIP_AUTH === "true") {
+      const devUser: User = {
+        id: "user-dev-001",
+        email: "dev@moling.local",
+        username: "本地开发",
+        avatar_url: null,
+        status: "active",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setUserState(devUser);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const storedUser = getStoredUser<Record<string, unknown>>();
       const authenticated = checkAuth();

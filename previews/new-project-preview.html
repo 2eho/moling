@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 · 新建作品</title>
+<style>
+/* ═══════════ 设计令牌 ═══════════ */
+:root {
+  --bg: #0d0f1a; --surface: #151829; --elevated: #111327;
+  --text-primary: #e8e9f0; --text-secondary: #9ca3c4; --text-tertiary: #6b7199; --text-disabled: #3d4166;
+  --brand: #6366f1; --brand-hover: #4f46e5; --brand-dim: rgba(99,102,241,0.12);
+  --brand-amber: #d4a843; --amber-dim: rgba(212,168,67,0.15);
+  --border: #2a2d45; --border-subtle: #1e2138;
+  --success: #34d399; --danger: #ef4444;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 18px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25),0 2px 4px rgba(99,102,241,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3),0 4px 8px rgba(99,102,241,0.1);
+  --ease-default: cubic-bezier(0.4,0,0.2,1);
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow-x:hidden}
+body{
+  font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg);color:var(--text-primary);
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.container{max-width:800px;margin:0 auto;padding:32px 24px 64px;display:flex;flex-direction:column;gap:32px}
+
+/* Step Indicator */
+.steps{
+  display:flex;align-items:center;justify-content:center;gap:0;
+  padding:16px 0;margin-bottom:8px;
+}
+.step{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:8px 12px;opacity:0.5;position:relative;
+  transition:opacity 0.3s var(--ease-default);
+}
+.step.active{opacity:1}
+.step-number{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:var(--text-disabled);color:#fff;border-radius:50%;
+  font-size:13px;font-weight:700;position:relative;z-index:2;
+  transition:all 0.3s var(--ease-spring);
+}
+.step.active .step-number{background:var(--brand);box-shadow:0 0 12px rgba(99,102,241,0.3)}
+.step.done .step-number{background:var(--success)}
+.step-label{font-size:12px;color:var(--text-primary);font-weight:500;white-space:nowrap}
+.step-connector{
+  width:60px;height:2px;background:var(--border);
+  transition:background 0.5s var(--ease-default);
+}
+.step-connector.done{background:var(--brand)}
+
+/* Back link */
+.back-row{display:flex;justify-content:center}
+.back-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:8px 16px;border-radius:var(--radius-md);font-size:13px;
+  color:var(--text-tertiary);cursor:pointer;border:none;background:transparent;
+  transition:all 0.2s;
+}
+.back-btn:hover{background:var(--border-subtle);color:var(--text-secondary)}
+.back-btn svg{width:16px;height:16px}
+
+/* Section */
+.section{
+  display:flex;flex-direction:column;gap:16px;
+  animation:fadeSlideIn 0.4s var(--ease-spring);
+}
+.section-title{
+  font-family:'Noto Serif SC','思源宋体',Georgia,serif;
+  font-size:22px;font-weight:700;color:var(--text-primary);
+}
+.section-desc{font-size:14px;color:var(--text-secondary);margin-bottom:8px}
+
+/* ── Step 1: Mode Cards ── */
+.mode-grid{display:flex;flex-direction:column;gap:16px}
+.mode-card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);padding:20px;cursor:pointer;
+  display:flex;align-items:flex-start;gap:16px;
+  transition:all 0.3s var(--ease-default);
+}
+.mode-card:hover{border-color:var(--border);box-shadow:var(--shadow-sm);}
+.mode-card.selected{border-color:var(--brand);background:rgba(99,102,241,0.04);box-shadow:0 0 16px rgba(99,102,241,0.08)}
+.mode-icon{
+  width:48px;height:48px;border-radius:var(--radius-md);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:var(--brand-dim);color:var(--brand);font-size:24px;
+}
+.mode-icon.amber{background:var(--amber-dim);color:var(--brand-amber)}
+.mode-content{flex:1}
+.mode-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.mode-desc{font-size:13px;color:var(--text-tertiary);line-height:1.5}
+.mode-tag{
+  display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;
+  font-weight:500;margin-top:8px;
+}
+.mode-tag.rec{background:var(--brand-dim);color:var(--brand)}
+.mode-tag.hot{background:var(--amber-dim);color:var(--brand-amber)}
+
+/* ── Step 2: Form ── */
+.form-group{margin-bottom:16px}
+.form-label{
+  display:block;font-size:13px;font-weight:600;color:var(--text-secondary);
+  margin-bottom:8px;letter-spacing:0.3px;
+}
+.form-label .required{color:var(--danger);margin-left:2px}
+.form-label .optional{color:var(--text-disabled);font-weight:400;font-size:11px;margin-left:4px}
+.form-input,.form-textarea{
+  width:100%;padding:12px;background:var(--elevated);
+  border:1px solid var(--border-subtle);border-radius:var(--radius-md);
+  font-size:14px;color:var(--text-primary);font-family:inherit;outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--text-disabled)}
+.form-input:focus,.form-textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(99,102,241,0.1)}
+.form-textarea{resize:vertical;min-height:100px;line-height:1.7}
+.form-input.error{border-color:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,0.1)}
+.form-error{font-size:12px;color:var(--danger);margin-top:4px;display:none}
+.form-error.visible{display:block}
+
+/* Chips (genre) */
+.chips-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  padding:4px 12px;border:1px solid var(--border-subtle);
+  border-radius:20px;font-size:13px;color:var(--text-tertiary);
+  cursor:pointer;transition:all 0.2s;user-select:none;
+}
+.chip:hover{border-color:var(--border);color:var(--text-secondary)}
+.chip.selected{background:rgba(99,102,241,0.15);border-color:var(--brand);color:var(--brand);font-weight:500}
+
+/* Cover Upload */
+.cover-upload{
+  border:2px dashed var(--border);border-radius:var(--radius-lg);
+  padding:32px;text-align:center;cursor:pointer;
+  transition:all 0.3s;
+}
+.cover-upload:hover{border-color:var(--brand);background:rgba(99,102,241,0.04)}
+.cover-upload .icon{font-size:36px;margin-bottom:8px}
+.cover-upload .text{font-size:14px;color:var(--text-secondary);margin-bottom:4px}
+.cover-upload .hint{font-size:12px;color:var(--text-tertiary)}
+.cover-preview{
+  display:none;width:200px;height:280px;border-radius:var(--radius-lg);
+  background:linear-gradient(135deg,var(--elevated),var(--surface));
+  border:1px solid var(--border-subtle);
+  align-items:center;justify-content:center;font-size:48px;position:relative;
+}
+.cover-preview.visible{display:flex}
+
+/* ── Step 3: Confirm ── */
+.confirm-card{
+  padding:24px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+}
+.confirm-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.confirm-icon{font-size:36px}
+.confirm-info{font-size:14px;color:var(--text-secondary);line-height:1.8}
+.confirm-info strong{color:var(--text-primary)}
+
+/* Actions */
+.actions{display:flex;justify-content:center;gap:12px;padding-top:16px}
+.btn-primary{
+  padding:12px 28px;background:linear-gradient(135deg,var(--brand),var(--brand-hover));
+  color:#fff;font-size:14px;font-weight:700;border:none;
+  border-radius:var(--radius-md);cursor:pointer;
+  transition:transform 0.2s var(--ease-spring),box-shadow 0.2s;
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,0.3)}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{
+  padding:12px 28px;background:transparent;color:var(--text-secondary);
+  font-size:14px;font-weight:600;border:1px solid var(--border);
+  border-radius:var(--radius-md);cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-secondary:hover{border-color:var(--text-tertiary);color:var(--text-primary)}
+
+/* Toast */
+.toast{position:fixed;top:24px;right:24px;z-index:3000;padding:12px 20px;border-radius:var(--radius-md);font-size:13px;font-weight:500;display:none}
+.toast.visible{display:block;animation:fadeSlideIn 0.3s var(--ease-spring)}
+.toast.success{background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.25);color:var(--success)}
+.toast.error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);color:var(--danger)}
+
+/* Animations */
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+
+/* Step content transitions */
+.step-content{display:none}
+.step-content.visible{display:block}
+
+@media(max-width:768px){
+  .container{padding:16px}
+  .mode-card{flex-direction:column;align-items:stretch}
+  .steps{flex-direction:column;align-items:flex-start;gap:4px}
+  .step-connector{width:2px;height:16px;margin-left:15px}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Step Indicator -->
+  <div class="steps" id="stepIndicator">
+    <div class="step active" id="step1"><div class="step-number">1</div><span class="step-label">创作模式</span></div>
+    <div class="step-connector" id="conn1"></div>
+    <div class="step" id="step2"><div class="step-number">2</div><span class="step-label">填写信息</span></div>
+    <div class="step-connector" id="conn2"></div>
+    <div class="step" id="step3"><div class="step-number">3</div><span class="step-label">确认创建</span></div>
+  </div>
+
+  <!-- Step 1: 创作模式 -->
+  <div class="step-content visible" id="content1">
+    <div class="section">
+      <h2 class="section-title">选择创作模式</h2>
+      <p class="section-desc">选择适合你的创作方式，开始你的写作之旅</p>
+      <div class="mode-grid">
+        <div class="mode-card selected" id="modeScratch" onclick="selectMode('scratch')">
+          <div class="mode-icon">✍️</div>
+          <div class="mode-content">
+            <div class="mode-title">从零开始</div>
+            <div class="mode-desc">从空白画布开始，自由构建你的世界观、人物和剧情。适合有清晰创作思路的作者。</div>
+            <span class="mode-tag rec">推荐</span>
+          </div>
+        </div>
+        <div class="mode-card" id="modeImport" onclick="selectMode('import')">
+          <div class="mode-icon amber">📥</div>
+          <div class="mode-content">
+            <div class="mode-title">导入已有</div>
+            <div class="mode-desc">粘贴或上传已有的小说文本，系统自动分析章节结构并导入到写作库中。</div>
+            <span class="mode-tag hot">热门</span>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="goToStep(2)">下一步 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: 填写信息 -->
+  <div class="step-content" id="content2">
+    <div class="section">
+      <h2 class="section-title">填写作品信息</h2>
+      <p class="section-desc" id="step2Desc">设定你的作品基本信息</p>
+
+      <div class="form-group">
+        <label class="form-label">书名 <span class="required">*</span></label>
+        <input class="form-input" type="text" id="formTitle" placeholder="给你的作品起一个响亮的名字" oninput="validateForm()">
+        <div class="form-error" id="titleError">请输入书名</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">笔名 <span class="optional">(可选)</span></label>
+        <input class="form-input" type="text" id="formPenName" placeholder="你的作者名">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">类型 <span class="required">*</span></label>
+        <div class="chips-wrap" id="genreChips">
+          <span class="chip" data-genre="玄幻" onclick="selectGenre(this)">玄幻</span>
+          <span class="chip" data-genre="仙侠" onclick="selectGenre(this)">仙侠</span>
+          <span class="chip" data-genre="都市" onclick="selectGenre(this)">都市</span>
+          <span class="chip" data-genre="科幻" onclick="selectGenre(this)">科幻</span>
+          <span class="chip" data-genre="悬疑" onclick="selectGenre(this)">悬疑</span>
+          <span class="chip" data-genre="历史" onclick="selectGenre(this)">历史</span>
+          <span class="chip" data-genre="网游" onclick="selectGenre(this)">网游</span>
+          <span class="chip" data-genre="轻小说" onclick="selectGenre(this)">轻小说</span>
+          <span class="chip" data-genre="奇幻" onclick="selectGenre(this)">奇幻</span>
+          <span class="chip" data-genre="军事" onclick="selectGenre(this)">军事</span>
+        </div>
+        <div class="form-error" id="genreError">请选择作品类型</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">简介 <span class="optional">(可选)</span></label>
+        <textarea class="form-textarea" id="formSynopsis" placeholder="简短的描述，让读者快速了解你的故事..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">封面 <span class="optional">(可选)</span></label>
+        <div class="cover-upload" id="coverUpload" onclick="simulateCoverUpload()">
+          <div class="icon">🖼️</div>
+          <div class="text">点击或拖拽上传封面图片</div>
+          <div class="hint">支持 JPG、PNG，推荐尺寸 600×800</div>
+        </div>
+        <div class="cover-preview" id="coverPreview">📕</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" onclick="goToStep(1)">← 上一步</button>
+        <button class="btn-primary" id="btnToStep3" onclick="goToStep(3)">下一步 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: 确认创建 -->
+  <div class="step-content" id="content3">
+    <div class="section">
+      <h2 class="section-title">确认创建</h2>
+      <p class="section-desc">确认以下信息，开始你的创作之旅</p>
+
+      <div class="confirm-card">
+        <div class="confirm-header">
+          <span class="confirm-icon" id="confirmModeIcon">✍️</span>
+          <h3 id="confirmTitle" style="font-family:'Noto Serif SC','思源宋体',Georgia,serif;font-size:18px;font-weight:600">--</h3>
+        </div>
+        <div class="confirm-info" id="confirmInfo"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" onclick="goToStep(2)">← 上一步</button>
+        <button class="btn-primary" id="btnCreate" onclick="createProject()">✨ 确认创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Back link -->
+  <div class="back-row">
+    <button class="back-btn" onclick="showToast('返回项目列表','success')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      返回项目列表
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// State
+let currentStep = 1;
+let selectedMode = 'scratch';
+let selectedGenre = '';
+
+// Mode selection
+function selectMode(mode) {
+  selectedMode = mode;
+  document.getElementById('modeScratch').classList.toggle('selected', mode === 'scratch');
+  document.getElementById('modeImport').classList.toggle('selected', mode === 'import');
+}
+
+// Genre selection
+function selectGenre(el) {
+  document.querySelectorAll('#genreChips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedGenre = el.dataset.genre;
+  validateForm();
+}
+
+// Cover upload simulation
+function simulateCoverUpload() {
+  const upload = document.getElementById('coverUpload');
+  const preview = document.getElementById('coverPreview');
+  upload.style.display = 'none';
+  preview.classList.add('visible');
+  preview.style.background = 'linear-gradient(135deg, #1e1b4b, #312e81)';
+  showToast('封面已上传', 'success');
+}
+
+// Form validation
+function validateForm() {
+  const title = document.getElementById('formTitle').value.trim();
+  const titleError = document.getElementById('titleError');
+  const titleInput = document.getElementById('formTitle');
+  const btn = document.getElementById('btnToStep3');
+
+  if (title) {
+    titleError.classList.remove('visible');
+    titleInput.classList.remove('error');
+    btn.disabled = false;
+  } else {
+    btn.disabled = true;
+  }
+}
+
+// Navigation
+function goToStep(step) {
+  if (step === 3) {
+    const title = document.getElementById('formTitle').value.trim();
+    if (!title) {
+      document.getElementById('titleError').classList.add('visible');
+      document.getElementById('formTitle').classList.add('error');
+      return;
+    }
+    if (!selectedGenre) {
+      document.getElementById('genreError').classList.add('visible');
+      return;
+    }
+    // Populate confirm card
+    const penName = document.getElementById('formPenName').value.trim() || '未设定';
+    const synopsis = document.getElementById('formSynopsis').value.trim() || '未填写';
+    const modeLabel = selectedMode === 'scratch' ? '从零开始' : '导入已有';
+
+    document.getElementById('confirmModeIcon').textContent = selectedMode === 'scratch' ? '✍️' : '📥';
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmInfo').innerHTML = `
+      <p><strong>创作模式：</strong>${modeLabel}</p>
+      <p><strong>书名：</strong>${title}</p>
+      <p><strong>笔名：</strong>${penName}</p>
+      <p><strong>类型：</strong>${selectedGenre}</p>
+      <p><strong>简介：</strong>${synopsis}</p>
+    `;
+  }
+
+  // Update step indicators
+  currentStep = step;
+  updateSteps();
+
+  // Show/hide content
+  document.querySelectorAll('.step-content').forEach(el => el.classList.remove('visible'));
+  document.getElementById('content' + step).classList.add('visible');
+}
+
+function updateSteps() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('step' + i);
+    stepEl.classList.remove('active', 'done');
+    if (i < currentStep) stepEl.classList.add('done');
+    if (i === currentStep) stepEl.classList.add('active');
+  }
+  document.getElementById('conn1').classList.toggle('done', currentStep > 1);
+  document.getElementById('conn2').classList.toggle('done', currentStep > 2);
+}
+
+function createProject() {
+  showToast('项目创建成功！正在跳转到工作台...', 'success');
+}
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type + ' visible';
+  setTimeout(() => { toast.classList.remove('visible'); }, 2500);
+}
+</script>
+
+</body>
+</html>

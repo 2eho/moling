@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 · 我的作品</title>
+<style>
+/* ════════════════════════════════════════
+   墨灵设计令牌 · 自包含内联
+   ════════════════════════════════════════ */
+:root {
+  --bg: #0d0f1a;
+  --surface: #151829;
+  --elevated: #111327;
+  --text-primary: #e8e9f0;
+  --text-secondary: #9ca3c4;
+  --text-tertiary: #6b7199;
+  --text-disabled: #3d4166;
+  --brand: #6366f1;
+  --brand-hover: #4f46e5;
+  --brand-dim: rgba(99,102,241,0.12);
+  --brand-amber: #d4a843;
+  --amber-dim: rgba(212,168,67,0.15);
+  --border: #2a2d45;
+  --border-subtle: #1e2138;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #ef4444;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 18px; --radius-2xl: 24px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25),0 2px 4px rgba(99,102,241,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3),0 4px 8px rgba(99,102,241,0.1);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.35),0 8px 16px rgba(99,102,241,0.12);
+  --shadow-modal: 0 16px 48px rgba(0,0,0,0.4),0 8px 16px rgba(0,0,0,0.2);
+  --ease-out: cubic-bezier(0,0,0.2,1);
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+  --ease-default: cubic-bezier(0.4,0,0.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow-x:hidden}
+body{
+  font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg);
+  color:var(--text-primary);
+  font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-tertiary)}
+
+.container{max-width:1280px;margin:0 auto;padding:32px 32px 48px}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;animation:fadeSlideIn 0.5s var(--ease-spring)}
+.header-left{display:flex;flex-direction:column;gap:4px}
+.greeting{font-family:'Noto Serif SC','思源宋体',Georgia,serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--text-primary) 0%,var(--brand) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{font-size:14px;color:var(--text-tertiary)}
+.header-actions{display:flex;align-items:center;gap:12px}
+.search-wrap{position:relative}
+.search-input{
+  width:260px;padding:10px 14px 10px 38px;
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md);color:var(--text-primary);
+  font-size:13px;outline:none;
+  transition:border-color 0.2s var(--ease-default),box-shadow 0.2s var(--ease-default);
+}
+.search-input::placeholder{color:var(--text-disabled)}
+.search-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-dim)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-tertiary);pointer-events:none}
+.btn-new{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 20px;
+  background:linear-gradient(135deg,var(--brand),var(--brand-hover));
+  color:#fff;font-size:13px;font-weight:600;
+  border:none;border-radius:var(--radius-md);
+  cursor:pointer;
+  transition:transform 0.2s var(--ease-spring),box-shadow 0.2s var(--ease-default);
+}
+.btn-new:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,0.3)}
+.btn-new:active{transform:translateY(0)}
+
+/* Filter Tabs */
+.filter-tabs{display:flex;gap:8px;margin-bottom:24px;animation:fadeSlideIn 0.5s var(--ease-spring) 0.1s both}
+.filter-tab{
+  padding:6px 16px;border-radius:20px;
+  font-size:13px;font-weight:500;color:var(--text-tertiary);
+  background:transparent;border:1px solid var(--border-subtle);
+  cursor:pointer;
+  transition:all 0.2s var(--ease-default);
+}
+.filter-tab:hover{color:var(--text-secondary);border-color:var(--border)}
+.filter-tab.active{background:var(--brand-dim);border-color:var(--brand);color:var(--brand)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;animation:fadeSlideIn 0.5s var(--ease-spring) 0.2s both}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);padding:20px 24px;
+  display:flex;align-items:center;gap:16px;
+  transition:transform 0.2s var(--ease-spring),border-color 0.2s var(--ease-default),box-shadow 0.2s var(--ease-default);
+}
+.stat-card:hover{transform:translateY(-2px);border-color:var(--border);box-shadow:var(--shadow-md)}
+.stat-icon{
+  width:44px;height:44px;border-radius:var(--radius-md);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+}
+.stat-icon.indigo{background:var(--brand-dim);color:var(--brand)}
+.stat-icon.green{background:rgba(52,211,153,0.1);color:var(--success)}
+.stat-icon.amber{background:var(--amber-dim);color:var(--brand-amber)}
+.stat-icon.purple{background:rgba(168,85,247,0.12);color:#a855f7}
+.stat-info{display:flex;flex-direction:column;gap:2px}
+.stat-number{font-family:'Noto Serif SC','思源宋体',Georgia,serif;font-size:24px;font-weight:700;color:var(--text-primary);line-height:1.2}
+.stat-label{font-size:12px;color:var(--text-tertiary)}
+
+/* Project Grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.project-card{
+  background:var(--surface);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);overflow:hidden;
+  transition:all 0.2s var(--ease-default);
+  animation:cardEnter 0.5s var(--ease-default) forwards;
+  opacity:0;transform:translateY(20px);
+}
+.project-card:nth-child(1){animation-delay:0.05s}
+.project-card:nth-child(2){animation-delay:0.1s}
+.project-card:nth-child(3){animation-delay:0.15s}
+.project-card:nth-child(4){animation-delay:0.2s}
+.project-card:nth-child(5){animation-delay:0.25s}
+.project-card:nth-child(6){animation-delay:0.3s}
+.project-card:hover{transform:translateY(-4px);border-color:var(--border);box-shadow:var(--shadow-lg)}
+.card-cover{
+  width:100%;height:160px;background:linear-gradient(135deg,var(--elevated),var(--surface));
+  display:flex;align-items:center;justify-content:center;
+  font-size:48px;position:relative;overflow:hidden;
+}
+.card-cover::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 50%,rgba(13,15,26,0.8));
+}
+.card-cover.cover-1{background:linear-gradient(135deg,#1e1b4b,#312e81)}
+.card-cover.cover-2{background:linear-gradient(135deg,#1a2e1a,#166534)}
+.card-cover.cover-3{background:linear-gradient(135deg,#2e1a2e,#86198f)}
+.card-cover.cover-4{background:linear-gradient(135deg,#1e1a1a,#7c2d12)}
+.card-cover.cover-5{background:linear-gradient(135deg,#1a1e2e,#1e3a5f)}
+.card-cover.cover-6{background:linear-gradient(135deg,#2e2e1a,#713f12)}
+.card-body{padding:16px}
+.card-title{font-family:'Noto Serif SC','思源宋体',Georgia,serif;font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.card-genre{
+  font-size:11px;padding:2px 8px;border-radius:20px;
+  background:var(--brand-dim);color:var(--brand);font-weight:500;
+}
+.card-genre.amber{background:var(--amber-dim);color:var(--brand-amber)}
+.card-genre.green{background:rgba(52,211,153,0.1);color:var(--success)}
+.card-genre.purple{background:rgba(168,85,247,0.12);color:#a855f7}
+.card-status{
+  font-size:11px;padding:2px 8px;border-radius:20px;
+  background:rgba(52,211,153,0.08);color:var(--success);font-weight:500;
+}
+.card-status.ongoing{background:rgba(99,102,241,0.08);color:var(--brand)}
+.card-status.draft{background:rgba(107,113,153,0.1);color:var(--text-tertiary)}
+.progress-wrap{margin-bottom:12px}
+.progress-info{display:flex;justify-content:space-between;font-size:11px;color:var(--text-tertiary);margin-bottom:4px}
+.progress-bar{
+  width:100%;height:4px;background:var(--elevated);
+  border-radius:2px;overflow:hidden;
+}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--brand),#818cf8);border-radius:2px;transition:width 0.8s var(--ease-out)}
+.progress-fill.amber{background:linear-gradient(90deg,var(--brand-amber),#e5c158)}
+.card-footer{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-tertiary);margin-bottom:12px;padding-top:8px;border-top:1px solid var(--border-subtle)}
+.card-actions{display:flex;gap:8px}
+.card-btn{
+  flex:1;padding:6px 12px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:500;cursor:pointer;
+  transition:all 0.2s var(--ease-default);
+  border:1px solid var(--border-subtle);
+  background:transparent;color:var(--text-secondary);
+  text-align:center;
+}
+.card-btn:hover{background:var(--elevated);border-color:var(--border)}
+.card-btn.primary{background:var(--brand-dim);border-color:rgba(99,102,241,0.2);color:var(--brand)}
+.card-btn.primary:hover{background:rgba(99,102,241,0.2)}
+.card-btn.danger:hover{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2);color:var(--danger)}
+
+/* Empty State */
+.empty{grid-column:1/-1;display:none;flex-direction:column;align-items:center;gap:16px;padding:64px 0}
+.empty.visible{display:flex}
+.empty-illustration{width:120px;height:120px;position:relative;margin-bottom:8px}
+.empty-illustration .book{
+  position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:80px;height:100px;background:var(--elevated);
+  border:2px solid var(--border);border-radius:4px 12px 12px 4px;
+  display:flex;align-items:center;justify-content:center;
+}
+.empty-illustration .book::after{
+  content:'';position:absolute;left:0;top:0;width:4px;height:100%;
+  background:linear-gradient(180deg,var(--brand),var(--brand-hover));
+  border-radius:2px 0 0 2px;
+}
+.empty-illustration .sparkle{
+  position:absolute;width:8px;height:8px;background:var(--brand);
+  border-radius:50%;opacity:0.6;
+  animation:floatSparkle 2s ease-in-out infinite;
+}
+.empty-illustration .sparkle:nth-child(1){top:0;left:10px;animation-delay:0s}
+.empty-illustration .sparkle:nth-child(2){top:20px;right:0;animation-delay:0.5s}
+.empty-illustration .sparkle:nth-child(3){top:-10px;right:20px;animation-delay:1s}
+.empty-title{font-family:'Noto Serif SC','思源宋体',Georgia,serif;font-size:18px;font-weight:600;color:var(--text-primary)}
+.empty-desc{font-size:14px;color:var(--text-tertiary);max-width:300px;text-align:center;line-height:1.6}
+.empty-btn{
+  margin-top:8px;padding:12px 24px;
+  background:linear-gradient(135deg,var(--brand),var(--brand-hover));
+  color:#fff;font-size:13px;font-weight:600;
+  border:none;border-radius:var(--radius-md);
+  cursor:pointer;
+  transition:transform 0.2s var(--ease-spring),box-shadow 0.2s var(--ease-default);
+}
+.empty-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,0.3)}
+
+/* Detail Modal */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  z-index:1000;align-items:center;justify-content:center;
+}
+.modal-overlay.visible{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-xl);padding:32px;
+  width:90%;max-width:560px;max-height:85vh;overflow-y:auto;
+  box-shadow:var(--shadow-modal);
+  animation:scaleIn 0.3s var(--ease-spring);
+}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.modal-title{font-family:'Noto Serif SC','思源宋体',Georgia,serif;font-size:22px;font-weight:700}
+.modal-close{
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-tertiary);cursor:pointer;border:none;background:transparent;
+  transition:all 0.2s;
+}
+.modal-close:hover{background:var(--border-subtle);color:var(--text-primary)}
+.modal-cover{
+  width:100%;height:200px;border-radius:var(--radius-lg);
+  display:flex;align-items:center;justify-content:center;
+  font-size:64px;margin-bottom:20px;
+}
+.modal-cover.c1{background:linear-gradient(135deg,#1e1b4b,#312e81)}
+.modal-cover.c2{background:linear-gradient(135deg,#1a2e1a,#166534)}
+.modal-cover.c3{background:linear-gradient(135deg,#2e1a2e,#86198f)}
+.modal-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.modal-info-item{background:var(--elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:12px}
+.modal-info-label{font-size:11px;color:var(--text-tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
+.modal-info-value{font-size:14px;font-weight:600;color:var(--text-primary)}
+.modal-chart{
+  background:var(--elevated);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md);padding:16px;margin-bottom:20px;
+}
+.modal-chart-title{font-size:12px;color:var(--text-tertiary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px}
+.chart-bar{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.chart-label{font-size:11px;color:var(--text-secondary);width:60px;flex-shrink:0;text-align:right}
+.chart-track{flex:1;height:8px;background:var(--border-subtle);border-radius:4px;overflow:hidden}
+.chart-fill{height:100%;background:linear-gradient(90deg,var(--brand),#818cf8);border-radius:4px}
+.chart-value{font-size:11px;color:var(--text-tertiary);width:40px}
+.modal-actions{display:flex;gap:12px;justify-content:flex-end}
+
+.btn-primary{
+  padding:10px 20px;background:linear-gradient(135deg,var(--brand),var(--brand-hover));
+  color:#fff;font-size:13px;font-weight:600;
+  border:none;border-radius:var(--radius-md);cursor:pointer;
+  transition:transform 0.2s var(--ease-spring),box-shadow 0.2s var(--ease-default);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,0.3)}
+.btn-secondary{
+  padding:10px 20px;background:transparent;color:var(--text-secondary);
+  font-size:13px;font-weight:600;
+  border:1px solid var(--border);border-radius:var(--radius-md);cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-secondary:hover{border-color:var(--text-tertiary);color:var(--text-primary)}
+.btn-danger{
+  padding:10px 20px;background:rgba(239,68,68,0.1);color:var(--danger);
+  font-size:13px;font-weight:600;
+  border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md);cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-danger:hover{background:rgba(239,68,68,0.2)}
+
+/* Delete Confirm Modal */
+.delete-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.5);backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  z-index:2000;align-items:center;justify-content:center;
+}
+.delete-overlay.visible{display:flex}
+.delete-modal{
+  background:rgba(21,24,41,0.9);border:1px solid var(--border);
+  border-radius:var(--radius-xl);padding:32px;
+  width:90%;max-width:420px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.5);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  animation:scaleIn 0.3s var(--ease-spring);
+}
+.delete-title{font-family:'Noto Serif SC','思源宋体',Georgia,serif;font-size:18px;font-weight:600;margin-bottom:12px}
+.delete-text{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:24px}
+.delete-actions{display:flex;gap:12px;justify-content:flex-end}
+
+/* Animations */
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cardEnter{to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+@keyframes floatSparkle{0%,100%{opacity:0.3;transform:translateY(0)}50%{opacity:0.8;transform:translateY(-8px)}}
+
+/* Toast */
+.toast{position:fixed;top:24px;right:24px;z-index:3000;padding:12px 20px;border-radius:var(--radius-md);font-size:13px;font-weight:500;animation:fadeSlideIn 0.3s var(--ease-spring);display:none}
+.toast.visible{display:block}
+.toast.success{background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.25);color:var(--success)}
+.toast.error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);color:var(--danger)}
+
+/* Responsive */
+@media(max-width:1024px){.grid{grid-template-columns:repeat(2,1fr)}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.container{padding:16px 16px 32px}.header{flex-direction:column;align-items:stretch}.header-actions{flex-direction:column}.search-input{width:100%}.grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr}.filter-tabs{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1 class="greeting">我的作品</h1>
+      <p class="subtitle">欢迎回来，继续你的创作之旅</p>
+    </div>
+    <div class="header-actions">
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="搜索作品名称..." id="searchInput" oninput="filterProjects()">
+      </div>
+      <button class="btn-new" onclick="handleNewProject()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新建作品
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-tabs" id="filterTabs">
+    <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">全部</button>
+    <button class="filter-tab" data-filter="ongoing" onclick="setFilter('ongoing',this)">连载中</button>
+    <button class="filter-tab" data-filter="completed" onclick="setFilter('completed',this)">已完结</button>
+    <button class="filter-tab" data-filter="draft" onclick="setFilter('draft',this)">草稿</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-icon indigo">📚</div>
+      <div class="stat-info"><div class="stat-number">6</div><div class="stat-label">作品数</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">✍️</div>
+      <div class="stat-info"><div class="stat-number">86.2 万</div><div class="stat-label">总字数</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">📄</div>
+      <div class="stat-info"><div class="stat-number">312</div><div class="stat-label">总章节</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">🕐</div>
+      <div class="stat-info"><div class="stat-number">2 小时前</div><div class="stat-label">最近更新</div></div>
+    </div>
+  </div>
+
+  <!-- Project Grid -->
+  <div class="grid" id="projectGrid">
+    <!-- Card 1 -->
+    <div class="project-card" data-status="ongoing" data-genre="玄幻" data-title="星穹之下" onclick="openDetail('星穹之下','玄幻','连载中',23,128000,'苏铭','2小时前','c1',62)">
+      <div class="card-cover cover-1">✨</div>
+      <div class="card-body">
+        <div class="card-title">星穹之下</div>
+        <div class="card-meta">
+          <span class="card-genre">玄幻</span>
+          <span class="card-status ongoing">连载中</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-info"><span>已写 62%</span><span>23 / 40 章</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:62%"></div></div>
+        </div>
+        <div class="card-footer"><span>2 小时前更新</span><span>12.8 万字</span></div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="card-btn primary">继续写</button>
+          <button class="card-btn" onclick="openDetail('星穹之下','玄幻','连载中',23,128000,'苏铭','2小时前','c1',62)">编辑</button>
+          <button class="card-btn danger" onclick="openDeleteConfirm('星穹之下')">删除</button>
+        </div>
+      </div>
+    </div>
+    <!-- Card 2 -->
+    <div class="project-card" data-status="ongoing" data-genre="都市" data-title="重生之商业帝国" onclick="openDetail('重生之商业帝国','都市','连载中',48,256000,'林远','1天前','c2',80)">
+      <div class="card-cover cover-2">🏙️</div>
+      <div class="card-body">
+        <div class="card-title">重生之商业帝国</div>
+        <div class="card-meta">
+          <span class="card-genre amber">都市</span>
+          <span class="card-status ongoing">连载中</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-info"><span>已写 80%</span><span>48 / 60 章</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
+        </div>
+        <div class="card-footer"><span>1 天前更新</span><span>25.6 万字</span></div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="card-btn primary">继续写</button>
+          <button class="card-btn" onclick="openDetail('重生之商业帝国','都市','连载中',48,256000,'林远','1天前','c2',80)">编辑</button>
+          <button class="card-btn danger" onclick="openDeleteConfirm('重生之商业帝国')">删除</button>
+        </div>
+      </div>
+    </div>
+    <!-- Card 3 -->
+    <div class="project-card" data-status="completed" data-genre="仙侠" data-title="剑道独尊" onclick="openDetail('剑道独尊','仙侠','已完结',120,680000,'叶无尘','1月前','c3',100)">
+      <div class="card-cover cover-3">⚔️</div>
+      <div class="card-body">
+        <div class="card-title">剑道独尊</div>
+        <div class="card-meta">
+          <span class="card-genre purple">仙侠</span>
+          <span class="card-status">已完结</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-info"><span>已完成</span><span>120 / 120 章</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+        </div>
+        <div class="card-footer"><span>1 月前更新</span><span>68 万字</span></div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="card-btn primary">查看</button>
+          <button class="card-btn" onclick="openDetail('剑道独尊','仙侠','已完结',120,680000,'叶无尘','1月前','c3',100)">编辑</button>
+          <button class="card-btn danger" onclick="openDeleteConfirm('剑道独尊')">删除</button>
+        </div>
+      </div>
+    </div>
+    <!-- Card 4 -->
+    <div class="project-card" data-status="draft" data-genre="科幻" data-title="星际流浪者" onclick="openDetail('星际流浪者','科幻','草稿',3,8500,'诺瓦','3天前','c4',15)">
+      <div class="card-cover cover-4">🚀</div>
+      <div class="card-body">
+        <div class="card-title">星际流浪者</div>
+        <div class="card-meta">
+          <span class="card-genre green">科幻</span>
+          <span class="card-status draft">草稿</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-info"><span>已写 15%</span><span>3 / 20 章</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:15%"></div></div>
+        </div>
+        <div class="card-footer"><span>3 天前更新</span><span>0.85 万字</span></div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="card-btn primary">继续写</button>
+          <button class="card-btn" onclick="openDetail('星际流浪者','科幻','草稿',3,8500,'诺瓦','3天前','c4',15)">编辑</button>
+          <button class="card-btn danger" onclick="openDeleteConfirm('星际流浪者')">删除</button>
+        </div>
+      </div>
+    </div>
+    <!-- Card 5 -->
+    <div class="project-card" data-status="ongoing" data-genre="悬疑" data-title="无间深渊" onclick="openDetail('无间深渊','悬疑','连载中',35,195000,'江辰','5小时前','c5',58)">
+      <div class="card-cover cover-5">🔍</div>
+      <div class="card-body">
+        <div class="card-title">无间深渊</div>
+        <div class="card-meta">
+          <span class="card-genre">悬疑</span>
+          <span class="card-status ongoing">连载中</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-info"><span>已写 58%</span><span>35 / 60 章</span></div>
+          <div class="progress-bar"><div class="progress-fill amber" style="width:58%"></div></div>
+        </div>
+        <div class="card-footer"><span>5 小时前更新</span><span>19.5 万字</span></div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="card-btn primary">继续写</button>
+          <button class="card-btn" onclick="openDetail('无间深渊','悬疑','连载中',35,195000,'江辰','5小时前','c5',58)">编辑</button>
+          <button class="card-btn danger" onclick="openDeleteConfirm('无间深渊')">删除</button>
+        </div>
+      </div>
+    </div>
+    <!-- Card 6 -->
+    <div class="project-card" data-status="completed" data-genre="历史" data-title="大明锦衣卫" onclick="openDetail('大明锦衣卫','历史','已完结',85,420000,'沈默','2周前','c6',100)">
+      <div class="card-cover cover-6">🏯</div>
+      <div class="card-body">
+        <div class="card-title">大明锦衣卫</div>
+        <div class="card-meta">
+          <span class="card-genre amber">历史</span>
+          <span class="card-status">已完结</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-info"><span>已完成</span><span>85 / 85 章</span></div>
+          <div class="progress-bar"><div class="progress-fill amber" style="width:100%"></div></div>
+        </div>
+        <div class="card-footer"><span>2 周前更新</span><span>42 万字</span></div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="card-btn primary">查看</button>
+          <button class="card-btn" onclick="openDetail('大明锦衣卫','历史','已完结',85,420000,'沈默','2周前','c6',100)">编辑</button>
+          <button class="card-btn danger" onclick="openDeleteConfirm('大明锦衣卫')">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State (hidden by default) -->
+    <div class="empty" id="emptyState">
+      <div class="empty-illustration">
+        <div class="book"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+      </div>
+      <p class="empty-title">暂无作品</p>
+      <p class="empty-desc">你的创作世界还是一片空白，点击下方按钮开始你的第一本书吧</p>
+      <button class="empty-btn" onclick="handleNewProject()">✨ 新建作品</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="detailTitle">作品详情</h2>
+      <button class="modal-close" onclick="closeDetail()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-cover c1" id="detailCover">✨</div>
+    <div class="modal-info" id="detailInfo"></div>
+    <div class="modal-chart">
+      <div class="modal-chart-title">各章节字数分布</div>
+      <div id="detailChart"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="openDeleteFromDetail()">删除项目</button>
+      <button class="btn-secondary" onclick="closeDetail()">关闭</button>
+      <button class="btn-primary" onclick="closeDetail();showToast('已进入创作工作台','success')">进入创作</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="delete-overlay" id="deleteModal">
+  <div class="delete-modal">
+    <h2 class="delete-title">确认删除</h2>
+    <p class="delete-text" id="deleteProjectName">确定要删除此项目吗？此操作不可撤销，所有章节内容和数据将被永久删除。</p>
+    <div class="delete-actions">
+      <button class="btn-secondary" onclick="closeDelete()">取消</button>
+      <button class="btn-danger" onclick="confirmDelete()">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// State
+let currentFilter = 'all';
+let deleteTarget = '';
+
+// Filter
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  filterProjects();
+}
+
+function filterProjects() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const cards = document.querySelectorAll('#projectGrid .project-card');
+  let visible = 0;
+
+  cards.forEach(card => {
+    const status = card.dataset.status;
+    const title = card.dataset.title.toLowerCase();
+    const genre = card.dataset.genre.toLowerCase();
+    const keyword = card.dataset.keyword || '';
+
+    const matchFilter = currentFilter === 'all' || status === currentFilter;
+    const matchSearch = !search || title.includes(search) || genre.includes(search) || keyword.includes(search);
+
+    if (matchFilter && matchSearch) {
+      card.style.display = '';
+      visible++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  // Update stats
+  updateStats(visible);
+
+  // Show/hide empty state
+  const empty = document.getElementById('emptyState');
+  if (visible === 0) {
+    empty.classList.add('visible');
+  } else {
+    empty.classList.remove('visible');
+  }
+}
+
+function updateStats(count) {
+  // Mock stats update based on visible cards
+  const totalWords = count === 6 ? '86.2 万' : (count * 14.3).toFixed(1) + ' 万';
+  const totalChapters = count === 6 ? 312 : count * 52;
+  document.querySelectorAll('.stat-number')[0].textContent = count;
+  document.querySelectorAll('.stat-number')[1].textContent = totalWords;
+  document.querySelectorAll('.stat-number')[2].textContent = totalChapters;
+}
+
+// Detail Modal
+function openDetail(title, genre, status, chapters, words, author, updated, coverClass, progress) {
+  document.getElementById('detailTitle').textContent = title;
+  const cover = document.getElementById('detailCover');
+  cover.className = 'modal-cover ' + coverClass;
+  cover.textContent = status === '已完结' ? '✅' : status === '草稿' ? '📝' : '✨';
+
+  document.getElementById('detailInfo').innerHTML = `
+    <div class="modal-info-item"><div class="modal-info-label">类型</div><div class="modal-info-value">${genre}</div></div>
+    <div class="modal-info-item"><div class="modal-info-label">状态</div><div class="modal-info-value">${status}</div></div>
+    <div class="modal-info-item"><div class="modal-info-label">笔名</div><div class="modal-info-value">${author}</div></div>
+    <div class="modal-info-item"><div class="modal-info-label">总字数</div><div class="modal-info-value">${(words/10000).toFixed(1)} 万字</div></div>
+    <div class="modal-info-item"><div class="modal-info-label">总章节</div><div class="modal-info-value">${chapters} 章</div></div>
+    <div class="modal-info-item"><div class="modal-info-label">进度</div><div class="modal-info-value">${progress}%</div></div>
+  `;
+
+  document.getElementById('detailChart').innerHTML = Array.from({length:6}, (_,i) => `
+    <div class="chart-bar">
+      <span class="chart-label">第${i*5+1}-${(i+1)*5}章</span>
+      <div class="chart-track"><div class="chart-fill" style="width:${25 + Math.random()*70}%"></div></div>
+      <span class="chart-value">${Math.floor(3000+Math.random()*5000)}字</span>
+    </div>
+  `).join('');
+
+  document.getElementById('detailModal').classList.add('visible');
+  deleteTarget = title;
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('visible');
+}
+
+// Delete Confirmation
+function openDeleteConfirm(title) {
+  deleteTarget = title;
+  document.getElementById('deleteProjectName').textContent = `确定要删除"${title}"吗？此操作不可撤销，所有章节内容和数据将被永久删除。`;
+  document.getElementById('deleteModal').classList.add('visible');
+}
+
+function openDeleteFromDetail() {
+  closeDetail();
+  setTimeout(() => openDeleteConfirm(deleteTarget), 200);
+}
+
+function closeDelete() {
+  document.getElementById('deleteModal').classList.remove('visible');
+}
+
+function confirmDelete() {
+  closeDelete();
+  showToast(`"${deleteTarget}" 已删除`, 'success');
+  // Remove the card (for demo)
+  const cards = document.querySelectorAll('#projectGrid .project-card');
+  cards.forEach(card => {
+    if (card.dataset.title === deleteTarget) card.remove();
+  });
+}
+
+// Toast
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type + ' visible';
+  setTimeout(() => { toast.classList.remove('visible'); }, 2500);
+}
+
+function handleNewProject() {
+  showToast('正在跳转到新建作品页面...', 'success');
+}
+
+// Close modals on overlay click
+document.getElementById('detailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetail();
+});
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDelete();
+});
+
+// ESC to close
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeDetail();
+    closeDelete();
+  }
+});
+
+// Initial: load all projects
+filterProjects();
+</script>
+
+</body>
+</html>

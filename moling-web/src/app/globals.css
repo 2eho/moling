@@ -388,3 +388,203 @@ main, section, .page, .shell, .main-content {
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* ═══════════════════════════════════════════════════════
+   品牌靛蓝完整色阶 · Indigo Color Scale (v3.1)
+   基于 Tailwind Indigo 色系，提供 50→900 共 10 级色阶
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --color-brand-indigo-50: #eef2ff;
+  --color-brand-indigo-100: #e0e7ff;
+  --color-brand-indigo-200: #c7d2fe;
+  --color-brand-indigo-300: #a5b4fc;
+  --color-brand-indigo-400: #818cf8;
+  --color-brand-indigo-500: #6366f1;
+  --color-brand-indigo-600: #4f46e5;
+  --color-brand-indigo-700: #4338ca;
+  --color-brand-indigo-800: #3730a3;
+  --color-brand-indigo-900: #312e81;
+}
+
+/* ═══════════════════════════════════════════════════════
+   玻璃态面板 · Glass Panels (v3.1)
+   参考 Raycast 玻璃态设计，用于导航栏、浮动卡片、工具栏
+   ═══════════════════════════════════════════════════════ */
+
+/* 大面板 — 导航栏、侧边栏、底部栏玻璃态背景 */
+.glass-panel {
+  background: rgba(21, 24, 41, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+}
+
+/* 小卡片 — 浮动卡牌、Hover 弹出面板、悬浮工具栏 */
+.glass-card {
+  background: rgba(21, 24, 41, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: background var(--transition-normal),
+              border-color var(--transition-normal),
+              box-shadow var(--transition-normal);
+}
+
+.glass-card:hover {
+  background: rgba(21, 24, 41, 0.8);
+  border-color: rgba(99, 102, 241, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════
+   编辑器排版 · Prose / Editor Stylings (v3.1)
+   参考 Notion 编辑器排版，用于写作区和内容预览
+   ═══════════════════════════════════════════════════════ */
+
+/* 编辑器写作区 — 字体适中、行宽受限、行高宽松 */
+.prose-editor {
+  font-family: var(--font-body);
+  font-size: var(--font-size-lg);
+  line-height: 1.8;
+  color: var(--color-text-primary);
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+  caret-color: var(--color-brand-indigo);
+}
+
+/* 编辑器内标题样式 */
+.prose-editor h1 {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 24px 0 12px;
+  color: var(--color-text-primary);
+}
+
+.prose-editor h2 {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 20px 0 10px;
+  color: var(--color-text-primary);
+}
+
+.prose-editor h3 {
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 16px 0 8px;
+  color: var(--color-text-primary);
+}
+
+.prose-editor p {
+  margin: 0 0 12px;
+}
+
+.prose-editor blockquote {
+  border-left: 3px solid var(--color-brand-indigo);
+  padding-left: 16px;
+  margin: 16px 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.prose-editor ul,
+.prose-editor ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.prose-editor li {
+  margin-bottom: 6px;
+}
+
+/* 预览区 — 衬线字体、卡片式、专注阅读 */
+.prose-preview {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  line-height: 1.7;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-8);
+  border: 1px solid var(--color-border-subtle);
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.prose-preview h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 24px 0 12px;
+}
+
+.prose-preview h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 20px 0 10px;
+}
+
+.prose-preview h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+
+.prose-preview p {
+  margin: 0 0 16px;
+  text-indent: 2em;
+}
+
+/* ═══════════════════════════════════════════════════════
+   工具类 · Utility Classes (v3.1)
+   可复用的视觉效果和交互反馈类
+   ═══════════════════════════════════════════════════════ */
+
+/* 渐变文字 — 用于 Hero 标题、品牌色强调文字 */
+.text-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-indigo),
+    var(--color-brand-indigo-300)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 微妙渐变背景 — 用于卡片内区域、区块背景、选中态 */
+.bg-gradient-subtle {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.08),
+    rgba(99, 102, 241, 0.02)
+  );
+}
+
+/* Hover 上浮效果 — 用于卡牌、列表项、可交互面板 */
+.hover-lift {
+  transition: transform var(--transition-normal),
+              box-shadow var(--transition-normal);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Active 按压效果 — 用于按钮、可点击区域 */
+.active-press {
+  transition: transform var(--transition-fast);
+}
+
+.active-press:active {
+  transform: scale(0.97);
+}

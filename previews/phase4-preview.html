@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 · 四库管理面板</title>
+<style>
+:root {
+  --color-bg: #0d0f1a;
+  --color-surface: #151829;
+  --color-elevated: #111327;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #9ca3c4;
+  --color-text-tertiary: #6b7199;
+  --color-text-disabled: #3d4166;
+  --color-brand-indigo: #6366f1;
+  --color-brand-amber: #d4a843;
+  --color-brand-indigo-dim: rgba(99,102,241,0.12);
+  --color-brand-amber-dim: rgba(212,168,67,0.15);
+  --color-border: #2a2d45;
+  --color-border-subtle: #1e2138;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --rarity-common: #9ca3af;
+  --rarity-rare: #67e8f9;
+  --rarity-epic: #a855f7;
+  --rarity-legendary: #d4a843;
+  --font-heading: 'Noto Serif SC', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font-body);background:var(--color-bg);
+  color:var(--color-text-primary);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+input{font-family:inherit;border:none;outline:none;background:none;color:inherit}
+
+/* ── Page ── */
+.page{
+  display:flex;flex-direction:column;
+  height:100vh;overflow:hidden;background:var(--color-bg);
+}
+.pageHeader{
+  background:var(--color-elevated);border-bottom:1px solid var(--color-border);
+  padding:20px 24px 16px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.pageHeaderLeft h1{
+  font-family:var(--font-heading);font-size:22px;font-weight:700;
+  color:var(--color-text-primary);
+}
+.pageHeaderLeft p{font-size:13px;color:var(--color-text-tertiary);margin-top:4px}
+
+/* ── Tab Bar ── */
+.tabsWrapper{
+  background:var(--color-surface);border-bottom:1px solid var(--color-border);
+  flex-shrink:0;padding:0 24px;
+}
+.tabs{display:flex;gap:0}
+.tab{
+  padding:14px 20px;font-size:13px;font-weight:500;
+  color:var(--color-text-tertiary);border-bottom:2px solid transparent;
+  transition:all 0.15s;display:flex;align-items:center;gap:6px;
+  white-space:nowrap;
+}
+.tab:hover{color:var(--color-text-secondary);background:rgba(255,255,255,0.02)}
+.tab.active{color:var(--color-brand-indigo);border-bottom-color:var(--color-brand-indigo)}
+.tabIcon{font-size:15px}
+.tabCount{font-size:11px;color:var(--color-text-tertiary);background:var(--color-elevated);padding:1px 8px;border-radius:8px}
+
+/* ── Content Area ── */
+.content{flex:1;overflow-y:auto;padding:24px}
+.contentPanel{display:none}
+.contentPanel.active{display:block}
+
+/* ── Filter Bar ── */
+.filterBar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.filterBtn{
+  padding:5px 14px;border-radius:var(--radius-sm);font-size:12px;
+  background:var(--color-surface);border:1px solid var(--color-border);
+  color:var(--color-text-secondary);transition:all 0.1s;
+}
+.filterBtn:hover{border-color:var(--color-text-tertiary);color:var(--color-text-primary)}
+.filterBtn.active{background:var(--color-brand-indigo);color:#fff;border-color:var(--color-brand-indigo)}
+
+/* ── Search ── */
+.searchBox{
+  display:flex;align-items:center;gap:8px;
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:8px 14px;margin-bottom:16px;
+}
+.searchBox svg{flex-shrink:0;color:var(--color-text-tertiary)}
+.searchInput{flex:1;font-size:13px;color:var(--color-text-primary)}
+.searchInput::placeholder{color:var(--color-text-disabled)}
+.searchShortcut{font-size:11px;color:var(--color-text-tertiary);background:var(--color-elevated);padding:2px 8px;border-radius:4px}
+
+/* ── Character Grid ── */
+.charGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.charCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:16px;cursor:pointer;
+  transition:all 0.15s;position:relative;overflow:hidden;
+}
+.charCard:hover{border-color:var(--color-text-tertiary);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.charCardTop{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.charAvatar{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:16px;flex-shrink:0;
+}
+.charAvatar.protagonist{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+.charAvatar.ally{background:linear-gradient(135deg,#34d399,#059669);color:#fff}
+.charAvatar.neutral{background:linear-gradient(135deg,#6b7199,#3d4166);color:#fff}
+.charAvatar.opponent{background:linear-gradient(135deg,#fbbf24,#d97706);color:#111}
+.charAvatar.villain{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff}
+.charInfo{min-width:0}
+.charName{font-size:14px;font-weight:600;color:var(--color-text-primary)}
+.charRole{font-size:11px;color:var(--color-text-tertiary);margin-top:1px}
+.charChapters{
+  position:absolute;top:12px;right:12px;
+  font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono)
+}
+.charTags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.charTag{
+  padding:2px 8px;border-radius:4px;font-size:11px;
+  background:var(--color-elevated);color:var(--color-text-secondary);
+  border:1px solid var(--color-border-subtle);
+}
+.charStatus{
+  display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-tertiary)
+}
+.charStatusDot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── Timeline ── */
+.timelineList{display:flex;flex-direction:column;gap:0;padding-left:20px;border-left:2px solid var(--color-border)}
+.timelineItem{padding:14px 0 14px 16px;position:relative}
+.timelineItem::before{
+  content:'';position:absolute;left:-25px;top:18px;
+  width:10px;height:10px;border-radius:50%;background:var(--color-border);border:2px solid var(--color-elevated)
+}
+.timelineItem.completed::before{background:var(--color-success)}
+.timelineItem.current::before{background:var(--color-brand-indigo);box-shadow:0 0 0 4px rgba(99,102,241,0.2)}
+.timelineItem.future::before{background:transparent;border:2px solid var(--color-border)}
+.timelineDay{font-size:11px;color:var(--color-text-tertiary);font-weight:600;margin-bottom:2px}
+.timelineText{font-size:13px;color:var(--color-text-secondary)}
+.timelineItem.current .timelineText{color:var(--color-text-primary);font-weight:500}
+.timelineBadge{
+  display:inline-block;padding:1px 8px;border-radius:8px;
+  background:var(--color-brand-indigo-dim);color:var(--color-brand-indigo);
+  font-size:10px;font-weight:600;margin-left:6px
+}
+
+/* ── Foreshadow Cards ── */
+.foreshadowList{display:flex;flex-direction:column;gap:10px}
+.foreshadowCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:14px 16px;cursor:pointer;
+  transition:all 0.15s;
+}
+.foreshadowCard:hover{border-color:var(--color-text-tertiary);box-shadow:var(--shadow-sm)}
+.foreshadowCard.statusPending{border-left:3px solid var(--color-warning)}
+.foreshadowCard.statusRecovered{border-left:3px solid var(--color-success);opacity:0.6}
+.foreshadowCard.statusLost{border-left:3px solid var(--color-danger);opacity:0.5}
+.foreshadowCard.statusActive{border-left:3px solid var(--color-brand-indigo)}
+.foreshadowHeader{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:6px
+}
+.foreshadowLeft{display:flex;align-items:center;gap:10px}
+.urgencyDot{width:6px;height:6px;border-radius:50%}
+.urgencyDot.high{background:var(--color-danger)}
+.urgencyDot.medium{background:var(--color-warning)}
+.urgencyDot.low{background:var(--color-text-tertiary)}
+.foreshadowTitle{font-size:14px;font-weight:600;color:var(--color-text-primary)}
+.badge{font-size:10px;padding:1px 8px;border-radius:4px;font-weight:500}
+.badge.foreshadow{background:rgba(99,102,241,0.12);color:#818cf8}
+.badge.twist{background:rgba(168,85,247,0.12);color:#a855f7}
+.badge.advance{background:rgba(52,211,153,0.12);color:#34d399}
+.badge.wrap{background:rgba(251,191,36,0.12);color:#fbbf24}
+.statusBadge{font-size:11px;padding:2px 10px;border-radius:8px;font-weight:500}
+.statusBadge.pending{background:rgba(251,191,36,0.1);color:var(--color-warning)}
+.statusBadge.recovered{background:rgba(52,211,153,0.1);color:var(--color-success)}
+.statusBadge.lost{background:rgba(239,68,68,0.1);color:var(--color-danger)}
+.statusBadge.active{background:rgba(99,102,241,0.1);color:#818cf8}
+.foreshadowMeta{display:flex;gap:16px;font-size:11px;color:var(--color-text-tertiary);align-items:center}
+.foreshadowMeta span{display:flex;align-items:center;gap:4px}
+
+/* ── World Cards ── */
+.worldGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.worldCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:16px;transition:all 0.15s
+}
+.worldCard:hover{border-color:var(--color-text-tertiary)}
+.worldCardHeader{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.worldCardName{font-size:15px;font-weight:600;color:var(--color-text-primary)}
+.worldCardCat{
+  font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500
+}
+.worldCardCat.geo{background:rgba(99,102,241,0.1);color:var(--color-brand-indigo)}
+.worldCardCat.sys{background:rgba(52,211,153,0.1);color:var(--color-success)}
+.worldCardCat.his{background:rgba(251,191,36,0.1);color:var(--color-warning)}
+.worldCardDesc{font-size:12px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:10px}
+.worldCardTags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.worldCardFooter{font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono)}
+
+/* ── Card Manager ── */
+.cardManagerGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.cardManagerItem{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);padding:20px 16px;text-align:center;
+  transition:all 0.15s;cursor:pointer;position:relative;overflow:hidden
+}
+.cardManagerItem:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.cardManagerItem.legendary{border-color:rgba(212,168,67,0.3);background:linear-gradient(180deg,rgba(212,168,67,0.06),var(--color-surface))}
+.cardManagerItem.epic{border-color:rgba(168,85,247,0.25);background:linear-gradient(180deg,rgba(168,85,247,0.05),var(--color-surface))}
+.cardManagerItem.rare{border-color:rgba(103,232,249,0.2);background:linear-gradient(180deg,rgba(103,232,249,0.04),var(--color-surface))}
+.cardManagerItem.common{border-color:var(--color-border)}
+.cardRarityLabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.cardRarityLabel.legendary{color:var(--rarity-legendary)}
+.cardRarityLabel.epic{color:var(--rarity-epic)}
+.cardRarityLabel.rare{color:var(--rarity-rare)}
+.cardRarityLabel.common{color:var(--rarity-common)}
+.cardManagerIcon{font-size:28px;margin:8px 0}
+.cardManagerName{font-size:13px;font-weight:600;color:var(--color-text-primary)}
+.cardManagerDesc{font-size:11px;color:var(--color-text-tertiary);margin-top:4px;line-height:1.4}
+.cardManagerCount{font-size:10px;color:var(--color-text-tertiary);margin-top:8px}
+
+/* ── Empty State ── */
+.emptyState{
+  text-align:center;padding:60px 20px;color:var(--color-text-tertiary)
+}
+.emptyStateIcon{font-size:48px;margin-bottom:12px}
+.emptyStateText{font-size:14px;margin-bottom:4px}
+
+/* ── Back button ── */
+.backBtn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:6px 12px;border-radius:var(--radius-sm);
+  font-size:12px;color:var(--color-text-secondary);
+  background:var(--color-surface);border:1px solid var(--color-border);
+  transition:all 0.1s;
+}
+.backBtn:hover{color:var(--color-text-primary);border-color:var(--color-text-tertiary)}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── Page Header ── -->
+  <div class="pageHeader">
+    <div class="pageHeaderLeft">
+      <h1>四库管理</h1>
+      <p>管理小说中的角色、时间线、伏笔、世界观和卡牌</p>
+    </div>
+    <a href="#" class="backBtn">← 返回工作台</a>
+  </div>
+
+  <!-- ── Tab Bar ── -->
+  <div class="tabsWrapper">
+    <div class="tabs" id="tabBar">
+      <button class="tab active" data-tab="characters"><span class="tabIcon">👤</span> 人物库 <span class="tabCount">14</span></button>
+      <button class="tab" data-tab="timeline"><span class="tabIcon">⏳</span> 时间线库 <span class="tabCount">5</span></button>
+      <button class="tab" data-tab="foreshadowing"><span class="tabIcon">🎯</span> 伏笔库 <span class="tabCount">9</span></button>
+      <button class="tab" data-tab="worldview"><span class="tabIcon">🌍</span> 世界观库 <span class="tabCount">6</span></button>
+      <button class="tab" data-tab="cards"><span class="tabIcon">🃏</span> 卡牌管理 <span class="tabCount">8</span></button>
+    </div>
+  </div>
+
+  <!-- ── Content ── -->
+  <div class="content">
+
+    <!-- Tab 1: Characters -->
+    <div class="contentPanel active" id="panel-characters">
+      <div class="searchBox">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input class="searchInput" placeholder="搜索角色名称、标签...">
+        <span class="searchShortcut">Ctrl+K</span>
+      </div>
+      <div class="filterBar">
+        <button class="filterBtn active">全部 (14)</button>
+        <button class="filterBtn">主角 (1)</button>
+        <button class="filterBtn">盟友 (5)</button>
+        <button class="filterBtn">中立 (3)</button>
+        <button class="filterBtn">对手 (2)</button>
+        <button class="filterBtn">反派 (3)</button>
+      </div>
+      <div class="charGrid">
+        <div class="charCard">
+          <span class="charChapters">出场 23 章</span>
+          <div class="charCardTop">
+            <div class="charAvatar protagonist">苏</div>
+            <div class="charInfo">
+              <div class="charName">苏铭</div>
+              <div class="charRole">主角 · 水灵使</div>
+            </div>
+          </div>
+          <div class="charTags">
+            <span class="charTag">坚韧</span><span class="charTag">重情义</span><span class="charTag">天赋异禀</span><span class="charTag">直感型</span>
+          </div>
+          <div class="charStatus">
+            <span class="charStatusDot" style="background:var(--color-success)"></span>
+            宗门考核秘境中
+          </div>
+        </div>
+        <div class="charCard">
+          <span class="charChapters">出场 15 章</span>
+          <div class="charCardTop">
+            <div class="charAvatar ally">长</div>
+            <div class="charInfo">
+              <div class="charName">长风</div>
+              <div class="charRole">盟友 · 金灵使</div>
+            </div>
+          </div>
+          <div class="charTags">
+            <span class="charTag">沉稳</span><span class="charTag">博学</span><span class="charTag">神秘</span>
+          </div>
+          <div class="charStatus">
+            <span class="charStatusDot" style="background:var(--color-success)"></span>
+            与主角同行
+          </div>
+        </div>
+        <div class="charCard">
+          <span class="charChapters">出场 8 章</span>
+          <div class="charCardTop">
+            <div class="charAvatar ally">叶</div>
+            <div class="charInfo">
+              <div class="charName">叶灵溪</div>
+              <div class="charRole">盟友 · 木灵使</div>
+            </div>
+          </div>
+          <div class="charTags">
+            <span class="charTag">机敏</span><span class="charTag">毒舌</span><span class="charTag">医术</span>
+          </div>
+          <div class="charStatus">
+            <span class="charStatusDot" style="background:var(--color-success)"></span>
+            秘境中东区探索
+          </div>
+        </div>
+        <div class="charCard">
+          <span class="charChapters">出场 7 章</span>
+          <div class="charCardTop">
+            <div class="charAvatar opponent">楚</div>
+            <div class="charInfo">
+              <div class="charName">楚天行</div>
+              <div class="charRole">对手 · 金灵天才</div>
+            </div>
+          </div>
+          <div class="charTags">
+            <span class="charTag">傲慢</span><span class="charTag">世家</span><span class="charTag">争强好胜</span>
+          </div>
+          <div class="charStatus">
+            <span class="charStatusDot" style="background:var(--color-warning)"></span>
+            秘境南区竞争
+          </div>
+        </div>
+        <div class="charCard">
+          <span class="charChapters">出场 6 章</span>
+          <div class="charCardTop">
+            <div class="charAvatar villain">帝</div>
+            <div class="charInfo">
+              <div class="charName">帝师·冥渊</div>
+              <div class="charRole">反派 · 宗灵级</div>
+            </div>
+          </div>
+          <div class="charTags">
+            <span class="charTag">野心勃勃</span><span class="charTag">操控者</span><span class="charTag">融灵禁忌</span>
+          </div>
+          <div class="charStatus">
+            <span class="charStatusDot" style="background:var(--color-danger)"></span>
+            帝宫密室修炼
+          </div>
+        </div>
+        <div class="charCard">
+          <span class="charChapters">出场 5 章</span>
+          <div class="charCardTop">
+            <div class="charAvatar neutral">灵</div>
+            <div class="charInfo">
+              <div class="charName">灵脉师·无崖</div>
+              <div class="charRole">中立 · 灵力学者</div>
+            </div>
+          </div>
+          <div class="charTags">
+            <span class="charTag">超然</span><span class="charTag">洞察</span><span class="charTag">守序</span>
+          </div>
+          <div class="charStatus">
+            <span class="charStatusDot" style="background:var(--color-warning)"></span>
+            灵脉观测站
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Timeline -->
+    <div class="contentPanel" id="panel-timeline">
+      <div class="timelineList">
+        <div class="timelineItem completed">
+          <div class="timelineDay">第 1 天</div>
+          <div class="timelineText">主角觉醒灵力，在村中引发异象</div>
+        </div>
+        <div class="timelineItem completed">
+          <div class="timelineDay">第 3 天</div>
+          <div class="timelineText">离开村庄，跟随引路人前往王城</div>
+        </div>
+        <div class="timelineItem completed">
+          <div class="timelineDay">第 7 天</div>
+          <div class="timelineText">抵达王城，初遇宗门考核使</div>
+        </div>
+        <div class="timelineItem current">
+          <div class="timelineDay">第 15 天 <span class="timelineBadge">当前</span></div>
+          <div class="timelineText">宗门考核开始，进入试炼秘境</div>
+        </div>
+        <div class="timelineItem future">
+          <div class="timelineDay">第 20 天</div>
+          <div class="timelineText">考核结束，宗门入门仪式（未写）</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Foreshadowing -->
+    <div class="contentPanel" id="panel-foreshadowing">
+      <div class="filterBar">
+        <button class="filterBtn active">全部 (9)</button>
+        <button class="filterBtn">活跃 (4)</button>
+        <button class="filterBtn">待回收 (3)</button>
+        <button class="filterBtn">已回收 (1)</button>
+        <button class="filterBtn">遗落 (1)</button>
+      </div>
+      <div class="foreshadowList">
+        <div class="foreshadowCard statusPending">
+          <div class="foreshadowHeader">
+            <div class="foreshadowLeft">
+              <span class="urgencyDot high"></span>
+              <span class="foreshadowTitle">神秘玉佩</span>
+              <span class="badge foreshadow">伏笔</span>
+            </div>
+            <span class="statusBadge pending">待回收</span>
+          </div>
+          <div class="foreshadowMeta">
+            <span>📅 第3章 · 古墓探索</span>
+            <span>👤 主角、神秘老者</span>
+            <span>💡 建议第15-20章回收</span>
+          </div>
+        </div>
+        <div class="foreshadowCard statusActive">
+          <div class="foreshadowHeader">
+            <div class="foreshadowLeft">
+              <span class="urgencyDot medium"></span>
+              <span class="foreshadowTitle">金灵禁术残卷</span>
+              <span class="badge foreshadow">伏笔</span>
+            </div>
+            <span class="statusBadge active">活跃</span>
+          </div>
+          <div class="foreshadowMeta">
+            <span>📅 第7章 · 地下书阁</span>
+            <span>👤 主角、长风</span>
+            <span>💡 建议第18-22章回收</span>
+          </div>
+        </div>
+        <div class="foreshadowCard statusActive">
+          <div class="foreshadowHeader">
+            <div class="foreshadowLeft">
+              <span class="urgencyDot medium"></span>
+              <span class="foreshadowTitle">王城地下的异响</span>
+              <span class="badge twist">转折</span>
+            </div>
+            <span class="statusBadge active">活跃</span>
+          </div>
+          <div class="foreshadowMeta">
+            <span>📅 第10章 · 王城夜行</span>
+            <span>👤 主角</span>
+            <span>💡 建议第20-25章回收</span>
+          </div>
+        </div>
+        <div class="foreshadowCard statusActive">
+          <div class="foreshadowHeader">
+            <div class="foreshadowLeft">
+              <span class="urgencyDot low"></span>
+              <span class="foreshadowTitle">长风的真实身份</span>
+              <span class="badge advance">推进</span>
+            </div>
+            <span class="statusBadge active">活跃</span>
+          </div>
+          <div class="foreshadowMeta">
+            <span>📅 第5章 · 旅途对话</span>
+            <span>👤 长风</span>
+          </div>
+        </div>
+        <div class="foreshadowCard statusRecovered">
+          <div class="foreshadowHeader">
+            <div class="foreshadowLeft">
+              <span class="urgencyDot low"></span>
+              <span class="foreshadowTitle">客栈中的密语</span>
+              <span class="badge wrap">收束</span>
+            </div>
+            <span class="statusBadge recovered">已回收</span>
+          </div>
+          <div class="foreshadowMeta">
+            <span>📅 第8章已回收</span>
+            <span>暗号指向追杀者，主角恍然大悟</span>
+          </div>
+        </div>
+        <div class="foreshadowCard statusLost">
+          <div class="foreshadowHeader">
+            <div class="foreshadowLeft">
+              <span class="urgencyDot high"></span>
+              <span class="foreshadowTitle">断桥上的符文</span>
+              <span class="badge twist">转折</span>
+            </div>
+            <span class="statusBadge lost">遗落</span>
+          </div>
+          <div class="foreshadowMeta">
+            <span>📅 第6章 · 断桥遗迹</span>
+            <span>⚠ 后续剧情未再提及</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worldview -->
+    <div class="contentPanel" id="panel-worldview">
+      <div class="filterBar">
+        <button class="filterBtn active">全部 (6)</button>
+        <button class="filterBtn">地理 (3)</button>
+        <button class="filterBtn">体系 (2)</button>
+        <button class="filterBtn">历史 (1)</button>
+      </div>
+      <div class="worldGrid">
+        <div class="worldCard">
+          <div class="worldCardHeader">
+            <span class="worldCardName">玄天宗宗门</span>
+            <span class="worldCardCat geo">地理</span>
+          </div>
+          <div class="worldCardDesc">位于苍云山脉主峰，占地三百里。宗门分七峰十二堂，以剑道与符法闻名南疆。护山大阵每甲子重启一次。</div>
+          <div class="worldCardTags">
+            <span class="charTag">剑修发源地</span><span class="charTag">七峰十二堂</span><span class="charTag">护山大阵</span>
+          </div>
+          <div class="worldCardFooter">关联章节: 1-23 · 最后更新: 第14章</div>
+        </div>
+        <div class="worldCard">
+          <div class="worldCardHeader">
+            <span class="worldCardName">灵力体系</span>
+            <span class="worldCardCat sys">体系</span>
+          </div>
+          <div class="worldCardDesc">修炼分九境：凝气→筑基→开光→融合→心动→金丹→元婴→化神→渡劫。灵力属性分金木水火土五行。</div>
+          <div class="worldCardTags">
+            <span class="charTag">九境体系</span><span class="charTag">五行灵力</span><span class="charTag">变异属性</span>
+          </div>
+          <div class="worldCardFooter">关联章节: 3-21 · 最后更新: 第12章</div>
+        </div>
+        <div class="worldCard">
+          <div class="worldCardHeader">
+            <span class="worldCardName">后山禁地</span>
+            <span class="worldCardCat geo">地理</span>
+          </div>
+          <div class="worldCardDesc">宗门后山深处一处古老遗迹，被层层阵法封印。传闻每甲子阵眼松动，曾有弟子误入后再未归来。</div>
+          <div class="worldCardTags">
+            <span class="charTag">古老遗迹</span><span class="charTag">阵法封印</span>
+          </div>
+          <div class="worldCardFooter">关联章节: 12 · 最后更新: 第12章</div>
+        </div>
+        <div class="worldCard">
+          <div class="worldCardHeader">
+            <span class="worldCardName">七国局势</span>
+            <span class="worldCardCat his">历史</span>
+          </div>
+          <div class="worldCardDesc">帝国历1037年，大陆分裂为七国，中央帝国名存实亡。七国各据一条灵脉，暗流涌动，局势微妙。</div>
+          <div class="worldCardTags">
+            <span class="charTag">分裂局面</span><span class="charTag">灵脉争夺</span>
+          </div>
+          <div class="worldCardFooter">关联章节: 5-20 · 最后更新: 第9章</div>
+        </div>
+        <div class="worldCard">
+          <div class="worldCardHeader">
+            <span class="worldCardName">融灵禁术</span>
+            <span class="worldCardCat sys">体系</span>
+          </div>
+          <div class="worldCardDesc">禁忌之术，可融合不同灵力属性。修炼者九死一生，成功者可获得远超同境的战力，但需付出未知代价。</div>
+          <div class="worldCardTags">
+            <span class="charTag">禁忌</span><span class="charTag">双属性融合</span><span class="charTag">高风险</span>
+          </div>
+          <div class="worldCardFooter">关联章节: 7-15 · 最后更新: 第15章</div>
+        </div>
+        <div class="worldCard">
+          <div class="worldCardHeader">
+            <span class="worldCardName">第八条灵脉</span>
+            <span class="worldCardCat geo">地理</span>
+          </div>
+          <div class="worldCardDesc">古灵脉图上标注了八条灵脉，但当代只知七条。第八条灵脉的位置被刻意抹去，疑与主角身世有关。</div>
+          <div class="worldCardTags">
+            <span class="charTag">神秘</span><span class="charTag">消失的灵脉</span>
+          </div>
+          <div class="worldCardFooter">关联章节: 4 · 最后更新: 第4章</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Card Manager -->
+    <div class="contentPanel" id="panel-cards">
+      <div class="cardManagerGrid">
+        <div class="cardManagerItem legendary">
+          <div class="cardRarityLabel legendary">✦ 传说</div>
+          <div class="cardManagerIcon">🌟</div>
+          <div class="cardManagerName">天道觉醒</div>
+          <div class="cardManagerDesc">在生死绝境中触发隐藏血脉力量，灵力等级临时跃迁</div>
+          <div class="cardManagerCount">库存: 1</div>
+        </div>
+        <div class="cardManagerItem epic">
+          <div class="cardRarityLabel epic">✦ 史诗</div>
+          <div class="cardManagerIcon">🌀</div>
+          <div class="cardManagerName">命运转折</div>
+          <div class="cardManagerDesc">关键选择引发连锁反应，整个剧情走向发生改变</div>
+          <div class="cardManagerCount">库存: 2</div>
+        </div>
+        <div class="cardManagerItem epic">
+          <div class="cardRarityLabel epic">✦ 史诗</div>
+          <div class="cardManagerIcon">⚡</div>
+          <div class="cardManagerName">灵脉共鸣</div>
+          <div class="cardManagerDesc">与天地灵脉产生共鸣，短暂获得超越自身极限的力量</div>
+          <div class="cardManagerCount">库存: 1</div>
+        </div>
+        <div class="cardManagerItem rare">
+          <div class="cardRarityLabel rare">✦ 稀有</div>
+          <div class="cardManagerIcon">💫</div>
+          <div class="cardManagerName">意外援手</div>
+          <div class="cardManagerDesc">在关键时刻获得意料之外的强援帮助</div>
+          <div class="cardManagerCount">库存: 3</div>
+        </div>
+        <div class="cardManagerItem rare">
+          <div class="cardRarityLabel rare">✦ 稀有</div>
+          <div class="cardManagerIcon">⚔</div>
+          <div class="cardManagerName">临阵突破</div>
+          <div class="cardManagerDesc">在战斗中发现新力量，或掌握新的战斗技巧</div>
+          <div class="cardManagerCount">库存: 2</div>
+        </div>
+        <div class="cardManagerItem common">
+          <div class="cardRarityLabel common">✦ 普通</div>
+          <div class="cardManagerIcon">🔥</div>
+          <div class="cardManagerName">情绪爆发</div>
+          <div class="cardManagerDesc">长期压抑的情感在某个瞬间释放</div>
+          <div class="cardManagerCount">库存: 5</div>
+        </div>
+        <div class="cardManagerItem common">
+          <div class="cardRarityLabel common">✦ 普通</div>
+          <div class="cardManagerIcon">🌿</div>
+          <div class="cardManagerName">旧梦重现</div>
+          <div class="cardManagerDesc">触发过去的回忆，揭示隐藏信息</div>
+          <div class="cardManagerCount">库存: 4</div>
+        </div>
+        <div class="cardManagerItem common">
+          <div class="cardRarityLabel common">✦ 普通</div>
+          <div class="cardManagerIcon">🕯</div>
+          <div class="cardManagerName">暗影窥探</div>
+          <div class="cardManagerDesc">反派势力的暗中动作被主角察觉</div>
+          <div class="cardManagerCount">库存: 4</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// Simple tab switching
+document.getElementById('tabBar').addEventListener('click', function(e) {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  const tabName = tab.dataset.tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.contentPanel').forEach(p => p.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('panel-' + tabName).classList.add('active');
+});
+</script>
+
+</body>
+</html>

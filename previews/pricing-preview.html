@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 — 定价方案</title>
+<style>
+/* ═══ Reset ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0d0f1a;
+  color: #e8e9f0;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+:root {
+  --bg: #0d0f1a;
+  --surface: #151829;
+  --elevated: #111327;
+  --text-primary: #e8e9f0;
+  --text-secondary: #9ca3c4;
+  --text-tertiary: #6b7199;
+  --indigo: #6366f1;
+  --amber: #d4a843;
+  --border: #2a2d45;
+  --border-subtle: #1e2138;
+  --max-width: 1100px;
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px 80px;
+  min-height: 100vh;
+}
+
+/* ═══ Navigation ═══ */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 60px;
+}
+.nav-brand {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.nav-brand span { color: var(--indigo); }
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.nav-link {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-link:hover { color: var(--text-primary); }
+.nav-link.active { color: var(--text-primary); }
+.nav-btn {
+  padding: 8px 18px;
+  background: linear-gradient(135deg, var(--indigo), #4f46e5);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+.nav-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+
+/* ═══ Hero ═══ */
+.hero {
+  text-align: center;
+  padding: 0 0 48px;
+}
+.hero-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+.hero-desc {
+  font-size: 16px;
+  color: var(--text-secondary);
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ═══ Billing Toggle ═══ */
+.billing-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 48px;
+}
+.toggle-label {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+.toggle-label.active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.toggle-track {
+  position: relative;
+  width: 44px; height: 24px;
+  border-radius: 12px;
+  background: var(--border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-track.yearly { background: var(--indigo); }
+.toggle-knob {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  transition: transform 0.2s ease;
+}
+.toggle-track.yearly .toggle-knob { transform: translateX(20px); }
+.save-badge {
+  padding: 2px 8px;
+  background: rgba(99,102,241,0.12);
+  color: var(--indigo);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+/* ═══ Cards ═══ */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 64px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.card:hover { transform: translateY(-2px); }
+.card.popular {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
+}
+.popular-badge {
+  position: absolute;
+  top: -12px; left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 16px;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.plan-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.plan-desc {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 28px;
+}
+.price-currency { font-size: 16px; color: var(--text-tertiary); }
+.price-amount {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.price-period { font-size: 14px; color: var(--text-tertiary); }
+.price-original {
+  font-size: 13px;
+  color: #52525b;
+  text-decoration: line-through;
+  margin-left: 8px;
+  display: none;
+}
+.price-original.show { display: inline; }
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.feature-check {
+  width: 14px; height: 14px;
+  color: var(--indigo);
+  flex-shrink: 0;
+}
+.plan-cta {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  text-align: center;
+  font-family: inherit;
+  background: var(--border);
+  color: var(--text-secondary);
+}
+.plan-cta:hover { background: #3f3f46; }
+.plan-cta.primary {
+  background: linear-gradient(135deg, var(--indigo), #4f46e5);
+  color: #fff;
+}
+.plan-cta.primary:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+
+/* ═══ FAQ ═══ */
+.faq {
+  max-width: 700px;
+  margin: 0 auto;
+}
+.faq-title {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 32px;
+}
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.faq-item {
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.faq-question {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+.faq-question:hover { color: var(--indigo); }
+.faq-arrow {
+  transition: transform 0.3s ease;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.faq-item.open .faq-arrow { transform: rotate(180deg); }
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 0 24px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+}
+.faq-item.open .faq-answer {
+  max-height: 200px;
+  padding: 0 24px 20px;
+}
+
+/* ═══ Footer ═══ */
+.footer {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #52525b;
+}
+.footer-links {
+  display: flex;
+  gap: 20px;
+}
+.footer-link {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+.footer-link:hover { color: var(--text-secondary); }
+
+/* ═══ Responsive ═══ */
+@media (max-width: 768px) {
+  .cards { grid-template-columns: 1fr; }
+  .hero-title { font-size: 28px; }
+  .nav-links { gap: 12px; }
+  .nav-links a:not(.nav-btn) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- ═══ Navigation ═══ -->
+  <nav class="nav">
+    <div class="nav-brand"><span>墨</span>灵</div>
+    <div class="nav-links">
+      <a href="#" class="nav-link">首页</a>
+      <a href="#" class="nav-link active">定价</a>
+      <a href="#" class="nav-link">帮助</a>
+      <a href="#" class="nav-btn">开始创作</a>
+    </div>
+  </nav>
+
+  <!-- ═══ Hero ═══ -->
+  <section class="hero">
+    <h1 class="hero-title">选择适合你的创作方案</h1>
+    <p class="hero-desc">免费版让你体验核心功能，Pro 版释放全部创作力，企业版支持团队协作。</p>
+  </section>
+
+  <!-- ═══ Billing Toggle ═══ -->
+  <div class="billing-toggle" id="billing-toggle">
+    <span class="toggle-label active" data-cycle="monthly">月付</span>
+    <div class="toggle-track" id="toggle-track" onclick="toggleBilling()">
+      <div class="toggle-knob"></div>
+    </div>
+    <span class="toggle-label" data-cycle="yearly">年付</span>
+    <span class="save-badge">省 17%</span>
+  </div>
+
+  <!-- ═══ Cards ═══ -->
+  <div class="cards">
+    <!-- Free -->
+    <div class="card">
+      <div class="plan-name">免费版</div>
+      <div class="plan-desc">体验核心功能，开启创作之旅</div>
+      <div class="plan-price">
+        <span class="price-amount">0</span>
+        <span class="price-period">/月</span>
+      </div>
+      <ul class="features-list">
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          每日 3 次免费灵感抽卡
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          每月 30 次 AI 生文
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          基础四库管理（3 个项目）
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          暗色主题，极简编辑
+        </li>
+      </ul>
+      <button class="plan-cta" onclick="alert('注册墨灵免费版！')">免费开始</button>
+    </div>
+
+    <!-- Pro -->
+    <div class="card popular">
+      <div class="popular-badge">最受欢迎</div>
+      <div class="plan-name">专业版</div>
+      <div class="plan-desc">释放全部创作力，专注长篇网文</div>
+      <div class="plan-price">
+        <span class="price-currency">¥</span>
+        <span class="price-amount" id="pro-price">39</span>
+        <span class="price-period" id="pro-period">/月</span>
+        <span class="price-original" id="pro-original">¥468</span>
+      </div>
+      <ul class="features-list">
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          无限灵感抽卡
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          无限 AI 生文次数
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          高级四库管理（无限项目）
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          卡牌策略工坊（自定义稀有度）
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          优先技术支持
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          导出为多种格式
+        </li>
+      </ul>
+      <button class="plan-cta primary" onclick="alert('订阅专业版！')">立即订阅</button>
+    </div>
+
+    <!-- Enterprise -->
+    <div class="card">
+      <div class="plan-name">企业版</div>
+      <div class="plan-desc">团队协作，批量创作管理</div>
+      <div class="plan-price">
+        <span class="price-currency">¥</span>
+        <span class="price-amount" id="ent-price">99</span>
+        <span class="price-period" id="ent-period">/月</span>
+        <span class="price-original" id="ent-original">¥1188</span>
+      </div>
+      <ul class="features-list">
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          专业版全部功能
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          最多 20 名团队成员
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          共享卡牌池与四库
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          API 接口（定制对接）
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          专属客户成功经理
+        </li>
+        <li class="feature-item">
+          <svg class="feature-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          SSO + 高级权限控制
+        </li>
+      </ul>
+      <button class="plan-cta primary" onclick="alert('联系墨灵企业销售！')">联系销售</button>
+    </div>
+  </div>
+
+  <!-- ═══ FAQ ═══ -->
+  <section class="faq">
+    <h2 class="faq-title">常见问题</h2>
+    <div class="faq-list">
+      <div class="faq-item open">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          可以随时取消订阅吗？
+          <svg class="faq-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">是的，你可以随时取消。取消后，你将继续享受当前订阅周期内的服务，到期后自动降级为免费版。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          生成次数用完了怎么办？
+          <svg class="faq-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">免费版每月自动重置。如果你需要更多，可以升级到 Pro 或企业版获得无限生成次数。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          支持哪些支付方式？
+          <svg class="faq-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">我们支持支付宝、微信支付、银联和信用卡。所有支付均通过加密渠道处理，安全可靠。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          有学生优惠吗？
+          <svg class="faq-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">有的！在校学生可享受五折优惠。请使用教育邮箱注册或联系客服进行验证。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          使用 AI 生成的内容版权归谁？
+          <svg class="faq-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">所有由你使用墨灵创作的内容，版权完全归属于你。我们不会宣称对任何生成内容拥有所有权。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="#" class="footer-link">首页</a>
+      <a href="#" class="footer-link">定价</a>
+      <a href="#" class="footer-link">帮助</a>
+      <a href="#" class="footer-link">服务条款</a>
+      <a href="#" class="footer-link">隐私政策</a>
+    </div>
+    <div>&copy; 2026 墨灵 · AI 驱动的创作平台</div>
+  </footer>
+</div>
+
+<script>
+// Billing toggle
+let billing = 'monthly';
+
+function toggleBilling() {
+  billing = billing === 'monthly' ? 'yearly' : 'monthly';
+  document.getElementById('toggle-track').classList.toggle('yearly', billing === 'yearly');
+  document.querySelectorAll('.toggle-label').forEach(l => {
+    l.classList.toggle('active', l.dataset.cycle === billing);
+  });
+
+  const proPrice = document.getElementById('pro-price');
+  const proPeriod = document.getElementById('pro-period');
+  const proOriginal = document.getElementById('pro-original');
+  const entPrice = document.getElementById('ent-price');
+  const entPeriod = document.getElementById('ent-period');
+  const entOriginal = document.getElementById('ent-original');
+
+  if (billing === 'yearly') {
+    proPrice.textContent = '32';
+    proPeriod.textContent = '/月（年付）';
+    proOriginal.classList.add('show');
+    entPrice.textContent = '82';
+    entPeriod.textContent = '/月（年付）';
+    entOriginal.classList.add('show');
+  } else {
+    proPrice.textContent = '39';
+    proPeriod.textContent = '/月';
+    proOriginal.classList.remove('show');
+    entPrice.textContent = '99';
+    entPeriod.textContent = '/月';
+    entOriginal.classList.remove('show');
+  }
+}
+
+function toggleFaq(btn) {
+  const item = btn.parentElement;
+  item.classList.toggle('open');
+}
+</script>
+
+</body>
+</html>

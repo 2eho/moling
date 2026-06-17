@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 · 健康监控仪表盘</title>
+<style>
+:root {
+  --color-bg: #0d0f1a;
+  --color-surface: #151829;
+  --color-elevated: #111327;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #9ca3c4;
+  --color-text-tertiary: #6b7199;
+  --color-text-disabled: #3d4166;
+  --color-brand-indigo: #6366f1;
+  --color-brand-amber: #d4a843;
+  --color-brand-indigo-dim: rgba(99,102,241,0.12);
+  --color-brand-amber-dim: rgba(212,168,67,0.15);
+  --color-border: #2a2d45;
+  --color-border-subtle: #1e2138;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --color-success-dim: rgba(52,211,153,0.12);
+  --color-warning-dim: rgba(251,191,36,0.12);
+  --color-danger-dim: rgba(239,68,68,0.12);
+  --font-heading: 'Noto Serif SC', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.3);
+  --shadow-glow-green: 0 0 20px rgba(52,211,153,0.3);
+  --shadow-glow-yellow: 0 0 20px rgba(251,191,36,0.3);
+  --shadow-glow-red: 0 0 20px rgba(239,68,68,0.3);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow-x:hidden}
+body{
+  font-family:var(--font-body);background:var(--color-bg);
+  color:var(--color-text-primary);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--color-border);border-radius:3px}
+
+/* ── Page ── */
+.page{min-height:100vh;background:var(--color-bg);padding:24px}
+
+/* Header */
+.pageHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.pageHeaderLeft h1{font-family:var(--font-heading);font-size:22px;font-weight:700;color:var(--color-text-primary)}
+.pageHeaderLeft p{font-size:13px;color:var(--color-text-tertiary);margin-top:4px}
+.backBtn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:6px 14px;border-radius:var(--radius-sm);
+  font-size:12px;color:var(--color-text-secondary);
+  background:var(--color-surface);border:1px solid var(--color-border);
+  transition:all 0.1s;text-decoration:none
+}
+.backBtn:hover{color:var(--color-text-primary);border-color:var(--color-text-tertiary)}
+
+/* Health Banner */
+.healthBanner{
+  border-radius:var(--radius-lg);padding:24px 28px;margin-bottom:24px;
+  display:flex;align-items:center;gap:20px;
+  border:1px solid var(--color-border)
+}
+.healthBanner.green{
+  background:linear-gradient(135deg,rgba(52,211,153,0.06),rgba(52,211,153,0.01));
+  border-color:rgba(52,211,153,0.2);
+}
+.healthBanner.green .bannerIcon{background:rgba(52,211,153,0.12);color:var(--color-success)}
+.healthBanner.green .bannerLabel{color:var(--color-success)}
+
+.healthBanner.yellow{
+  background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.02));
+  border-color:rgba(251,191,36,0.25);
+}
+.healthBanner.yellow .bannerIcon{background:rgba(251,191,36,0.15);color:var(--color-warning)}
+.healthBanner.yellow .bannerLabel{color:var(--color-warning)}
+
+.healthBanner.red{
+  background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(239,68,68,0.02));
+  border-color:rgba(239,68,68,0.25);
+}
+.healthBanner.red .bannerIcon{background:rgba(239,68,68,0.15);color:var(--color-danger)}
+.healthBanner.red .bannerLabel{color:var(--color-danger)}
+
+.bannerIcon{
+  width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;flex-shrink:0
+}
+.bannerContent{min-width:0}
+.bannerLabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.bannerTitle{
+  font-family:var(--font-heading);font-size:18px;font-weight:700;
+  color:var(--color-text-primary);margin-bottom:4px
+}
+.bannerDesc{font-size:13px;color:var(--color-text-secondary);line-height:1.6}
+.bannerScore{
+  margin-left:auto;text-align:center;flex-shrink:0
+}
+.bannerScoreValue{font-family:var(--font-mono);font-size:36px;font-weight:700;color:var(--color-text-primary)}
+.bannerScoreLabel{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+
+/* Stats Grid */
+.statsRow{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:900px){.statsRow{grid-template-columns:1fr}}
+
+.statCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:20px
+}
+.statCardHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.statCardTitle{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.statCardBadge{font-size:11px;padding:2px 10px;border-radius:8px;font-weight:600}
+.statCardBadge.r1{background:rgba(239,68,68,0.1);color:var(--color-danger)}
+.statCardBadge.r2{background:rgba(251,191,36,0.1);color:var(--color-warning)}
+.statCardBadge.r3{background:rgba(99,102,241,0.1);color:var(--color-brand-indigo)}
+.statGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.statItem{background:var(--color-elevated);border-radius:var(--radius-sm);padding:12px}
+.statItemLabel{font-size:11px;color:var(--color-text-tertiary);margin-bottom:4px}
+.statItemValue{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--color-text-primary)}
+.statItemUnit{font-size:11px;color:var(--color-text-tertiary);margin-left:4px;font-weight:400}
+.statProgress{margin-top:8px}
+.statProgressBar{height:4px;background:var(--color-border-subtle);border-radius:2px;overflow:hidden}
+.statProgressFill{height:100%;border-radius:2px;transition:width 0.5s}
+.statItemFooter{font-size:10px;color:var(--color-text-tertiary);margin-top:4px;font-family:var(--font-mono)}
+
+/* Alert Section */
+.sectionTitle{
+  font-size:14px;font-weight:600;color:var(--color-text-primary);
+  margin-bottom:12px;display:flex;align-items:center;gap:8px
+}
+.sectionTitleCount{
+  font-size:11px;color:var(--color-text-tertiary);
+  background:var(--color-elevated);padding:2px 8px;border-radius:8px;font-weight:400
+}
+
+.alertList{display:flex;flex-direction:column;gap:8px}
+.alertCard{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:16px;display:flex;align-items:flex-start;gap:14px;
+  transition:all 0.1s
+}
+.alertCard:hover{border-color:var(--color-text-tertiary)}
+.alertSeverity{
+  width:36px;height:36px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0
+}
+.alertSeverity.r1{background:rgba(239,68,68,0.12);color:var(--color-danger);box-shadow:0 0 12px rgba(239,68,68,0.15)}
+.alertSeverity.r2{background:rgba(251,191,36,0.12);color:var(--color-warning)}
+.alertSeverity.r3{background:rgba(99,102,241,0.12);color:var(--color-brand-indigo)}
+.alertContent{min-width:0;flex:1}
+.alertHeader{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.alertTitle{font-size:13px;font-weight:600;color:var(--color-text-primary)}
+.alertLevel{
+  font-size:10px;padding:1px 8px;border-radius:4px;font-weight:700;text-transform:uppercase
+}
+.alertLevel.r1{background:rgba(239,68,68,0.12);color:var(--color-danger)}
+.alertLevel.r2{background:rgba(251,191,36,0.12);color:var(--color-warning)}
+.alertLevel.r3{background:rgba(99,102,241,0.1);color:var(--color-brand-indigo)}
+.alertDesc{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:6px}
+.alertMeta{display:flex;gap:16px;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap}
+.alertMetaItem{display:flex;align-items:center;gap:4px}
+.alertAction{
+  margin-left:auto;flex-shrink:0;
+  padding:6px 14px;border-radius:var(--radius-sm);
+  font-size:12px;color:var(--color-text-secondary);
+  background:var(--color-elevated);border:1px solid var(--color-border);
+  transition:all 0.1s;white-space:nowrap
+}
+.alertAction:hover{color:var(--color-text-primary);border-color:var(--color-text-tertiary)}
+
+/* Chapter Health Table */
+.chapterHealth{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden}
+.chapterHealth table{width:100%;border-collapse:collapse}
+.chapterHealth th{
+  padding:10px 14px;text-align:left;font-size:11px;font-weight:700;
+  color:var(--color-text-tertiary);background:var(--color-elevated);
+  border-bottom:1px solid var(--color-border)
+}
+.chapterHealth td{padding:10px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:12px;color:var(--color-text-secondary)}
+.chapterHealth tr:hover td{background:rgba(255,255,255,0.01)}
+.healthDot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.healthDot.green{background:var(--color-success);box-shadow:0 0 6px rgba(52,211,153,0.4)}
+.healthDot.yellow{background:var(--color-warning);box-shadow:0 0 6px rgba(251,191,36,0.4)}
+.healthDot.red{background:var(--color-danger);box-shadow:0 0 6px rgba(239,68,68,0.4)}
+.alertCount{font-family:var(--font-mono);font-size:11px;font-weight:600}
+.alertCount.red{color:var(--color-danger)}
+.alertCount.yellow{color:var(--color-warning)}
+
+/* Empty state */
+.emptyState{text-align:center;padding:40px 20px;color:var(--color-text-tertiary)}
+.emptyStateIcon{font-size:36px;margin-bottom:8px}
+
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* Switch Banner Demo */
+.bannerSwitcher{display:flex;gap:8px;margin-bottom:16px}
+.bannerSwitch{
+  padding:6px 16px;border-radius:var(--radius-sm);font-size:12px;
+  background:var(--color-surface);border:1px solid var(--color-border);
+  color:var(--color-text-secondary);transition:all 0.1s
+}
+.bannerSwitch:hover{border-color:var(--color-text-tertiary)}
+.bannerSwitch.active{background:var(--color-brand-indigo);color:#fff;border-color:var(--color-brand-indigo)}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── Page Header ── -->
+  <div class="pageHeader">
+    <div class="pageHeaderLeft">
+      <h1>健康监控仪表盘</h1>
+      <p>监控项目中所有子情节的健康状态，包含 R1（严重）、R2（警告）和 R3（信息）级别的告警</p>
+    </div>
+    <a href="#" class="backBtn">← 返回工作台</a>
+  </div>
+
+  <!-- Banner Switcher -->
+  <div class="bannerSwitcher">
+    <button class="bannerSwitch active" onclick="switchBanner('green')">🟢 正常</button>
+    <button class="bannerSwitch" onclick="switchBanner('yellow')">🟡 注意</button>
+    <button class="bannerSwitch" onclick="switchBanner('red')">🔴 严重</button>
+  </div>
+
+  <!-- ── Health Status Banner ── -->
+  <div class="healthBanner green" id="healthBanner">
+    <div class="bannerIcon pulse">✓</div>
+    <div class="bannerContent">
+      <div class="bannerLabel">整体健康状态</div>
+      <div class="bannerTitle">项目整体健康，运行稳定</div>
+      <div class="bannerDesc">
+        所有核心指标在正常范围内。伏笔回收率 78.9%，秘密债务均值 24（< 阈值 30）。最近一次同步在 2 分钟前。
+      </div>
+    </div>
+    <div class="bannerScore">
+      <div class="bannerScoreValue">92</div>
+      <div class="bannerScoreLabel">健康评分</div>
+    </div>
+  </div>
+
+  <!-- ── Stats Row ── -->
+  <div class="statsRow">
+    <!-- R1: Critical -->
+    <div class="statCard">
+      <div class="statCardHeader">
+        <span class="statCardTitle" style="color:var(--color-danger)">R1 · 严重告警</span>
+        <span class="statCardBadge r1">1</span>
+      </div>
+      <div class="statGrid">
+        <div class="statItem">
+          <div class="statItemLabel">冲突角色数</div>
+          <div class="statItemValue">3<span class="statItemUnit">人</span></div>
+          <div class="statItemFooter">苏铭·冥渊·楚天行</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">断桥符文</div>
+          <div class="statItemValue" style="color:var(--color-danger)">遗落</div>
+          <div class="statItemFooter">第6章伏笔未回收</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">秘密债务</div>
+          <div class="statItemValue" style="color:var(--color-danger)">45</div>
+          <div class="statProgress">
+            <div class="statProgressBar"><div class="statProgressFill" style="width:90%;background:linear-gradient(90deg,#fbbf24,#ef4444)"></div></div>
+          </div>
+          <div class="statItemFooter">天象核心 · 建议揭露</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">冲突指标</div>
+          <div class="statItemValue">2<span class="statItemUnit">处</span></div>
+          <div class="statItemFooter">需作者介入</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- R2: Warning -->
+    <div class="statCard">
+      <div class="statCardHeader">
+        <span class="statCardTitle" style="color:var(--color-warning)">R2 · 警告</span>
+        <span class="statCardBadge r2">3</span>
+      </div>
+      <div class="statGrid">
+        <div class="statItem">
+          <div class="statItemLabel">活跃伏笔</div>
+          <div class="statItemValue">4<span class="statItemUnit">个</span></div>
+          <div class="statItemFooter">2个待回收 · 2个活跃</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">回收率</div>
+          <div class="statItemValue">78.9<span class="statItemUnit">%</span></div>
+          <div class="statProgress">
+            <div class="statProgressBar"><div class="statProgressFill" style="width:78.9%;background:linear-gradient(90deg,var(--color-brand-indigo),var(--color-success))"></div></div>
+          </div>
+          <div class="statItemFooter">目标 ≥ 80%</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">角色出场不均</div>
+          <div class="statItemValue" style="color:var(--color-warning)">中等</div>
+          <div class="statItemFooter">寒月 4章 · 主角 23章</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">节奏偏差</div>
+          <div class="statItemValue">2<span class="statItemUnit">章</span></div>
+          <div class="statItemFooter">Ch.9-10 过快</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- R3: Info -->
+    <div class="statCard">
+      <div class="statCardHeader">
+        <span class="statCardTitle" style="color:var(--color-brand-indigo)">R3 · 信息</span>
+        <span class="statCardBadge r3">5</span>
+      </div>
+      <div class="statGrid">
+        <div class="statItem">
+          <div class="statItemLabel">总字数</div>
+          <div class="statItemValue">124,800<span class="statItemUnit">字</span></div>
+          <div class="statProgress">
+            <div class="statProgressBar"><div class="statProgressFill" style="width:62.4%;background:var(--color-brand-indigo)"></div></div>
+          </div>
+          <div class="statItemFooter">目标 200,000</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">已完成章节</div>
+          <div class="statItemValue">23 / 40<span class="statItemUnit">章</span></div>
+          <div class="statItemFooter">进度 57.5%</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">活跃角色</div>
+          <div class="statItemValue">14<span class="statItemUnit">人</span></div>
+          <div class="statItemFooter">1主 · 5盟 · 3中 · 5反</div>
+        </div>
+        <div class="statItem">
+          <div class="statItemLabel">世界观条目</div>
+          <div class="statItemValue">6<span class="statItemUnit">项</span></div>
+          <div class="statItemFooter">地理3 · 体系2 · 历史1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Alert List ── -->
+  <div class="sectionTitle">
+    活跃告警
+    <span class="sectionTitleCount">3 条</span>
+  </div>
+  <div class="alertList">
+    <!-- R1 Alert -->
+    <div class="alertCard">
+      <div class="alertSeverity r1">!</div>
+      <div class="alertContent">
+        <div class="alertHeader">
+          <span class="alertTitle">伏笔遗落 — 断桥上的符文</span>
+          <span class="alertLevel r1">R1</span>
+        </div>
+        <div class="alertDesc">
+          第6章在断桥遗迹看到的古老符文，后续 17 章内未再提及。此伏笔关联「第八条灵脉」主线，遗落将导致世界观设定断裂。建议在近期章节补充呼应或标记为废弃。
+        </div>
+        <div class="alertMeta">
+          <span class="alertMetaItem">📅 第6章埋设</span>
+          <span class="alertMetaItem">⏳ 已搁置 17 章</span>
+          <span class="alertMetaItem">📊 影响: 世界观连续性</span>
+          <span class="alertMetaItem">💡 建议: 第18章提及或标记废弃</span>
+        </div>
+      </div>
+      <button class="alertAction">修复</button>
+    </div>
+
+    <!-- R2 Alert 1 -->
+    <div class="alertCard">
+      <div class="alertSeverity r2">!</div>
+      <div class="alertContent">
+        <div class="alertHeader">
+          <span class="alertTitle">秘密债务超标 — 天象核心</span>
+          <span class="alertLevel r2">R2</span>
+        </div>
+        <div class="alertDesc">
+          秘密「天象核心是一把钥匙」自第4章埋设至今已过 12 章，仅 2 位角色知情。当前债务值 45，超出建议阈值 30。建议在第16章安排揭露事件，否则读者遗忘风险增大。
+        </div>
+        <div class="alertMeta">
+          <span class="alertMetaItem">🔐 绝对秘密</span>
+          <span class="alertMetaItem">⚠ 债务 45 / 30</span>
+          <span class="alertMetaItem">👤 知情: 林夜 · 青袍老者</span>
+          <span class="alertMetaItem">💡 建议第16章揭露</span>
+        </div>
+      </div>
+      <button class="alertAction">查看详情</button>
+    </div>
+
+    <!-- R2 Alert 2 -->
+    <div class="alertCard">
+      <div class="alertSeverity r2">!</div>
+      <div class="alertContent">
+        <div class="alertHeader">
+          <span class="alertTitle">角色出场严重不均</span>
+          <span class="alertLevel r2">R2</span>
+        </div>
+        <div class="alertDesc">
+          角色「寒月」近 10 章仅出场 2 次，「顾云栖」在近 12 章中无任何戏份。作为已确立的对手和盟友角色，长期缺席可能导致角色线松散。建议安排支线或合线。
+        </div>
+        <div class="alertMeta">
+          <span class="alertMetaItem">👤 寒月: 4章 · 距上次 10章</span>
+          <span class="alertMetaItem">👤 顾云栖: 3章 · 距上次 12章</span>
+          <span class="alertMetaItem">💡 建议: 支线或合线</span>
+        </div>
+      </div>
+      <button class="alertAction">规划支线</button>
+    </div>
+
+    <!-- R3 Alert -->
+    <div class="alertCard">
+      <div class="alertSeverity r3">i</div>
+      <div class="alertContent">
+        <div class="alertHeader">
+          <span class="alertTitle">建议增加角色背景补充</span>
+          <span class="alertLevel r3">R3</span>
+        </div>
+        <div class="alertDesc">
+          「醉道人」「商会主·柳如烟」仅出场 2-3 章，且缺乏详细的背景设定。建议在后续场景中适当补充角色弧线和动机，增强故事厚度。
+        </div>
+        <div class="alertMeta">
+          <span class="alertMetaItem">📋 信息提示</span>
+          <span class="alertMetaItem">👤 2 个角色待补充</span>
+        </div>
+      </div>
+      <button class="alertAction">前往编辑</button>
+    </div>
+
+    <div class="alertCard" style="opacity:0.5;border-left:3px solid var(--color-success)">
+      <div class="alertSeverity" style="background:rgba(52,211,153,0.12);color:var(--color-success)">✓</div>
+      <div class="alertContent">
+        <div class="alertHeader">
+          <span class="alertTitle">伏笔「客栈密语」已成功回收</span>
+          <span class="alertLevel r3" style="background:rgba(52,211,153,0.1);color:var(--color-success)">已解决</span>
+        </div>
+        <div class="alertDesc">
+          第2章埋设的客栈密语伏笔在第8章获得成功回收，主角在遭遇伏击时识破暗号，读者反馈良好。回收质量评分: 9.2/10。
+        </div>
+        <div class="alertMeta">
+          <span class="alertMetaItem">📅 回收于第8章</span>
+          <span class="alertMetaItem">⭐ 回收评分 9.2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Chapter Health Overview ── -->
+  <div class="sectionTitle" style="margin-top:24px">
+    章节健康概览
+    <span class="sectionTitleCount">最近 5 章</span>
+  </div>
+  <div class="chapterHealth">
+    <table>
+      <thead>
+        <tr>
+          <th>章节</th>
+          <th>健康状态</th>
+          <th>R1 告警</th>
+          <th>R2 告警</th>
+          <th>R3 提示</th>
+          <th>伏笔操作</th>
+          <th>角色出场</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:600">第15章 · 秘境试炼</td>
+          <td><span class="healthDot green"></span>健康</td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount">1</span></td>
+          <td>新增: 秘境规则</td>
+          <td>6人 (含新增2人)</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">第14章 · 初入王城</td>
+          <td><span class="healthDot green"></span>健康</td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount">—</span></td>
+          <td>引用: 金灵禁术残卷</td>
+          <td>5人</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">第13章 · 暗流涌动</td>
+          <td><span class="healthDot yellow"></span>注意</td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount red">1</span></td>
+          <td><span class="alertCount">1</span></td>
+          <td>新增: 冥渊密谋</td>
+          <td>4人</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">第12章 · 地下城</td>
+          <td><span class="healthDot green"></span>健康</td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount">—</span></td>
+          <td>新增: 融灵禁术详述</td>
+          <td>7人</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">第11章 · 初识同门</td>
+          <td><span class="healthDot yellow"></span>注意</td>
+          <td><span class="alertCount">—</span></td>
+          <td><span class="alertCount yellow">2</span></td>
+          <td><span class="alertCount">1</span></td>
+          <td>—</td>
+          <td>3人 (偏少)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+function switchBanner(level) {
+  const banner = document.getElementById('healthBanner');
+  const buttons = document.querySelectorAll('.bannerSwitch');
+
+  buttons.forEach(b => b.classList.remove('active'));
+
+  banner.className = 'healthBanner ' + level;
+
+  if (level === 'green') {
+    banner.innerHTML = `
+      <div class="bannerIcon pulse">✓</div>
+      <div class="bannerContent">
+        <div class="bannerLabel">整体健康状态</div>
+        <div class="bannerTitle">项目整体健康，运行稳定</div>
+        <div class="bannerDesc">所有核心指标在正常范围内。伏笔回收率 78.9%，秘密债务均值 24（< 阈值 30）。</div>
+      </div>
+      <div class="bannerScore">
+        <div class="bannerScoreValue">92</div>
+        <div class="bannerScoreLabel">健康评分</div>
+      </div>
+    `;
+    document.querySelectorAll('.bannerSwitch')[0].classList.add('active');
+  } else if (level === 'yellow') {
+    banner.innerHTML = `
+      <div class="bannerIcon pulse">⚠</div>
+      <div class="bannerContent">
+        <div class="bannerLabel">整体健康状态</div>
+        <div class="bannerTitle">存在 3 项需关注的警告</div>
+        <div class="bannerDesc">秘密债务「天象核心」超标（45/30），伏笔「断桥符文」遗落，角色出场分布不均。</div>
+      </div>
+      <div class="bannerScore">
+        <div class="bannerScoreValue">71</div>
+        <div class="bannerScoreLabel">健康评分</div>
+      </div>
+    `;
+    document.querySelectorAll('.bannerSwitch')[1].classList.add('active');
+  } else if (level === 'red') {
+    banner.innerHTML = `
+      <div class="bannerIcon pulse">!</div>
+      <div class="bannerContent">
+        <div class="bannerLabel">整体健康状态</div>
+        <div class="bannerTitle">严重告警：1 项伏笔遗落 + 秘密债务超标</div>
+        <div class="bannerDesc">「天象核心」秘密债务达 45，远超阈值 30。「断桥符文」伏笔已搁置 17 章，可能造成世界观断裂。请尽快干预。</div>
+      </div>
+      <div class="bannerScore">
+        <div class="bannerScoreValue">48</div>
+        <div class="bannerScoreLabel">健康评分</div>
+      </div>
+    `;
+    document.querySelectorAll('.bannerSwitch')[2].classList.add('active');
+  }
+}
+</script>
+
+</body>
+</html>

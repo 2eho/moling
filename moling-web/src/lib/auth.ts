@@ -77,6 +77,8 @@ export function clearAuth(): void {
  * Returns `false` if no token exists, the token is malformed, or it is expired.
  */
 export function isAuthenticated(): boolean {
+  // ✅ DEV MODE: skip all auth checks locally
+  if (process.env.NEXT_PUBLIC_SKIP_AUTH === "true") return true;
   const token = getAccessToken();
   if (!token) return false;
 
