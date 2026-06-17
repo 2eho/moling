@@ -120,8 +120,28 @@ export default function SettingsPage() {
 
     loadSettings();
     // Load mock storage stats
+    // TODO: 从 API 获取真实数据，当前使用 Mock 数据
     setStorageStats({ totalWords: 1284500, projects: 3, chapters: 47, cards: 18 });
   }, [showMessage]);
+
+  // 应用强调色到 CSS 变量
+  useEffect(() => {
+    document.documentElement.style.setProperty('--color-brand-indigo', accentColor);
+  }, [accentColor]);
+
+  // 主题模式即时切换
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.setAttribute('data-theme', 'dark');
+    } else if (theme === 'light') {
+      root.setAttribute('data-theme', 'light');
+    } else {
+      // system
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    }
+  }, [theme]);
 
   const handleSaveGlobalSettings = async () => {
     setSaving(true);
@@ -165,7 +185,7 @@ export default function SettingsPage() {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      showMessage('success', '头像已上传（模拟）');
+      showMessage('info', '头像上传功能即将上线');
     }
   };
 

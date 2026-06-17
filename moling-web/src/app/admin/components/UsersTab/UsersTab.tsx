@@ -287,7 +287,7 @@ export default function UsersTab() {
                       <button
                         className={parentStyles.tableActionBtn}
                         disabled={actingUserId === u.id}
-                        onClick={() => {}}
+                        onClick={() => showToast("info", "编辑用户功能即将上线")}
                       >
                         编辑
                       </button>

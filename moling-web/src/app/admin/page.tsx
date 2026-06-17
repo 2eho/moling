@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { showToast } from "@/components/ui/Toast";
 import styles from "./admin.module.css";
 import OverviewTab from "./components/OverviewTab/OverviewTab";
 import UsersTab from "./components/UsersTab/UsersTab";
@@ -70,7 +71,7 @@ function LlmConfigIcon() {
 }
 
 export default function AdminPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -164,7 +165,7 @@ export default function AdminPage() {
 
         <div className={styles.sidebarFooter}>
           <div className={styles.sidebarNavSection}>
-            <div className={styles.sidebarNavItem} data-tooltip="系统设置">
+            <div className={styles.sidebarNavItem} data-tooltip="系统设置" onClick={() => router.push('/settings')}>
               <span className={styles.sidebarNavIcon}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3"/>
@@ -173,7 +174,7 @@ export default function AdminPage() {
               </span>
               <span className={styles.sidebarNavText}>系统设置</span>
             </div>
-            <div className={styles.sidebarNavItem} data-tooltip="退出登录">
+            <div className={styles.sidebarNavItem} data-tooltip="退出登录" onClick={logout}>
               <span className={styles.sidebarNavIcon}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -206,13 +207,13 @@ export default function AdminPage() {
           <div className={styles.headerCenter}></div>
 
           <div className={styles.headerRight}>
-            <button className={styles.headerIconBtn} aria-label="搜索">
+            <button className={styles.headerIconBtn} aria-label="搜索" onClick={() => showToast("info", "搜索功能即将上线")}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M12 12l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
             </button>
-            <button className={styles.headerIconBtn} aria-label="通知">
+            <button className={styles.headerIconBtn} aria-label="通知" onClick={() => router.push('/notifications')}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 1.5a5.5 5.5 0 00-5.5 5.5v3l-1.5 2.5h14l-1.5-2.5V7A5.5 5.5 0 009 1.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
                 <path d="M6.5 13.5a2.5 2.5 0 005 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -348,6 +349,10 @@ function PaymentsContent() {
   const [paymentFilterTab, setPaymentFilterTab] = useState("全部");
   const paymentFilterTabs = ["全部", "已支付", "待支付", "已退款", "失败"];
 
+  const [dateFilter, setDateFilter] = useState("日期范围");
+  const [paymentSearch, setPaymentSearch] = useState("");
+  const [paymentPage, setPaymentPage] = useState(1);
+
   const payments = [
     { order: "ORD-2025-001", user: "张三", amount: "¥99.00", method: "微信支付", status: "paid" as const, time: "2025-06-10 14:30" },
     { order: "ORD-2025-002", user: "李四", amount: "¥199.00", method: "支付宝", status: "paid" as const, time: "2025-06-10 13:20" },
@@ -382,14 +387,14 @@ function PaymentsContent() {
               onClick={() => setPaymentFilterTab(t)}>{t}</button>
           ))}
         </div>
-        <select className={styles.filterSelect}><option>日期范围</option><option>今天</option><option>本周</option><option>本月</option><option>自定义</option></select>
+        <select className={styles.filterSelect} value={dateFilter} onChange={e => setDateFilter(e.target.value)}><option>日期范围</option><option>今天</option><option>本周</option><option>本月</option><option>自定义</option></select>
         <div className={styles.filterSearchWrap}>
           <span className={styles.filterSearchIcon}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           </span>
-          <input className={styles.filterSearch} type="text" placeholder="搜索订单号/用户..." />
+          <input className={styles.filterSearch} type="text" placeholder="搜索订单号/用户..." value={paymentSearch} onChange={e => setPaymentSearch(e.target.value)} />
         </div>
       </div>
 
@@ -415,7 +420,7 @@ function PaymentsContent() {
                 <td style={{color:"var(--color-text-secondary)"}}>{p.method}</td>
                 <td>{badgeForStatus(p.status)}</td>
                 <td style={{color:"var(--color-text-secondary)"}}>{p.time}</td>
-                <td><button className={styles.tableActionBtn}>详情</button></td>
+                <td><button className={styles.tableActionBtn} onClick={() => showToast("info", "查看详情功能即将上线")}>详情</button></td>
               </tr>
             ))}
           </tbody>
@@ -423,13 +428,21 @@ function PaymentsContent() {
         <div className={styles.tablePagination}>
           <span className={styles.paginationInfo}>显示 1-5 条，共 128 条</span>
           <div className={styles.paginationBtns}>
-            <button className={styles.paginationBtnDisabled}>‹</button>
-            <button className={styles.paginationBtnActive}>1</button>
-            <button className={styles.paginationBtn}>2</button>
-            <button className={styles.paginationBtn}>3</button>
-            <button className={styles.paginationBtn}>⋯</button>
-            <button className={styles.paginationBtn}>26</button>
-            <button className={styles.paginationBtn}>›</button>
+            <button
+              className={paymentPage <= 1 ? styles.paginationBtnDisabled : styles.paginationBtn}
+              disabled={paymentPage <= 1}
+              onClick={() => setPaymentPage(p => Math.max(1, p - 1))}
+            >‹</button>
+            <button className={paymentPage === 1 ? styles.paginationBtnActive : styles.paginationBtn} onClick={() => setPaymentPage(1)}>1</button>
+            <button className={paymentPage === 2 ? styles.paginationBtnActive : styles.paginationBtn} onClick={() => setPaymentPage(2)}>2</button>
+            <button className={paymentPage === 3 ? styles.paginationBtnActive : styles.paginationBtn} onClick={() => setPaymentPage(3)}>3</button>
+            <button className={styles.paginationBtn} style={{cursor:"default",color:"var(--color-text-disabled)"}}>⋯</button>
+            <button className={paymentPage === 26 ? styles.paginationBtnActive : styles.paginationBtn} onClick={() => setPaymentPage(26)}>26</button>
+            <button
+              className={paymentPage >= 26 ? styles.paginationBtnDisabled : styles.paginationBtn}
+              disabled={paymentPage >= 26}
+              onClick={() => setPaymentPage(p => Math.min(26, p + 1))}
+            >›</button>
           </div>
         </div>
       </div>

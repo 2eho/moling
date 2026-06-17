@@ -820,7 +820,11 @@ export default function VaultsPage() {
         ))}
       </div>
       <div className={styles.dCharacterGrid}>
-        {filteredChars.map((char) => (
+        {(() => {
+          const searchedCharacters = searchQuery
+            ? filteredChars.filter(c => c.name.includes(searchQuery))
+            : filteredChars;
+          return searchedCharacters.map((char) => (
           <div
             key={char.name}
             className={styles.dCharacterCard}
@@ -846,7 +850,12 @@ export default function VaultsPage() {
             </div>
           </div>
         ))}
-        <button className={styles.dAddCharacterBtn} onClick={() => showToast("success", "添加角色功能开发中")}>
+        )()}
+        <button className={styles.dAddCharacterBtn} onClick={async () => {
+  const name = window.prompt("请输入角色名称：");
+  if (!name || !name.trim()) return;
+  showToast("info", `添加角色「${name.trim()}」功能待对接后端`);
+}}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
@@ -1030,8 +1039,8 @@ export default function VaultsPage() {
               <div key={i} className={styles.dMemoryItem}>
                 <span className={styles.dMemoryItemText}>{item.text}</span>
                 <div className={styles.dMemoryItemActions}>
-                  <button className={styles.dActionBtn} title="编辑">✏️</button>
-                  <button className={`${styles.dActionBtn} ${styles.danger}`} title="删除">🗑</button>
+                  <button className={styles.dActionBtn} title="编辑" onClick={(e) => { e.stopPropagation(); showToast("info", "编辑功能即将上线"); }}>✏️</button>
+                  <button className={`${styles.dActionBtn} ${styles.danger}`} title="删除" onClick={(e) => { e.stopPropagation(); showToast("info", "删除功能即将上线"); }}>🗑</button>
                 </div>
               </div>
             ))}
@@ -1420,12 +1429,12 @@ export default function VaultsPage() {
       {/* Bottom Nav */}
       <div className={styles.mBottomNav}>
         {[
-          { icon: "🏠", label: "首页" },
-          { icon: "📖", label: "作品", active: true },
-          { icon: "✏️", label: "创作" },
-          { icon: "👤", label: "我的" },
+          { icon: "🏠", label: "首页", onClick: () => router.push('/projects') },
+          { icon: "📖", label: "作品", onClick: () => router.push('/projects'), active: true },
+          { icon: "✏️", label: "创作", onClick: () => router.push(`/workspace/${projectId}`) },
+          { icon: "👤", label: "我的", onClick: () => router.push('/settings') },
         ].map((item, i) => (
-          <div key={i} className={`${styles.mNavItem} ${i === 1 ? styles.active : ""}`}>
+          <div key={i} className={`${styles.mNavItem} ${i === 1 ? styles.active : ""}`} onClick={item.onClick}>
             <span className={styles.mNavIcon}>{item.icon}</span>
             <span className={styles.mNavLabel}>{item.label}</span>
           </div>
