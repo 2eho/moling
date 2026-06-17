@@ -121,15 +121,14 @@ function generateRequestId(): string {
 }
 
 function getBaseUrl(): string {
-  // 使用相对路径，由 Nginx 反代到后端
+  // 使用相对路径，由 Next.js rewrite dev 或 Nginx 反代到后端
   // 优先级: NEXT_PUBLIC_API_BASE_URL > 相对路径 fallback
   const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (envUrl) {
-    // 如果设置了环境变量，确保是相对路径（以 / 开头）
     if (envUrl.startsWith("/")) {
       return envUrl;
     }
-    // 如果是完整 URL，提取路径部分
+    // 如果是完整 URL，提取路径部分（仅用于 Nginx 反代路径）
     try {
       const url = new URL(envUrl);
       return url.pathname.replace(/\/+$/, "");
@@ -138,7 +137,7 @@ function getBaseUrl(): string {
     }
   }
   
-  // 默认使用相对路径（由 Nginx 反代）
+  // 默认使用相对路径（由 Nginx 或 Next.js rewrites 处理）
   return "/moling/api/v1";
 }
 

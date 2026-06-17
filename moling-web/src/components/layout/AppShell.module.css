@@ -17,9 +17,15 @@
 .main {
   flex: 1;
   overflow-y: auto;
-  margin-top: var(--header-height, 52px);
+  margin-top: var(--header-height, 56px);
   background: var(--color-bg);
   transition: background var(--transition-normal);
+  animation: pageEnter 0.3s var(--ease-spring);
+}
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- 专注模式：全屏显示 ---- */
@@ -66,7 +72,7 @@
 /* ---- 侧边栏头部 ---- */
 
 .sidebarHeader {
-  height: var(--header-height, 52px);
+  height: var(--header-height, 56px);
   display: flex;
   align-items: center;
   padding: 0 var(--spacing-4);

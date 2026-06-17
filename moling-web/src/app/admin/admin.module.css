@@ -35,7 +35,7 @@
 .sidebarToggleBtn {
   position: absolute;
   right: -14px;
-  top: 56px;
+  top: var(--header-height);
   width: 28px;
   height: 28px;
   background: var(--color-sidebar-bg, #111326);
@@ -69,8 +69,8 @@
 
 /* Sidebar Logo */
 .sidebarLogo {
-  height: 56px;
-  min-height: 56px;
+  height: var(--header-height);
+  min-height: var(--header-height);
   display: flex;
   align-items: center;
   padding: 0 16px;
@@ -264,8 +264,8 @@
 
 /* ── Header ── */
 .adminHeader {
-  height: 56px;
-  min-height: 56px;
+  height: var(--header-height);
+  min-height: var(--header-height);
   background: rgba(21, 24, 41, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

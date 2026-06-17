@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 Agent Console — 概念预览</title>
+<style>
+/* ═══════════════════════════════════════════
+   Tokens — 墨灵暗色体系
+   ═══════════════════════════════════════════ */
+:root {
+  --bg: #0a0c15;
+  --surface: #11131e;
+  --elevated: #161825;
+  --border: #20233a;
+  --border-hover: #2a2f4a;
+  --text-primary: #e3e5f1;
+  --text-secondary: #8b90b0;
+  --text-tertiary: #5a5f80;
+  --indigo: #6366f1;
+  --indigo-dim: rgba(99,102,241,0.1);
+  --indigo-glow: rgba(99,102,241,0.2);
+  --amber: #d4a843;
+  --amber-dim: rgba(212,168,67,0.1);
+  --green: #34d399;
+  --green-dim: rgba(52,211,153,0.1);
+  --red: #ef4444;
+  --radius: 8px;
+  --radius-lg: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #060810;
+  color: var(--text-primary);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════
+   AGENT CONSOLE LAYOUT
+   ═══════════════════════════════════════════ */
+.console {
+  display: flex; flex-direction: column;
+  height: 100vh; max-height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- TOP BAR (ultra minimal) ---- */
+.topbar {
+  height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+}
+.topbar-left {
+  display: flex; align-items: center; gap: 12px;
+}
+.topbar-project {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  transition: background 0.15s;
+}
+.topbar-project:hover { background: rgba(255,255,255,0.04); }
+.topbar-project svg { opacity: 0.4; }
+.topbar-sep {
+  width: 1px; height: 20px; background: var(--border);
+}
+.topbar-badge {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: var(--indigo-dim); color: var(--indigo);
+  display: flex; align-items: center; gap: 4px;
+  border: 1px solid rgba(99,102,241,0.15);
+}
+.topbar-right {
+  display: flex; align-items: center; gap: 8px;
+}
+.topbar-btn {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; color: var(--text-tertiary); cursor: pointer;
+  transition: all 0.15s; font-size: 14px;
+}
+.topbar-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.topbar-btn.active { color: var(--indigo); background: var(--indigo-dim); }
+.topbar-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--indigo), #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  margin-left: 4px;
+}
+
+/* ---- MAIN BODY: three-column ---- */
+.main {
+  display: flex; flex: 1; overflow: hidden;
+}
+
+/* ---- LEFT: Context Panel (四库) ---- */
+.context-panel {
+  width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.context-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.context-title {
+  font-size: 11px; font-weight: 700; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 1.5px;
+}
+.context-add {
+  width: 22px; height: 22px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary); cursor: pointer; font-size: 14px;
+  transition: all 0.15s;
+}
+.context-add:hover { color: var(--indigo); background: var(--indigo-dim); }
+
+.context-section {
+  padding: 10px 16px;
+}
+.context-section-title {
+  font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.context-section-title .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+.dot.char { background: var(--indigo); }
+.dot.plot { background: var(--amber); }
+.dot.world { background: var(--green); }
+.dot.foreshadow { background: #f472b6; }
+
+.context-item {
+  padding: 7px 10px; border-radius: 6px;
+  font-size: 12px; color: var(--text-secondary);
+  cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 2px;
+}
+.context-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+.context-item .item-icon { font-size: 13px; opacity: 0.5; }
+.context-item .item-count { margin-left: auto; font-size: 10px; color: var(--text-tertiary); }
+
+.context-footer {
+  margin-top: auto; padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.context-footer-btn {
+  width: 100%; padding: 8px; border-radius: 6px;
+  background: var(--elevated); border: 1px solid var(--border);
+  color: var(--text-secondary); font-size: 12px; cursor: pointer;
+  text-align: center; transition: all 0.15s;
+}
+.context-footer-btn:hover {
+  border-color: var(--indigo); color: var(--indigo);
+}
+
+/* ---- CENTER: Agent Conversation (Core) ---- */
+.agent-area {
+  flex: 1;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  min-width: 0;
+}
+.agent-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.agent-header-left {
+  display: flex; align-items: center; gap: 10px;
+}
+.agent-status {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse-status 2s ease-in-out infinite;
+}
+@keyframes pulse-status {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+}
+.agent-name {
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 14px; font-weight: 600;
+}
+.agent-subtitle {
+  font-size: 11px; color: var(--text-tertiary);
+}
+.agent-header-right {
+  display: flex; gap: 6px;
+}
+.agent-header-btn {
+  padding: 5px 12px; border-radius: 6px; font-size: 12px;
+  color: var(--text-tertiary); cursor: pointer; transition: all 0.15s;
+}
+.agent-header-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+
+.agent-messages {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.agent-msg {
+  max-width: 85%; display: flex; flex-direction: column; gap: 8px;
+}
+.agent-msg.user { align-self: flex-end; }
+.agent-msg.agent { align-self: flex-start; }
+.agent-msg-label {
+  font-size: 10px; font-weight: 600; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.agent-msg.user .agent-msg-label { text-align: right; }
+
+.agent-bubble {
+  padding: 12px 16px; border-radius: var(--radius-lg);
+  font-size: 13px; line-height: 1.7;
+}
+.agent-msg.user .agent-bubble {
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1));
+  border: 1px solid rgba(99,102,241,0.2);
+  color: var(--text-primary);
+}
+.agent-msg.agent .agent-bubble {
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* Agent thinking block */
+.agent-thinking {
+  padding: 14px 18px; border-radius: var(--radius-lg);
+  background: var(--elevated); border: 1px solid var(--border);
+  display: flex; align-items: flex-start; gap: 12px;
+  animation: fadeInUp 0.3s ease;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.thinking-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--indigo), #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+}
+.thinking-content {
+  flex: 1;
+}
+.thinking-title {
+  font-size: 13px; font-weight: 600; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.thinking-spinner {
+  width: 14px; height: 14px; border: 2px solid var(--border);
+  border-top-color: var(--indigo); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.thinking-steps {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.thinking-step {
+  font-size: 12px; color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 6px;
+}
+.thinking-step.done { color: var(--green); }
+.thinking-step.active { color: var(--indigo); }
+.thinking-step .step-dot {
+  width: 4px; height: 4px; border-radius: 50%; background: currentColor;
+}
+
+/* Agent action card */
+.agent-action-card {
+  padding: 14px 16px; border-radius: var(--radius);
+  background: var(--elevated); border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.action-card-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.action-card-icon.amber { background: var(--amber-dim); }
+.action-card-icon.indigo { background: var(--indigo-dim); }
+.action-card-body { flex: 1; }
+.action-card-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.action-card-desc { font-size: 12px; color: var(--text-tertiary); }
+.action-card-btn {
+  padding: 6px 14px; border-radius: 6px;
+  background: var(--indigo); color: #fff;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; transition: all 0.15s;
+}
+.action-card-btn:hover { background: #4f46e5; }
+
+/* Agent input area */
+.agent-input-area {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.agent-input-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.agent-input {
+  flex: 1; padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary); font-size: 13px;
+  transition: all 0.2s;
+}
+.agent-input:focus {
+  outline: none;
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.agent-input::placeholder { color: var(--text-tertiary); }
+.agent-send {
+  width: 38px; height: 38px; border-radius: 8px;
+  background: var(--indigo); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; transition: all 0.15s;
+  flex-shrink: 0;
+}
+.agent-send:hover { background: #4f46e5; transform: scale(1.05); }
+.agent-quick-actions {
+  display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;
+}
+.agent-quick-action {
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; color: var(--text-tertiary);
+  background: var(--elevated); border: 1px solid var(--border);
+  cursor: pointer; transition: all 0.15s;
+}
+.agent-quick-action:hover {
+  color: var(--indigo); border-color: var(--indigo-dim);
+  background: var(--indigo-dim);
+}
+.agent-quick-action.warn {
+  border-color: rgba(212,168,67,0.2);
+  color: var(--amber);
+}
+.agent-quick-action.warn:hover {
+  background: var(--amber-dim); color: var(--amber);
+}
+
+/* ---- RIGHT: Output/Editor Panel ---- */
+.output-panel {
+  width: 360px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.output-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.output-title {
+  font-size: 11px; font-weight: 700; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 1.5px;
+}
+.output-mode {
+  display: flex; gap: 2px;
+}
+.output-mode-btn {
+  padding: 3px 8px; border-radius: 4px; font-size: 10px;
+  color: var(--text-tertiary); cursor: pointer; transition: all 0.15s;
+}
+.output-mode-btn:hover { color: var(--text-primary); }
+.output-mode-btn.active { color: var(--indigo); background: var(--indigo-dim); }
+.output-body {
+  flex: 1; padding: 20px; overflow-y: auto;
+  font-family: 'Noto Serif SC', Georgia, serif;
+  font-size: 14px; line-height: 2;
+  color: var(--text-primary);
+}
+.output-body .chapter-title {
+  font-size: 20px; font-weight: 700; margin-bottom: 20px;
+  text-align: center; letter-spacing: 1px;
+}
+.output-paragraph {
+  margin-bottom: 16px; color: var(--text-secondary);
+  transition: color 0.3s;
+}
+.output-paragraph.draft {
+  color: var(--text-tertiary);
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+}
+.output-paragraph.final {
+  color: var(--text-primary);
+}
+.output-paragraph .highlight {
+  color: var(--amber);
+  background: rgba(212,168,67,0.08);
+  padding: 0 2px; border-radius: 2px;
+}
+.output-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.output-word-count {
+  font-size: 11px; color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 4px;
+}
+.output-actions {
+  margin-left: auto; display: flex; gap: 6px;
+}
+.output-btn {
+  padding: 6px 14px; border-radius: 6px; font-size: 12px;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 4px;
+}
+.output-btn.primary {
+  background: var(--indigo); color: #fff; font-weight: 500;
+}
+.output-btn.primary:hover { background: #4f46e5; }
+.output-btn.secondary {
+  background: var(--elevated); border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.output-btn.secondary:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+/* ---- Mobile adaptation ---- */
+@media (max-width: 900px) {
+  .context-panel { display: none; }
+  .output-panel { width: 100%; position: absolute; right: 0; top: 48px; bottom: 0; z-index: 50; }
+  .output-panel.collapsed { display: none; }
+}
+
+/* Concept label */
+.concept-label {
+  position: absolute; bottom: 8px; right: 16px;
+  font-size: 10px; color: var(--text-tertiary); opacity: 0.4;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+</style>
+</head>
+<body>
+
+<div class="console" style="position:relative">
+  <span class="concept-label">墨灵 Agent Console · 概念原型</span>
+
+  <!-- ═══════════ TOP BAR ═══════════ -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-project">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        仙道长青
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="topbar-sep"></div>
+      <div class="topbar-badge">
+        <span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>
+        第12章 · 风云突变
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn active" title="Agent 对话">💬</button>
+      <button class="topbar-btn" title="编辑器">✎</button>
+      <button class="topbar-btn" title="四库管理">📚</button>
+      <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
+      <div class="topbar-avatar">林</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ MAIN ═══════════ -->
+  <div class="main">
+
+    <!-- LEFT: Context Panel -->
+    <div class="context-panel">
+      <div class="context-header">
+        <span class="context-title">📚 四库记忆</span>
+        <span class="context-add">+</span>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title"><span class="dot char"></span> 人物库</div>
+        <div class="context-item"><span class="item-icon">👤</span> 林玄·主角<span class="item-count">活跃</span></div>
+        <div class="context-item"><span class="item-icon">👤</span> 苏清雪·女主</div>
+        <div class="context-item"><span class="item-icon">👤</span> 莫邪·反派</div>
+        <div class="context-item"><span class="item-icon" style="opacity:0.3">+</span> 查看全部 7 人</div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title"><span class="dot plot"></span> 情节承诺库</div>
+        <div class="context-item"><span class="item-icon">🔗</span> 林玄必须击败莫邪</div>
+        <div class="context-item"><span class="item-icon">🔗</span> 苏清雪身世之谜</div>
+        <div class="context-item"><span class="item-icon">🔗</span> 仙门大会决战</div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title"><span class="dot world"></span> 世界观库</div>
+        <div class="context-item"><span class="item-icon">🗺</span> 修真境界体系</div>
+        <div class="context-item"><span class="item-icon">🗺</span> 五行灵气设定</div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title"><span class="dot foreshadow"></span> 伏笔库</div>
+        <div class="context-item"><span class="item-icon">🎯</span> 戒指中的残魂·未揭示</div>
+        <div class="context-item"><span class="item-icon">🎯</span> 宗门禁地·已揭示</div>
+        <div class="context-item"><span class="item-icon">🎯</span> 莫邪的过去·进行中</div>
+      </div>
+
+      <div class="context-footer">
+        <div class="context-footer-btn">💾 导入更多素材</div>
+      </div>
+    </div>
+
+    <!-- CENTER: Agent -->
+    <div class="agent-area">
+      <div class="agent-header">
+        <div class="agent-header-left">
+          <div class="agent-status"></div>
+          <div>
+            <div class="agent-name">墨灵·创作伙伴</div>
+            <div class="agent-subtitle">全知 · 四库同步 · 就绪</div>
+          </div>
+        </div>
+        <div class="agent-header-right">
+          <span class="agent-header-btn">清空</span>
+          <span class="agent-header-btn">导出</span>
+        </div>
+      </div>
+
+      <div class="agent-messages">
+        <!-- User message -->
+        <div class="agent-msg user">
+          <div class="agent-msg-label">你</div>
+          <div class="agent-bubble">帮我写第12章，林玄在仙门大会上第一次正面迎战莫邪，要展示他的成长。上一章结尾是林玄突破到金丹期。</div>
+        </div>
+
+        <!-- Agent thinking -->
+        <div class="agent-msg agent">
+          <div class="agent-msg-label">墨灵</div>
+          <div class="agent-thinking">
+            <div class="thinking-icon">🧠</div>
+            <div class="thinking-content">
+              <div class="thinking-title">
+                分析中...
+                <div class="thinking-spinner"></div>
+              </div>
+              <div class="thinking-steps">
+                <div class="thinking-step done">
+                  <span class="step-dot"></span> 读取第11章摘要
+                </div>
+                <div class="thinking-step done">
+                  <span class="step-dot"></span> 调取人物库：林玄(金丹期)、莫邪(金丹后期)
+                </div>
+                <div class="thinking-step done">
+                  <span class="step-dot"></span> 调取情节承诺库：仙门大会决战
+                </div>
+                <div class="thinking-step active">
+                  <span class="step-dot"></span> 调取文风指纹：战斗描写密度 74%
+                </div>
+                <div class="thinking-step">
+                  <span class="step-dot"></span> 抽取匹配卡牌...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent: card draw result -->
+        <div class="agent-msg agent">
+          <div class="agent-msg-label">墨灵</div>
+          <div class="agent-action-card">
+            <div class="action-card-icon amber">🎴</div>
+            <div class="action-card-body">
+              <div class="action-card-title">抽卡结果：3 张匹配卡牌</div>
+              <div class="action-card-desc">「临阵突破」· 稀有 | 「情感涌动」· 罕见 | 「反转一击」· 稀有</div>
+            </div>
+            <span class="action-card-btn">确认 · 开始生文</span>
+          </div>
+        </div>
+
+        <!-- Agent: generated result -->
+        <div class="agent-msg agent">
+          <div class="agent-msg-label">墨灵</div>
+          <div class="agent-bubble">
+            ✅ 已根据 3 张卡牌 + 四库记忆生成第12章初稿。<br><br>
+            📊 统计：1,847 字 / 14 段落 / 对话占比 38%<br>
+            🎯 伏笔回收：戒指残魂在第3段出现<br>
+            📝 初稿已输出到右侧面板，可以查看和编辑。
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Input -->
+      <div class="agent-input-area">
+        <div class="agent-input-row">
+          <input class="agent-input" placeholder="告诉墨灵你想要写什么... (Shift+Enter 换行, Enter 发送)" value="把开头的战斗场景节奏再加快一点，增加环境描写">
+          <div class="agent-send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <div class="agent-quick-actions">
+          <span class="agent-quick-action">✏ 续写当前章节</span>
+          <span class="agent-quick-action warn">🎴 重新抽卡</span>
+          <span class="agent-quick-action">📋 本章大纲优化</span>
+          <span class="agent-quick-action">🔍 检查伏笔一致性</span>
+          <span class="agent-quick-action">🎭 角色语气校准</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output Panel -->
+    <div class="output-panel">
+      <div class="output-header">
+        <span class="output-title">📄 生成输出</span>
+        <div class="output-mode">
+          <span class="output-mode-btn active">原文</span>
+          <span class="output-mode-btn">对比</span>
+        </div>
+      </div>
+      <div class="output-body">
+        <div class="chapter-title">第十二章 · 风云突变</div>
+        <p class="output-paragraph final">
+          金丹期的力量在林玄体内奔涌，这是他第一次清晰地感受到天地灵气的流动。擂台上空，乌云如墨，电蛇隐现——莫邪负手而立，嘴角挂着那抹标志性的讥讽。
+        </p>
+        <p class="output-paragraph final">
+          "金丹期？"莫邪轻笑，"三年不见，倒是长进了不少。不过——"他抬起右手，五道黑色气劲如蛇般缠绕，"在我眼里，还是不够看。"
+        </p>
+        <p class="output-paragraph final">
+          话音未落，莫邪的身影消失在原地。林玄瞳孔骤缩——不是消失，是速度太快！他本能地向左闪避，一道黑色气刃擦着脸颊掠过，在擂台上留下一道深达半尺的沟壑。<span class="highlight">戒指中的残魂突然震动了一下。</span>
+        </p>
+        <p class="output-paragraph draft">
+          [以下为草稿，尚未确认] 林玄稳住身形，丹田内的灵力疯狂运转。他想起师父说过的话："金丹期的真正威力，不在于灵力多少，而在于对天地的感知。" 闭上眼，他不再用眼睛去看...
+        </p>
+      </div>
+      <div class="output-footer">
+        <span class="output-word-count">📝 1,847 字</span>
+        <div class="output-actions">
+          <span class="output-btn secondary">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            下载
+          </span>
+          <span class="output-btn secondary">重新生成</span>
+          <span class="output-btn primary">✅ 采纳</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     DESIGN RATIONALE — 独立说明
+     ═══════════════════════════════════════════ -->
+<div style="padding:40px 20px;max-width:1000px;margin:0 auto;color:var(--text-secondary);font-size:13px;line-height:2">
+
+  <h2 style="font-family:'Noto Serif SC',Georgia,serif;font-size:22px;color:var(--text-primary);margin-bottom:20px">设计决策说明</h2>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:32px">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border)">
+        <th style="text-align:left;padding:10px;font-size:11px;color:var(--text-tertiary);width:140px">决策维度</th>
+        <th style="text-align:left;padding:10px;font-size:11px;color:var(--text-tertiary)">传统 SaaS 做法</th>
+        <th style="text-align:left;padding:10px;font-size:11px;color:var(--text-indigo)">墨灵 Agent Console 做法</th>
+        <th style="text-align:left;padding:10px;font-size:11px;color:var(--text-tertiary)">契合的产品特点</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px;font-weight:600">主交互模式</td>
+        <td style="padding:10px">表单 + 按钮驱动</td>
+        <td style="padding:10px;color:var(--indigo)">对话 + 自然语言驱动</td>
+        <td style="padding:10px">写作是创意活动，用户想说"帮我写这个"而非填表</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px;font-weight:600">操作入口</td>
+        <td style="padding:10px">顶栏工具栏散落各处</td>
+        <td style="padding:10px;color:var(--indigo)">快捷指令条(Quick Actions) + 命令式输入</td>
+        <td style="padding:10px">Agent 应像伙伴：告诉它做什么，不需要找按钮</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px;font-weight:600">上下文管理</td>
+        <td style="padding:10px">切换页面查看不同数据</td>
+        <td style="padding:10px;color:var(--indigo)">四库持久侧栏，Agent 自动引用</td>
+        <td style="padding:10px">四库是长篇小说的"记忆系统"，必须始终可见</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px;font-weight:600">输出方式</td>
+        <td style="padding:10px">原地替换编辑器内容</td>
+        <td style="padding:10px;color:var(--indigo)">右侧预览面板 + 采纳/编辑/重生成</td>
+        <td style="padding:10px">AI 输出不是最终版，用户需要"审查-采纳-修改"循环</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px;font-weight:600">抽卡集成</td>
+        <td style="padding:10px">独立弹窗或页面</td>
+        <td style="padding:10px;color:var(--indigo)">嵌入对话流中，AI 主动提议抽卡</td>
+        <td style="padding:10px">抽卡是创作启动器，应在对话中自然出现</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px;font-weight:600">状态反馈</td>
+        <td style="padding:10px">Loading spinner</td>
+        <td style="padding:10px;color:var(--indigo)">Agent 思考过程可见(Thinking Steps)</td>
+        <td style="padding:10px">让用户看到 AI 在读什么数据、为什么这样输出</td>
+      </tr>
+      <tr>
+        <td style="padding:10px;font-weight:600">导航策略</td>
+        <td style="padding:10px">多页面跳转</td>
+        <td style="padding:10px;color:var(--indigo)">单页面三栏：四库 + 对话 + 输出</td>
+        <td style="padding:10px">创作是沉浸式活动，减少页面跳转 = 减少心流打断</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="font-family:'Noto Serif SC',Georgia,serif;font-size:18px;color:var(--text-primary);margin-bottom:16px">为什么不做成 ChatGPT 式的纯对话</h3>
+  <p style="margin-bottom:12px;color:var(--text-tertiary)">
+    纯对话界面对网文创作有问题：① 四库数据(人物/世界观/情节)需要持久可查，不能靠"翻聊天记录"；② 输出内容需要编辑和版本管理；③ 抽卡机制是墨灵的差异化特色，必须视觉化呈现。
+  </p>
+  <p style="color:var(--text-tertiary)">
+    所以方案是 <strong style="color:var(--indigo)">"对话驱动 + 三栏布局"</strong>：左边的四库和右边的输出是 Agent 的"双手"，中间的对话是 Agent 的"大脑"。
+  </p>
+
+  <h3 style="font-family:'Noto Serif SC',Georgia,serif;font-size:18px;color:var(--text-primary);margin:28px 0 16px">快捷指令设计哲学</h3>
+  <p style="margin-bottom:12px;color:var(--text-tertiary)">
+    底部快捷指令(续写/重新抽卡/大纲优化/伏笔检查/语气校准)不是按钮，是 <strong style="color:var(--indigo)">语境的提示</strong>。
+    每个都对应一个高频操作，点击后填充输入框并自动发送——用户不需要记住命令，看到就知道能做什么。这 5 个指令的选取是基于"网文创作的最核心五步"：
+  </p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:20px">
+    <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px">
+      <div style="color:var(--indigo);font-weight:600;margin-bottom:4px">续写当前章节</div>
+      <div style="color:var(--text-tertiary)">最高频操作，放在首位</div>
+    </div>
+    <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px">
+      <div style="color:var(--amber);font-weight:600;margin-bottom:4px">重新抽卡</div>
+      <div style="color:var(--text-tertiary)">不满意就重来，墨灵核心机制</div>
+    </div>
+    <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px">
+      <div style="color:var(--indigo);font-weight:600;margin-bottom:4px">大纲优化</div>
+      <div style="color:var(--text-tertiary)">结构层操作，章节级别</div>
+    </div>
+    <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px">
+      <div style="color:var(--indigo);font-weight:600;margin-bottom:4px">检查伏笔一致性</div>
+      <div style="color:var(--text-tertiary)">长篇创作的最大痛点</div>
+    </div>
+    <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px">
+      <div style="color:var(--indigo);font-weight:600;margin-bottom:4px">角色语气校准</div>
+      <div style="color:var(--text-tertiary)">人物一致性的关键</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

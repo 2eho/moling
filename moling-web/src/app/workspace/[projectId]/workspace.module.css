@@ -392,8 +392,8 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.04), transparent);
   flex-shrink: 0;
   gap: var(--space-2);
   width: 100%;
@@ -403,6 +403,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+.toolbarRight {
+  gap: var(--space-3);
 }
 
 .toolBtn {
@@ -437,11 +441,71 @@
   margin: 0 var(--space-1);
 }
 
+/* ── Word Count & Progress ── */
+.editorMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  padding: 0 var(--space-2);
+  flex-shrink: 0;
+}
+
+.editorWordCount {
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+}
+
+.editorWordCount span {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.editorProgressWrap {
+  width: 48px;
+  height: 3px;
+  background: var(--color-border-subtle);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.editorProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-brand-indigo), var(--color-brand-amber));
+  border-radius: 2px;
+  transition: width var(--duration-slow) var(--ease-default);
+}
+
+/* ── Editor Content (writing surface) ── */
 .editorContent {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-6) var(--space-8);
+  padding: var(--space-8) var(--space-10);
   width: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(99, 102, 241, 0.015) 0%,
+    transparent 20%
+  );
+  position: relative;
+}
+
+/* Left gutter guide line */
+.editorContent::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--space-8) + 4px);
+  top: var(--space-8);
+  bottom: var(--space-8);
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    rgba(99, 102, 241, 0.05) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 /* ── Editor text styling ── */
@@ -555,8 +619,8 @@
 /* ── Generation Bottom Bar ── */
 .generationBar {
   flex-shrink: 0;
-  background: var(--color-elevated);
-  border-top: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.03), var(--color-elevated));
+  border-top: 1px solid rgba(99, 102, 241, 0.1);
   padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: center;

@@ -52,6 +52,24 @@ const nextConfig: NextConfig = {
     // 优化服务器端 React DOM 操作
     webVitalsAttribution: ["CLS", "LCP", "FID"],
   },
+
+  // ═══════════════════════════════════════════════════════════
+  // 开发模式 API 代理
+  // ═══════════════════════════════════════════════════════════
+  // 在 dev 模式下，Next.js dev server 会将 /moling/api/* 请求
+  // 转发到后端 FastAPI（避免跨域和 404 问题）
+  // 生产环境由 Nginx 处理反代，此配置不生效
+  // ═══════════════════════════════════════════════════════════
+  async rewrites() {
+    if (process.env.NODE_ENV !== "development") return [];
+
+    return [
+      {
+        source: "/moling/api/:path*",
+        destination: "http://127.0.0.1:8000/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -22,7 +22,7 @@
 
 /* ── Top Nav ── */
 .topNav {
-  height: 56px;
+  height: var(--header-height);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   display: flex;

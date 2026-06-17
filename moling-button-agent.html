@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 · 按钮驱动的 Agent 操作台</title>
+<style>
+/* ═══════════════════════════════════════════
+   Tokens — 严格对齐 globals.css
+   ═══════════════════════════════════════════ */
+:root {
+  --bg: #0d0f1a;
+  --surface: #151829;
+  --elevated: #111327;
+  --border: #2a2d45;
+  --border-subtle: #1e2138;
+  --text-primary: #e8e9f0;
+  --text-secondary: #9ca3c4;
+  --text-tertiary: #6b7199;
+  --text-disabled: #3d4166;
+  --indigo: #6366f1;
+  --indigo-dim: rgba(99,102,241,0.12);
+  --indigo-hover: #4f46e5;
+  --amber: #d4a843;
+  --amber-dim: rgba(212,168,67,0.15);
+  --success: #34d399;
+  --success-dim: rgba(52,211,153,0.12);
+  --warning: #fbbf24;
+  --warning-dim: rgba(251,191,36,0.12);
+  --danger: #ef4444;
+  --danger-dim: rgba(239,68,68,0.12);
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --font-heading: 'Noto Serif SC', Georgia, serif;
+  --font-body: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  background: #060810;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════
+   WORKSPACE — Full Screen Layout
+   ═══════════════════════════════════════════ */
+.workspace {
+  display: flex; flex-direction: column;
+  height: 100vh; max-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Top Bar ── */
+.topbar {
+  height: 48px; min-height: 48px;
+  background: var(--elevated);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 16px;
+  z-index: 100;
+}
+.topbar-section {
+  display: flex; align-items: center; gap: 8px;
+}
+.topbar-section.left { margin-right: auto; }
+.topbar-section.center {
+  position: absolute; left: 50%; transform: translateX(-50%);
+}
+.topbar-section.right { margin-left: auto; }
+
+.topbar-breadcrumb {
+  display: flex; align-items: center; gap: 0;
+  font-size: 13px; color: var(--text-tertiary);
+}
+.topbar-breadcrumb a {
+  color: var(--text-tertiary); text-decoration: none;
+  padding: 4px 6px; border-radius: 4px; transition: all 0.15s;
+}
+.topbar-breadcrumb a:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.topbar-breadcrumb .sep {
+  margin: 0 2px; color: var(--border); user-select: none;
+}
+.topbar-breadcrumb .current {
+  color: var(--text-primary); font-weight: 600; font-family: var(--font-heading);
+  padding: 4px 8px; border-radius: 4px; cursor: pointer;
+}
+.topbar-breadcrumb .current:hover { background: rgba(255,255,255,0.04); }
+.topbar-breadcrumb .current svg { margin-left: 4px; opacity: 0.4; }
+
+.topbar-chapter {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 20px;
+  background: var(--indigo-dim); border: 1px solid rgba(99,102,241,0.15);
+  font-size: 12px; color: var(--indigo); cursor: pointer;
+  white-space: nowrap; transition: all 0.15s;
+}
+.topbar-chapter:hover { background: rgba(99,102,241,0.18); }
+.topbar-chapter .dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--success);
+}
+
+.topbar-icon-btn {
+  width: 34px; height: 34px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary); cursor: pointer;
+  transition: all 0.15s; font-size: 15px;
+  position: relative;
+}
+.topbar-icon-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.topbar-icon-btn.has-pulse::after {
+  content: ''; position: absolute; top: 8px; right: 8px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--indigo);
+}
+
+.topbar-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--indigo), #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  margin-left: 6px; transition: transform 0.15s;
+}
+.topbar-avatar:hover { transform: scale(1.08); }
+
+.topbar-divider {
+  width: 1px; height: 20px; background: var(--border);
+}
+
+/* ── Main Body ── */
+.main {
+  display: flex; flex: 1; overflow: hidden;
+}
+
+/* ── Left Panel: Library Drawers ── */
+.left-panel {
+  width: 280px; min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.lib-drawer {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.lib-drawer-header {
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+  transition: background 0.15s;
+}
+.lib-drawer-header:hover { background: rgba(255,255,255,0.02); }
+.lib-drawer-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600;
+}
+.lib-drawer-title .icon { font-size: 14px; }
+.lib-drawer-count {
+  font-size: 11px; color: var(--text-tertiary);
+  background: var(--elevated); padding: 2px 8px; border-radius: 10px;
+}
+.lib-drawer-body {
+  padding: 6px 16px 12px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.lib-tag {
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 11px; cursor: pointer; transition: all 0.12s;
+  background: var(--elevated); color: var(--text-secondary);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.lib-tag:hover {
+  color: var(--text-primary); border-color: var(--border);
+  background: rgba(255,255,255,0.04);
+}
+.lib-tag.active {
+  color: var(--indigo); border-color: rgba(99,102,241,0.25);
+  background: var(--indigo-dim);
+}
+.lib-tag.char { border-left: 2px solid var(--indigo); }
+.lib-tag.plot { border-left: 2px solid var(--amber); }
+.lib-tag.world { border-left: 2px solid var(--success); }
+.lib-tag.foreshadow { border-left: 2px solid #f472b6; }
+
+.lib-footer-row {
+  padding: 10px 16px; border-top: 1px solid var(--border-subtle);
+  display: flex; gap: 8px;
+}
+.lib-footer-btn {
+  flex: 1; padding: 8px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  text-align: center; transition: all 0.15s;
+  border: 1px solid var(--border);
+  background: var(--elevated); color: var(--text-secondary);
+}
+.lib-footer-btn:hover { border-color: var(--indigo-dim); color: var(--indigo); }
+.lib-footer-btn.primary {
+  background: var(--indigo); color: #fff; border-color: var(--indigo);
+}
+.lib-footer-btn.primary:hover { background: var(--indigo-hover); }
+
+/* ── Center: Editor ── */
+.editor-area {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--bg); min-width: 0;
+}
+.editor-toolbar {
+  height: 40px; min-height: 40px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; padding: 0 16px; gap: 4px;
+}
+.editor-tbtn {
+  width: 28px; height: 28px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary); font-size: 13px; cursor: pointer;
+  transition: all 0.12s;
+}
+.editor-tbtn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.editor-tbtn-sep { width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px; }
+.editor-scroll {
+  flex: 1; overflow-y: auto; padding: 32px 48px;
+}
+.editor-title-input {
+  font-family: var(--font-heading);
+  font-size: 24px; font-weight: 700;
+  background: none; border: none; color: var(--text-primary);
+  text-align: center; width: 100%; margin-bottom: 24px;
+  outline: none; caret-color: var(--indigo);
+}
+.editor-title-input::placeholder { color: var(--text-disabled); }
+.editor-text {
+  font-family: var(--font-heading);
+  font-size: 15px; line-height: 2.2;
+  color: var(--text-secondary);
+}
+.editor-text p { margin-bottom: 16px; }
+.editor-text .cursor-line {
+  border-left: 2px solid var(--indigo); padding-left: 12px;
+  color: var(--text-primary);
+}
+.editor-text .highlight {
+  color: var(--amber);
+  background: linear-gradient(transparent 60%, rgba(212,168,67,0.12) 60%);
+}
+.editor-text .prompt-hint {
+  color: var(--text-tertiary); font-style: italic;
+}
+.editor-word-count {
+  position: absolute; bottom: 0; right: 0;
+  padding: 6px 16px; border-radius: 20px 0 0 0;
+  background: var(--surface); border-top: 1px solid var(--border-subtle);
+  border-left: 1px solid var(--border-subtle);
+  font-size: 11px; color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+/* ── Right Panel: Agent Toolbox ── */
+.right-panel {
+  width: 320px; min-width: 320px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.tool-section {
+  padding: 16px; border-bottom: 1px solid var(--border-subtle);
+}
+.tool-section:last-child { border-bottom: none; }
+.tool-section-title {
+  font-size: 11px; font-weight: 700; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.tool-section-title .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+
+/* Card Draw Grid */
+.card-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.card-btn {
+  padding: 14px 12px; border-radius: var(--radius);
+  background: var(--elevated); border: 1px solid var(--border);
+  cursor: pointer; text-align: center; transition: all 0.15s;
+  position: relative; overflow: hidden;
+}
+.card-btn:hover {
+  border-color: var(--indigo-dim);
+  background: rgba(99,102,241,0.04);
+  transform: translateY(-1px);
+}
+.card-btn:active { transform: translateY(0); }
+.card-btn .card-rarity {
+  font-size: 10px; font-weight: 600; margin-bottom: 2px;
+}
+.card-btn .card-rarity.common { color: #9ca3af; }
+.card-btn .card-rarity.rare { color: #67e8f9; }
+.card-btn .card-rarity.epic { color: #a855f7; }
+.card-btn .card-rarity.legendary { color: var(--amber); }
+.card-btn .card-icon { font-size: 22px; margin-bottom: 4px; }
+.card-btn .card-name {
+  font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px;
+}
+.card-btn .card-desc {
+  font-size: 10px; color: var(--text-tertiary); line-height: 1.4;
+}
+.card-btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: var(--radius);
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.card-btn:hover::after {
+  opacity: 1;
+  box-shadow: inset 0 0 0 1px var(--indigo-dim);
+}
+
+/* Big Action Buttons */
+.action-btn {
+  width: 100%; padding: 12px 16px; border-radius: var(--radius);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px; text-align: left;
+}
+.action-btn:last-child { margin-bottom: 0; }
+.action-btn.draw {
+  background: linear-gradient(135deg, rgba(212,168,67,0.12), rgba(212,168,67,0.04));
+  border: 1px solid rgba(212,168,67,0.2);
+  color: var(--amber);
+}
+.action-btn.draw:hover {
+  background: linear-gradient(135deg, rgba(212,168,67,0.18), rgba(212,168,67,0.08));
+  border-color: rgba(212,168,67,0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(212,168,67,0.08);
+}
+.action-btn.generate {
+  background: linear-gradient(135deg, var(--indigo), #7c3aed);
+  color: #fff; border: none;
+}
+.action-btn.generate:hover {
+  background: linear-gradient(135deg, #4f46e5, #6d28d9);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99,102,241,0.3);
+}
+.action-btn.secondary {
+  background: var(--elevated); border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.action-btn.secondary:hover {
+  border-color: var(--indigo-dim); color: var(--text-primary);
+  background: rgba(255,255,255,0.03);
+}
+.action-btn-icon { font-size: 18px; flex-shrink: 0; }
+
+/* Quick Actions */
+.quick-actions {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.quick-btn {
+  padding: 6px 12px; border-radius: 6px; font-size: 12px;
+  background: var(--elevated); border: 1px solid var(--border);
+  color: var(--text-secondary); cursor: pointer;
+  transition: all 0.12s; display: flex; align-items: center; gap: 4px;
+}
+.quick-btn:hover {
+  border-color: var(--indigo-dim);
+  background: var(--indigo-dim); color: var(--indigo);
+}
+.quick-btn.suggested {
+  border-color: var(--indigo); color: var(--indigo);
+  background: var(--indigo-dim);
+}
+
+/* Status Pill */
+.status-bar {
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--elevated);
+  font-size: 12px;
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--success);
+  animation: pulse-status 2s ease-in-out infinite;
+}
+@keyframes pulse-status {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+}
+.status-text { color: var(--text-secondary); }
+.status-meta { margin-left: auto; color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; }
+
+/* Agent Thinking Inline */
+.agent-inline {
+  margin-top: 12px; padding: 12px; border-radius: var(--radius);
+  background: rgba(99,102,241,0.04); border: 1px solid rgba(99,102,241,0.1);
+  font-size: 12px; color: var(--text-tertiary);
+}
+.agent-inline .step-row {
+  display: flex; align-items: center; gap: 6px; padding: 3px 0;
+}
+.agent-inline .step-row.done { color: var(--success); }
+.agent-inline .step-row.active { color: var(--indigo); font-weight: 500; }
+.agent-inline .step-dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+
+/* ═══════════════════════════════════════════
+   PRODUCT FLOW OVERVIEW
+   ═══════════════════════════════════════════ */
+.overview-page {
+  padding: 40px 20px; max-width: 1000px; margin: 0 auto;
+}
+.page-title {
+  font-family: var(--font-heading);
+  font-size: 28px; font-weight: 700; margin-bottom: 8px;
+}
+.page-subtitle {
+  font-size: 14px; color: var(--text-tertiary); margin-bottom: 40px;
+}
+
+/* Flow Cards */
+.flow-section {
+  margin-bottom: 48px;
+}
+.flow-section-title {
+  font-family: var(--font-heading);
+  font-size: 20px; font-weight: 600; margin-bottom: 12px;
+}
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+}
+.flow-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: all 0.2s;
+}
+.flow-card:hover { border-color: var(--indigo-dim); }
+.flow-card-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 12px;
+}
+.flow-card-num.route { background: var(--indigo-dim); color: var(--indigo); }
+.flow-card-num.work { background: var(--amber-dim); color: var(--amber); }
+.flow-card-num.meta { background: var(--success-dim); color: var(--success); }
+.flow-card-name {
+  font-size: 16px; font-weight: 600; margin-bottom: 6px;
+}
+.flow-card-desc {
+  font-size: 13px; color: var(--text-tertiary); line-height: 1.7; margin-bottom: 12px;
+}
+.flow-card-buttons {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.flow-card-btn {
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 11px; border: 1px solid var(--border);
+  background: var(--elevated); color: var(--text-secondary);
+  cursor: default;
+}
+.flow-card-btn.primary-btn {
+  border-color: var(--indigo); color: var(--indigo);
+  background: var(--indigo-dim); font-weight: 600;
+}
+
+/* Design Philosophy Box */
+.philosophy-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px; margin-bottom: 40px;
+}
+.philosophy-box h3 {
+  font-family: var(--font-heading); font-size: 18px; margin-bottom: 16px;
+}
+.philosophy-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+.philosophy-item {
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.philosophy-icon {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  background: var(--indigo-dim);
+}
+.philosophy-text strong { color: var(--text-primary); display: block; }
+.philosophy-text span { font-size: 12px; color: var(--text-tertiary); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .left-panel { display: none; }
+  .right-panel { width: 100%; position: absolute; right: 0; top: 48px; bottom: 0; z-index: 50; }
+  .right-panel.collapsed { display: none; }
+  .editor-scroll { padding: 20px; }
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     THE WORKSPACE — Button-Driven Agent Console
+     ═══════════════════════════════════════════ -->
+<div class="workspace">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-section left">
+      <div class="topbar-breadcrumb">
+        <a href="#">我的作品</a>
+        <span class="sep">/</span>
+        <span class="current">
+          仙道长青
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+      </div>
+      <div class="topbar-chapter">
+        <span class="dot"></span>
+        第 12 章 · 风云突变
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+
+    <div class="topbar-section center">
+      <!-- Empty center = breathing room -->
+    </div>
+
+    <div class="topbar-section right">
+      <div class="topbar-icon-btn" title="健康状态">🛡</div>
+      <div class="topbar-icon-btn has-pulse" title="消息">🔔</div>
+      <div class="topbar-divider"></div>
+      <div class="topbar-avatar">林</div>
+    </div>
+  </div>
+
+  <!-- MAIN: Three Columns -->
+  <div class="main">
+
+    <!-- LEFT: 四库 Library -->
+    <div class="left-panel">
+
+      <!-- 人物库 -->
+      <div class="lib-drawer">
+        <div class="lib-drawer-header">
+          <div class="lib-drawer-title">
+            <span class="icon">👤</span> 人物库
+          </div>
+          <span class="lib-drawer-count">7</span>
+        </div>
+        <div class="lib-drawer-body">
+          <span class="lib-tag char active">林玄·主角</span>
+          <span class="lib-tag char">苏清雪·女主</span>
+          <span class="lib-tag char">莫邪·反派</span>
+          <span class="lib-tag char">+4 人</span>
+        </div>
+      </div>
+
+      <!-- 情节承诺库 -->
+      <div class="lib-drawer">
+        <div class="lib-drawer-header">
+          <div class="lib-drawer-title">
+            <span class="icon">🔗</span> 情节承诺库
+          </div>
+          <span class="lib-drawer-count">4</span>
+        </div>
+        <div class="lib-drawer-body">
+          <span class="lib-tag plot">击败莫邪</span>
+          <span class="lib-tag plot">身世之谜</span>
+          <span class="lib-tag plot">仙门决战</span>
+          <span class="lib-tag plot">+1</span>
+        </div>
+      </div>
+
+      <!-- 世界观库 -->
+      <div class="lib-drawer">
+        <div class="lib-drawer-header">
+          <div class="lib-drawer-title">
+            <span class="icon">🗺</span> 世界观库
+          </div>
+          <span class="lib-drawer-count">5</span>
+        </div>
+        <div class="lib-drawer-body">
+          <span class="lib-tag world">修真体系</span>
+          <span class="lib-tag world">五行灵气</span>
+          <span class="lib-tag world">宗门格局</span>
+          <span class="lib-tag world">+2</span>
+        </div>
+      </div>
+
+      <!-- 伏笔库 -->
+      <div class="lib-drawer">
+        <div class="lib-drawer-header">
+          <div class="lib-drawer-title">
+            <span class="icon">🎯</span> 伏笔库
+          </div>
+          <span class="lib-drawer-count">3</span>
+        </div>
+        <div class="lib-drawer-body">
+          <span class="lib-tag foreshadow">戒指残魂</span>
+          <span class="lib-tag foreshadow">宗门禁地</span>
+          <span class="lib-tag foreshadow">莫邪过去</span>
+        </div>
+      </div>
+
+      <!-- Library Footer -->
+      <div class="lib-footer-row">
+        <div class="lib-footer-btn">📥 导入素材</div>
+        <div class="lib-footer-btn primary">⚙ 四库管理</div>
+      </div>
+    </div>
+
+    <!-- CENTER: Editor -->
+    <div class="editor-area" style="position:relative">
+      <div class="editor-toolbar">
+        <div class="editor-tbtn" title="粗体">B</div>
+        <div class="editor-tbtn" title="斜体"><i>I</i></div>
+        <div class="editor-tbtn-sep"></div>
+        <div class="editor-tbtn" title="标题">H</div>
+        <div class="editor-tbtn" title="引用">❝</div>
+        <div class="editor-tbtn-sep"></div>
+        <div style="font-size:11px;color:var(--text-tertiary);margin-left:8px">专注模式</div>
+      </div>
+      <div class="editor-scroll">
+        <input class="editor-title-input" placeholder="输入章节标题..." value="第十二章 · 风云突变">
+        <div class="editor-text">
+          <p>金丹期的力量在林玄体内奔涌，这是他第一次清晰地感受到天地灵气的流动。擂台上空，乌云如墨，电蛇隐现——莫邪负手而立，嘴角挂着那抹标志性的讥讽。</p>
+          <p class="cursor-line">"金丹期？"莫邪轻笑，"三年不见，倒是长进了不少。不过——"他抬起右手，五道黑色气劲如蛇般缠绕，"在我眼里，还是不够看。"</p>
+          <p>话音未落，莫邪的身影消失在原地。林玄瞳孔骤缩——不是消失，是速度太快！他本能地向左闪避，一道黑色气刃擦着脸颊掠过，在擂台上留下一道<span class="highlight">深达半尺的沟壑</span>。</p>
+          <p class="prompt-hint">⌨ 继续输入，或点击右侧按钮让 AI 帮你续写...</p>
+        </div>
+        <div class="editor-word-count">1,247 字</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Agent Toolbox -->
+    <div class="right-panel">
+
+      <!-- 抽卡区 -->
+      <div class="tool-section">
+        <div class="tool-section-title">
+          <span class="dot" style="background:var(--amber)"></span> 灵感抽卡
+        </div>
+        <div class="card-grid">
+          <div class="card-btn">
+            <div class="card-rarity rare">✦ 罕见</div>
+            <div class="card-icon">⚔</div>
+            <div class="card-name">临阵突破</div>
+            <div class="card-desc">战斗中发现新力量</div>
+          </div>
+          <div class="card-btn">
+            <div class="card-rarity common">✦ 普通</div>
+            <div class="card-icon">🔥</div>
+            <div class="card-name">情绪爆发</div>
+            <div class="card-desc">压抑情感瞬间释放</div>
+          </div>
+          <div class="card-btn">
+            <div class="card-rarity epic">✦ 史诗</div>
+            <div class="card-icon">🌀</div>
+            <div class="card-name">命运转折</div>
+            <div class="card-desc">关键选择改变一切</div>
+          </div>
+          <div class="card-btn">
+            <div class="card-rarity rare">✦ 稀有</div>
+            <div class="card-icon">💫</div>
+            <div class="card-name">意外援手</div>
+            <div class="card-desc">意想不到的外援</div>
+          </div>
+        </div>
+
+        <!-- Agent thinking (appears after draw) -->
+        <div class="agent-inline" style="margin-top:10px">
+          <div class="step-row done"><span class="step-dot"></span> 读取第11章摘要</div>
+          <div class="step-row done"><span class="step-dot"></span> 调取四库数据：人物7 / 情节4 / 伏笔3</div>
+          <div class="step-row active"><span class="step-dot"></span> 匹配文风指纹 · 战斗描写密度 74%</div>
+          <div class="step-row"><span class="step-dot"></span> 等待抽卡确认...</div>
+        </div>
+      </div>
+
+      <!-- 生成操作 -->
+      <div class="tool-section">
+        <div class="tool-section-title">
+          <span class="dot" style="background:var(--indigo)"></span> AI 操作
+        </div>
+
+        <div class="action-btn draw">
+          <span class="action-btn-icon">🎴</span>
+          <div>
+            <div>抽取新卡牌</div>
+            <div style="font-size:11px;color:rgba(212,168,67,0.6);margin-top:1px">点击刷新卡牌组合</div>
+          </div>
+        </div>
+
+        <div class="action-btn generate">
+          <span class="action-btn-icon">✏</span>
+          <div>
+            <div>AI 生文 · 3 张卡牌就绪</div>
+            <div style="font-size:11px;opacity:0.7;margin-top:1px">基于当前卡牌 + 四库记忆</div>
+          </div>
+        </div>
+
+        <div class="action-btn secondary">
+          <span class="action-btn-icon">🔍</span>
+          <div>
+            <div>AI 审阅</div>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:1px">检查一致性、节奏、伏笔</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div class="tool-section">
+        <div class="tool-section-title">
+          <span class="dot" style="background:var(--success)"></span> 快捷操作
+        </div>
+        <div class="quick-actions">
+          <span class="quick-btn suggested">↻ 续写下一段</span>
+          <span class="quick-btn">📋 优化本章大纲</span>
+          <span class="quick-btn">🎭 角色语气校准</span>
+          <span class="quick-btn">📖 查看前章摘要</span>
+          <span class="quick-btn">⚡ 节奏分析</span>
+          <span class="quick-btn">🎯 伏笔一致性检查</span>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span class="status-dot"></span>
+        <span class="status-text">墨灵 · 就绪</span>
+        <span class="status-meta">四库同步 · 3卡就绪</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     PRODUCT FLOW & BUTTON MAP
+     ═══════════════════════════════════════════ -->
+<div class="overview-page">
+
+  <h1 class="page-title">按钮即能力 · 墨灵全页面按钮地图</h1>
+  <p class="page-subtitle">每个页面的每个按钮都有明确的功能定位和摆放理由。不做 hidden feature，所有能力明面可见。</p>
+
+  <!-- Philosophy -->
+  <div class="philosophy-box">
+    <h3>设计哲学：比 Agent 更 Agent</h3>
+    <div class="philosophy-grid">
+      <div class="philosophy-item">
+        <div class="philosophy-icon">👁</div>
+        <div class="philosophy-text">
+          <strong>能力外显</strong>
+          <span>所有功能以按钮形式直接可见，不需要"猜"系统能做什么</span>
+        </div>
+      </div>
+      <div class="philosophy-item">
+        <div class="philosophy-icon">🎯</div>
+        <div class="philosophy-text">
+          <strong>一键触发</strong>
+          <span>核心操作（抽卡/生文）就在工作区右侧，始终可见、始终可触</span>
+        </div>
+      </div>
+      <div class="philosophy-item">
+        <div class="philosophy-icon">📊</div>
+        <div class="philosophy-text">
+          <strong>状态透明</strong>
+          <span>Agent 的"思考"过程以步骤条展示，用户清楚 AI 在做什么</span>
+        </div>
+      </div>
+      <div class="philosophy-item">
+        <div class="philosophy-icon">🧩</div>
+        <div class="philosophy-text">
+          <strong>频率分层</strong>
+          <span>高频按钮放面板右侧，中频放快捷区，低频收入四库管理</span>
+        </div>
+      </div>
+      <div class="philosophy-item">
+        <div class="philosophy-icon">🤝</div>
+        <div class="philosophy-text">
+          <strong>亲民优先</strong>
+          <span>中文标签、图标辅助、无缩写，新用户 30 秒看懂所有按钮</span>
+        </div>
+      </div>
+      <div class="philosophy-item">
+        <div class="philosophy-icon">⚡</div>
+        <div class="philosophy-text">
+          <strong>最少点击</strong>
+          <span>核心路径（选章节→抽卡→生文→编辑）全程在同一页面，0 次跳转</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page-by-page flow -->
+  <div class="flow-section">
+    <div class="flow-section-title">📍 着陆页 → 项目列表</div>
+    <div class="flow-grid">
+      <div class="flow-card">
+        <div class="flow-card-num route">1</div>
+        <div class="flow-card-name">着陆页 /</div>
+        <div class="flow-card-desc">第一印象。展示产品核心价值，快速引导进入创作。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn primary-btn">免费开始</span>
+          <span class="flow-card-btn">登录</span>
+          <span class="flow-card-btn">定价</span>
+          <span class="flow-card-btn">功能介绍</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num route">2</div>
+        <div class="flow-card-name">登录 / 注册 /auth</div>
+        <div class="flow-card-desc">极简表单。邮箱 + 密码 = 2 步。第三方登录后续扩展。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn primary-btn">登录</span>
+          <span class="flow-card-btn">注册</span>
+          <span class="flow-card-btn">忘记密码</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num route">3</div>
+        <div class="flow-card-name">项目列表 /projects</div>
+        <div class="flow-card-desc">全貌仪表盘。显示所有作品 + 统计概览，是创作的起点。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn primary-btn">+ 新建作品</span>
+          <span class="flow-card-btn">搜索</span>
+          <span class="flow-card-btn">进入工作台</span>
+          <span class="flow-card-btn">··· 编辑/删除</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <div class="flow-section-title">🎯 工作台 — 核心操作台（本页预览主体）</div>
+    <div class="flow-grid">
+      <div class="flow-card">
+        <div class="flow-card-num work">核心</div>
+        <div class="flow-card-name">左侧：四库面板</div>
+        <div class="flow-card-desc">人物的每个标签可点击聚焦到编辑器对应段落。四大库按分类折叠，展开式设计，不用时不占空间。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn">人物标签(点击聚焦)</span>
+          <span class="flow-card-btn">情节标签</span>
+          <span class="flow-card-btn primary-btn">📥 导入素材</span>
+          <span class="flow-card-btn">⚙ 四库管理</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num work">核心</div>
+        <div class="flow-card-name">中间：编辑器</div>
+        <div class="flow-card-desc">所见即所得编辑体验。顶部微型工具栏(B/I/H/引用)，底部实时字数。支持全文专注模式。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn">加粗/斜体/标题</span>
+          <span class="flow-card-btn">字数实时统计</span>
+          <span class="flow-card-btn">专注模式切换</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num work">核心</div>
+        <div class="flow-card-name">右侧：AI 工具箱</div>
+        <div class="flow-card-desc">操作中枢。抽卡、生文、审阅、快捷操作全部在此。所有按钮都有中文标签 + 图标。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn primary-btn">🎴 抽取新卡牌</span>
+          <span class="flow-card-btn primary-btn" style="background:rgba(99,102,241,0.12);color:var(--indigo);border-color:var(--indigo)">✏ AI 生文</span>
+          <span class="flow-card-btn">🔍 AI 审阅</span>
+          <span class="flow-card-btn">6个快捷操作</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num work">辅助</div>
+        <div class="flow-card-name">顶栏：导航</div>
+        <div class="flow-card-desc">面包屑导航(作品/项目) + 章节快速切换 + 全局搜索 + 通知。精简到最少干扰。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn">作品名▾(切换项目)</span>
+          <span class="flow-card-btn">章节▾(切换章节)</span>
+          <span class="flow-card-btn">🔔 通知</span>
+          <span class="flow-card-btn">头像(个人中心)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <div class="flow-section-title">📂 辅助页面</div>
+    <div class="flow-grid">
+      <div class="flow-card">
+        <div class="flow-card-num meta">辅助</div>
+        <div class="flow-card-name">导入引擎 /import</div>
+        <div class="flow-card-desc">连载书导入。采集→分章→四库提取→确认导入，分步向导式。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn primary-btn">导入新书</span>
+          <span class="flow-card-btn">粘贴链接</span>
+          <span class="flow-card-btn">上传文件</span>
+          <span class="flow-card-btn">查看导入历史</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num meta">辅助</div>
+        <div class="flow-card-name">四库管理 /vaults</div>
+        <div class="flow-card-desc">独立管理四库数据。增删改查 + 批量操作。可单独导出某库。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn primary-btn">+ 新增条目</span>
+          <span class="flow-card-btn">编辑</span>
+          <span class="flow-card-btn">删除</span>
+          <span class="flow-card-btn">导出</span>
+          <span class="flow-card-btn">搜索</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num meta">辅助</div>
+        <div class="flow-card-name">定价 /pricing</div>
+        <div class="flow-card-desc">套餐对比。免费/Pro/无限三档，功能对比表 + 价格 + CTA。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn">免费试用</span>
+          <span class="flow-card-btn primary-btn">升级 Pro</span>
+          <span class="flow-card-btn">联系销售</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num meta">辅助</div>
+        <div class="flow-card-name">通知 /notifications</div>
+        <div class="flow-card-desc">系统通知中心。生成完成、导入完成、系统维护等。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn">全部已读</span>
+          <span class="flow-card-btn">筛选</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num meta">辅助</div>
+        <div class="flow-card-name">个人设置 /settings</div>
+        <div class="flow-card-desc">账号信息、密码修改、偏好设置。分标签页展示。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn primary-btn">保存</span>
+          <span class="flow-card-btn">修改密码</span>
+          <span class="flow-card-btn">偏好设置</span>
+        </div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-num meta">管理</div>
+        <div class="flow-card-name">后台管理 /admin</div>
+        <div class="flow-card-desc">管理员专属。系统概览、用户管理、LLM用量、支付记录。</div>
+        <div class="flow-card-buttons">
+          <span class="flow-card-btn">概览</span>
+          <span class="flow-card-btn">用户管理</span>
+          <span class="flow-card-btn">LLM用量</span>
+          <span class="flow-card-btn">支付记录</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workflow path -->
+  <div class="philosophy-box" style="margin-top:40px">
+    <h3>用户核心路径 · 全程按钮驱动</h3>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:14px">
+      <span style="padding:8px 16px;background:var(--indigo-dim);border-radius:20px;color:var(--indigo);font-weight:600">1. 打开工作台</span>
+      <span style="color:var(--text-tertiary)">→</span>
+      <span style="padding:8px 16px;background:var(--amber-dim);border-radius:20px;color:var(--amber);font-weight:600">2. 选章节▾</span>
+      <span style="color:var(--text-tertiary)">→</span>
+      <span style="padding:8px 16px;background:var(--amber-dim);border-radius:20px;color:var(--amber);font-weight:600">3. 抽卡</span>
+      <span style="color:var(--text-tertiary)">→</span>
+      <span style="padding:8px 16px;background:var(--indigo);border-radius:20px;color:#fff;font-weight:600">4. AI生文</span>
+      <span style="color:var(--text-tertiary)">→</span>
+      <span style="padding:8px 16px;background:var(--elevated);border:1px solid var(--border);border-radius:20px;color:var(--text-primary);font-weight:600">5. 编辑审阅</span>
+      <span style="color:var(--text-tertiary)">→</span>
+      <span style="padding:8px 16px;background:var(--success-dim);border-radius:20px;color:var(--success);font-weight:600">6. 继续下一章</span>
+    </div>
+    <p style="margin-top:16px;font-size:13px;color:var(--text-tertiary)">
+      全程 0 次页面跳转、0 次键盘输入（可选）、0 次记忆命令。所有操作都是按钮——看得见、按得着。
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>
