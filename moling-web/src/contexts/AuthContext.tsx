@@ -19,6 +19,11 @@ import {
   isAuthenticated as checkAuth,
 } from "@/lib/auth";
 
+/** 将后端 user 对象映射为前端 User 类型（nickname → username）。 */
+function normalizeUser(raw: Record<string, unknown>): User {
+  return { ...raw, username: (raw.username as string) || (raw.nickname as string) || "" } as User;
+}
+
 // ---- Types ----
 
 interface LoginResponse {
@@ -61,10 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Hydrate from localStorage on mount
   useEffect(() => {
     try {
-      const storedUser = getStoredUser<User>();
+      const storedUser = getStoredUser<Record<string, unknown>>();
       const authenticated = checkAuth();
       if (storedUser && authenticated) {
-        setUserState(storedUser);
+        setUserState(normalizeUser(storedUser));
       }
     } catch {
       // Ignore — stay logged out
@@ -80,9 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // ✅ 修复：authApi.login() 返回 ApiResponse<LoginResponse>
     //    所以 res.data 才是 {access_token, refresh_token, user}
     const { access_token, refresh_token, user: userData } = res.data;
+    const normalized = normalizeUser(userData as unknown as Record<string, unknown>);
     storeTokens(access_token, refresh_token);
-    storeUser(userData);
-    setUserState(userData);
+    storeUser(normalized);
+    setUserState(normalized);
   }, []);
 
   const register = useCallback(
@@ -91,9 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await authApi.register(username, email, password);
       // ✅ 修复：使用 res.data
       const { access_token, refresh_token, user: userData } = res.data;
+      const normalized = normalizeUser(userData as unknown as Record<string, unknown>);
       storeTokens(access_token, refresh_token);
-      storeUser(userData);
-      setUserState(userData);
+      storeUser(normalized);
+      setUserState(normalized);
     },
     [],
   );

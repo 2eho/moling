@@ -56,8 +56,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const loadProjects = useCallback(async () => {
     try {
       const res = await projectApi.list();
-      // ✅ 确保安全：如果 res.data 是 undefined，使用空数组
-      setProjects(Array.isArray(res.data) ? res.data : []);
+      // 兼容两种后端返回格式：
+      // 1) 直接数组: res.data = [{id, title, ...}, ...]
+      // 2) 分页 dict: res.data = {items: [...], total: N}
+      const raw = res.data;
+      const list: Project[] = Array.isArray(raw) ? raw : (raw?.items ?? []);
+      setProjects(list);
     } catch (error) {
       console.error("Failed to load projects:", error);
       setProjects([]); // ✅ 确保 projects 始终是数组
