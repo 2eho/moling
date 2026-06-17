@@ -156,8 +156,8 @@ export const AppShell = memo(function AppShell({ children }: { children: React.R
     );
   }
 
-  // Web端 — 工作台页面：全宽布局，无 Sidebar
-  if (pathname?.startsWith("/workspace")) {
+  // Web端 — 工作台/项目列表页：全宽布局，无 Sidebar
+  if (pathname?.startsWith("/workspace") || pathname?.startsWith("/projects")) {
     return (
       <div className={styles.shell}>
         <Suspense fallback={null}>
