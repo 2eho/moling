@@ -243,4 +243,10 @@ export const CREATION_MODES = [
     description: "从预设模板出发快速搭建故事框架，适合新手快速上手",
     icon: "📋",
   },
+  {
+    id: "from_import",
+    title: "导入已有",
+    description: "将已写好的小说内容导入系统，自动提取四库和动态层",
+    icon: "📥",
+  },
 ] as const;

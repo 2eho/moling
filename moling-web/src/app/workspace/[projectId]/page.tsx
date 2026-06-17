@@ -1,14 +1,18 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ChapterSelector } from "@/components/workspace/ChapterSelector";
 import { ToolBar } from "@/components/workspace/ToolBar";
 import { HealthAlertBanner } from "@/components/workspace/HealthAlert";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectContext } from "@/contexts/ProjectContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useResizablePanel } from "@/hooks/useResizablePanel";
+import { ResizableHandle } from "@/components/ui/ResizableHandle";
 import { showToast } from "@/components/ui/Toast";
 import { Spinner } from "@/components/ui/Spinner";
 import styles from "./workspace.module.css";
@@ -49,7 +53,9 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
     setCurrentChapter,
   } = useWorkspace();
 
-  const { currentProject, loadProject } = useProjectContext();
+  const { currentProject, loadProject, projects } = useProjectContext();
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
@@ -57,6 +63,8 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
   const [mobileRightOpen, setMobileRightOpen] = useState(false);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // 检测移动端
   useEffect(() => {
@@ -104,6 +112,22 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
       loadProject(projectId);
     }
   }, [projectId, currentProject, loadProject]);
+
+  // 可拖拽面板宽度
+  const leftResizable = useResizablePanel({
+    storageKey: "leftPanelWidth",
+    defaultWidth: 280,
+    minWidth: 200,
+    maxWidth: 400,
+    side: "left",
+  });
+  const rightResizable = useResizablePanel({
+    storageKey: "rightPanelWidth",
+    defaultWidth: 300,
+    minWidth: 220,
+    maxWidth: 450,
+    side: "right",
+  });
 
   const handleAddChapter = () => {
     showToast("info", "新增章节功能即将上线");
@@ -153,9 +177,59 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
               ☰
             </button>
           )}
-          <span className={styles.projectTitle}>
-            {currentProject?.title || "加载中..."}
-          </span>
+          {/* 返回项目列表 */}
+          <button
+            className={styles.iconBtn}
+            onClick={() => router.push("/projects")}
+            title="返回项目列表"
+            aria-label="返回项目列表"
+          >
+            ←
+          </button>
+          {/* 项目切换下拉 */}
+          <div className={styles.projectSwitcher}>
+            <button
+              className={styles.projectSwitcherBtn}
+              onClick={() => setProjectMenuOpen(!projectMenuOpen)}
+              title="切换项目"
+            >
+              <span className={styles.projectTitle}>
+                {currentProject?.title || "加载中..."}
+              </span>
+              <span className={styles.projectSwitcherArrow}>▾</span>
+            </button>
+            {projectMenuOpen && (
+              <>
+                <div className={styles.dropdownBackdrop} onClick={() => setProjectMenuOpen(false)} />
+                <div className={styles.projectDropdown}>
+                  {projects?.map((p) => (
+                    <button
+                      key={p.id}
+                      className={`${styles.projectDropdownItem} ${p.id === projectId ? styles.projectDropdownItemActive : ""}`}
+                      onClick={() => {
+                        setProjectMenuOpen(false);
+                        if (p.id !== projectId) {
+                          router.push(`/workspace/${p.id}`);
+                        }
+                      }}
+                    >
+                      {p.title}
+                    </button>
+                  ))}
+                  <div className={styles.dropdownDivider} />
+                  <button
+                    className={styles.projectDropdownItem}
+                    onClick={() => {
+                      setProjectMenuOpen(false);
+                      router.push("/projects");
+                    }}
+                  >
+                    管理项目...
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <ChapterSelector
             chapters={chapters}
             currentChapterId={currentChapter?.id}
@@ -164,7 +238,61 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
           />
         </div>
         <div className={styles.topRight}>
-          <span className={styles.healthIcon}>🛡</span>
+          {/* 健康状态 */}
+          <span className={styles.healthIcon} title="系统健康状态">🛡</span>
+          {/* 设置 */}
+          <button
+            className={styles.iconBtn}
+            onClick={() => router.push("/settings")}
+            title="设置"
+            aria-label="设置"
+          >
+            ⚙
+          </button>
+          {/* 用户菜单 */}
+          {user && (
+            <div className={styles.userSection}>
+              <button
+                className={styles.userAvatarBtn}
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                title="用户菜单"
+              >
+                <span className={styles.userAvatar}>
+                  {user.username?.charAt(0)?.toUpperCase() || "U"}
+                </span>
+              </button>
+              {userMenuOpen && (
+                <>
+                  <div className={styles.dropdownBackdrop} onClick={() => setUserMenuOpen(false)} />
+                  <div className={styles.userDropdown}>
+                    <div className={styles.userInfo}>
+                      <span className={styles.userName}>{user.username || "用户"}</span>
+                      <span className={styles.userEmail}>{user.email}</span>
+                    </div>
+                    <div className={styles.dropdownDivider} />
+                    <button
+                      className={styles.dropdownItem}
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        router.push("/settings");
+                      }}
+                    >
+                      个人设置
+                    </button>
+                    <button
+                      className={`${styles.dropdownItem} ${styles.dropdownDanger}`}
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        logout();
+                      }}
+                    >
+                      退出登录
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           {/* 右面板切换按钮 */}
           {isMobile ? (
             <button
@@ -202,9 +330,14 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
       {/* Three-column Layout */}
       <div className={styles.main}>
         {/* Left Panel - Desktop */}
-        <div className={`${styles.leftPanel} ${!leftPanelOpen && !isMobile ? styles.leftPanelCollapsed : ""}`}>
-          <LeftPanel />
-        </div>
+        {!isMobile && (
+          <div
+            className={`${styles.leftPanel} ${!leftPanelOpen ? styles.leftPanelCollapsed : ""}`}
+            style={leftPanelOpen ? { width: leftResizable.width, minWidth: leftResizable.width } : undefined}
+          >
+            <LeftPanel />
+          </div>
+        )}
 
         {/* Left Panel - Mobile Drawer */}
         {isMobile && (
@@ -219,6 +352,14 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
           </>
         )}
 
+        {/* Resizable Handle: Left ↔ Editor */}
+        {!isMobile && leftPanelOpen && (
+          <ResizableHandle
+            onMouseDown={leftResizable.onResizeStart}
+            active={leftResizable.isResizing}
+          />
+        )}
+
         {/* Center: Editor (Obsidian-style centered) */}
         <div className={styles.editorArea}>
           <div className={styles.editorCenter}>
@@ -226,10 +367,23 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
           </div>
         </div>
 
+        {/* Resizable Handle: Editor ↔ Right */}
+        {!isMobile && rightPanelOpen && (
+          <ResizableHandle
+            onMouseDown={rightResizable.onResizeStart}
+            active={rightResizable.isResizing}
+          />
+        )}
+
         {/* Right Panel - Desktop */}
-        <div className={`${styles.rightPanel} ${!rightPanelOpen && !isMobile ? styles.rightPanelCollapsed : ""}`}>
-          <RightPanel />
-        </div>
+        {!isMobile && (
+          <div
+            className={`${styles.rightPanel} ${!rightPanelOpen ? styles.rightPanelCollapsed : ""}`}
+            style={rightPanelOpen ? { width: rightResizable.width, minWidth: rightResizable.width } : undefined}
+          >
+            <RightPanel />
+          </div>
+        )}
 
         {/* Right Panel - Mobile Drawer */}
         {isMobile && (

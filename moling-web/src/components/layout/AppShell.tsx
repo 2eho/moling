@@ -156,6 +156,20 @@ export const AppShell = memo(function AppShell({ children }: { children: React.R
     );
   }
 
+  // Web端 — 工作台页面：全宽布局，无 Sidebar
+  if (pathname?.startsWith("/workspace")) {
+    return (
+      <div className={styles.shell}>
+        <Suspense fallback={null}>
+          <FocusModeDetector focusMode={focusMode} onFocusModeChange={setFocusMode} />
+        </Suspense>
+        <main className={`${styles.main} ${focusMode ? styles.mainFullscreen : ""}`}>
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   // Web端：根据 focusMode 决定是否显示侧边栏
   return (
     <div className={styles.layoutWithSidebar}>

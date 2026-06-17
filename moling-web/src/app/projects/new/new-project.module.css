@@ -157,6 +157,54 @@
   color: var(--color-text-primary);
 }
 
+/* ── Import Form ── */
+.importForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.importLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.required {
+  color: var(--color-danger);
+}
+
+.importInput {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-elevated);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.importInput:focus {
+  border-color: var(--color-brand-indigo);
+  box-shadow: 0 0 0 3px var(--color-brand-indigo-dim);
+}
+
+.importInput::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.importHint {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+}
+
 /* ── Back ── */
 .back {
   display: flex;

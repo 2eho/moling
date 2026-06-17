@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useProjects } from "@/hooks/useProjects";
 import { CreationModeCard } from "@/components/project/CreationModeCard";
@@ -19,6 +19,8 @@ export default function NewProjectPage() {
   const [mode, setMode] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // Import mode state
+  const [importTitle, setImportTitle] = useState("");
 
   const handleModeSelect = (modeId: string) => {
     setMode(modeId);
@@ -53,7 +55,12 @@ export default function NewProjectPage() {
       };
       const project = await createProject(projectData as any);
       showToast("success", "项目创建成功！");
-      router.push(`/workspace/${project.id}`);
+      // 导入模式：跳转到导入页
+      if (mode === "from_import") {
+        router.push(`/projects/${project.id}/import`);
+      } else {
+        router.push(`/workspace/${project.id}`);
+      }
     } catch (error: any) {
       // 修复：显示具体错误信息，而不是模糊的"创建失败"
       const errorMessage = 
@@ -139,6 +146,51 @@ export default function NewProjectPage() {
             }}
             loading={creating}
           />
+        </div>
+      )}
+
+      {/* Step 2: Import Mode — 只需输入标题 */}
+      {step === 2 && mode === "from_import" && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>导入已有作品</h2>
+          <p className={styles.sectionDesc}>
+            先创建一个项目占位，然后进入导入页面粘贴文本或上传文件
+          </p>
+          <div className={styles.importForm}>
+            <label className={styles.importLabel}>
+              作品标题 <span className={styles.required}>*</span>
+            </label>
+            <input
+              className={styles.importInput}
+              type="text"
+              placeholder="输入作品标题"
+              value={importTitle}
+              onChange={(e) => setImportTitle(e.target.value)}
+            />
+            <div className={styles.importHint}>
+              创建后将自动跳转到导入页面，你可以在那里粘贴内容或上传文件
+            </div>
+          </div>
+          <div className={styles.actions}>
+            <Button variant="secondary" size="lg" onClick={() => { setMode(null); setStep(1); }}>
+              上一步
+            </Button>
+            <Button
+              variant="primary"
+              size="lg"
+              loading={creating}
+              disabled={!importTitle.trim()}
+              onClick={async () => {
+                await handleCreateProject({
+                  title: importTitle.trim(),
+                  genre: "未分类",
+                  creation_mode: "from_import",
+                } as any);
+              }}
+            >
+              创建并导入
+            </Button>
+          </div>
         </div>
       )}
 
