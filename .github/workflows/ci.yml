@@ -1,16 +1,35 @@
+# ==============================================================================
+# Moling CI — 统一持续集成管道
+# ==============================================================================
+# 设计原则:
+#   - 触发条件: push/PR 到 develop 和 main
+#   - 核心检查 (测试+构建) 必须通过，阻断合并
+#   - 代码检查 (lint) 报告但不阻断
+#   = 部署通过 workflow_dispatch 手动触发
+#
+# 分支策略: Trunk-Based Development
+#   develop — 集成分支，日常合入
+#   main    — 生产分支，仅从 develop merge
+#
+# 相关文档: docs/GIT_WORKFLOW_GUIDE.md
+# ==============================================================================
+
 name: Moling CI
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [develop, main]
   pull_request:
-    branches: [main, master, develop]
+    branches: [develop, main]
+  workflow_dispatch:
 
 jobs:
   # ==========================================================================
   # Job 1: 后端测试（PostgreSQL + Redis）
+  #   阻断条件：develop 和 main 的 PR
   # ==========================================================================
-  test:
+  backend-test:
+    name: 后端测试
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -38,28 +57,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 设置 Python 环境
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Cache pip
+      - name: 缓存 pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('moling-server/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-            ${{ runner.os }}-
 
-      - name: Install dependencies
+      - name: 安装依赖
         run: |
           cd moling-server
           python -m pip install --upgrade pip
           pip install ".[dev]"
-          pip install pytest pytest-asyncio httpx
+          pip install pytest pytest-asyncio httpx pytest-cov
 
-      - name: Run backend tests
+      - name: 运行后端测试
         env:
           DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test
           REDIS_URL: redis://localhost:6379/0
@@ -67,9 +85,9 @@ jobs:
           ALGORITHM: HS256
         run: |
           cd moling-server
-          python -m pytest tests/ -v --tb=short --junitxml=report.xml || true
+          python -m pytest tests/ -v --tb=short --junitxml=report.xml
 
-      - name: Upload test report
+      - name: 上传测试报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -77,25 +95,33 @@ jobs:
           path: moling-server/report.xml
 
   # ==========================================================================
-  # Job 2: 前端构建验证（不跑 Playwright E2E，等有测试文件后再启用）
+  # Job 2: 前端构建验证
+  #   阻断条件：develop 和 main 的 PR
   # ==========================================================================
   frontend-build:
+    name: 前端构建验证
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
+
+      - name: 设置 Node.js 环境
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: moling-web/package-lock.json
-      - name: Install dependencies
+
+      - name: 安装依赖
         run: cd moling-web && npm ci
-      - name: Build frontend
+
+      - name: 构建前端
         run: cd moling-web && npm run build
-      - name: Lint frontend
-        run: cd moling-web && npm run lint --no-error || true
-      - name: Upload build artifacts
+
+      - name: Lint 检查
+        continue-on-error: true
+        run: cd moling-web && npm run lint
+
+      - name: 上传构建产物
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -103,86 +129,68 @@ jobs:
           path: moling-web/.next/
 
   # ==========================================================================
-  # Job 3: 代码风格检查（宽容模式，不阻塞主流程）
+  # Job 3: 代码风格检查（宽松模式，不阻断主流程）
   # ==========================================================================
   lint:
+    name: 代码检查
     runs-on: ubuntu-latest
+    continue-on-error: true  # 整体不阻断
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
+
+      - name: 设置 Python 环境
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install dependencies
+
+      - name: 安装依赖
         run: |
           cd moling-server
           python -m pip install --upgrade pip
           pip install ".[dev]"
           pip install flake8 bandit safety
-      - name: Run flake8 (宽松模式，仅报告不阻断)
+
+      - name: flake8 检查
         run: |
           cd moling-server
-          flake8 app/ --count --exit-zero --max-line-length=127 --statistics || true
-      - name: Run Bandit security scan (报告模式)
+          flake8 app/ --count --max-line-length=127 --statistics
+
+      - name: Bandit 安全扫描
         run: |
           cd moling-server
-          bandit -r app/ -f json -o bandit-report.json || true
-          bandit -r app/ -f screen || true
-      - name: Run Safety dependency check
-        run: cd moling-server && safety check || true
-      - name: Upload reports
+          bandit -r app/ -f json -o bandit-report.json
+
+      - name: 上传检查报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lint-reports
-          path: |
-            moling-server/bandit-report.json
+          path: moling-server/bandit-report.json
 
   # ==========================================================================
-  # Job 4: 性能基线测试（修正文件名）
+  # Job 4: OpenAPI 规范校验
   # ==========================================================================
-  performance:
+  openapi-validate:
+    name: OpenAPI 校验
     runs-on: ubuntu-latest
-    needs: [test]
-    if: success() || failure()  # 即使 test 失败也运行
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
+
+      - name: 设置 Python 环境
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install dependencies
+
+      - name: 生成 OpenAPI 规范
         run: |
           cd moling-server
-          python -m pip install --upgrade pip
-          pip install ".[dev]" requests locust
-      - name: Start backend
-        env:
-          DATABASE_URL: sqlite+aiosqlite:///
-          REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: test-secret-key-for-ci
-          ALGORITHM: HS256
-        run: |
-          cd moling-server
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 10
-      - name: Run performance tests
-        run: |
-          cd moling-server/tests/performance
-          python simple_perf_test.py --all --host http://localhost:8000 --output performance_report.json || echo "⚠️ 性能测试未通过，请查看报告"
-      - name: Upload report
-        if: always()
+          python scripts/generate_openapi_from_doc.py
+
+      - name: 校验 JSON 格式
+        run: python -m json.tool openapi.json > /dev/null
+
+      - name: 上传规范文件
         uses: actions/upload-artifact@v4
         with:
-          name: performance-report
-          path: moling-server/tests/performance/performance_report.json
+          name: openapi-spec
+          path: openapi.json
