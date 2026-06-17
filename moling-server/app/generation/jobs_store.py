@@ -14,6 +14,7 @@ class JobStatus(str, Enum):
     running = "running"
     completed = "completed"
     failed = "failed"
+    cancelled = "cancelled"
 
 
 # 内存存储（MVP 用，生产环境改用 Redis/PostgreSQL）

@@ -3,13 +3,14 @@
 Endpoints:
 - POST /api/v1/generate/chapters/{chapter_id}/generate - 创建异步生成任务
 - GET  /api/v1/generate/jobs/{job_id} - 查询任务状态
-- POST /api/v1/generate/chapters/{chapter_id}/generate-sync - 同步生成（向后兼容）
+- POST /api/v1/generate/jobs/{job_id}/cancel - 取消任务
+- GET  /api/v1/generate/history - 获取生成历史
 """
 
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
@@ -89,6 +90,48 @@ async def get_generation_job(
         raise HTTPException(status_code=403, detail="无权访问")
     
     return {"code": 0, "message": "success", "data": job}
+
+
+@router.post("/jobs/{job_id}/cancel")
+async def cancel_generation_job(
+    job_id: str,
+    current_user=Depends(get_current_user),
+):
+    """取消异步生成任务。
+    
+    Returns:
+        取消后的任务状态。
+    """
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    # 检查权限（只能取消自己的任务）
+    if job["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="无权访问")
+    
+    # 只允许取消 pending 或 running 状态的任务
+    if job["status"] not in (JobStatus.pending, JobStatus.running):
+        raise HTTPException(status_code=400, detail="当前状态不支持取消")
+    
+    update_job(job_id, status=JobStatus.cancelled, progress=0)
+    
+    return {"code": 0, "message": "success", "data": {"status": "cancelled"}}
+
+
+@router.get("/history")
+async def get_generation_history(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Page size"),
+):
+    """获取异步生成任务历史（从数据库读取）。"""
+    from app.service import generation_service
+    history = await generation_service.get_history(
+        db, current_user["id"], page, page_size
+    )
+    return {"code": 0, "message": "success", "data": {"history": history, "total": len(history), "page": page, "page_size": page_size}}
 
 
 async def _run_generation_task(

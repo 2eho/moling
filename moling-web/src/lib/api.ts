@@ -267,7 +267,7 @@ export const generationApi = {
     );
   },
 
-  // 查询异步任务状态（对齐 OpenAPI 规范）
+  // 查询异步任务状态（对齐后端 API: GET /generate/jobs/{job_id}）
   async getJobStatus(taskId: string) {
     return apiClient.get<ApiResponse<{
       status: string;
@@ -275,7 +275,7 @@ export const generationApi = {
       result?: { content: string; chapter_id: string };
       error?: string;
     }>>(
-      `/generate/${taskId}/status`,
+      `/generate/jobs/${taskId}`,
     );
   },
 

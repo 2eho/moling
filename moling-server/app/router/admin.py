@@ -19,7 +19,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import set_override, get_effective_llm_config
-from app.dependencies import get_db
+from app.dependencies import get_current_user, get_db
 from app.models.system_config import SystemConfig
 from app.models.user import User
 from app.models.project import Project
@@ -77,7 +77,10 @@ async def _save_config_to_db(
 
 
 @router.get("/llm-config", response_model=LLMConfigResp)
-async def get_llm_config(db: AsyncSession = Depends(get_db)):
+async def get_llm_config(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Get current LLM configuration (masked for security)."""
     db_config = await _load_config_from_db(db)
     env_config = get_effective_llm_config()
@@ -95,7 +98,11 @@ async def get_llm_config(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/llm-config", response_model=LLMConfigResp)
-async def save_llm_config(req: LLMConfigReq, db: AsyncSession = Depends(get_db)):
+async def save_llm_config(
+    req: LLMConfigReq,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Save LLM configuration to database and update runtime overrides."""
     # Save to database
     await _save_config_to_db(db, req.api_key, req.api_base, req.model)
@@ -114,7 +121,10 @@ async def save_llm_config(req: LLMConfigReq, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/llm-config/test")
-async def test_llm_connection(db: AsyncSession = Depends(get_db)):
+async def test_llm_connection(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Test LLM API connection with current config."""
     db_config = await _load_config_from_db(db)
     config = get_effective_llm_config()
@@ -150,7 +160,10 @@ async def test_llm_connection(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/stats", response_model=AdminStatsResp)
-async def get_admin_stats(db: AsyncSession = Depends(get_db)):
+async def get_admin_stats(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Get admin statistics (user count, project count, etc.)."""
     # Count users
     stmt = select(func.count()).select_from(User)
@@ -187,6 +200,7 @@ async def get_users(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get user list (admin only)."""
@@ -221,6 +235,7 @@ async def get_projects(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get project list (admin only)."""
