@@ -37,7 +37,7 @@ services:
       - DATABASE_URL=postgresql+psycopg://moling:moling@db:5432/moling
       # CORS：允许前端通过 Nginx 访问
       # 生产环境替换为实际服务器 IP
-      - CORS_ORIGINS=http://localhost:8080,http://服务器IP:8080
+      - CORS_ORIGINS=http://localhost:8080,http://124.222.163.79:8080
       # 生产环境标记
       - ENVIRONMENT=production
     volumes:
