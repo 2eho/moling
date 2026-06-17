@@ -76,7 +76,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install alembic python-dotenv
 
       - name: 创建 .env 文件
@@ -176,7 +176,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install alembic python-dotenv
 
       - name: 安装 PostgreSQL 客户端工具
@@ -273,7 +273,7 @@ jobs:
         run: |
           cd moling-server
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[dev]"
           pip install alembic python-dotenv
 
       - name: 安装 PostgreSQL 客户端工具
