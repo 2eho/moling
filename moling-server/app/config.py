@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 
+from typing import List
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
@@ -58,6 +60,14 @@ class Settings(BaseSettings):
     # Sentry DSN（从 Sentry 后台获取）
     # 格式: https://<key>@<organization>.ingest.sentry.io/<project>
     SENTRY_DSN: str | None = None
+
+    # ---- API Key Pool ----
+    LLM_PRO_KEYS: List[str] = []  # Pro Pool Keys (from env comma-separated)
+    LLM_FLASH_KEYS: List[str] = []  # Flash Pool Keys (from env comma-separated)
+    KEY_SELECT_STRATEGY: str = "LEAST_USAGE"  # LEAST_USAGE | ROUND_ROBIN
+    KEY_BACKOFF_BASE: int = 30  # 初始冷却秒数
+    KEY_BACKOFF_MAX: int = 300  # 最大冷却秒数
+    KEY_RECOVERY_CHECK_INTERVAL: int = 60  # 恢复检查间隔（秒）
 
     # ---- Rate Limiting ----
     RATE_LIMIT_CALLS: int = 1000  # 每个周期允许的请求数（开发环境设为 1000）

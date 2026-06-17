@@ -6,10 +6,15 @@ a prompt template library organised by generation scenario.
 """
 
 from app.llm.client import LLMClient, llm_client
+from app.llm.key_manager import KeyManager, KeyHealth, NoAvailableKeyError, key_manager
 from app.llm.prompts import PromptLibrary
 
 __all__ = [
     "LLMClient",
     "llm_client",
+    "KeyManager",
+    "KeyHealth",
+    "NoAvailableKeyError",
+    "key_manager",
     "PromptLibrary",
 ]

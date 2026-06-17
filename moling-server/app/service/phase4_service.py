@@ -16,6 +16,7 @@ from sqlalchemy import select, update
 
 from app.config import get_settings
 from app.dao import chapter_dao, project_dao, vault_dao, card_dao, generation_dao, phase4_dao
+from app.service.card_retire_service import card_retire_service, RetireResult
 from app.errors import ErrorCode, NotFoundError, ValidationError, AppError
 from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool, GenerationTask
 from app.models.phase4_task import Phase4Task
@@ -1160,92 +1161,139 @@ class Phase4Service:
             "summary": "",
         }
 
+        # ── Phase 4 主事务（外层事务） ──────────────────────────────────
+        # LLM 调用和解析在事务外（不消耗事务资源）
+        # 四库合并 + 卡牌充实 + 卡牌淘汰 + 变更日志在 savepoint 内
         try:
-            # 步骤 1-3: 构建 prompt → 调用 LLM → 解析结果
+            # 步骤 [14]: LLM 调用 — 事务外（可重试，不消耗事务资源）
             logger.info("Step [14]: Building extraction prompt and calling LLM")
             extraction_result = await self._call_extraction_llm(
                 db, project_id, chapter_text, card_ids or []
             )
             parsed = self._parse_extraction_result(extraction_result)
 
-            # 步骤 [15]: 合并人物库变更
-            logger.info("Step [15]: Merging character updates")
-            char_result = await self._merge_characters(
-                db, project_id, parsed.get("character_updates", []),
-                chapter_number=chapter_number,
-            )
-            result["changes"]["characters"] = char_result
+            # ── savepoint：包含所有 DB 写入操作 ──────────────────────
+            # savepoint 失败时回滚 savepoint，不中断主事务
+            sp = await db.begin_nested()
+            try:
+                # 步骤 [15]: 合并人物库变更
+                logger.info("Step [15]: Merging character updates")
+                char_result = await self._merge_characters(
+                    db, project_id, parsed.get("character_updates", []),
+                    chapter_number=chapter_number,
+                )
+                result["changes"]["characters"] = char_result
 
-            # 步骤 [16]: 合并时间线库变更
-            logger.info("Step [16]: Merging timeline updates")
-            timeline_result = await self._merge_timeline(
-                db, project_id, parsed.get("timeline_updates", []),
-                chapter_id=chapter_id, chapter_number=chapter_number,
-            )
-            result["changes"]["timeline"] = timeline_result
+                # 步骤 [16]: 合并时间线库变更
+                logger.info("Step [16]: Merging timeline updates")
+                timeline_result = await self._merge_timeline(
+                    db, project_id, parsed.get("timeline_updates", []),
+                    chapter_id=chapter_id, chapter_number=chapter_number,
+                )
+                result["changes"]["timeline"] = timeline_result
 
-            # 步骤 [17]: 合并剧情承诺库变更
-            logger.info("Step [17]: Merging plot promise updates")
-            promise_result = await self._merge_plot_promises(
-                db, project_id, parsed.get("plot_promise_updates", []),
-                chapter_number=chapter_number,
-            )
-            result["changes"]["plot_promises"] = promise_result
+                # 步骤 [17]: 合并剧情承诺库变更
+                logger.info("Step [17]: Merging plot promise updates")
+                promise_result = await self._merge_plot_promises(
+                    db, project_id, parsed.get("plot_promise_updates", []),
+                    chapter_number=chapter_number,
+                )
+                result["changes"]["plot_promises"] = promise_result
 
-            # 步骤 [18]: 合并世界观库变更
-            logger.info("Step [18]: Merging world updates")
-            world_result = await self._merge_world(
-                db, project_id, parsed.get("world_updates", []),
-                chapter_number=chapter_number,
-            )
-            result["changes"]["world"] = world_result
+                # 步骤 [18]: 合并世界观库变更
+                logger.info("Step [18]: Merging world updates")
+                world_result = await self._merge_world(
+                    db, project_id, parsed.get("world_updates", []),
+                    chapter_number=chapter_number,
+                )
+                result["changes"]["world"] = world_result
 
-            # 步骤 [19]: 充实卡牌池
-            logger.info("Step [19]: Enriching card pool")
-            card_result = await self._enrich_card_pool(
-                db, project_id, parsed.get("card_pool_entries", []),
-                chapter_number=chapter_number,
-            )
-            result["changes"]["card_pool"] = card_result
+                # 步骤 [19]: 充实卡牌池
+                logger.info("Step [19]: Enriching card pool")
+                card_result = await self._enrich_card_pool(
+                    db, project_id, parsed.get("card_pool_entries", []),
+                    chapter_number=chapter_number,
+                )
+                result["changes"]["card_pool"] = card_result
 
-            # 步骤 [20]: 归档变更日志
-            logger.info("Step [20]: Archiving changelog")
-            timestamp = int(datetime.now(timezone.utc).timestamp())
-            version = f"v4_ch{chapter_number}_{timestamp}"
-            result["version"] = version
+                # 构建 version 和 summary
+                timestamp = int(datetime.now(timezone.utc).timestamp())
+                version = f"v4_ch{chapter_number}_{timestamp}"
+                result["version"] = version
 
-            summary_parts = []
-            if char_result.get("created"):
-                summary_parts.append(f"新增角色 {len(char_result['created'])} 个")
-            if char_result.get("updated"):
-                summary_parts.append(f"更新角色 {len(char_result['updated'])} 个")
-            if char_result.get("status_changed"):
-                summary_parts.append(f"角色状态变更 {len(char_result['status_changed'])} 个")
-            if timeline_result.get("added", 0) > 0:
-                summary_parts.append(f"新增时间线事件 {timeline_result['added']} 个")
-            if promise_result.get("created", 0) > 0:
-                summary_parts.append(f"新增伏笔 {promise_result['created']} 个")
-            if promise_result.get("advanced", 0) > 0:
-                summary_parts.append(f"推进伏笔 {promise_result['advanced']} 个")
-            if world_result.get("created", 0) > 0:
-                summary_parts.append(f"新增世界设定 {world_result['created']} 个")
-            if card_result.get("added", 0) > 0:
-                summary_parts.append(f"新增卡牌 {card_result['added']} 张")
+                summary_parts = []
+                if char_result.get("created"):
+                    summary_parts.append(f"新增角色 {len(char_result['created'])} 个")
+                if char_result.get("updated"):
+                    summary_parts.append(f"更新角色 {len(char_result['updated'])} 个")
+                if char_result.get("status_changed"):
+                    summary_parts.append(f"角色状态变更 {len(char_result['status_changed'])} 个")
+                if timeline_result.get("added", 0) > 0:
+                    summary_parts.append(f"新增时间线事件 {timeline_result['added']} 个")
+                if promise_result.get("created", 0) > 0:
+                    summary_parts.append(f"新增伏笔 {promise_result['created']} 个")
+                if promise_result.get("advanced", 0) > 0:
+                    summary_parts.append(f"推进伏笔 {promise_result['advanced']} 个")
+                if world_result.get("created", 0) > 0:
+                    summary_parts.append(f"新增世界设定 {world_result['created']} 个")
+                if card_result.get("added", 0) > 0:
+                    summary_parts.append(f"新增卡牌 {card_result['added']} 张")
 
-            summary = "、".join(summary_parts) if summary_parts else "无变更"
-            result["summary"] = summary
+                summary = "、".join(summary_parts) if summary_parts else "无变更"
+                result["summary"] = summary
 
-            await self._archive_changelog(
-                db, project_id, chapter_id, version, chapter_number, result["changes"],
-            )
+                # 步骤 [20]: 归档变更日志（savepoint 内）
+                logger.info("Step [20]: Archiving changelog")
+                await self._archive_changelog(
+                    db, project_id, chapter_id, version, chapter_number, result["changes"],
+                )
 
+                # 步骤 [21]: 卡牌淘汰检查（savepoint 内，错误降级）
+                try:
+                    retire_result = await card_retire_service.check_and_retire(
+                        db, project_id, current_chapter=chapter_number,
+                    )
+                    if retire_result.retired_count > 0:
+                        logger.info(
+                            f"Card retire: {retire_result.retired_count} retired, "
+                            f"{retire_result.expired_count} expired, "
+                            f"{retire_result.remaining_active} remaining"
+                        )
+                        result["card_retire"] = {
+                            "retired_count": retire_result.retired_count,
+                            "expired_count": retire_result.expired_count,
+                            "remaining_active": retire_result.remaining_active,
+                        }
+                except Exception as retire_err:
+                    logger.error(
+                        f"Card retire check failed (degraded): {retire_err}",
+                        exc_info=True,
+                    )
+
+                # 保存 savepoint — 所有合并操作一起提交
+                await sp.commit()
+
+            except Exception as e:
+                # savepoint 回滚：合并失败不影响主事务
+                await sp.rollback()
+                logger.error(
+                    f"Phase 4 savepoint rollback: merge operations failed: {e}",
+                    exc_info=True,
+                )
+                result["summary"] = f"合并操作失败，已回滚: {str(e)}"
+
+            # 步骤 [22]: 提交主事务
+            # savepoint 内的写入已由 sp.commit() 提交到主事务
+            # db.commit() 将所有变更持久化到数据库
             await db.commit()
-            logger.info(f"Phase 4 completed: {summary}")
+            logger.info(f"Phase 4 completed: {result.get('summary', '')}")
 
         except Exception as e:
-            logger.error(f"Phase 4 failed: {e}", exc_info=True)
+            # 主事务完全回滚（包括 savepoint 已提交的部分）
+            await db.rollback()
+            logger.error(f"Phase 4 full rollback: {e}", exc_info=True)
             result["summary"] = f"Phase 4 执行出错: {str(e)}"
-            # 不抛出异常，返回部分结果（优雅降级）
+            # 不抛出异常，保持优雅降级（不改变返回值行为）
 
         return result
 

@@ -49,6 +49,12 @@ def _make_mock_db() -> MagicMock:
     db.execute = AsyncMock()
     db.execute.return_value = MagicMock()  # avoid coroutine from .scalars()/.all()
     db.get = AsyncMock()
+    db.rollback = AsyncMock()
+    # begin_nested → returns a savepoint sp with async commit/rollback
+    mock_sp = MagicMock()
+    mock_sp.commit = AsyncMock()
+    mock_sp.rollback = AsyncMock()
+    db.begin_nested = AsyncMock(return_value=mock_sp)
     return db
 
 

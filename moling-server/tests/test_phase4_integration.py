@@ -50,7 +50,7 @@ class TestSourceTextGrounding:
 
     @pytest.mark.asyncio
     async def test_grounding_skip_missing_source(self):
-        """缺少 source_text 的条目被跳过。"""
+        """缺少 source_text 的条目被跳过（warn）。"""
         from app.service.phase4_scheduler import Phase4Scheduler
 
         scheduler = Phase4Scheduler()
@@ -64,8 +64,9 @@ class TestSourceTextGrounding:
 
         result = await scheduler._verify_source_text(chapter_text, analysis)
 
-        assert result["passed"] is False
-        assert len(result.get("skipped_items", [])) > 0
+        # warnings 不影响 passed（全部通过或仅有 warn 时 passed=True）
+        assert result["passed"] is True
+        assert len(result.get("warnings", [])) > 0
         print("✅ Source Text Grounding 缺失 source_text 跳过测试")
 
     @pytest.mark.asyncio

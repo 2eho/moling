@@ -355,7 +355,7 @@ class TestSourceTextGrounding:
         assert verdict == "fail"
 
     async def test_verify_source_text_skips_missing_source(self, fresh_scheduler):
-        """缺少 source_text 的条目应被跳过。"""
+        """缺少 source_text 的条目应被跳过（warn）。"""
         analysis = {
             "characters": [
                 {"name": "无名氏", "source_text": ""},
@@ -363,8 +363,10 @@ class TestSourceTextGrounding:
             "segments": [],
         }
         result = await fresh_scheduler._verify_source_text("原文内容", analysis)
-        assert result["passed"] is False
-        assert any("缺少 source_text" in item for item in result["skipped_items"])
+        # warnings 不影响 passed（全部通过或仅有 warn 时 passed=True）
+        assert result["passed"] is True
+        assert len(result["warnings"]) == 1
+        assert any("缺少 source_text" in item for item in result["warnings"])
 
 
 # ============================================================================
