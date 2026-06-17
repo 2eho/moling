@@ -21,7 +21,6 @@ from app.service.vault_filter import VaultFilterService
 
 
 # ── 确保 async 测试在没有 conftest 的场景下也能运行 ──
-pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture(scope="session")
@@ -247,6 +246,7 @@ class TestExtractCardIds:
         assert result["timeline_points"] == ["15"]
 
 
+@pytest.mark.asyncio
 class TestFetchFilteredCharacters:
     """_fetch_filtered_characters 单元测试。"""
 
@@ -282,6 +282,7 @@ class TestFetchFilteredCharacters:
         assert result[0].id == "c001"
 
 
+@pytest.mark.asyncio
 class TestFetchFilteredTimeline:
     """_fetch_filtered_timeline 单元测试。"""
 
@@ -329,6 +330,7 @@ class TestFetchFilteredTimeline:
         assert chapters == [1, 2, 3, 4, 5, 6, 7, 8]
 
 
+@pytest.mark.asyncio
 class TestFetchFilteredPromises:
     """_fetch_filtered_promises 单元测试。"""
 
@@ -357,6 +359,7 @@ class TestFetchFilteredPromises:
         assert result[0].id == "p001"
 
 
+@pytest.mark.asyncio
 class TestFetchFilteredWorld:
     """_fetch_filtered_world 单元测试。"""
 
@@ -455,6 +458,7 @@ class TestTokenEstimate:
         assert tokens >= 1
 
 
+@pytest.mark.asyncio
 class TestFilterByCards:
     """filter_by_cards 集成测试。"""
 

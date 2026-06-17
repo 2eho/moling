@@ -30,7 +30,6 @@ from app.service.health_monitor import (
 )
 
 # ── 确保 async 测试在没有 conftest 的场景下也能运行 ──
-pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture(scope="session")
@@ -544,6 +543,7 @@ class TestMakeResult:
 # ===========================================================================
 
 
+@pytest.mark.asyncio
 class TestCheckHealth:
     """check_health 集成测试。"""
 

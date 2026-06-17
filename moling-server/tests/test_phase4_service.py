@@ -35,9 +35,21 @@ def phase4_service() -> Phase4Service:
 
 
 @pytest.fixture
-def mock_db() -> AsyncMock:
-    """Mock async database session."""
-    return AsyncMock()
+def mock_db() -> MagicMock:
+    """Mock database session (add is sync, flush/commit/refresh/execute are async)."""
+    return _make_mock_db()
+
+
+def _make_mock_db() -> MagicMock:
+    """Create a mock db: MagicMock for sync methods (add), AsyncMock for async ones."""
+    db = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock()
+    db.execute.return_value = MagicMock()  # avoid coroutine from .scalars()/.all()
+    db.get = AsyncMock()
+    return db
 
 
 @pytest.fixture
@@ -230,7 +242,7 @@ async def test_get_vault_summary_async(
     phase4_service: Phase4Service,
 ):
     """测试获取四库摘要。"""
-    mock_db = AsyncMock()
+    mock_db = _make_mock_db()
 
     # Mock vault_dao methods
     from app.models.vault_character import VaultCharacter

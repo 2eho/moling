@@ -320,7 +320,7 @@ def main():
     print("="*60)
     print("墨灵性能测试 — 简化版")
     print("="*60)
-    print(f"后端地址: <ADDRESS_REDACTED>
+    print(f"后端地址: {args.host}")
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*60)
     

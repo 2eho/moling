@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -29,6 +29,18 @@ from app.service.phase4_scheduler import (
 )
 
 pytestmark = pytest.mark.asyncio
+
+
+def _make_mock_db() -> MagicMock:
+    """Create a mock db: MagicMock for sync methods (add), AsyncMock for async ones."""
+    db = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock()
+    db.execute.return_value = MagicMock()  # avoid coroutine from .scalars()/.all()
+    db.get = AsyncMock()
+    return db
 
 
 # ============================================================================
@@ -86,7 +98,7 @@ class TestIdempotency:
         """Layer 1: nonce 在内存集合中应返回已有状态。"""
         nonce = "test_nonce_001"
         fresh_scheduler._nonce_set.add(nonce)
-        result = await fresh_scheduler._check_idempotency(AsyncMock(), nonce)
+        result = await fresh_scheduler._check_idempotency(MagicMock(), nonce)
         assert result is not None
         assert result["status"] == "already_exists"
 
@@ -103,7 +115,7 @@ class TestIdempotency:
         with patch("app.service.phase4_scheduler.phase4_dao.get_by_nonce",
                    return_value=mock_task):
             nonce = "db_nonce_001"
-            result = await fresh_scheduler._check_idempotency(AsyncMock(), nonce)
+            result = await fresh_scheduler._check_idempotency(MagicMock(), nonce)
             assert result is not None
             assert result["task_id"] == "42"
             assert result["status"] == "done"
@@ -115,7 +127,7 @@ class TestIdempotency:
         with patch("app.service.phase4_scheduler.phase4_dao.get_by_nonce",
                    return_value=None):
             nonce = "brand_new_nonce"
-            result = await fresh_scheduler._check_idempotency(AsyncMock(), nonce)
+            result = await fresh_scheduler._check_idempotency(MagicMock(), nonce)
             assert result is None
 
 
@@ -203,7 +215,7 @@ class TestFailureHandling:
 
     async def test_handle_failure_first(self, fresh_scheduler):
         """首次失败应加入回补队列。"""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
         with patch("app.service.phase4_scheduler.phase4_dao.get_by_nonce",
                    return_value=AsyncMock()):
             await fresh_scheduler._handle_failure(
@@ -215,7 +227,7 @@ class TestFailureHandling:
 
     async def test_handle_failure_three_times(self, fresh_scheduler):
         """连续 3 次失败后应记录日志 (触发角标逻辑)."""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
         with patch("app.service.phase4_scheduler.phase4_dao.get_by_nonce",
                    return_value=AsyncMock()):
             for i in range(3):
@@ -228,7 +240,7 @@ class TestFailureHandling:
 
     async def test_handle_failure_five_triggers_pause(self, fresh_scheduler):
         """连续 5 次失败应强制暂停，抛出 RuntimeError。"""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
         with patch("app.service.phase4_scheduler.phase4_dao.get_by_nonce",
                    return_value=AsyncMock()):
             for i in range(4):
@@ -249,7 +261,7 @@ class TestFailureHandling:
 
     async def test_failure_after_success_resets_counter(self, fresh_scheduler):
         """成功一次后连续失败计数应重置。"""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
         with patch("app.service.phase4_scheduler.phase4_dao.get_by_nonce",
                    return_value=AsyncMock()):
             await fresh_scheduler._handle_failure(
@@ -411,7 +423,7 @@ class TestEntityNormalization:
 
     async def test_normalize_entity_names_new_entity(self, fresh_scheduler):
         """新实体名应注册为新的。"""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
         mock_vault_dao = AsyncMock()
         mock_vault_dao.get_characters.return_value = []
 
@@ -426,7 +438,8 @@ class TestEntityNormalization:
 
     async def test_normalize_entity_names_register_alias(self, fresh_scheduler):
         """匹配已有实体时应注册别名。"""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
+        mock_db.add = MagicMock(return_value=None)
         existing_char = AsyncMock()
         existing_char.name = "东方不败"
         existing_char.traits = []
@@ -446,7 +459,7 @@ class TestEntityNormalization:
 
     async def test_normalize_entity_names_skip_empty(self, fresh_scheduler):
         """空名字应被跳过。"""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
         mock_vault_dao = AsyncMock()
         mock_vault_dao.get_characters.return_value = []
 
@@ -476,7 +489,7 @@ class TestScheduleIntegration:
         with patch.object(fresh_scheduler, "_generate_nonce",
                           return_value=fixed_nonce):
             result = await fresh_scheduler.schedule_phase4(
-                AsyncMock(), 1, 1, "章节内容",
+                MagicMock(), 1, 1, "章节内容",
             )
         assert result["status"] == "already_exists"
         assert result["nonce"] == fixed_nonce
@@ -484,8 +497,8 @@ class TestScheduleIntegration:
     async def test_schedule_phase4_full_flow_success(self, fresh_scheduler):
         """完整流程: 幂等检查 → 门控 → 加锁 → 安全验证 → 调用 → 解锁 → 成功。"""
         # 模拟所有外部调用
-        mock_db = AsyncMock()
-        mock_db.flush.return_value = None
+        mock_db = _make_mock_db()
+        mock_db.add = MagicMock(return_value=None)
         mock_db.commit.return_value = None
 
         mock_task = AsyncMock()
@@ -522,7 +535,8 @@ class TestScheduleIntegration:
 
     async def test_schedule_phase4_failure_flow(self, fresh_scheduler):
         """异常流程: 执行失败应触发 _handle_failure. """
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
+        mock_db.add = MagicMock(return_value=None)
 
         with patch.multiple(
             "app.service.phase4_scheduler",
@@ -557,7 +571,7 @@ class TestInputAssembly:
 
     async def test_assemble_input_structure(self, fresh_scheduler):
         """组装的输入应包含所有必需字段。"""
-        mock_db = AsyncMock()
+        mock_db = _make_mock_db()
         mock_vault_dao = AsyncMock()
         mock_vault_dao.get_characters.return_value = []
 
