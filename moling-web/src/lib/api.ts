@@ -31,6 +31,7 @@ import type {
   AdminStats,
   AdminUser,
   AdminProject,
+  Phase4TaskStatus,
 } from "@/lib/types";
 
 // ---- Auth API ----
@@ -873,14 +874,27 @@ export const phase4Api = {
   },
 
   async getChapterTasks(chapterId: string) {
-    return apiClient.get<ApiResponse<Array<{ id: number; status: string; created_at: string; completed_at?: string }>>>(
+    return apiClient.get<ApiResponse<Phase4TaskStatus[]>>(
       `/phase4/chapters/${chapterId}/tasks`,
     );
   },
 
   async getProjectTasks(projectId: string) {
-    return apiClient.get<ApiResponse<Array<{ id: number; status: string; created_at: string; completed_at?: string }>>>(
+    return apiClient.get<ApiResponse<Phase4TaskStatus[]>>(
       `/phase4/projects/${projectId}/tasks`,
+    );
+  },
+
+  async getTask(taskId: string) {
+    return apiClient.get<ApiResponse<Phase4TaskStatus>>(
+      `/phase4/tasks/${taskId}`,
+    );
+  },
+
+  async retryTask(taskId: string) {
+    return apiClient.post<ApiResponse<Phase4TaskStatus>>(
+      `/phase4/tasks/${taskId}/retry`,
+      {},
     );
   },
 };

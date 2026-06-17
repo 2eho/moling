@@ -262,6 +262,7 @@ export default function VaultsPage() {
     worlds: VaultWorld[];
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId || !isAuthenticated) return;
@@ -269,6 +270,7 @@ export default function VaultsPage() {
     const loadVaultData = async () => {
       try {
         setIsLoading(true);
+        setLoadError(null);
         const [charsRes, tlRes, ppRes, wldRes] = await Promise.all([
           vaultApi.getCharacters(projectId),
           vaultApi.getTimeline(projectId),
@@ -276,7 +278,6 @@ export default function VaultsPage() {
           vaultApi.getWorld(projectId),
         ]);
         
-        // ✅ 修复：使用 safeArray 确保永远是数组
         setVaultData({
           characters: safeArray<VaultCharacter>(charsRes.data, []),
           timelines: safeArray<VaultTimeline>(tlRes.data, []),
@@ -285,7 +286,7 @@ export default function VaultsPage() {
         });
       } catch (error) {
         console.error("Failed to load vault data:", error);
-        // ✅ 修复：API 失败时保持 vaultData 为 null（使用 Mock 数据作为 fallback）
+        setLoadError(error instanceof Error ? error.message : "加载知识库数据失败");
         setVaultData(null);
       } finally {
         setIsLoading(false);
@@ -295,16 +296,321 @@ export default function VaultsPage() {
     loadVaultData();
   }, [projectId, isAuthenticated]);
 
+  // ── API-driven data transformations ──
+  // VaultCharacter → desktop card format
+  const apiCharacterCards = useMemo(() => {
+    if (!vaultData) return CHARACTER_CARDS;
+    const roleFactionMap: Record<string, string> = {
+      "主角": "protagonist", "protagonist": "protagonist",
+      "盟友": "ally", "ally": "ally",
+      "中立": "neutral", "neutral": "neutral",
+      "对手": "opponent", "opponent": "opponent",
+      "反派": "villain", "villain": "villain",
+    };
+    const getFaction = (role: string): string => roleFactionMap[role.toLowerCase()] || "neutral";
+    const getStatusDotColor = (faction: string): string => {
+      const colorMap: Record<string, string> = {
+        protagonist: "var(--color-success)",
+        ally: "var(--color-success)",
+        neutral: "var(--color-warning)",
+        opponent: "var(--color-warning)",
+        villain: "var(--color-danger)",
+      };
+      return colorMap[faction] || "var(--color-text-secondary)";
+    };
+    return vaultData.characters.map((c) => ({
+      name: c.name,
+      faction: getFaction(c.role),
+      avatarClass: getFaction(c.role),
+      avatarChar: c.name.charAt(0),
+      chapters: "—",
+      tags: c.traits && c.traits.length > 0 ? c.traits : [c.role],
+      status: c.description ? c.description.slice(0, 20) + (c.description.length > 20 ? "…" : "") : "—",
+      statusDotColor: getStatusDotColor(getFaction(c.role)),
+    }));
+  }, [vaultData]);
+
+  // VaultCharacter → detail modal format
+  const apiCharacterDetails = useMemo(() => {
+    if (!vaultData) return CHARACTER_DETAILS;
+    const details: Record<string, CharacterDetail> = {};
+    vaultData.characters.forEach((c) => {
+      details[c.name] = {
+        name: c.name,
+        faction: c.role,
+        background: c.background || "暂无背景信息",
+        ability: c.knowledge || "暂无能力信息",
+        relationships: c.relationships?.map((r) => `${r.relationship}: ${r.description}`).join(" · ") || "暂无关联信息",
+        arc: c.arc || "暂无成长弧线",
+      };
+    });
+    return details;
+  }, [vaultData]);
+
+  // VaultTimeline → timeline events
+  const apiTimelineEvents = useMemo(() => {
+    if (!vaultData || vaultData.timelines.length === 0) return TIMELINE_EVENTS;
+    return vaultData.timelines.map((tl, idx) => ({
+      day: tl.day !== undefined ? `第 ${tl.day} 天` : `事件 ${idx + 1}`,
+      text: tl.description || tl.title || "未命名事件",
+      className: idx === 0 ? "completed" : idx === vaultData.timelines.length - 1 ? "current" : "completed",
+      isCurrent: idx === vaultData.timelines.length - 1,
+    }));
+  }, [vaultData]);
+
+  // VaultTimeline → scene list
+  const apiSceneList = useMemo(() => {
+    if (!vaultData) return SCENE_LIST;
+    const scenes: Array<{ chapter: string; summary: string }> = [];
+    vaultData.timelines.forEach((tl) => {
+      tl.events?.forEach((evt, idx) => {
+        scenes.push({
+          chapter: `Ch.${evt.chapter_number}`,
+          summary: evt.event || tl.title || `事件 ${idx + 1}`,
+        });
+      });
+    });
+    return scenes.length > 0 ? scenes : SCENE_LIST;
+  }, [vaultData]);
+
+  // VaultPlotPromise → ForeshadowItem format
+  const apiForeshadowItems = useMemo(() => {
+    if (!vaultData) return FORESHADOW_ITEMS;
+    const urgencyMap: Record<string, "high" | "medium" | "low"> = {
+      "高": "high", "high": "high",
+      "中": "medium", "medium": "medium",
+      "低": "low", "low": "low",
+    };
+    const getBadgeClass = (s: string): string => {
+      if (s === "fulfilled") return "wrap";
+      if (s === "broken") return "lost";
+      if (s === "pending") return "foreshadow";
+      return "advance";
+    };
+    const statusLabel: Record<string, string> = {
+      pending: "待回收",
+      fulfilled: "已回收",
+      broken: "遗落",
+    };
+    const statusClass: Record<string, string> = {
+      pending: "pending",
+      fulfilled: "recovered",
+      broken: "lost",
+    };
+    return vaultData.plotPromises.map((pp) => ({
+      id: pp.id,
+      title: pp.title || pp.description.slice(0, 30),
+      urgency: (urgencyMap[pp.urgency?.toLowerCase() || ""] || "medium") as "high" | "medium" | "low",
+      badge: pp.type || "伏笔",
+      badgeClass: getBadgeClass(pp.status),
+      status: statusLabel[pp.status] || pp.status,
+      statusClass: statusClass[pp.status] || "pending",
+      chapter: `第${pp.introduced_at}章`,
+      characters: "",
+      suggestChapter: pp.resolved_at ? `已解决于第${pp.resolved_at}章` : "",
+      detailRows: [{ label: "描述", value: pp.description }],
+    }));
+  }, [vaultData]);
+
+  // VaultWorld → world items (text list)
+  const apiWorldItems = useMemo(() => {
+    if (!vaultData) return WORLD_ITEMS;
+    return vaultData.worlds.map((w) => ({
+      text: `${w.name}（${w.category}）：${w.description}`,
+    }));
+  }, [vaultData]);
+
+  // VaultWorld → world cards
+  const apiWorldCards = useMemo(() => {
+    if (!vaultData) return WORLD_CARDS;
+    const catClassMap: Record<string, string> = {
+      地理: "protagonist", geography: "protagonist",
+      体系: "ally", system: "ally",
+      历史: "opponent", history: "opponent",
+      势力: "neutral", faction: "neutral",
+    };
+    return vaultData.worlds.map((w) => ({
+      name: w.name,
+      category: w.category,
+      catClass: catClassMap[w.category?.toLowerCase()] || "ally",
+      tags: w.rules || [],
+      desc: w.description,
+      chapters: w.source_chapter ? `第${w.source_chapter}章` : "—",
+      lastUpdate: w.source_chapter ? `第${w.source_chapter}章` : "—",
+    }));
+  }, [vaultData]);
+
+  // Dynamic filter buttons with counts
+  const apiCharFilterLabels = useMemo(() => {
+    if (!vaultData) return CHAR_FILTER_LABELS;
+    const counts: Record<string, number> = { all: vaultData.characters.length, protagonist: 0, ally: 0, neutral: 0, opponent: 0, villain: 0 };
+    vaultData.characters.forEach((c) => {
+      const roleLower = c.role?.toLowerCase() || "";
+      if (["主角", "protagonist"].includes(roleLower)) counts.protagonist++;
+      else if (["盟友", "ally"].includes(roleLower)) counts.ally++;
+      else if (["中立", "neutral"].includes(roleLower)) counts.neutral++;
+      else if (["对手", "opponent"].includes(roleLower)) counts.opponent++;
+      else if (["反派", "villain"].includes(roleLower)) counts.villain++;
+      else counts.neutral++;
+    });
+    return [
+      { key: "all" as CharFilter, label: `全部 (${counts.all})` },
+      { key: "protagonist" as CharFilter, label: `主角 (${counts.protagonist})` },
+      { key: "ally" as CharFilter, label: `盟友 (${counts.ally})` },
+      { key: "neutral" as CharFilter, label: `中立 (${counts.neutral})` },
+      { key: "opponent" as CharFilter, label: `对手 (${counts.opponent})` },
+      { key: "villain" as CharFilter, label: `反派 (${counts.villain})` },
+    ];
+  }, [vaultData]);
+
+  const apiForeshadowFilterBtns = useMemo(() => {
+    if (!vaultData) return FORESHADOW_FILTER_BTNS;
+    const counts = { all: vaultData.plotPromises.length, active: 0, pending: 0, recovered: 0, lost: 0 };
+    vaultData.plotPromises.forEach((pp) => {
+      if (pp.status === "pending") { counts.pending++; counts.active++; }
+      else if (pp.status === "fulfilled") { counts.recovered++; }
+      else if (pp.status === "broken") { counts.lost++; }
+    });
+    return [
+      { key: "all" as ForeshadowFilter, label: `全部 (${counts.all})` },
+      { key: "active" as ForeshadowFilter, label: `活跃 (${counts.active})` },
+      { key: "pending" as ForeshadowFilter, label: `待回收 (${counts.pending})` },
+      { key: "recovered" as ForeshadowFilter, label: `已回收 (${counts.recovered})` },
+      { key: "lost" as ForeshadowFilter, label: `遗落 (${counts.lost})` },
+    ];
+  }, [vaultData]);
+
+  const apiWorldFilterBtns = useMemo(() => {
+    if (!vaultData) return WORLD_FILTER_BTNS;
+    const catCounts: Record<string, number> = {};
+    vaultData.worlds.forEach((w) => {
+      const cat = w.category?.toLowerCase() || "other";
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+    });
+    const total = vaultData.worlds.length;
+    return [
+      { key: "all" as WorldFilter, label: `全部 (${total})` },
+      { key: "geography" as WorldFilter, label: `地理 (${catCounts["geography"] || catCounts["地理"] || 0})` },
+      { key: "history" as WorldFilter, label: `历史 (${catCounts["history"] || catCounts["历史"] || 0})` },
+      { key: "magic" as WorldFilter, label: `体系 (${catCounts["magic"] || catCounts["体系"] || catCounts["system"] || 0})` },
+      { key: "faction" as WorldFilter, label: `势力 (${catCounts["faction"] || catCounts["势力"] || 0})` },
+    ];
+  }, [vaultData]);
+
+  // Derived active variables
+  const activeCharCards = vaultData ? apiCharacterCards : CHARACTER_CARDS;
+  const activeCharDetails = vaultData ? apiCharacterDetails : CHARACTER_DETAILS;
+  const activeTimelineEvents = vaultData ? apiTimelineEvents : TIMELINE_EVENTS;
+  const activeSceneList = vaultData ? apiSceneList : SCENE_LIST;
+  const activeForeshadowItems = vaultData ? apiForeshadowItems : FORESHADOW_ITEMS;
+  const activeWorldItems = vaultData ? apiWorldItems : WORLD_ITEMS;
+  const activeWorldCards = vaultData ? apiWorldCards : WORLD_CARDS;
+  const activeCharFilterLabels = vaultData ? apiCharFilterLabels : CHAR_FILTER_LABELS;
+  const activeForeshadowFilterBtns = vaultData ? apiForeshadowFilterBtns : FORESHADOW_FILTER_BTNS;
+  const activeWorldFilterBtns = vaultData ? apiWorldFilterBtns : WORLD_FILTER_BTNS;
+
+  // Sidebar stats
+  const apiSidebarTabs = useMemo(() => {
+    if (!vaultData) return SIDEBAR_TABS;
+    const activePP = vaultData.plotPromises.filter((p) => p.status === "pending").length;
+    return [
+      { id: "character" as DTab, icon: "👥", label: "人物库", count: `${vaultData.characters.length} 人` },
+      { id: "timeline" as DTab, icon: "⏱️", label: "时间线库", count: `${vaultData.timelines.length} 个节点` },
+      { id: "commitments" as DTab, icon: "📖", label: "剧情承诺库", count: `${activePP} 活跃 · ${vaultData.plotPromises.filter((p) => p.status === "fulfilled").length} 已回收` },
+      { id: "world" as DTab, icon: "🌍", label: "世界观库", count: `${vaultData.worlds.length} 项` },
+      { id: "secrets" as DTab, icon: "🔐", label: "秘密矩阵", count: `${SECRET_ROWS.length} 活跃` },
+    ];
+  }, [vaultData]);
+
+  // Mobile data from API
+  const apiMobileCharacters = useMemo(() => {
+    if (!vaultData) return MOBILE_CHARACTERS;
+    return vaultData.characters.map((c, i) => ({
+      name: c.name,
+      avatarVariant: `v${(i % 3) + 1}`,
+      avatarChar: c.name.charAt(0),
+      tags: c.role ? [c.role, ...(c.traits || []).slice(0, 3)] : (c.traits || []).slice(0, 4),
+      traits: c.traits || [],
+      desc: c.description || c.background || "暂无详细描述",
+    }));
+  }, [vaultData]);
+
+  const apiMobileTimeline = useMemo(() => {
+    if (!vaultData || vaultData.timelines.length === 0) return MOBILE_TIMELINE;
+    return vaultData.timelines.map((tl, idx) => ({
+      day: tl.day !== undefined ? `第 ${tl.day} 天` : `阶段 ${idx + 1}`,
+      title: tl.title || "事件",
+      desc: tl.description || "暂无描述",
+      className: idx === vaultData.timelines.length - 1 ? "current" : "",
+    }));
+  }, [vaultData]);
+
+  const apiMobilePlotItems = useMemo(() => {
+    if (!vaultData) return MOBILE_PLOT_ITEMS;
+    return vaultData.plotPromises.map((pp) => ({
+      title: pp.title || pp.description.slice(0, 20),
+      type: pp.status === "fulfilled" ? "done" as const : "pending" as const,
+      chapter: `第${pp.introduced_at}章埋设`,
+      suggest: pp.resolved_at ? `第${pp.resolved_at}章回收` : "待回收",
+      desc: pp.description,
+    }));
+  }, [vaultData]);
+
+  const apiMobileWorldCards = useMemo(() => {
+    if (!vaultData) return MOBILE_WORLD_CARDS;
+    const catIconMap: Record<string, { icon: string; iconClass: string }> = {
+      地理: { icon: "🏛", iconClass: "geo" },
+      geography: { icon: "🏛", iconClass: "geo" },
+      体系: { icon: "⚙", iconClass: "sys" },
+      system: { icon: "⚙", iconClass: "sys" },
+      历史: { icon: "📖", iconClass: "his" },
+      history: { icon: "📖", iconClass: "his" },
+      势力: { icon: "🏴", iconClass: "power" },
+      faction: { icon: "🏴", iconClass: "power" },
+    };
+    return vaultData.worlds.map((w) => {
+      const cat = w.category?.toLowerCase() || "";
+      const mapping = catIconMap[cat] || catIconMap[w.category] || { icon: "📌", iconClass: "sys" };
+      return {
+        name: w.name,
+        cat: mapping.iconClass,
+        icon: mapping.icon,
+        iconClass: mapping.iconClass,
+        desc: w.description,
+      };
+    });
+  }, [vaultData]);
+
+  // Final mobile data
+  const activeMobileCharacters = vaultData ? apiMobileCharacters : MOBILE_CHARACTERS;
+  const activeMobileTimeline = vaultData ? apiMobileTimeline : MOBILE_TIMELINE;
+  const activeMobilePlotItems = vaultData ? apiMobilePlotItems : MOBILE_PLOT_ITEMS;
+  const activeMobileWorldCards = vaultData ? apiMobileWorldCards : MOBILE_WORLD_CARDS;
+
+  // Dynamic secrets filter counts
+  const apiSecretsFilterBtns = useMemo(() => {
+    if (!vaultData) return SECRETS_FILTER_BTNS;
+    const absCount = SECRET_ROWS.filter((s) => s.level === "absolute").length;
+    const partCount = SECRET_ROWS.filter((s) => s.level === "partial").length;
+    const openCount = SECRET_ROWS.filter((s) => s.level === "open").length;
+    return [
+      { key: "all" as SecretsFilter, label: `全部 (${SECRET_ROWS.length})` },
+      { key: "absolute" as SecretsFilter, label: `绝对秘密 (${absCount})` },
+      { key: "partial" as SecretsFilter, label: `部分公开 (${partCount})` },
+      { key: "open" as SecretsFilter, label: `已公开 (${openCount})` },
+    ];
+  }, [vaultData]);
+
   // Filtered data
   const filteredChars = useMemo(() => {
-    if (charFilter === "all") return CHARACTER_CARDS;
-    return CHARACTER_CARDS.filter(c => c.faction === charFilter);
-  }, [charFilter]);
+    if (charFilter === "all") return activeCharCards;
+    return activeCharCards.filter(c => c.faction === charFilter);
+  }, [charFilter, activeCharCards]);
 
   const filteredForeshadows = useMemo(() => {
-    if (foreshadowFilter === "all") return FORESHADOW_ITEMS;
-    return FORESHADOW_ITEMS.filter(f => f.statusClass === foreshadowFilter);
-  }, [foreshadowFilter]);
+    if (foreshadowFilter === "all") return activeForeshadowItems;
+    return activeForeshadowItems.filter(f => f.statusClass === foreshadowFilter);
+  }, [foreshadowFilter, activeForeshadowItems]);
 
   const filteredSecrets = useMemo(() => {
     if (secretsFilter === "all") return SECRET_ROWS;
@@ -312,23 +618,23 @@ export default function VaultsPage() {
   }, [secretsFilter]);
 
   const filteredMobilePlot = useMemo(() => {
-    if (mobilePlotFilter === "all") return MOBILE_PLOT_ITEMS;
-    return MOBILE_PLOT_ITEMS.filter(p => p.type === mobilePlotFilter);
-  }, [mobilePlotFilter]);
+    if (mobilePlotFilter === "all") return activeMobilePlotItems;
+    return activeMobilePlotItems.filter(p => p.type === mobilePlotFilter);
+  }, [mobilePlotFilter, activeMobilePlotItems]);
 
   const filteredMobileWorld = useMemo(() => {
-    if (mobileWorldFilter === "all") return MOBILE_WORLD_CARDS;
-    return MOBILE_WORLD_CARDS.filter(c => c.cat === mobileWorldFilter);
-  }, [mobileWorldFilter]);
+    if (mobileWorldFilter === "all") return activeMobileWorldCards;
+    return activeMobileWorldCards.filter(c => c.cat === mobileWorldFilter);
+  }, [mobileWorldFilter, activeMobileWorldCards]);
 
   const filteredMobileChars = useMemo(() => {
-    if (!mobileSearchQuery.trim()) return MOBILE_CHARACTERS;
+    if (!mobileSearchQuery.trim()) return activeMobileCharacters;
     const q = mobileSearchQuery.toLowerCase();
-    return MOBILE_CHARACTERS.filter(c =>
+    return activeMobileCharacters.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.tags.some(t => t.toLowerCase().includes(q))
     );
-  }, [mobileSearchQuery]);
+  }, [mobileSearchQuery, activeMobileCharacters]);
 
   // Toggle section collapse
   const toggleSection = useCallback((sectionId: string) => {
@@ -367,8 +673,8 @@ export default function VaultsPage() {
 
   // Get character detail
   const getCharDetail = useCallback((name: string): CharacterDetail | null => {
-    return CHARACTER_DETAILS[name] || null;
-  }, []);
+    return activeCharDetails[name] || null;
+  }, [activeCharDetails]);
 
   // Keyboard shortcut
   useEffect(() => {
@@ -394,7 +700,7 @@ export default function VaultsPage() {
   // ── Render: Character Detail Modal ──
   const renderCharModal = () => {
     if (!selectedCharacterName) return null;
-    const card = CHARACTER_CARDS.find(c => c.name === selectedCharacterName);
+    const card = activeCharCards.find(c => c.name === selectedCharacterName);
     const detail = getCharDetail(selectedCharacterName);
 
     return (
@@ -503,7 +809,7 @@ export default function VaultsPage() {
   const dCharacterPanel = (
     <div className={`${styles.dContentPanel} ${activeTab === "character" ? styles.active : ""}`}>
       <div className={styles.dFilterBar}>
-        {CHAR_FILTER_LABELS.map((btn) => (
+        {activeCharFilterLabels.map((btn) => (
           <button
             key={btn.key}
             className={`${styles.dFilterBtn} ${charFilter === btn.key ? styles.active : ""}`}
@@ -569,7 +875,7 @@ export default function VaultsPage() {
           </div>
           <div className={styles.dSectionCardBody}>
             <div className={styles.dTimeline}>
-              {TIMELINE_EVENTS.map((evt, i) => (
+              {activeTimelineEvents.map((evt, i) => (
                 <div key={i} className={`${styles.dTimelineItem} ${evt.isCurrent ? styles.current : ""} ${evt.className === "completed" ? styles.completed : ""}`}>
                   <div className={styles.dTimelineDot}></div>
                   <div className={styles.dTimelineLabel}>{evt.day}</div>
@@ -596,7 +902,7 @@ export default function VaultsPage() {
             </div>
           </div>
           <div className={styles.dSectionCardBody}>
-            {SCENE_LIST.map((scene, i) => (
+            {activeSceneList.map((scene, i) => (
               <div key={i} className={styles.dSceneListItem}>
                 <span className={styles.dSceneChapter}>{scene.chapter}</span>
                 <span className={styles.dSceneSummary}>{scene.summary}</span>
@@ -612,7 +918,7 @@ export default function VaultsPage() {
   const dCommitmentsPanel = (
     <div className={`${styles.dContentPanel} ${activeTab === "commitments" ? styles.active : ""}`}>
       <div className={styles.dFilterBar}>
-        {FORESHADOW_FILTER_BTNS.map((btn) => (
+        {activeForeshadowFilterBtns.map((btn) => (
           <button
             key={btn.key}
             className={`${styles.dFilterBtn} ${foreshadowFilter === btn.key ? styles.active : ""}`}
@@ -695,7 +1001,7 @@ export default function VaultsPage() {
   const dWorldPanel = (
     <div className={`${styles.dContentPanel} ${activeTab === "world" ? styles.active : ""}`}>
       <div className={styles.dFilterBar}>
-        {WORLD_FILTER_BTNS.map((btn) => (
+        {activeWorldFilterBtns.map((btn) => (
           <button
             key={btn.key}
             className={`${styles.dFilterBtn} ${worldFilter === btn.key ? styles.active : ""}`}
@@ -720,7 +1026,7 @@ export default function VaultsPage() {
             </div>
           </div>
           <div className={styles.dSectionCardBody}>
-            {WORLD_ITEMS.map((item, i) => (
+            {activeWorldItems.map((item, i) => (
               <div key={i} className={styles.dMemoryItem}>
                 <span className={styles.dMemoryItemText}>{item.text}</span>
                 <div className={styles.dMemoryItemActions}>
@@ -733,7 +1039,7 @@ export default function VaultsPage() {
         </div>
       </section>
       <div className={styles.dWorldGrid}>
-        {WORLD_CARDS.map((card, i) => (
+        {activeWorldCards.map((card, i) => (
           <div key={i} className={styles.dWorldCardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-2)" }}>
               <span className={styles.dWorldCardName}>{card.name}</span>
@@ -756,7 +1062,7 @@ export default function VaultsPage() {
   const dSecretsPanel = (
     <div className={`${styles.dContentPanel} ${activeTab === "secrets" ? styles.active : ""}`}>
       <div className={styles.dFilterBar}>
-        {SECRETS_FILTER_BTNS.map((btn) => (
+        {apiSecretsFilterBtns.map((btn) => (
           <button
             key={btn.key}
             className={`${styles.dFilterBtn} ${secretsFilter === btn.key ? styles.active : ""}`}
@@ -910,6 +1216,8 @@ export default function VaultsPage() {
           </button>
           <span className={styles.dHeaderTitle}>四库管理</span>
           <span className={styles.dHeaderProject}>{PROJECT_NAME}</span>
+          {isLoading && <span className={styles.loadingBadge}>同步中…</span>}
+          {loadError && <span className={styles.loadingBadge} style={{color:"var(--color-danger)"}} title={loadError}>回退模式</span>}
         </div>
         <div className={styles.dHeaderRight}>{dSearchBox}</div>
       </header>
@@ -917,7 +1225,7 @@ export default function VaultsPage() {
         <aside className={styles.dSidebar}>
           <div className={styles.dSidebarSectionLabel}>知识库</div>
           <nav className={styles.dVaultTabs}>
-            {SIDEBAR_TABS.map((tab) => (
+            {apiSidebarTabs.map((tab) => (
               <div
                 key={tab.id}
                 className={`${styles.dVaultTab} ${activeTab === tab.id ? styles.active : ""}`}
@@ -1039,7 +1347,7 @@ export default function VaultsPage() {
       {/* Tab 1: Timeline */}
       <div className={`${styles.mTabContent} ${mobileTab === 1 ? styles.active : ""}`}>
         <div className={styles.mTimeline}>
-          {MOBILE_TIMELINE.map((evt, i) => (
+          {activeMobileTimeline.map((evt, i) => (
             <div key={i} className={`${styles.mTlNode} ${evt.className ? styles[evt.className] : ""}`}>
               <div className={styles.mTlDot}></div>
               <div className={styles.mTlLabel}>{evt.day}{evt.className === "current" ? <span className={styles.mTlBadge}>当前</span> : ""}</div>

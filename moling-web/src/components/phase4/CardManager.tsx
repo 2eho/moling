@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { cardApi } from "@/lib/api";
 import type { CardPool, DrawRecord, Rarity } from "@/lib/types";
 import { RARITY_LABELS, RARITY_ICONS } from "@/lib/constants";
@@ -20,6 +20,7 @@ export function CardManager({ projectId, chapterId }: CardManagerProps) {
   const [mode, setMode] = useState<"normal" | "double" | "guaranteed">("normal");
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [cardStatusFilter, setCardStatusFilter] = useState<"all" | "active" | "retired">("active");
 
   // 创建卡牌表单
   const [formData, setFormData] = useState({
@@ -114,6 +115,33 @@ export function CardManager({ projectId, chapterId }: CardManagerProps) {
       setSelectedCards([...selectedCards, cardId]);
     }
   };
+
+  // 根据退役过滤卡牌
+  const filteredCards = useMemo(() => {
+    if (cardStatusFilter === "all") return cards;
+    if (cardStatusFilter === "retired") return cards.filter((c) => c.status === "retired");
+    return cards.filter((c) => c.status !== "retired");
+  }, [cards, cardStatusFilter]);
+
+  // 卡牌状态标签映射
+  const statusLabelMap: Record<string, string> = {
+    available: "可用",
+    drawn: "已抽取",
+    used: "已使用",
+    expired: "已过期",
+    retired: "已退役",
+  };
+
+  // 判断卡牌是否处于新鲜期
+  const isFresh = (card: CardPool): boolean => {
+    if (card.status === "retired") return false;
+    if (card.freshness_chapter === undefined) return false;
+    // 如果 freshness_chapter 大于当前抽取次数，认为仍在新颖
+    return card.freshness_chapter > (card.draw_count || 0);
+  };
+
+  const activeCardCount = cards.filter((c) => c.status !== "retired").length;
+  const retiredCardCount = cards.filter((c) => c.status === "retired").length;
 
   if (loading) {
     return <div className={styles.loading}>加载中...</div>;
@@ -277,18 +305,49 @@ export function CardManager({ projectId, chapterId }: CardManagerProps) {
         </div>
       )}
 
+      {/* 卡牌状态过滤 */}
+      <div className={styles.filterBar}>
+        <button
+          className={`${styles.filterBtn} ${cardStatusFilter === "active" ? styles.active : ""}`}
+          onClick={() => setCardStatusFilter("active")}
+        >
+          活跃 ({activeCardCount})
+        </button>
+        <button
+          className={`${styles.filterBtn} ${cardStatusFilter === "retired" ? styles.active : ""}`}
+          onClick={() => setCardStatusFilter("retired")}
+        >
+          已退役 ({retiredCardCount})
+        </button>
+        <button
+          className={`${styles.filterBtn} ${cardStatusFilter === "all" ? styles.active : ""}`}
+          onClick={() => setCardStatusFilter("all")}
+        >
+          全部 ({cards.length})
+        </button>
+      </div>
+
       {/* 卡牌列表 */}
       <div className={styles.list}>
-        <h4 className={styles.panelTitle}>卡牌池 ({cards.length})</h4>
-        {cards.length === 0 ? (
-          <div className={styles.empty}>暂无卡牌数据</div>
+        <h4 className={styles.panelTitle}>卡牌池 ({filteredCards.length})</h4>
+        {filteredCards.length === 0 ? (
+          <div className={styles.empty}>
+            {cardStatusFilter === "active"
+              ? "暂无活跃卡牌"
+              : cardStatusFilter === "retired"
+                ? "暂无已退役卡牌"
+                : "暂无卡牌数据"}
+          </div>
         ) : (
-          cards.map((card) => (
+          filteredCards.map((card) => (
             <div
               key={card.id}
-              className={`${styles.card} ${styles[`rarity_${card.rarity}`]}`}
-              onClick={() => toggleCardSelection(card.id)}
+              className={`${styles.card} ${styles[`rarity_${card.rarity}`]} ${card.status === "retired" ? styles.retired : ""}`}
+              onClick={() => card.status !== "retired" && toggleCardSelection(card.id)}
             >
+              {card.status === "retired" && (
+                <div className={styles.retiredOverlay}>已退役</div>
+              )}
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>
                   {RARITY_ICONS[card.rarity] || "⚪"}
@@ -297,20 +356,20 @@ export function CardManager({ projectId, chapterId }: CardManagerProps) {
                 <span className={styles.cardRarity}>
                   {RARITY_LABELS[card.rarity] || card.rarity}
                 </span>
+                {/* 新鲜期指示器 */}
+                {isFresh(card) && (
+                  <span className={styles.freshBadge} title="此卡牌处于新鲜期">
+                    ✨ 新鲜
+                  </span>
+                )}
               </div>
               <p className={styles.cardDescription}>{card.description}</p>
               <div className={styles.cardFooter}>
                 <span className={styles.cardType}>
                   {card.direction_type}
                 </span>
-                <span className={styles.cardStatus}>
-                  {card.status === "available"
-                    ? "可用"
-                    : card.status === "drawn"
-                      ? "已抽取"
-                      : card.status === "used"
-                        ? "已使用"
-                        : "已过期"}
+                <span className={`${styles.cardStatus} ${card.status === "retired" ? styles.statusRetired : ""}`}>
+                  {statusLabelMap[card.status] || card.status}
                 </span>
                 {card.draw_count !== undefined && (
                   <span className={styles.cardDrawCount}>
@@ -318,18 +377,33 @@ export function CardManager({ projectId, chapterId }: CardManagerProps) {
                   </span>
                 )}
               </div>
+              {/* 退役原因和退役章节 */}
+              {card.status === "retired" && card.retired_reason && (
+                <div className={styles.retiredInfo}>
+                  <span className={styles.retiredReason}>
+                    退役原因: {card.retired_reason}
+                  </span>
+                  {card.retired_at_chapter && (
+                    <span className={styles.retiredChapter}>
+                      退役章节: 第{card.retired_at_chapter}章
+                    </span>
+                  )}
+                </div>
+              )}
               <div className={styles.cardActions}>
-                <button
-                  className={styles.retireButton}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRetire(card.id);
-                  }}
-                >
-                  停用
-                </button>
+                {card.status !== "retired" && (
+                  <button
+                    className={styles.retireButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRetire(card.id);
+                    }}
+                  >
+                    停用
+                  </button>
+                )}
               </div>
-              {selectedCards.includes(card.id) && (
+              {selectedCards.includes(card.id) && card.status !== "retired" && (
                 <div className={styles.selectedBadge}>✓ 已选择</div>
               )}
             </div>

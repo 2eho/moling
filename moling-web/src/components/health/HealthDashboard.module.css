@@ -1,0 +1,333 @@
+/* ═══════════════════════════════════════════════════════
+   墨灵 (Moling) — Health Dashboard Styles
+   ═══════════════════════════════════════════════════════ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ---- Header ---- */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.lastChecked {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+/* ---- Count Cards ---- */
+
+.countCards {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.countCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 4px solid;
+  background: var(--color-surface);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.countCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.countLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.countNumber {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.countName {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* ---- Alert List ---- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.listTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* ---- Alert Item ---- */
+
+.alertItem {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  border-left: 4px solid;
+  background: var(--color-surface);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast);
+}
+
+.alertItem:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.alertSuppressed {
+  opacity: 0.5;
+  border-left-color: var(--color-text-disabled) !important;
+}
+
+.alertHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-fast);
+}
+
+.alertHeader:hover {
+  background: var(--color-bg-hover);
+}
+
+.alertLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.severityDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.alertTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.severityBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.alertTitleText {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.alertTitleTextSuppressed {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-disabled);
+}
+
+.suppressTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.alertMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.expandIcon {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  margin-left: var(--space-3);
+  transition: transform var(--transition-fast);
+}
+
+/* ---- Alert Body (Expanded) ---- */
+
+.alertBody {
+  padding: 0 var(--space-4) var(--space-4) calc(var(--space-4) + 20px);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: expandIn var(--duration-normal, 200ms) ease-out;
+}
+
+.alertDetail {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: var(--space-3) 0 0;
+}
+
+.suggestion {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  padding: var(--space-3);
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-md);
+}
+
+.suggestionLabel {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+/* ---- Skeleton placeholders ---- */
+
+.alertItemSkeleton {
+  padding: var(--space-2) 0;
+}
+
+.skeletonCards {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.skeletonCard {
+  flex: 1;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* ---- Animations ---- */
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 300px;
+  }
+}
+
+/* ---- Empty state override ---- */
+
+.emptyContainer {
+  padding-top: var(--space-8);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--space-4);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerActions {
+    justify-content: flex-end;
+  }
+
+  .countCards {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .countCard {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .countNumber {
+    font-size: 28px;
+  }
+
+  .alertMeta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .alertBody {
+    padding-right: var(--space-3);
+    padding-left: calc(var(--space-3) + 20px);
+  }
+}

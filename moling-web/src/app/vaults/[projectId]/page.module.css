@@ -75,6 +75,18 @@
     border: 1px solid var(--color-border-subtle);
   }
 
+  .loadingBadge {
+    font-size: 11px;
+    color: var(--color-brand-indigo);
+    margin-left: var(--space-2);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
   .dHeaderRight {
     position: relative;
   }

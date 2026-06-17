@@ -71,11 +71,15 @@ export interface CardPool {
   status: CardStatus;
   freshness_chapter?: number;
   draw_count?: number;
+  /** 退役原因（仅当 status=retired 时有效） */
+  retired_reason?: string;
+  /** 退役章节（仅当 status=retired 时有效） */
+  retired_at_chapter?: number;
 }
 
 export type Rarity = "common" | "rare" | "epic" | "legendary";
 export type DirectionType = "plot" | "character" | "worldview" | "style" | "conflict";
-export type CardStatus = "available" | "drawn" | "used" | "expired";
+export type CardStatus = "available" | "drawn" | "used" | "expired" | "retired";
 
 // ---- Draw Record ----
 
@@ -440,6 +444,43 @@ export interface SystemHealthStatus {
   timestamp: string;
   // R1: 不可手动消除，R2: 可点击关闭，R3: 自动消失
   dismissable: boolean;
+}
+
+// ---- API Response Envelopes ----
+
+// ---- Phase 4 Task ----
+
+export interface SafetyCheckResult {
+  passed: boolean;
+  checks: string[];
+  warnings: string[];
+}
+
+export interface Phase4TaskStatus {
+  id: string;
+  projectId: string;
+  chapterId: string;
+  state: Phase4State;
+  nonce: string;
+  retryCount: number;
+  retryAt?: string;
+  lastError?: string;
+  safetyCheck?: SafetyCheckResult;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export enum Phase4State {
+  IDLE = "idle",
+  QUEUED = "queued",
+  LOCKING = "locking",
+  EXTRACTING = "extracting",
+  VERIFYING = "verifying",
+  MERGING = "merging",
+  COMMITTING = "committing",
+  DONE = "done",
+  FAILED = "failed",
+  RETRY = "retry",
 }
 
 // ---- API Response Envelopes ----
