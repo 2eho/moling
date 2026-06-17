@@ -4,7 +4,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // 使用 standalone 模式，支持动态路由
-  // output: "standalone", // 临时禁用，修复复制错误
+  output: "standalone",
   // 子路径部署，配合宿主机 Nginx 的 /moling 反代
   basePath: "/moling",
   
