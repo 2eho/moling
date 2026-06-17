@@ -32,19 +32,31 @@ export function ToolBar({ onDraw }: ToolBarProps) {
     onDraw?.();
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!hasCards) return;
-    generate(cards.slice(0, 3).map((c) => c.id));
+    try {
+      await generate(cards.slice(0, 3).map((c) => c.id));
+    } catch (error: any) {
+      showToast("error", `生成失败：${error?.message || "未知错误"}`);
+    }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!drawResult) return;
-    confirmChapter(drawResult.chapter_id);
+    try {
+      await confirmChapter(drawResult.chapter_id);
+    } catch (error: any) {
+      showToast("error", `收纳失败：${error?.message || "未知错误"}`);
+    }
   };
 
-  const handleRevise = () => {
+  const handleRevise = async () => {
     if (!drawResult) return;
-    reviseChapter(drawResult.chapter_id);
+    try {
+      await reviseChapter(drawResult.chapter_id);
+    } catch (error: any) {
+      showToast("error", `拒稿失败：${error?.message || "未知错误"}`);
+    }
   };
 
   const handleAgentInput = async () => {

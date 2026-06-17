@@ -144,12 +144,19 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
     weights: number[],
     mode: string,
   ) => {
-    await drawCards(cardIds, weights, mode);
+    try {
+      await drawCards(cardIds, weights, mode);
+    } catch (error: any) {
+      showToast("error", `抽卡失败：${error?.message || "未知错误"}`);
+    }
   };
 
   const handleRedraw = async () => {
-    await redrawCards(projectId);
-    showToast("info", "已重新抽取卡牌");
+    try {
+      await redrawCards(projectId);
+    } catch (error: any) {
+      showToast("error", `重抽失败：${error?.message || "未知错误"}`);
+    }
   };
 
   // 桌面端：切换面板可见性

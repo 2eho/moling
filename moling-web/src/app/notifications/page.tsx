@@ -6,6 +6,7 @@ import { notificationsApi } from '@/lib/api';
 import type { Notification } from '@/lib/types';
 import { safePaginatedData } from '@/lib/apiSafety';
 import { NotificationList } from '@/components/notifications/NotificationList';
+import { showToast } from '@/components/ui/Toast';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -19,12 +20,6 @@ export default function NotificationsPage() {
 
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const showToast = useCallback((msg: string) => {
-    setToastMsg(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastMsg(''), 2000);
-  }, []);
-
   const loadNotifications = useCallback(async () => {
     setLoading(true);
     try {
@@ -36,6 +31,7 @@ export default function NotificationsPage() {
       setTotal(total);
     } catch (error) {
       console.error('Failed to load notifications:', error);
+      showToast("error", "加载通知失败");
     } finally {
       setLoading(false);
     }
@@ -66,9 +62,10 @@ export default function NotificationsPage() {
       await notificationsApi.markAsRead(id);
       await loadNotifications();
       await loadUnreadCount();
-      showToast('已标记为已读');
+      showToast("success", "已标记为已读");
     } catch (error) {
       console.error('Failed to mark as read:', error);
+      showToast("error", "标记已读失败");
     } finally {
       setActionLoading(null);
     }
@@ -80,9 +77,10 @@ export default function NotificationsPage() {
       await notificationsApi.markAllAsRead();
       await loadNotifications();
       await loadUnreadCount();
-      showToast('全部已读');
+      showToast("success", "全部已读");
     } catch (error) {
       console.error('Failed to mark all as read:', error);
+      showToast("error", "全部标记已读失败");
     } finally {
       setActionLoading(null);
     }
@@ -97,6 +95,7 @@ export default function NotificationsPage() {
       await loadUnreadCount();
     } catch (error) {
       console.error('Failed to delete notification:', error);
+      showToast("error", "删除失败");
     } finally {
       setActionLoading(null);
     }

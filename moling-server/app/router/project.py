@@ -108,43 +108,6 @@ async def get_project_suggestions(
     return suggestions
 
 
-# ============ Project Secrets ============
-
-@router.get("/{project_id}/secrets", response_model=list[dict])
-async def list_project_secrets(
-    project_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
-) -> list[dict]:
-    """获取项目的秘密矩阵列表。"""
-    from app.service.secret_service import secret_service
-    return await secret_service.list_secrets(db, project_id)
-
-
-@router.get("/{project_id}/secrets/{role}", response_model=dict)
-async def get_project_secrets_by_role(
-    project_id: int,
-    role: str,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
-) -> dict:
-    """按角色查询秘密。"""
-    from app.service.secret_service import secret_service
-    return await secret_service.get_secrets_by_role(db, project_id, role)
-
-
-@router.put("/{project_id}/secrets/{secret_id}", response_model=dict)
-async def update_project_secret(
-    project_id: int,
-    secret_id: int,
-    data: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
-) -> dict:
-    """更新项目的秘密。"""
-    from app.service.secret_service import secret_service
-    return await secret_service.update_secret(db, project_id, secret_id, data)
-
 
 # ============ Project Cards History ============
 
