@@ -17,6 +17,11 @@ from sqlalchemy import select, update
 from app.config import get_settings
 from app.dao import chapter_dao, project_dao, vault_dao, card_dao, generation_dao, phase4_dao
 from app.service.card_retire_service import card_retire_service, RetireResult
+from app.service.merge_service import (
+    ConfidenceLevel,
+    evaluate_confidence,
+    should_auto_apply,
+)
 from app.errors import ErrorCode, NotFoundError, ValidationError, AppError
 from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool, GenerationTask
 from app.models.phase4_task import Phase4Task
@@ -1208,6 +1213,13 @@ class Phase4Service:
                 )
                 result["changes"]["world"] = world_result
 
+                # 步骤 [18a]: 置信度评估（P1-4）
+                logger.info("Step [18a]: Evaluating confidence levels")
+                confidence_result = self._evaluate_phase4_confidence(
+                    result["changes"],
+                )
+                result["confidence"] = confidence_result
+
                 # 步骤 [19]: 充实卡牌池
                 logger.info("Step [19]: Enriching card pool")
                 card_result = await self._enrich_card_pool(
@@ -2183,6 +2195,102 @@ class Phase4Service:
 
         logger.info(f"Card pool enriched: {added} new cards added")
         return {"added": added}
+
+    # ------------------------------------------------------------------
+    # §11.7 [18a]: 置信度评估（P1-4）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _evaluate_phase4_confidence(changes: Dict[str, Any]) -> Dict[str, Any]:
+        """评估 Phase 4 合并结果的置信度等级。
+
+        对每类变更中的每个条目计算 confidence_level（HIGH/MEDIUM/LOW/REJECT），
+        并生成整体置信度评估。
+
+        Returns:
+            dict with:
+              - level: 整体 ConfidenceLevel 名称
+              - auto_applied: 是否自动入库
+              - levels: 每类变更的置信度分布
+              - items_requiring_review: 需要人工审核的条目
+        """
+        items_requiring_review: List[Dict[str, Any]] = []
+        level_counts = {lvl.value: 0 for lvl in ConfidenceLevel}
+
+        # 评估角色变更
+        char_changes = changes.get("characters", {})
+        for key in ("created", "updated", "status_changed"):
+            for item in char_changes.get(key, []):
+                confidence = item.get("confidence", 0.8)
+                level = evaluate_confidence(confidence)
+                item["confidence_level"] = level.value
+                level_counts[level.value] = level_counts.get(level.value, 0) + 1
+                if level == ConfidenceLevel.LOW:
+                    items_requiring_review.append({
+                        "type": f"character_{key}",
+                        "name": item.get("name", ""),
+                        "id": item.get("id", ""),
+                        "confidence": confidence,
+                        "confidence_level": level.value,
+                    })
+
+        # 评估时间线变更（使用默认置信度 0.7）
+        timeline_changes = changes.get("timeline", {})
+        added_count = timeline_changes.get("added", 0)
+        if added_count > 0:
+            level = evaluate_confidence(0.7)
+            level_counts[level.value] = level_counts.get(level.value, 0) + added_count
+
+        # 评估剧情承诺变更（使用默认置信度 0.8）
+        promise_changes = changes.get("plot_promises", {})
+        for key in ("created", "advanced", "redeemed"):
+            count = promise_changes.get(key, 0)
+            if count > 0:
+                level = evaluate_confidence(0.8)
+                level_counts[level.value] = level_counts.get(level.value, 0) + count
+
+        # 评估世界观变更（使用默认置信度 0.7）
+        world_changes = changes.get("world", {})
+        for key in ("created", "expanded"):
+            count = world_changes.get(key, 0)
+            if count > 0:
+                level = evaluate_confidence(0.7)
+                level_counts[level.value] = level_counts.get(level.value, 0) + count
+
+        # 卡牌变更（使用默认置信度 0.85）
+        card_changes = changes.get("card_pool", {})
+        card_added = card_changes.get("added", 0)
+        if card_added > 0:
+            level = evaluate_confidence(0.85)
+            level_counts[level.value] = level_counts.get(level.value, 0) + card_added
+
+        # 计算整体置信度：按条目数量加权平均
+        total_items = sum(level_counts.values())
+        if total_items == 0:
+            overall_level = ConfidenceLevel.HIGH
+        else:
+            # 使用加权平均计算整体置信度
+            # HIGH=1.0, MEDIUM=0.65, LOW=0.4, REJECT=0.15
+            score_map = {
+                "high": 1.0,
+                "medium": 0.65,
+                "low": 0.4,
+                "reject": 0.15,
+            }
+            weighted_sum = sum(
+                level_counts.get(lvl.value, 0) * score_map.get(lvl.value, 0.0)
+                for lvl in ConfidenceLevel
+            )
+            avg_score = weighted_sum / total_items if total_items > 0 else 1.0
+            overall_level = evaluate_confidence(avg_score)
+
+        return {
+            "level": overall_level.value,
+            "auto_applied": should_auto_apply(overall_level),
+            "levels": level_counts,
+            "items_requiring_review": items_requiring_review,
+            "total_items": total_items,
+        }
 
     # ------------------------------------------------------------------
     # §11.7 [20]: 变更日志归档

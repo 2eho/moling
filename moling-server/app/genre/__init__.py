@@ -78,9 +78,29 @@ def run_full_analysis(
     return profile
 
 
+# --- Cold Start & Data Retirement ---
+from app.genre.cold_start_loader import (
+    ColdStartLoader,
+    DataRetirementManager,
+    PrefillResult,
+    VaultPrefill,
+    DynamicLayerPrefill,
+    CardPrefill,
+    CharacterPrototype,
+    cold_start_loader,
+)
+
 __all__ = [
     "run_full_analysis",
     "GenreProfile",
+    "ColdStartLoader",
+    "DataRetirementManager",
+    "PrefillResult",
+    "VaultPrefill",
+    "DynamicLayerPrefill",
+    "CardPrefill",
+    "CharacterPrototype",
+    "cold_start_loader",
     "A1Result", "A2Result", "A3Result", "A4Result",
     "A1_analyze_opening",
     "A2_cluster_characters",

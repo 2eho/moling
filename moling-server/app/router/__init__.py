@@ -108,3 +108,9 @@ try:
     api_router.include_router(ingest_router, tags=["import"])
 except ImportError:
     pass
+
+try:
+    from app.router.genre import router as genre_router
+    api_router.include_router(genre_router, prefix="/genre", tags=["genre"])
+except ImportError:
+    pass

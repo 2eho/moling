@@ -6396,6 +6396,159 @@
           }
         }
       }
+    },
+    "/api/v1/genre/prefill": {
+      "post": {
+        "tags": [
+          "genre"
+        ],
+        "summary": "Trigger Prefill",
+        "description": "B1-B5 完整冷启动流程。\n\n1. 验证用户对项目的所有权（TODO: 增加项目权限检查）\n2. 执行 B1-B5 冷启动\n3. 返回预填数据供前端展示",
+        "operationId": "trigger_prefill_api_v1_genre_prefill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrefillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrefillResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/genre/prefill/{project_id}": {
+      "get": {
+        "tags": [
+          "genre"
+        ],
+        "summary": "Get Prefill",
+        "description": "获取预填结果供用户审核（B5 审核界面用）。",
+        "operationId": "get_prefill_api_v1_genre_prefill__project_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrefillSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/genre/prefill/{project_id}/confirm": {
+      "post": {
+        "tags": [
+          "genre"
+        ],
+        "summary": "Confirm Prefill",
+        "description": "用户确认预填数据并入库（B5 最终步骤）。",
+        "operationId": "confirm_prefill_api_v1_genre_prefill__project_id__confirm_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmRequest",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6862,6 +7015,51 @@
         ],
         "title": "CharacterResp",
         "description": "Vault character response."
+      },
+      "ConfirmRequest": {
+        "properties": {
+          "modifications": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModificationItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modifications"
+          }
+        },
+        "type": "object",
+        "title": "ConfirmRequest",
+        "description": "确认预填请求（可选修改）"
+      },
+      "ConfirmResponse": {
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "default": "confirmed"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "message"
+        ],
+        "title": "ConfirmResponse",
+        "description": "确认入库响应"
       },
       "CreateChapterReq": {
         "properties": {
@@ -7403,6 +7601,28 @@
         "title": "LogoutReq",
         "description": "User logout request body."
       },
+      "ModificationItem": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "default": "update"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "ModificationItem",
+        "description": "用户修改项"
+      },
       "NotificationResp": {
         "properties": {
           "id": {
@@ -7769,6 +7989,185 @@
         ],
         "title": "PlotPromiseResp",
         "description": "Vault plot promise response."
+      },
+      "PrefillRequest": {
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "genre": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Genre"
+          },
+          "synopsis": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Synopsis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "genre",
+          "synopsis"
+        ],
+        "title": "PrefillRequest",
+        "description": "触发冷启动请求"
+      },
+      "PrefillResponse": {
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "genre": {
+            "type": "string",
+            "title": "Genre"
+          },
+          "synopsis": {
+            "type": "string",
+            "title": "Synopsis"
+          },
+          "profile_source": {
+            "type": "string",
+            "title": "Profile Source"
+          },
+          "profile_version": {
+            "type": "string",
+            "title": "Profile Version"
+          },
+          "vault": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Vault"
+          },
+          "dynamic_layer": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dynamic Layer"
+          },
+          "card_pool": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Card Pool"
+          },
+          "opening_directions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Opening Directions"
+          },
+          "async_analysis_triggered": {
+            "type": "boolean",
+            "title": "Async Analysis Triggered"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "genre",
+          "synopsis",
+          "profile_source",
+          "profile_version",
+          "vault",
+          "dynamic_layer",
+          "card_pool",
+          "opening_directions",
+          "async_analysis_triggered",
+          "session_id"
+        ],
+        "title": "PrefillResponse",
+        "description": "预填数据响应"
+      },
+      "PrefillSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "genre": {
+            "type": "string",
+            "title": "Genre"
+          },
+          "synopsis": {
+            "type": "string",
+            "title": "Synopsis"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "prefill_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefill Data"
+          },
+          "profile_source": {
+            "type": "string",
+            "title": "Profile Source"
+          },
+          "profile_version": {
+            "type": "string",
+            "title": "Profile Version"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "project_id",
+          "genre",
+          "synopsis",
+          "state",
+          "profile_source",
+          "profile_version"
+        ],
+        "title": "PrefillSessionResponse",
+        "description": "预填会话详情响应"
       },
       "ProjectResp": {
         "properties": {

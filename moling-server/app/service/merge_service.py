@@ -7,6 +7,11 @@ P0-3: 四库合并核心引擎。
 - 世界观库合并 (merge_world_building) — create/expand/revise/conflict
 - 变更日志 (archive_changelog) — ChangeEntry → VaultChangelog
 
+P1-4: 置信度降级策略。
+- ConfidenceLevel 枚举（HIGH/MEDIUM/LOW/REJECT）
+- evaluate_confidence / should_auto_apply 函数
+- MergeResult / ChangeEntry 新增置信度相关字段
+
 所有 merge 方法遵循统一 4 步模式：
 [1] 解析验证 → [2] 查找匹配 → [3] 执行合并 → [4] 记录日志
 每个步骤抛出的异常由调用方处理（P0-5 事务边界）。
@@ -14,6 +19,7 @@ P0-3: 四库合并核心引擎。
 
 from __future__ import annotations
 
+import enum
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -45,6 +51,47 @@ NEW_ENTITY_CONFIDENCE = 0.3
 # 编辑距离 → 置信度映射
 EDIT_DIST_CONFIDENCE = {0: 1.0, 1: 0.9, 2: 0.75}
 
+# P1-4 置信度阈值
+CONFIDENCE_HIGH_THRESHOLD = 0.8   # > 0.8 自动入库
+CONFIDENCE_MEDIUM_THRESHOLD = 0.5 # 0.5-0.8 后台标记需审核
+CONFIDENCE_LOW_THRESHOLD = 0.3    # 0.3-0.5 弹窗确认
+
+
+# ---------------------------------------------------------------------------
+# P1-4: 置信度降级策略
+# ---------------------------------------------------------------------------
+
+
+class ConfidenceLevel(enum.Enum):
+    """4 级置信度评估。
+
+    HIGH   — > 0.8: 自动入库，无需确认
+    MEDIUM — 0.5-0.8: 自动入库 + 后台标记"需审核"
+    LOW    — 0.3-0.5: 暂停入库，弹窗确认
+    REJECT — < 0.3: 忽略，不写入数据库
+    """
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    REJECT = "reject"
+
+
+def evaluate_confidence(confidence_score: float) -> ConfidenceLevel:
+    """根据置信度分数返回对应的 ConfidenceLevel。"""
+    if confidence_score > CONFIDENCE_HIGH_THRESHOLD:
+        return ConfidenceLevel.HIGH
+    elif confidence_score >= CONFIDENCE_MEDIUM_THRESHOLD:
+        return ConfidenceLevel.MEDIUM
+    elif confidence_score >= CONFIDENCE_LOW_THRESHOLD:
+        return ConfidenceLevel.LOW
+    else:
+        return ConfidenceLevel.REJECT
+
+
+def should_auto_apply(level: ConfidenceLevel) -> bool:
+    """HIGH 和 MEDIUM 自动入库，LOW 需确认，REJECT 忽略。"""
+    return level in (ConfidenceLevel.HIGH, ConfidenceLevel.MEDIUM)
+
 
 # ---------------------------------------------------------------------------
 # 数据传输对象 (DTO)
@@ -63,6 +110,7 @@ class ChangeEntry:
     chapter: int              # 变更章节
     confidence: float         # 置信度 (0-1)
     change_reason: str        # 人类可读的变更原因
+    confidence_level: Optional[ConfidenceLevel] = None  # P1-4: 置信度等级
 
 
 @dataclass
@@ -75,6 +123,10 @@ class MergeResult:
     conflicts: List[Dict[str, Any]] = field(default_factory=list)   # 冲突列表
     warnings: List[str] = field(default_factory=list)               # 警告列表
     changes: List[ChangeEntry] = field(default_factory=list)        # 本次变更日志
+    # P1-4: 置信度评估
+    confidence_level: Optional[ConfidenceLevel] = None              # 整体置信度等级
+    auto_applied: bool = False                                      # 是否自动入库
+    items_requiring_review: List[ChangeEntry] = field(default_factory=list)  # LOW 级别条目
 
 
 # ---------------------------------------------------------------------------
@@ -204,6 +256,35 @@ class MergeService:
         if detail:
             reason += f" — {detail}"
         return reason
+
+    @staticmethod
+    def _evaluate_merge_confidence(result: MergeResult) -> MergeResult:
+        """评估 MergeResult 的整体置信度并填充相关字段。
+
+        基于所有 change 条目的平均置信度计算整体 confidence_level，
+        并收集需要人工审核（LOW）的条目。
+        """
+        if not result.changes:
+            # 无变更时默认 HIGH（不需要关注）
+            result.confidence_level = ConfidenceLevel.HIGH
+            result.auto_applied = True
+            result.items_requiring_review = []
+            return result
+
+        # 为每个 ChangeEntry 设置 confidence_level
+        avg_confidence = 0.0
+        for change in result.changes:
+            level = evaluate_confidence(change.confidence)
+            change.confidence_level = level
+            avg_confidence += change.confidence
+            if level == ConfidenceLevel.LOW:
+                result.items_requiring_review.append(change)
+
+        avg_confidence /= len(result.changes)
+        result.confidence_level = evaluate_confidence(avg_confidence)
+        result.auto_applied = should_auto_apply(result.confidence_level)
+
+        return result
 
     # ==================================================================
     # 15-1: 人物库合并
@@ -355,6 +436,7 @@ class MergeService:
                 ))
                 result.created += 1
 
+        self._evaluate_merge_confidence(result)
         return result
 
     def _find_best_character_match(
@@ -571,6 +653,7 @@ class MergeService:
                     ))
                     result.updated += 1
 
+        self._evaluate_merge_confidence(result)
         return result
 
     @staticmethod
@@ -785,6 +868,7 @@ class MergeService:
                         f"(planted_chapter={planted}) 已超 {STALE_CHAPTER_THRESHOLD} 章未兑现"
                     )
 
+        self._evaluate_merge_confidence(result)
         return result
 
     @staticmethod
@@ -991,6 +1075,7 @@ class MergeService:
                     f"未知的世界观操作 '{item.action}' for '{name}'"
                 )
 
+        self._evaluate_merge_confidence(result)
         return result
 
     # ==================================================================
