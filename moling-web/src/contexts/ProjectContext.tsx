@@ -107,11 +107,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, []); // ✅ 使用 ref 替代 currentProject state 依赖
 
-  // Initial load
+  // Initial load — 只在已认证时加载项目列表
   useEffect(() => {
-    loadProjects().finally(() =>
-      setIsLoading(false),
-    );
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      loadProjects().finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
   }, [loadProjects]);
 
   const value = useMemo<ProjectContextValue>(() => ({

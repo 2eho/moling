@@ -330,14 +330,15 @@ async function request<T>(
         } else {
           // Refresh failed — clear auth and redirect
           clearAuth();
-          if (typeof window !== "undefined") {
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/moling/auth")) {
             window.location.href = "/moling/auth";
           }
           throw new ApiError(401, "认证已过期，请重新登录");
         }
       } else if (!getAccessToken()) {
-        // 连 access token 都没有（用户未登录）→ 直接跳转
-        if (typeof window !== "undefined") {
+        // 连 access token 都没有（用户未登录）→ 跳转到登录页
+        // 但如果在 /auth 页上就不再跳转，避免死循环
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/moling/auth")) {
           window.location.href = "/moling/auth";
         }
         throw new ApiError(401, "请先登录");
