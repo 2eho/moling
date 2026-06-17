@@ -331,14 +331,14 @@ async function request<T>(
           // Refresh failed — clear auth and redirect
           clearAuth();
           if (typeof window !== "undefined") {
-            window.location.href = "/auth";
+            window.location.href = "/moling/auth";
           }
           throw new ApiError(401, "认证已过期，请重新登录");
         }
       } else if (!getAccessToken()) {
         // 连 access token 都没有（用户未登录）→ 直接跳转
         if (typeof window !== "undefined") {
-          window.location.href = "/auth";
+          window.location.href = "/moling/auth";
         }
         throw new ApiError(401, "请先登录");
       }
