@@ -12,6 +12,7 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  compact?: boolean;
 }
 
 export const EmptyState = memo(function EmptyState({
@@ -19,10 +20,13 @@ export const EmptyState = memo(function EmptyState({
   title,
   description,
   action,
+  compact = false,
 }: EmptyStateProps) {
   return (
-    <div className={styles.container}>
-      <span className={styles.icon}>{icon}</span>
+    <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
+      <div className={styles.iconWrapper}>
+        <span className={styles.icon}>{icon}</span>
+      </div>
       <h4 className={styles.title}>{title}</h4>
       {description && <p className={styles.description}>{description}</p>}
       {action && (

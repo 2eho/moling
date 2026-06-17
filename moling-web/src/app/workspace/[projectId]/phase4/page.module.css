@@ -1,10 +1,12 @@
-/* page.module.css - Phase 4 四库管理页面样式 */
+/* page.module.css - Phase 4 四库管理页面样式 (v3.1) */
 
 .page {
-  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow-y: auto;
   background: var(--color-bg);
+  padding: var(--space-6);
 }
 
 .pageHeader {
@@ -14,6 +16,7 @@
 .pageTitle {
   font-family: var(--font-heading);
   font-size: var(--font-size-2xl);
+  font-weight: 600;
   color: var(--color-text-primary);
   margin: 0 0 var(--space-2) 0;
 }
@@ -25,7 +28,7 @@
   line-height: 1.6;
 }
 
-/* 标签页导航 */
+/* Tab 导航 — §4.5 Tab 规范: 无间距相邻排列 */
 .tabsWrapper {
   margin-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border);
@@ -33,7 +36,7 @@
 
 .tabs {
   display: flex;
-  gap: var(--space-1);
+  gap: 0;
   padding: 0 var(--space-2);
 }
 
@@ -41,26 +44,26 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   background: none;
   border: none;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-base);
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast),
+              border-color var(--transition-fast);
   white-space: nowrap;
 }
 
 .tab:hover {
   color: var(--color-text-primary);
-  background: var(--color-bg-hover);
 }
 
 .tab.active {
-  color: var(--color-brand-indigo);
+  color: var(--color-brand-indigo-300);
   border-bottom-color: var(--color-brand-indigo);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tabIcon {
@@ -68,21 +71,51 @@
 }
 
 .tabLabel {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 
 /* 内容区域 */
 .content {
-  animation: fadeIn 0.3s var(--ease-default);
+  animation: tabFadeIn var(--transition-slow) var(--ease-default);
 }
 
-@keyframes fadeIn {
+@keyframes tabFadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .page {
+    padding: var(--space-4);
+  }
+
+  .pageTitle {
+    font-size: var(--font-size-xl);
+  }
+
+  .pageDescription {
+    font-size: var(--font-size-xs);
+  }
+
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
   }
 }

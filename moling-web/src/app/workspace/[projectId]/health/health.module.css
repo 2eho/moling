@@ -1,10 +1,12 @@
-/* health page styles - 健康监控仪表盘页面 */
+/* health page styles - 健康监控仪表盘页面 (v3.1) */
 
 .page {
-  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   overflow-y: auto;
   background: var(--color-bg);
+  padding: var(--space-6);
 }
 
 .pageHeader {
@@ -14,6 +16,7 @@
 .pageTitle {
   font-family: var(--font-heading);
   font-size: var(--font-size-2xl);
+  font-weight: 600;
   color: var(--color-text-primary);
   margin: 0 0 var(--space-2) 0;
 }
@@ -26,16 +29,31 @@
 }
 
 .dashboardWrapper {
-  animation: fadeIn 0.3s var(--ease-default);
+  animation: fadeIn var(--transition-slow) var(--ease-default);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .page {
+    padding: var(--space-4);
+  }
+
+  .pageTitle {
+    font-size: var(--font-size-xl);
+  }
+
+  .pageDescription {
+    font-size: var(--font-size-xs);
   }
 }

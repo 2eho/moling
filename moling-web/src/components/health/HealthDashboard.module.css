@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   墨灵 (Moling) — Health Dashboard Styles
+   墨灵 (Moling) — Health Dashboard Styles (v3.1)
    ═══════════════════════════════════════════════════════ */
 
 .container {
@@ -13,7 +13,6 @@
 }
 
 /* ---- Header ---- */
-
 .header {
   display: flex;
   align-items: flex-start;
@@ -46,8 +45,7 @@
   flex-shrink: 0;
 }
 
-/* ---- Count Cards ---- */
-
+/* ---- Count Cards (§4.2) ---- */
 .countCards {
   display: flex;
   gap: var(--space-4);
@@ -61,15 +59,16 @@
   gap: var(--space-1);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border);
   border-left: 4px solid;
   background: var(--color-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .countCard:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
 }
 
 .countLabel {
@@ -92,7 +91,6 @@
 }
 
 /* ---- Alert List ---- */
-
 .list {
   display: flex;
   flex-direction: column;
@@ -109,18 +107,18 @@
 }
 
 /* ---- Alert Item ---- */
-
 .alertItem {
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   border-left: 4px solid;
   background: var(--color-surface);
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   transition: box-shadow var(--transition-fast);
 }
 
 .alertItem:hover {
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
 }
 
 .alertSuppressed {
@@ -218,14 +216,13 @@
 }
 
 /* ---- Alert Body (Expanded) ---- */
-
 .alertBody {
   padding: 0 var(--space-4) var(--space-4) calc(var(--space-4) + 20px);
   border-top: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  animation: expandIn var(--duration-normal, 200ms) ease-out;
+  animation: expandIn var(--transition-normal) ease-out;
 }
 
 .alertDetail {
@@ -253,7 +250,6 @@
 }
 
 /* ---- Skeleton placeholders ---- */
-
 .alertItemSkeleton {
   padding: var(--space-2) 0;
 }
@@ -271,7 +267,6 @@
 }
 
 /* ---- Animations ---- */
-
 @keyframes expandIn {
   from {
     opacity: 0;
@@ -284,13 +279,11 @@
 }
 
 /* ---- Empty state override ---- */
-
 .emptyContainer {
   padding-top: var(--space-8);
 }
 
 /* ---- Responsive ---- */
-
 @media (max-width: 768px) {
   .container {
     padding: var(--space-4);

@@ -1,10 +1,13 @@
+/* ToolBar v3.1 — 玻璃态底栏 */
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-2) var(--space-4);
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.04), var(--color-surface) 60%);
-  border-top: 1px solid rgba(99, 102, 241, 0.08);
+  background: rgba(21, 24, 41, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   gap: var(--space-3);
   position: relative;
 }
@@ -37,9 +40,9 @@
 .agentInput {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  background-color: rgba(99, 102, 241, 0.04);
+  background-color: var(--color-elevated);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   outline: none;
@@ -47,13 +50,12 @@
 }
 
 .agentInput::placeholder {
-  color: var(--color-text-disabled);
+  color: var(--color-text-tertiary);
 }
 
 .agentInput:focus {
   border-color: var(--color-brand-indigo);
-  background-color: rgba(99, 102, 241, 0.06);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.06);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .agentInput:disabled {

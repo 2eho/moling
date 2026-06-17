@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import styles from './History.module.css';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<Array<{
@@ -95,9 +97,17 @@ export default function HistoryPage() {
 
       <div className={styles.content}>
         {loading ? (
-          <div className={styles.loading}>加载中...</div>
+          <div className={styles.list}>
+            {[1, 2, 3, 4].map((i) => (
+              <SkeletonCard key={i} lines={3} />
+            ))}
+          </div>
         ) : history.length === 0 ? (
-          <div className={styles.empty}>暂无生成记录</div>
+          <EmptyState
+            icon="🕐"
+            title="还没有生成记录"
+            description="开始使用 AI 生成章节，你的生成记录将显示在这里"
+          />
         ) : (
           <div className={styles.list}>
             {history.map(record => (

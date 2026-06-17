@@ -1,4 +1,4 @@
-/* WorldviewLibrary.module.css - 世界观库样式 */
+/* WorldviewLibrary.module.css - 世界观库样式 (v3.1) */
 
 .container {
   padding: var(--space-4);
@@ -22,15 +22,20 @@
 
 .createButton {
   padding: var(--space-2) var(--space-4);
-  background: var(--color-brand-indigo);
-  color: white;
+  background: linear-gradient(135deg, var(--color-brand-indigo), var(--color-brand-indigo-600));
+  color: #fff;
+  border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .createButton:hover {
-  background: var(--color-brand-hover);
+  background: linear-gradient(135deg, var(--color-brand-indigo-400), var(--color-brand-indigo));
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }
 
 .error {
@@ -63,9 +68,16 @@
 
 .item {
   background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: var(--space-3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.item:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
 }
 
 .itemHeader {
@@ -104,10 +116,12 @@
 .editButton {
   padding: var(--space-1) var(--space-3);
   background: var(--color-brand-indigo);
-  color: white;
+  color: #fff;
+  border: none;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .editButton:hover {
@@ -118,14 +132,17 @@
   padding: var(--space-1) var(--space-3);
   background: var(--color-danger-dim);
   color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .deleteButton:hover {
-  background: var(--color-danger);
-  color: white;
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
 }
 
 .desc {
@@ -171,8 +188,9 @@
 .faction {
   margin-bottom: var(--space-2);
   padding: var(--space-2);
-  background: var(--color-bg);
+  background: var(--color-elevated);
   border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .factionHeader {
@@ -214,7 +232,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,7 +242,7 @@
 }
 
 .form {
-  background: var(--color-surface);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
@@ -230,6 +250,7 @@
   max-width: 600px;
   max-height: 80vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-modal);
 }
 
 .form h4 {
@@ -262,6 +283,7 @@
 .input:focus {
   border-color: var(--color-brand-indigo);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .textarea {
@@ -281,6 +303,7 @@
 .textarea:focus {
   border-color: var(--color-brand-indigo);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .ruleInput {
@@ -301,12 +324,12 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .ruleTag:hover {
   background: var(--color-brand-indigo);
-  color: white;
+  color: #fff;
 }
 
 .actionsSection {
@@ -324,14 +347,16 @@
   padding: var(--space-1) var(--space-3);
   background: var(--color-brand-indigo-dim);
   color: var(--color-brand-indigo);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .addFactionButton:hover {
   background: var(--color-brand-indigo);
-  color: white;
+  color: #fff;
 }
 
 .factionForm {
@@ -354,6 +379,7 @@
 .factionInput:focus {
   border-color: var(--color-brand-indigo);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .removeFactionButton {
@@ -364,14 +390,16 @@
   justify-content: center;
   background: var(--color-danger-dim);
   color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .removeFactionButton:hover {
-  background: var(--color-danger);
-  color: white;
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .formActions {
@@ -383,28 +411,35 @@
 .cancelButton {
   flex: 1;
   padding: var(--space-2) var(--space-4);
-  background: var(--color-bg);
+  background: transparent;
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .cancelButton:hover {
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary);
 }
 
 .submitButton {
   flex: 1;
   padding: var(--space-2) var(--space-4);
-  background: var(--color-brand-indigo);
-  color: white;
+  background: linear-gradient(135deg, var(--color-brand-indigo), var(--color-brand-indigo-600));
+  color: #fff;
+  border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .submitButton:hover {
-  background: var(--color-brand-hover);
+  background: linear-gradient(135deg, var(--color-brand-indigo-400), var(--color-brand-indigo));
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }

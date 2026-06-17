@@ -114,22 +114,22 @@
 .dot:nth-child(1) {
   top: 20%;
   left: 15%;
-  animation: pulse 2s ease-in-out infinite;
+  animation: dotPulse 2s ease-in-out infinite;
 }
 
 .dot:nth-child(2) {
   top: 60%;
   right: 20%;
-  animation: pulse 2s ease-in-out infinite 0.5s;
+  animation: dotPulse 2s ease-in-out infinite 0.5s;
 }
 
 .dot:nth-child(3) {
   bottom: 30%;
   left: 30%;
-  animation: pulse 2s ease-in-out infinite 1s;
+  animation: dotPulse 2s ease-in-out infinite 1s;
 }
 
-@keyframes pulse {
+@keyframes dotPulse {
   0%, 100% {
     opacity: 0.1;
     transform: scale(1);

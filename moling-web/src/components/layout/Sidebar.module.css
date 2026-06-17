@@ -3,22 +3,22 @@
    ═══════════════════════════════════════════════════════ */
 
 .sidebar {
-  width: 280px;
+  width: var(--sidebar-width);
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
-  background: var(--color-surface);
+  background: var(--color-bg);
   border-right: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   z-index: 50;
-  transition: width 0.3s var(--ease-spring);
+  transition: width 200ms ease;
   overflow-x: hidden;
 }
 
 .sidebar.collapsed {
-  width: 56px;
+  width: var(--sidebar-collapsed);
 }
 
 /* ---- Header ---- */
@@ -39,7 +39,7 @@
   gap: var(--spacing-2);
   text-decoration: none;
   white-space: nowrap;
-  transition: opacity 0.2s var(--ease-spring);
+  transition: opacity 200ms ease;
 }
 
 .logo:hover {
@@ -67,7 +67,7 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-text-secondary);
-  transition: all 0.2s var(--ease-spring);
+  transition: all 200ms ease;
   flex-shrink: 0;
   font-size: 14px;
 }
@@ -93,14 +93,14 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-2) var(--spacing-3);
-  background: var(--color-bg-subtle);
+  background: transparent;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  transition: all 0.2s var(--ease-spring);
+  transition: all 200ms ease;
 }
 
 .projectSwitcherBtn:hover {
@@ -127,13 +127,13 @@
   left: var(--spacing-3);
   right: var(--spacing-3);
   margin-top: var(--spacing-1);
-  background: var(--color-surface);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   z-index: 100;
   overflow: hidden;
-  animation: dropdownFadeIn 0.2s var(--ease-spring);
+  animation: dropdownFadeIn 200ms ease;
 }
 
 @keyframes dropdownFadeIn {
@@ -152,7 +152,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.15s var(--ease-spring);
+  transition: all 150ms ease;
 }
 
 .projectDropdownItem:hover {
@@ -189,39 +189,44 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  padding: var(--spacing-3) var(--spacing-4);
-  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  border-radius: 8px;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  transition: all 0.2s var(--ease-spring);
+  transition: all 150ms ease;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
   position: relative;
 }
 
+.navItem::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  background: var(--color-brand-indigo);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: transform 0.3s var(--ease-out-expo);
+}
+
 .navItem:hover {
-  background: var(--color-bg-hover);
+  background: var(--color-glass-hover);
   color: var(--color-text-primary);
 }
 
 .navItem.active {
   background: var(--color-brand-indigo-dim);
-  color: var(--color-brand-indigo);
+  color: var(--color-brand-indigo-light);
   font-weight: 600;
 }
 
 .navItem.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  background: var(--color-brand-indigo);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transform: translateY(-50%) scaleY(1);
 }
 
 .navIcon {
@@ -243,7 +248,9 @@
 
 /* ---- Responsive: 移动端隐藏侧边栏 ---- */
 
-@media (max-width: 768px) {
+/* ── Responsive: 移动端隐藏侧边栏 (< 640px) ── */
+/* 通过 JS 控制汉堡菜单呼出，CSS 只提供隐藏基础 */
+@media (max-width: 640px) {
   .sidebar {
     display: none;
   }

@@ -74,7 +74,7 @@
 }
 
 /* ── Mobile Redirect ── */
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .redirectContainer {
     padding: var(--space-4);
   }
@@ -106,7 +106,7 @@
   min-height: 100vh;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .desktopShell { display: none; }
   .mobileShell { display: flex; }
 }
@@ -788,7 +788,7 @@
 }
 
 /* ── Mobile Styles ── */
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .mStatusBar {
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 24px 8px; font-size: 14px; font-weight: 600;
@@ -951,7 +951,7 @@
 }
 
 /* ── Desktop Responsive ── */
-@media (max-width: 900px) and (min-width: 769px) {
+@media (max-width: 900px) and (min-width: 641px) {
   .mainScroll { padding: var(--space-4); }
   .importOptions { grid-template-columns: 1fr; }
   .progressGrid { grid-template-columns: 1fr; }

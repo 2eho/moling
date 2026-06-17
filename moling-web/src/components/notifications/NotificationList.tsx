@@ -2,6 +2,8 @@
 
 import styles from './NotificationList.module.css';
 import { NotificationItem } from './NotificationItem';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { Notification } from '@/lib/types';
 
 interface NotificationListProps {
@@ -21,24 +23,21 @@ export function NotificationList({
 }: NotificationListProps) {
   if (loading) {
     return (
-      <div className={styles.loading}>
-        <div className={styles.spinner} />
-        <span>加载中...</span>
+      <div className={styles.list}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <SkeletonCard key={i} lines={2} />
+        ))}
       </div>
     );
   }
 
   if (notifications.length === 0) {
     return (
-      <div className={styles.empty}>
-        <div className={styles.emptyIcon}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-        </div>
-        <p>暂无通知</p>
-      </div>
+      <EmptyState
+        icon="🔔"
+        title="暂无通知"
+        description="当有新消息时，会在这里显示"
+      />
     );
   }
 

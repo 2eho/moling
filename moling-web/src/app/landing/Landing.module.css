@@ -31,10 +31,10 @@
 }
 
 .navScrolled {
-  background: rgba(13, 15, 26, 0.85);
+  background: var(--color-glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 1px 0 rgba(99, 102, 241, 0.08);
+  box-shadow: 0 1px 0 var(--color-glass-border);
 }
 
 .navInner {
@@ -111,12 +111,11 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--color-bg);
-  background: linear-gradient(135deg, var(--color-brand-amber), #c99a30);
+  background: linear-gradient(135deg, var(--color-brand-amber), #b8962f);
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md);
   text-decoration: none;
-  transition: transform var(--duration-normal) var(--ease-spring),
-              box-shadow var(--duration-normal) var(--ease-default);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .navCta:hover {
@@ -148,7 +147,7 @@
   top: var(--nav-height);
   left: 0;
   right: 0;
-  background: rgba(13, 15, 26, 0.98);
+  background: var(--color-glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: var(--space-4) var(--space-6);
@@ -187,7 +186,7 @@
 .mobileCta {
   display: block;
   padding: var(--space-3) var(--space-5);
-  background: linear-gradient(135deg, var(--color-brand-amber), #c99a30);
+  background: linear-gradient(135deg, var(--color-brand-amber), #b8962f);
   color: var(--color-bg);
   font-weight: 600;
   font-size: 15px;
@@ -431,14 +430,13 @@
   font-size: 16px;
   font-weight: 600;
   color: var(--color-bg);
-  background: linear-gradient(135deg, var(--color-brand-amber), #c99a30);
+  background: linear-gradient(135deg, var(--color-brand-amber), #b8962f);
   padding: var(--space-4) var(--space-10);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   text-decoration: none;
   position: relative;
   overflow: hidden;
-  transition: transform var(--duration-normal) var(--ease-spring),
-              box-shadow var(--duration-normal) var(--ease-default);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
   animation: fadeInUp var(--duration-cinematic) var(--ease-default) 0.55s both;
 }
 
@@ -954,14 +952,13 @@
   font-size: 16px;
   font-weight: 600;
   color: var(--color-bg);
-  background: linear-gradient(135deg, var(--color-brand-amber), #c99a30);
+  background: linear-gradient(135deg, var(--color-brand-amber), #b8962f);
   padding: var(--space-4) var(--space-10);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   text-decoration: none;
   position: relative;
   overflow: hidden;
-  transition: transform var(--duration-normal) var(--ease-spring),
-              box-shadow var(--duration-normal) var(--ease-default);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .ctaButton::before {
@@ -1109,5 +1106,86 @@
   .footerInner {
     flex-direction: column;
     text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding: calc(var(--nav-height) + var(--space-8)) var(--space-4) var(--space-10);
+    min-height: auto;
+  }
+
+  .heroTitle {
+    font-size: clamp(28px, 8vw, 40px);
+  }
+
+  .heroTagline {
+    font-size: 15px;
+  }
+
+  .heroSubtags {
+    gap: var(--space-2);
+  }
+
+  .heroSubtag {
+    font-size: 12px;
+    padding: var(--space-1) var(--space-3);
+  }
+
+  .heroCta {
+    font-size: 15px;
+    padding: var(--space-3) var(--space-8);
+  }
+
+  .features {
+    padding: var(--space-12) var(--space-4);
+  }
+
+  .sectionHeader {
+    margin-bottom: var(--space-10);
+  }
+
+  .featuresGrid {
+    gap: var(--space-4);
+  }
+
+  .featureCard {
+    padding: var(--space-5);
+  }
+
+  .featureTitle {
+    font-size: 18px;
+  }
+
+  .featureDesc {
+    font-size: 14px;
+  }
+
+  .testimonials {
+    gap: var(--space-4);
+  }
+
+  .testimonialCard {
+    padding: var(--space-4);
+  }
+
+  .ctaInner {
+    padding: var(--space-8) var(--space-4);
+  }
+
+  .gachaSection,
+  .socialProof,
+  .ctaSection {
+    padding: var(--space-12) var(--space-4);
+  }
+
+  .ctaTitle {
+    font-size: clamp(20px, 5vw, 26px);
+  }
+
+  .statsRow {
+    gap: var(--space-6);
+    flex-direction: column;
+    align-items: center;
   }
 }

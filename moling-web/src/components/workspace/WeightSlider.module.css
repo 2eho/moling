@@ -1,3 +1,4 @@
+/* WeightSlider v3.1 */
 .slider {
   display: flex;
   align-items: center;
@@ -6,7 +7,7 @@
 
 .label {
   font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
+  color: var(--color-text-tertiary);
   min-width: 28px;
 }
 
@@ -14,7 +15,7 @@
   position: relative;
   flex: 1;
   height: 6px;
-  background-color: var(--color-elevated);
+  background-color: var(--color-border-subtle);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -47,9 +48,10 @@
   height: 14px;
   border-radius: 50%;
   background-color: var(--color-brand-indigo);
-  border: 2px solid #ffffff;
+  border: 2px solid #fff;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: transform var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .input::-webkit-slider-thumb:hover {
@@ -62,4 +64,5 @@
   font-weight: 600;
   min-width: 24px;
   text-align: right;
+  font-family: var(--font-mono);
 }

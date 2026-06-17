@@ -1,13 +1,13 @@
-/* ======== NotificationItem Styles ======== */
+/* ═══ NotificationItem — 墨灵 通知项 v3.1 ═══ */
 
 .item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
   border: 1px solid transparent;
 }
 
@@ -16,8 +16,8 @@
 }
 
 .itemUnread {
-  background: rgba(167, 139, 250, 0.04);
-  border-color: rgba(167, 139, 250, 0.08);
+  background: rgba(99, 102, 241, 0.04);
+  border-color: rgba(99, 102, 241, 0.08);
 }
 
 .itemIcon {
@@ -26,28 +26,28 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
 .iconWarning {
-  background: rgba(251, 191, 36, 0.12);
-  color: #fbbf24;
+  background: var(--color-warning-dim);
+  color: var(--color-warning);
 }
 
 .iconError {
-  background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
+  background: var(--color-danger-dim);
+  color: var(--color-danger);
 }
 
 .iconSuccess {
-  background: rgba(34, 197, 94, 0.12);
-  color: #22c55e;
+  background: var(--color-success-dim);
+  color: var(--color-success);
 }
 
 .iconInfo {
-  background: rgba(96, 165, 250, 0.12);
-  color: #60a5fa;
+  background: var(--color-brand-indigo-dim);
+  color: var(--color-brand-indigo);
 }
 
 .itemContent {
@@ -56,17 +56,17 @@
 }
 
 .itemTitle {
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: #f4f4f5;
-  margin-bottom: 4px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
 }
 
 .itemBody {
-  font-size: 0.8125rem;
-  color: #a1a1aa;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   line-height: 1.5;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -74,17 +74,17 @@
 }
 
 .itemTime {
-  font-size: 0.75rem;
-  color: #52525b;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
 }
 
 .itemActions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast);
 }
 
 .item:hover .itemActions {
@@ -92,20 +92,20 @@
 }
 
 .actionBtn {
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-2);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #a1a1aa;
-  font-size: 0.75rem;
-  border-radius: 4px;
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
   white-space: nowrap;
 }
 
 .actionBtn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.04);
-  color: #f4f4f5;
+  color: var(--color-text-primary);
 }
 
 .actionBtn:disabled {
@@ -114,16 +114,16 @@
 }
 
 .deleteBtn:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-dim);
   border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .unreadDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #a78bfa;
+  background: var(--color-brand-indigo);
   flex-shrink: 0;
   margin-top: 6px;
 }
@@ -134,7 +134,7 @@
 
 @media (max-width: 480px) {
   .item {
-    padding: 12px;
+    padding: var(--space-3);
   }
 
   .itemActions {

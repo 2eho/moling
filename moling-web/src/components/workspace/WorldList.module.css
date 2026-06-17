@@ -1,3 +1,4 @@
+/* WorldList v3.1 — §4.2 卡片规范 */
 .list {
   display: flex;
   flex-direction: column;
@@ -15,17 +16,19 @@
 }
 
 .item {
-  background-color: var(--color-bg-hover);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  transition: background-color var(--transition-normal);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .item:hover {
-  background-color: var(--color-elevated);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
 }
 
 .name {
@@ -35,11 +38,11 @@
 }
 
 .category {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-brand-indigo);
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: var(--color-brand-indigo-dim);
   padding: 1px var(--space-2);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .desc {
@@ -53,11 +56,11 @@
   flex-direction: column;
   gap: var(--space-1);
   padding-top: var(--space-1);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .sectionLabel {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
   font-weight: 500;
 }
@@ -103,12 +106,12 @@
 }
 
 .factionInfluence {
-  font-size: 11px;
-  color: var(--color-text-disabled);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .factionDesc {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   line-height: 1.4;
 }

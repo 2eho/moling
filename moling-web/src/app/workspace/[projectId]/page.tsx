@@ -12,6 +12,7 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useResizablePanel } from "@/hooks/useResizablePanel";
 import { ResizableHandle } from "@/components/ui/ResizableHandle";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { showToast } from "@/components/ui/Toast";
 import { Spinner } from "@/components/ui/Spinner";
 import styles from "./workspace.module.css";
@@ -34,48 +35,65 @@ const CardModal = dynamic(
 function LibraryPanel() {
   return (
     <>
-      {/* 人物库 */}
+      {/* 角色库 */}
       <div className={styles.libDrawer}>
         <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>👤 人物库</span>
+          <span className={styles.libDrawerTitle}>👤 角色库</span>
           <span className={styles.libDrawerCount}>—</span>
         </div>
-        <div className={styles.libHint}>
-          暂无人物数据。导入小说或手动添加角色。
-        </div>
+        <EmptyState
+          compact
+          icon="👤"
+          title="暂无角色数据"
+          description="导入小说或手动添加角色"
+        />
       </div>
 
-      {/* 情节承诺库 */}
+      {/* 剧情承诺 */}
       <div className={styles.libDrawer}>
         <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>🔗 情节承诺库</span>
+          <span className={styles.libDrawerTitle}>🎯 剧情承诺</span>
           <span className={styles.libDrawerCount}>—</span>
         </div>
-        <div className={styles.libHint}>
-          暂无情节数据。AI 生成章节时会自动提取。
-        </div>
+        <EmptyState
+          compact
+          icon="🎯"
+          title="暂无剧情数据"
+          description="AI 生成章节时会自动提取"
+        />
       </div>
 
       {/* 世界观库 */}
       <div className={styles.libDrawer}>
         <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>🗺 世界观库</span>
+          <span className={styles.libDrawerTitle}>🌍 世界观</span>
           <span className={styles.libDrawerCount}>—</span>
         </div>
-        <div className={styles.libHint}>
-          暂无世界观数据。导入小说可自动提取。
-        </div>
+        <EmptyState
+          compact
+          icon="🌍"
+          title="暂无世界观数据"
+          description="导入小说可自动提取"
+        />
       </div>
 
       {/* 伏笔库 */}
       <div className={styles.libDrawer}>
         <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>🎯 伏笔库</span>
+          <span className={styles.libDrawerTitle}>🔮 伏笔库</span>
           <span className={styles.libDrawerCount}>—</span>
         </div>
-        <div className={styles.libHint}>
-          暂无伏笔数据。AI 生成章节时会自动追踪。
-        </div>
+        <EmptyState
+          compact
+          icon="🔮"
+          title="暂无伏笔数据"
+          description="AI 生成章节时会自动追踪"
+        />
+      </div>
+
+      {/* 层级提示 */}
+      <div className={styles.libHint}>
+        点击以上卡片快速预览。需要编辑？前往「📋 深度编辑」或「📊 全局概览」。
       </div>
 
       {/* 底部操作 */}
@@ -84,7 +102,7 @@ function LibraryPanel() {
           📥 导入素材
         </Link>
         <Link href={`/vaults`} className={`${styles.libFooterBtn} ${styles.libFooterBtnPrimary}`} style={{ textDecoration: "none" }}>
-          ⚙ 四库管理
+          📊 全局概览
         </Link>
       </div>
     </>
@@ -109,7 +127,10 @@ function AIToolbox({
       <div className={styles.toolSection}>
         <div className={styles.toolSectionTitle}>
           <span className={styles.toolSectionDot} style={{ background: "var(--color-brand-amber)" }} />
-          灵感抽卡
+          ⚡ 快速灵感
+        </div>
+        <div className={styles.toolSectionHint}>
+          轻量即兴，快速获取创作灵感方向
         </div>
 
         {/* 快捷抽卡网格 */}

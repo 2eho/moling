@@ -61,9 +61,9 @@ export default function WeavePage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>编织模式</h1>
+        <h1 className={styles.title}>🧶 深度编织</h1>
         <p className={styles.subtitle}>
-          选择编织策略，AI 将以此为基础生成后续章节
+          选择策略、调整方向，让 AI 根据四库记忆精细编织后续章节。适合需要连贯规划、深度控制的创作场景。
         </p>
       </div>
 
@@ -71,6 +71,9 @@ export default function WeavePage() {
         {/* Mode Selection */}
         <div className={styles.modes}>
           <h2 className={styles.sectionTitle}>选择编织模式</h2>
+          <p className={styles.sectionHint}>
+            深度编织会综合四库数据和故事全局，生成多章连贯内容。如需轻量灵感，请在写作工作台使用「⚡ 快速灵感」。
+          </p>
           <div className={styles.modeGrid}>
             {modes.map(mode => (
               <div
@@ -93,7 +96,7 @@ export default function WeavePage() {
             onClick={handleWeave}
             disabled={weaving}
           >
-            {weaving ? '编织中...' : '🧵 开始编织'}
+            {weaving ? '编织中...' : '🧶 开始深度编织'}
           </button>
         </div>
 

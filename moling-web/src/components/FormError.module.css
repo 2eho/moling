@@ -1,4 +1,4 @@
-﻿/* ============================================
+/* ============================================
    墨灵 (Moling) — FormError 样式
    ============================================ */
 
@@ -19,14 +19,14 @@
 }
 
 .danger {
-  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: var(--color-danger);
 }
 
 .warning {
-  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
   color: var(--color-warning);
 }
 

@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { showToast } from "@/components/ui/Toast";
 import { Spinner } from "@/components/ui/Spinner";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { vaultApi } from "@/lib/api";
 import type { VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld } from "@/lib/types";
 import { safeArray, safeObject } from "@/lib/apiSafety";  // ✅ 导入安全工具
@@ -1253,11 +1256,33 @@ export default function VaultsPage() {
           {dSidebarStats}
         </aside>
         <main className={styles.dContentArea}>
-          {dCharacterPanel}
-          {dTimelinePanel}
-          {dCommitmentsPanel}
-          {dWorldPanel}
-          {dSecretsPanel}
+          {loadError ? (
+            <ErrorState
+              message={loadError}
+              onRetry={() => {
+                setLoadError(null);
+                setIsLoading(true);
+                // 触发重新加载 — 使用 window.location.reload 最简单
+                window.location.reload();
+              }}
+            />
+          ) : isLoading ? (
+            <div className={styles.dContentArea}>
+              <div className={styles.dCharacterGrid}>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <SkeletonCard key={i} lines={3} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              {dCharacterPanel}
+              {dTimelinePanel}
+              {dCommitmentsPanel}
+              {dWorldPanel}
+              {dSecretsPanel}
+            </>
+          )}
         </main>
       </div>
       {renderCharModal()}

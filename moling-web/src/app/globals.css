@@ -42,6 +42,28 @@
   --color-warning-dim: rgba(251, 191, 36, 0.12);
   --color-danger-dim: rgba(239, 68, 68, 0.12);
 
+  /* ── 玻璃态令牌 · Glass Tokens ── */
+  --color-glass-bg: rgba(13, 15, 26, 0.85);
+  --color-glass-border: rgba(99, 102, 241, 0.08);
+  --color-glass-hover: rgba(255, 255, 255, 0.06);
+  --color-overlay-bg: rgba(0, 0, 0, 0.6);
+
+  /* ── 品牌色完整变体 · Brand Variants ── */
+  --color-brand-indigo-light: #a5b4fc;
+  --color-brand-indigo-lighter: #c7d2fe;
+  --color-brand-indigo-dark: #4f46e5;
+  --color-brand-indigo-hover: rgba(99, 102, 241, 0.18);
+  --color-brand-indigo-border: rgba(99, 102, 241, 0.2);
+  --color-brand-indigo-ring: rgba(99, 102, 241, 0.35);
+
+  /* ── 危险色变体 · Danger Variants ── */
+  --color-danger-light: #fca5a5;
+  --color-danger-lighter: #fecaca;
+  --color-danger-text: #f87171;
+  --color-danger-border: rgba(239, 68, 68, 0.2);
+  --color-danger-hover: rgba(239, 68, 68, 0.22);
+  --color-danger-ring: rgba(239, 68, 68, 0.4);
+
   /* ══════════════════════════════════════════════════════
      字体系统 · Font System
      ══════════════════════════════════════════════════════ */
@@ -131,6 +153,8 @@
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
   --duration-fast: 100ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
@@ -587,4 +611,27 @@ main, section, .page, .shell, .main-content {
 
 .active-press:active {
   transform: scale(0.97);
+}
+
+/* ═══════════════════════════════════════════════════════
+   全局交互规则 · Global Interaction Rules (v3.2)
+   统一按钮、卡片、输入框的过渡行为，全部 GPU 加速
+   ═══════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: no-preference) {
+  button, .btn, [role="button"], a {
+    transition: transform 0.15s var(--ease-out-expo),
+                box-shadow 0.15s var(--ease-out-expo),
+                opacity 0.15s var(--ease-out-expo);
+  }
+  button:active, .btn:active {
+    transform: scale(0.97);
+  }
+  .card, [class*="card"] {
+    transition: transform 0.2s var(--ease-out-expo),
+                box-shadow 0.2s var(--ease-out-expo),
+                border-color 0.2s ease;
+  }
+  input:focus, textarea:focus, select:focus {
+    transition: border-color 0.2s ease, box-shadow 0.3s ease;
+  }
 }

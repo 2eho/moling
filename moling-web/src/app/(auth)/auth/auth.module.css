@@ -31,16 +31,15 @@
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   padding: var(--space-8) var(--space-6);
-  box-shadow: var(--shadow-modal);
-  transition: transform var(--duration-normal) var(--ease-spring),
-              box-shadow var(--duration-normal) var(--ease-default);
+  box-shadow: var(--shadow-lg);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 8px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .header {
@@ -66,11 +65,25 @@
 }
 
 /* ── 响应式 ── */
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .page {
     padding: var(--space-4);
   }
+
+  .container {
+    max-width: 100%;
+  }
+
   .card {
     padding: var(--space-6) var(--space-4);
+    border-radius: var(--radius-md);
+  }
+
+  .logo {
+    font-size: 24px;
+  }
+
+  .header {
+    margin-bottom: var(--space-4);
   }
 }

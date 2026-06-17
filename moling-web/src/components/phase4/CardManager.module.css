@@ -1,4 +1,4 @@
-/* CardManager.module.css - 卡牌管理样式 */
+/* CardManager.module.css - 卡牌管理样式 (v3.1) */
 
 .container {
   padding: var(--space-4);
@@ -22,15 +22,20 @@
 
 .createButton {
   padding: var(--space-2) var(--space-4);
-  background: var(--color-brand-indigo);
-  color: white;
+  background: linear-gradient(135deg, var(--color-brand-indigo), var(--color-brand-indigo-600));
+  color: #fff;
+  border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .createButton:hover {
-  background: var(--color-brand-hover);
+  background: linear-gradient(135deg, var(--color-brand-indigo-400), var(--color-brand-indigo));
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }
 
 .error {
@@ -51,10 +56,11 @@
 /* 抽卡控制面板 */
 .drawPanel {
   background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: var(--space-4);
   margin-bottom: var(--space-4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .panelTitle {
@@ -83,7 +89,7 @@
 .numberInput {
   width: 80px;
   padding: var(--space-2) var(--space-3);
-  background: var(--color-bg);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
@@ -93,11 +99,12 @@
 .numberInput:focus {
   border-color: var(--color-brand-indigo);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .select {
   padding: var(--space-2) var(--space-3);
-  background: var(--color-bg);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
@@ -118,15 +125,20 @@
 
 .drawButton {
   padding: var(--space-2) var(--space-4);
-  background: var(--color-brand-indigo);
-  color: white;
+  background: linear-gradient(135deg, var(--color-brand-indigo), var(--color-brand-indigo-600));
+  color: #fff;
+  border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .drawButton:hover:not(:disabled) {
-  background: var(--color-brand-hover);
+  background: linear-gradient(135deg, var(--color-brand-indigo-400), var(--color-brand-indigo));
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }
 
 .drawButton:disabled {
@@ -137,15 +149,16 @@
 .redrawButton {
   padding: var(--space-2) var(--space-4);
   background: var(--color-brand-amber);
-  color: white;
+  color: #fff;
+  border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .redrawButton:hover:not(:disabled) {
-  background: var(--color-brand-amber);
-  opacity: 0.9;
+  filter: brightness(1.1);
 }
 
 .redrawButton:disabled {
@@ -160,7 +173,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,7 +183,7 @@
 }
 
 .form {
-  background: var(--color-surface);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
@@ -176,6 +191,7 @@
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-modal);
 }
 
 .form h4 {
@@ -208,6 +224,7 @@
 .input:focus {
   border-color: var(--color-brand-indigo);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .textarea {
@@ -227,6 +244,7 @@
 .textarea:focus {
   border-color: var(--color-brand-indigo);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .formActions {
@@ -238,39 +256,47 @@
 .cancelButton {
   flex: 1;
   padding: var(--space-2) var(--space-4);
-  background: var(--color-bg);
+  background: transparent;
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .cancelButton:hover {
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary);
 }
 
 .submitButton {
   flex: 1;
   padding: var(--space-2) var(--space-4);
-  background: var(--color-brand-indigo);
-  color: white;
+  background: linear-gradient(135deg, var(--color-brand-indigo), var(--color-brand-indigo-600));
+  color: #fff;
+  border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  transition: background var(--transition-fast);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .submitButton:hover {
-  background: var(--color-brand-hover);
+  background: linear-gradient(135deg, var(--color-brand-indigo-400), var(--color-brand-indigo));
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }
 
 /* 抽卡结果 */
 .drawResult {
   background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: var(--space-4);
   margin-bottom: var(--space-4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .remainingRedraws {
@@ -293,7 +319,7 @@
 
 .card {
   background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   margin-bottom: var(--space-3);
@@ -303,26 +329,15 @@
 }
 
 .card:hover {
-  border-color: var(--color-border-hover);
-  background: var(--color-bg-hover);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
 }
 
 /* 稀有度边框颜色 */
-.rarity_common {
-  border-left: 3px solid var(--rarity-common);
-}
-
-.rarity_rare {
-  border-left: 3px solid var(--rarity-rare);
-}
-
-.rarity_epic {
-  border-left: 3px solid var(--rarity-epic);
-}
-
-.rarity_legendary {
-  border-left: 3px solid var(--rarity-legendary);
-}
+.rarity_common { border-left: 3px solid var(--rarity-common); }
+.rarity_rare { border-left: 3px solid var(--rarity-rare); }
+.rarity_epic { border-left: 3px solid var(--rarity-epic); }
+.rarity_legendary { border-left: 3px solid var(--rarity-legendary); }
 
 .cardHeader {
   display: flex;
@@ -345,7 +360,7 @@
 .cardRarity {
   font-size: var(--font-size-xs);
   padding: var(--space-1) var(--space-2);
-  background: var(--color-bg);
+  background: var(--color-elevated);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
 }
@@ -389,14 +404,16 @@
   padding: var(--space-1) var(--space-2);
   background: var(--color-danger-dim);
   color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .retireButton:hover {
-  background: var(--color-danger);
-  color: white;
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .selectedBadge {
@@ -414,7 +431,6 @@
 /* 退役状态 */
 .retired {
   opacity: 0.6;
-  border-color: var(--color-border);
   cursor: default;
 }
 
@@ -471,7 +487,7 @@
 
 .filterBtn {
   padding: var(--space-1) var(--space-3);
-  background: var(--color-bg);
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-xs);
@@ -487,6 +503,6 @@
 
 .filterBtn.active {
   background: var(--color-brand-indigo);
-  color: white;
+  color: #fff;
   border-color: var(--color-brand-indigo);
 }

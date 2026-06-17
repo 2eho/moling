@@ -1,3 +1,4 @@
+/* RightPanel v3.1 — AI 工具箱 */
 .panel {
   display: flex;
   flex-direction: column;
@@ -6,7 +7,7 @@
   overflow: hidden;
 }
 
-/* ── Tabs ── */
+/* ── Tabs (§4.4 导航规范) ── */
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--color-border);
@@ -20,11 +21,11 @@
   justify-content: center;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-2);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--color-text-tertiary);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
+  transition: all var(--transition-fast);
   border-bottom: 2px solid transparent;
   background: none;
   border-top: none;
@@ -43,11 +44,11 @@
 }
 
 .tabIcon {
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .tabLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 /* ── Tab Content ── */
@@ -82,11 +83,11 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background-color: var(--color-elevated);
-  transition: all var(--duration-fast) var(--ease-default);
+  transition: all var(--transition-fast);
 }
 
 .suggestionCard:hover {
-  border-color: var(--color-brand-indigo);
+  border-color: rgba(99, 102, 241, 0.3);
   box-shadow: var(--shadow-sm);
 }
 
@@ -198,21 +199,23 @@
 .addChapterBtn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-brand-indigo);
+  background: linear-gradient(135deg, var(--color-brand-indigo), var(--color-brand-indigo-600));
   color: #fff;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
 .addChapterBtn:hover {
-  opacity: 0.85;
+  background: linear-gradient(135deg, var(--color-brand-indigo-400), var(--color-brand-indigo));
   transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
 .chapterList {
@@ -228,11 +231,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2);
+  padding: var(--space-2);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
@@ -248,8 +251,8 @@
 }
 
 .chapterNum {
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   min-width: 24px;
 }

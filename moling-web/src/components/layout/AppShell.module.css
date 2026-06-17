@@ -17,10 +17,10 @@
 .main {
   flex: 1;
   overflow-y: auto;
-  margin-top: var(--header-height, 56px);
+  margin-top: var(--header-height);
   background: var(--color-bg);
   transition: background var(--transition-normal);
-  animation: pageEnter 0.3s var(--ease-spring);
+  animation: pageEnter 300ms ease;
 }
 
 @keyframes pageEnter {
@@ -45,34 +45,34 @@
 
 @media (max-width: 768px) {
   .main {
-    padding-bottom: 56px; /* 底部导航栏高度 */
+    padding-bottom: var(--mobile-bottom-nav-height);
   }
 }
 
 /* ---- 侧边栏样式 (Web端) ---- */
 
 .sidebar {
-  width: var(--sidebar-width, 280px);
+  width: var(--sidebar-width);
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
-  background: var(--color-surface);
+  background: var(--color-bg);
   border-right: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   z-index: 50;
-  transition: all var(--transition-normal);
+  transition: width 200ms ease;
 }
 
 .sidebarCollapsed {
-  width: var(--sidebar-collapsed, 56px);
+  width: var(--sidebar-collapsed);
 }
 
 /* ---- 侧边栏头部 ---- */
 
 .sidebarHeader {
-  height: var(--header-height, 56px);
+  height: var(--header-height);
   display: flex;
   align-items: center;
   padding: 0 var(--spacing-4);
@@ -96,25 +96,25 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  padding: var(--spacing-3) var(--spacing-4);
-  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  border-radius: 8px;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  transition: all var(--transition-normal);
+  transition: all 150ms ease;
   cursor: pointer;
   position: relative;
   text-decoration: none;
 }
 
 .navItem:hover {
-  background: var(--color-bg-hover);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--color-text-primary);
 }
 
 .navItemActive {
-  background: var(--color-brand-indigo-dim);
-  color: var(--color-brand-indigo);
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
   font-weight: 600;
 }
 
@@ -171,13 +171,13 @@
 }
 
 .layoutWithSidebar .main {
-  margin-left: var(--sidebar-width, 280px);
-  margin-top: 0; /* 覆盖移动端的 margin-top */
+  margin-left: var(--sidebar-width);
+  margin-top: 0;
   flex: 1;
   overflow-y: auto;
-  transition: margin-left var(--transition-normal);
+  transition: margin-left 200ms ease;
 }
 
 .layoutWithSidebar .mainCollapsed {
-  margin-left: var(--sidebar-collapsed, 56px);
+  margin-left: var(--sidebar-collapsed);
 }

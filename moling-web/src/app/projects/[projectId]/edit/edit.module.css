@@ -1,52 +1,70 @@
+/* ═══════════════════════════════════════════════════════
+   编辑项目页 · Edit Project
+   设计令牌全部继承自 globals.css
+   ═══════════════════════════════════════════════════════ */
+
 .container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg, #0d0f1a);
-  padding: 24px;
+  background: var(--color-bg);
+  padding: var(--space-6);
 }
 
 .card {
-  background: var(--color-surface, #151829);
-  border: 1px solid var(--color-border-subtle, #1e2138);
-  border-radius: var(--radius-xl, 16px);
-  padding: 32px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
   width: 100%;
   max-width: 480px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--duration-normal) var(--ease-default),
+              box-shadow var(--duration-normal) var(--ease-default);
 }
 
 .title {
   font-family: var(--font-heading);
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
-  color: var(--color-text-primary, #e8e9f0);
-  margin-bottom: 24px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-6);
 }
 
 .field {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .label {
   display: block;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  color: var(--color-text-secondary, #9ca3c4);
-  margin-bottom: 6px;
-  font-family: var(--font-ui);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
 }
 
 .loading {
   text-align: center;
-  color: var(--color-text-tertiary, #6b7199);
-  font-size: 14px;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-base);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .container {
+    padding: var(--space-4);
+  }
+
+  .card {
+    padding: var(--space-6);
+    border-radius: var(--radius-md);
+  }
 }

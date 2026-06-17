@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import type { Project } from "@/lib/types";
 import styles from "./projects.module.css";
 
@@ -21,6 +24,7 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const hasRefetched = useRef(false); // 防止重复刷新
 
   // 关键修复：登录后列表自动刷新
@@ -30,9 +34,20 @@ export default function ProjectsPage() {
   useEffect(() => {
     if (isAuthenticated && !isLoading && projects.length === 0 && !hasRefetched.current) {
       hasRefetched.current = true;
-      loadProjects();
+      loadProjects().catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "加载作品列表失败");
+      });
     }
   }, [isAuthenticated, isLoading, projects.length, loadProjects]);
+
+  const handleRetry = async () => {
+    setLoadError(null);
+    try {
+      await loadProjects();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "加载作品列表失败");
+    }
+  };
 
   // ✅ 防御性检查：确保 projects 始终是数组
   const safeProjects = Array.isArray(projects) ? projects : [];
@@ -97,29 +112,34 @@ export default function ProjectsPage() {
 
       {/* Project Grid */}
       <div className={styles.grid}>
-        {isLoading
-          ? [1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} height={200} borderRadius={12} />
-            ))
-          : filteredProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onClick={() => {
-                  setSelectedProject(project);
-                }}
-              />
-            ))}
-        {!isLoading && filteredProjects.length === 0 && (
-          <div className={styles.empty}>
-            <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              <line x1="8" y1="11" x2="14" y2="11"/>
-            </svg>
-            <p className={styles.emptyTitle}>暂无作品</p>
-            <p className={styles.emptyDesc}>点击"新建作品"开始创作吧</p>
-          </div>
+        {loadError ? (
+          <ErrorState
+            message={loadError}
+            onRetry={handleRetry}
+          />
+        ) : isLoading ? (
+          [1, 2, 3, 4, 5, 6].map((i) => (
+            <SkeletonCard key={i} lines={4} />
+          ))
+        ) : filteredProjects.length > 0 ? (
+          filteredProjects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onClick={() => {
+                setSelectedProject(project);
+              }}
+            />
+          ))
+        ) : (
+          <EmptyState
+            title="暂无作品"
+            description="还没有作品，开始你的第一本小说吧"
+            action={{
+              label: "新建作品",
+              onClick: handleNewProject,
+            }}
+          />
         )}
       </div>
 

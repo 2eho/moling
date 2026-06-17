@@ -1,3 +1,4 @@
+/* HealthAlert v3.1 */
 .banner {
   display: flex;
   flex-direction: column;
@@ -49,7 +50,8 @@
   font-size: 10px;
   color: var(--color-text-disabled);
   border-radius: var(--radius-sm);
-  transition: var(--transition-fast);
+  transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .close:hover {

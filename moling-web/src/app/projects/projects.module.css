@@ -49,7 +49,7 @@
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-5);
 }
 
@@ -157,8 +157,8 @@
 .emptyBtn {
   margin-top: var(--space-2);
   padding: var(--space-3) var(--space-6);
-  background: linear-gradient(135deg, var(--color-brand-indigo), #4f46e5);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-indigo), var(--color-brand-indigo-600));
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
   border: none;
@@ -237,25 +237,8 @@
 }
 
 /* ── Card animations ── */
-@keyframes cardEnter {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* 卡片入场动画已迁移到 ProjectCard.module.css，此处仅保留网格布局 */
 
-.grid > * {
-  opacity: 0;
-  transform: translateY(20px);
-  animation: cardEnter 0.5s var(--ease-default) forwards;
-}
-
-.grid > *:nth-child(1) { animation-delay: 0.05s; }
-.grid > *:nth-child(2) { animation-delay: 0.1s; }
-.grid > *:nth-child(3) { animation-delay: 0.15s; }
-.grid > *:nth-child(4) { animation-delay: 0.2s; }
-.grid > *:nth-child(5) { animation-delay: 0.25s; }
-.grid > *:nth-child(6) { animation-delay: 0.3s; }
 
 /* ── Responsive ── */
 @media (max-width: 1024px) {
@@ -267,7 +250,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .container {
     padding: var(--space-4) var(--space-4) var(--space-8);
   }
@@ -285,11 +268,19 @@
     flex: 1;
   }
 
+  .greeting {
+    font-size: 22px;
+  }
+
   .grid {
     grid-template-columns: 1fr;
   }
 
   .statsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .statCard {
+    padding: var(--space-4);
   }
 }

@@ -1,9 +1,8 @@
 /* ═══════════════════════════════════════════════════════
-   墨灵 (Moling) — System Health Banner Styles
+   墨灵 (Moling) — System Health Banner Styles (v3.1)
    ═══════════════════════════════════════════════════════ */
 
 /* ---- Container ---- */
-
 .container {
   position: relative;
   width: 100%;
@@ -12,16 +11,15 @@
 }
 
 /* ---- Banner ---- */
-
 .banner {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3, 12px);
-  padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   border-left: 4px solid;
-  margin: var(--spacing-3, 12px) var(--spacing-4, 16px);
-  animation: slideIn var(--duration-normal, 200ms) var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+  margin: var(--space-3) var(--space-4);
+  animation: slideIn var(--transition-normal) var(--ease-spring);
   transition: all var(--transition-normal);
 }
 
@@ -31,24 +29,22 @@
 }
 
 /* ---- Status Variants ---- */
-
 .bannerHealthy {
-  background: var(--color-success-dim, rgba(52, 211, 153, 0.08));
-  border-left-color: var(--color-success, #34d399);
+  background: var(--color-success-dim);
+  border-left-color: var(--color-success);
 }
 
 .bannerDegraded {
-  background: var(--color-warning-dim, rgba(251, 191, 36, 0.08));
-  border-left-color: var(--color-warning, #fbbf24);
+  background: var(--color-warning-dim);
+  border-left-color: var(--color-warning);
 }
 
 .bannerDown {
-  background: var(--color-danger-dim, rgba(239, 68, 68, 0.08));
-  border-left-color: var(--color-danger, #ef4444);
+  background: var(--color-danger-dim);
+  border-left-color: var(--color-danger);
 }
 
 /* ---- Legacy Support (R1, R2, R3) ---- */
-
 .bannerR1 {
   background: var(--color-danger-dim);
   border-left-color: var(--color-danger);
@@ -65,7 +61,6 @@
 }
 
 /* ---- Icon ---- */
-
 .icon {
   flex-shrink: 0;
   width: 24px;
@@ -78,22 +73,21 @@
 }
 
 .iconHealthy {
-  background: var(--color-success-dim, rgba(52, 211, 153, 0.15));
-  color: var(--color-success, #34d399);
+  background: var(--color-success-dim);
+  color: var(--color-success);
 }
 
 .iconDegraded {
-  background: var(--color-warning-dim, rgba(251, 191, 36, 0.15));
-  color: var(--color-warning, #fbbf24);
+  background: var(--color-warning-dim);
+  color: var(--color-warning);
 }
 
 .iconDown {
-  background: var(--color-danger-dim, rgba(239, 68, 68, 0.15));
-  color: var(--color-danger, #ef4444);
+  background: var(--color-danger-dim);
+  color: var(--color-danger);
 }
 
 /* ---- Legacy Icon Support ---- */
-
 .iconR1 {
   background: var(--color-danger-dim);
   color: var(--color-danger);
@@ -110,56 +104,37 @@
 }
 
 /* ---- Content ---- */
-
 .content {
   flex: 1;
   min-width: 0;
 }
 
 .title {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   line-height: 1.4;
 }
 
-.titleHealthy {
-  color: var(--color-success, #34d399);
-}
-
-.titleDegraded {
-  color: var(--color-warning, #fbbf24);
-}
-
-.titleDown {
-  color: var(--color-danger, #ef4444);
-}
+.titleHealthy { color: var(--color-success); }
+.titleDegraded { color: var(--color-warning); }
+.titleDown { color: var(--color-danger); }
 
 /* ---- Legacy Title Support ---- */
-
-.titleR1 {
-  color: var(--color-danger, #ef4444);
-}
-
-.titleR2 {
-  color: var(--color-warning, #fbbf24);
-}
-
-.titleR3 {
-  color: var(--color-brand-indigo, #6366f1);
-}
+.titleR1 { color: var(--color-danger); }
+.titleR2 { color: var(--color-warning); }
+.titleR3 { color: var(--color-brand-indigo); }
 
 .message {
-  font-size: 12px;
-  color: var(--color-text-secondary, #9ca3c4);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
   line-height: 1.5;
   margin-top: 2px;
 }
 
 /* ---- Details Toggle ---- */
-
 .detailsToggle {
-  font-size: 11px;
-  color: var(--color-text-tertiary, #6b7199);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
   background: none;
   border: none;
   cursor: pointer;
@@ -169,27 +144,26 @@
 }
 
 .detailsToggle:hover {
-  color: var(--color-text-secondary, #9ca3c4);
+  color: var(--color-text-secondary);
 }
 
 .detailsList {
   margin-top: 6px;
-  padding-left: 16px;
+  padding-left: var(--space-4);
 }
 
 .detailItem {
-  font-size: 11px;
-  color: var(--color-text-tertiary, #6b7199);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
   line-height: 1.5;
   list-style: disc;
 }
 
 .detailItem::marker {
-  color: var(--color-text-disabled, #3d4166);
+  color: var(--color-text-disabled);
 }
 
 /* ---- Slide-in Animation ---- */
-
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -202,14 +176,12 @@
 }
 
 /* ---- Hover Effect ---- */
-
 .banner:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
 
 /* ---- Close Button Enhancement ---- */
-
 .closeBtn {
   flex-shrink: 0;
   width: 24px;
@@ -217,24 +189,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  border-radius: var(--radius-sm, 6px);
-  color: var(--color-text-disabled, #3d4166);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-disabled);
   transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .closeBtn:hover {
   background: var(--color-bg-hover);
-  color: var(--color-text-primary, #e8e9f0);
+  color: var(--color-text-primary);
 }
 
 /* ---- Responsive ---- */
-
 @media (max-width: 768px) {
   .banner {
-    padding: var(--spacing-2, 8px) var(--spacing-3, 12px);
-    gap: var(--spacing-2, 8px);
-    margin: var(--spacing-2, 8px) var(--spacing-3, 12px);
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
+    margin: var(--space-2) var(--space-3);
   }
 
   .icon {
@@ -244,10 +216,10 @@
   }
 
   .title {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 
   .message {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
   }
 }

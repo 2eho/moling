@@ -1,21 +1,30 @@
+/* ═══════════════════════════════════════════════════════
+   模板选择器 · TemplateSelector
+   设计令牌全部继承自 globals.css
+   ═══════════════════════════════════════════════════════ */
+
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-4);
+  gap: var(--space-4);
 }
 
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
-  padding: var(--spacing-6);
-  background-color: var(--color-surface);
-  border: 2px solid var(--color-border-subtle);
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: border-color var(--duration-normal) var(--ease-default),
+              background var(--duration-normal) var(--ease-default),
+              transform var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-default);
   position: relative;
   overflow: hidden;
+  animation: fadeIn var(--duration-slow) var(--ease-out);
 }
 
 .card::before {
@@ -27,12 +36,12 @@
   height: 3px;
   background: linear-gradient(90deg, var(--color-brand-indigo), var(--color-brand-amber));
   opacity: 0;
-  transition: opacity var(--transition-normal);
+  transition: opacity var(--duration-normal) var(--ease-default);
 }
 
 .card:hover {
   border-color: var(--color-border);
-  background-color: var(--color-bg-hover);
+  background: var(--color-bg-hover);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -43,7 +52,7 @@
 
 .selected {
   border-color: var(--color-brand-indigo);
-  background-color: var(--color-brand-indigo-dim);
+  background: var(--color-brand-indigo-dim);
 }
 
 .selected::before {
@@ -62,15 +71,16 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background-color: var(--color-brand-indigo-dim);
+  background: var(--color-brand-indigo-dim);
   font-size: 28px;
   line-height: 1;
-  transition: all var(--transition-normal);
+  transition: transform var(--duration-normal) var(--ease-spring),
+              background var(--duration-normal) var(--ease-default);
 }
 
 .card:hover .iconWrapper {
   transform: scale(1.05);
-  background-color: rgba(99, 102, 241, 0.2);
+  background: rgba(99, 102, 241, 0.2);
 }
 
 .icon {
@@ -83,7 +93,7 @@
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
-  transition: color var(--transition-fast);
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
 .selected .name {
@@ -93,16 +103,16 @@
 .description {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  line-height: 1.5);
+  line-height: 1.5;
 }
 
 .preview {
-  padding: var(--spacing-3);
-  background-color: var(--color-bg);
+  padding: var(--space-3);
+  background: var(--color-elevated);
   border-radius: var(--radius-md);
   margin-top: auto;
   border: 1px solid var(--color-border-subtle);
-  transition: all var(--transition-fast);
+  transition: border-color var(--duration-fast) var(--ease-default);
 }
 
 .card:hover .preview {
@@ -112,7 +122,7 @@
 .previewLabel {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  line-height: 1.5);
+  line-height: 1.5;
 }
 
 .loading {
@@ -132,13 +142,7 @@
   border-top-color: var(--color-brand-indigo);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  margin-left: var(--spacing-2);
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  margin-left: var(--space-2);
 }
 
 .error {
@@ -148,6 +152,12 @@
   min-height: 200px;
   font-size: var(--font-size-base);
   color: var(--color-danger);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
@@ -161,6 +171,9 @@
   }
 }
 
-.card {
-  animation: fadeIn var(--transition-slow) var(--ease-out);
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }

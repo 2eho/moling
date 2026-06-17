@@ -1,3 +1,4 @@
+/* PlotPromiseList v3.1 */
 .list {
   display: flex;
   flex-direction: column;
@@ -15,17 +16,19 @@
 }
 
 .item {
-  background-color: var(--color-bg-hover);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  transition: background-color var(--transition-normal);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .item:hover {
-  background-color: var(--color-elevated);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
 }
 
 .header {
@@ -39,15 +42,15 @@
   align-items: center;
   height: 20px;
   padding: 0 var(--space-2);
-  font-size: 11px;
-  color: #ffffff;
-  border-radius: 10px;
+  font-size: var(--font-size-xs);
+  color: #fff;
+  border-radius: var(--radius-pill);
   font-weight: 500;
 }
 
 .chapter {
-  font-size: 11px;
-  color: var(--color-text-disabled);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .description {
@@ -57,6 +60,6 @@
 }
 
 .resolved {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
 }

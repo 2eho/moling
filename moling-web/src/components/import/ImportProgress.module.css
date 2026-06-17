@@ -155,7 +155,7 @@
 
 .progressBarFill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-brand-indigo), #818cf8, var(--color-brand-amber));
+  background: linear-gradient(90deg, var(--color-brand-indigo), var(--color-brand-indigo-400), var(--color-brand-amber));
   border-radius: 3px;
   width: 0%;
   transition: width var(--duration-cinematic) var(--ease-default);

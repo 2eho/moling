@@ -1,26 +1,146 @@
+/* ═══════════════════════════════════════════════════════
+   项目卡片 · ProjectCard
+   设计令牌全部继承自 globals.css
+   ═══════════════════════════════════════════════════════ */
+
 .card {
-  background-color: var(--color-surface);
+  background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-6);
   cursor: pointer;
-  transition: all var(--transition-slow);
+  transition: border-color var(--duration-normal) var(--ease-default),
+              box-shadow var(--duration-normal) var(--ease-default);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
+  overflow: hidden;
 }
 
-.card:hover {
-  transform: translateY(-4px);
-  border-color: var(--color-border);
-  box-shadow: var(--shadow-lg);
+/* ── Card hover: border glow + shadow lift ── */
+@media (prefers-reduced-motion: no-preference) {
+  .card:hover {
+    border-color: rgba(99, 102, 241, 0.2);
+    box-shadow: var(--shadow-lg), 0 0 20px rgba(99, 102, 241, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover {
+    border-color: rgba(99, 102, 241, 0.2);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-brand-indigo);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   封面 · Cover
+   ═══════════════════════════════════════════════════════ */
+
+.cover {
+  position: relative;
+  height: 120px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-4);
+  overflow: hidden;
+  transition: filter var(--duration-normal) var(--ease-default);
+}
+
+/* ── 纹理叠加 ── */
+.cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 4px
+    );
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* ── hover 光影 ── */
+@media (prefers-reduced-motion: no-preference) {
+  .card:hover .cover {
+    filter: brightness(1.08);
+  }
+}
+
+/* ── 6 种类型专属渐变 ── */
+
+/* 玄幻 — 紫色星云 */
+.coverType1 {
+  background: linear-gradient(135deg, #1a1040 0%, #2d1b69 40%, #1e3a5f 100%);
+}
+
+/* 都市 — 霓虹夜色 */
+.coverType2 {
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+}
+
+/* 仙侠/古代 — 青山水墨 */
+.coverType3 {
+  background: linear-gradient(135deg, #0c1a1a 0%, #1a3a3a 40%, #2d5a4b 100%);
+}
+
+/* 科幻 — 深空蓝 */
+.coverType4 {
+  background: linear-gradient(135deg, #0a0f2a 0%, #1a204a 50%, #2a3a6a 100%);
+}
+
+/* 历史 — 古卷褐 */
+.coverType5 {
+  background: linear-gradient(135deg, #1a1008 0%, #2d1f10 40%, #4a3020 100%);
+}
+
+/* 灵异 — 暗红雾 */
+.coverType6 {
+  background: linear-gradient(135deg, #0f0000 0%, #1a0a0a 40%, #2d1212 100%);
+}
+
+.coverGenre {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.coverPattern {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   卡片内容 · Card Content
+   ═══════════════════════════════════════════════════════ */
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
 }
 
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
 }
 
 .title {
@@ -38,34 +158,34 @@
 .status {
   flex-shrink: 0;
   height: 24px;
-  padding: 0 var(--spacing-2);
+  padding: 0 var(--space-2);
   display: flex;
   align-items: center;
   font-size: var(--font-size-xs);
-  color: #ffffff;
+  color: var(--color-text-primary);
   border-radius: var(--radius-sm);
   font-weight: 500;
 }
 
 .statusDraft {
   composes: status;
-  background-color: var(--color-text-tertiary);
+  background: var(--color-text-tertiary);
 }
 
 .statusActive {
   composes: status;
-  background-color: var(--color-success);
+  background: var(--color-success);
 }
 
 .statusArchived {
   composes: status;
-  background-color: var(--color-warning);
+  background: var(--color-warning);
 }
 
 .meta {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
@@ -87,16 +207,16 @@
 .stats {
   display: flex;
   align-items: center;
-  gap: var(--spacing-4);
+  gap: var(--space-4);
   margin-top: auto;
-  padding-top: var(--spacing-3);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--color-border-subtle);
 }
 
 .statItem {
   display: flex;
   align-items: center;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
   font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
 }
@@ -104,4 +224,46 @@
 .statIcon {
   font-size: var(--font-size-sm);
   color: var(--color-brand-indigo);
+}
+
+/* ═══════════════════════════════════════════════════════
+   入场动画 · Entry Animation
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: cardEnter 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  }
+
+  .card:nth-child(1)  { animation-delay: 0.05s; }
+  .card:nth-child(2)  { animation-delay: 0.1s; }
+  .card:nth-child(3)  { animation-delay: 0.15s; }
+  .card:nth-child(4)  { animation-delay: 0.2s; }
+  .card:nth-child(5)  { animation-delay: 0.25s; }
+  .card:nth-child(6)  { animation-delay: 0.3s; }
+  .card:nth-child(7)  { animation-delay: 0.35s; }
+  .card:nth-child(8)  { animation-delay: 0.4s; }
+  .card:nth-child(9)  { animation-delay: 0.45s; }
+  .card:nth-child(10) { animation-delay: 0.5s; }
+  .card:nth-child(11) { animation-delay: 0.55s; }
+  .card:nth-child(12) { animation-delay: 0.6s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    opacity: 1;
+  }
 }

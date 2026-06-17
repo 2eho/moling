@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════
-   四库管理 · Vaults Page — MoLing Vault Dashboard
+   四库管理 · Vaults Page — v3.1 规范
+   布局: 玻璃态顶栏 | 左侧分类导航 | 主区域卡片网格 | Modal
    ═══════════════════════════════════════════════════════ */
 
 /* ── Shell ── */
@@ -21,15 +22,17 @@
     height: 100vh;
   }
 
-  /* ── Header ── */
+  /* ── Header — 玻璃态 ── */
   .dAppHeader {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--space-6);
-    height: 56px;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
+    height: var(--header-height);
+    background: var(--color-glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--color-glass-hover);
     flex-shrink: 0;
     z-index: 10;
   }
@@ -51,7 +54,7 @@
     background: transparent;
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
   }
   .dBtnBack:hover {
     background: var(--color-border);
@@ -60,14 +63,14 @@
 
   .dHeaderTitle {
     font-family: var(--font-heading);
-    font-size: 16px;
+    font-size: var(--font-size-lg);
     font-weight: 600;
     color: var(--color-text-primary);
     letter-spacing: 0.5px;
   }
 
   .dHeaderProject {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
     padding: 2px 10px;
     background: var(--color-elevated);
@@ -76,7 +79,7 @@
   }
 
   .loadingBadge {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     color: var(--color-brand-indigo);
     margin-left: var(--space-2);
     animation: pulse 1.5s infinite;
@@ -91,20 +94,21 @@
     position: relative;
   }
 
+  /* 搜索框 */
   .dSearchBox {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     background: var(--color-elevated);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     padding: 6px 12px;
     width: 260px;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
   }
   .dSearchBox:focus-within {
     border-color: var(--color-brand-indigo);
-    box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   }
 
   .dSearchInput {
@@ -113,15 +117,15 @@
     border: none;
     outline: none;
     color: var(--color-text-primary);
-    font-size: 13px;
-    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-body);
   }
   .dSearchInput::placeholder {
-    color: var(--color-text-disabled);
+    color: var(--color-text-tertiary);
   }
 
   .dSearchShortcut {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     font-family: var(--font-mono);
     color: var(--color-text-disabled);
     padding: 1px 6px;
@@ -149,7 +153,7 @@
   }
 
   .dSidebarSectionLabel {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-text-disabled);
     text-transform: uppercase;
@@ -171,17 +175,17 @@
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
     border: 1px solid transparent;
     position: relative;
     user-select: none;
   }
   .dVaultTab:hover {
-    background: rgba(99,102,241,0.06);
+    background: rgba(99, 102, 241, 0.06);
   }
   .dVaultTab.active {
-    background: rgba(99,102,241,0.12);
-    border-color: rgba(99,102,241,0.2);
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.2);
   }
 
   .dTabIcon {
@@ -193,27 +197,27 @@
     border-radius: var(--radius-md);
     font-size: 18px;
     flex-shrink: 0;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
   }
 
   .dVaultTab[data-tab="character"] .dTabIcon {
-    background: rgba(99,102,241,0.12);
+    background: rgba(99, 102, 241, 0.12);
     color: var(--color-brand-indigo);
   }
   .dVaultTab[data-tab="timeline"] .dTabIcon {
-    background: rgba(52,211,153,0.12);
+    background: rgba(52, 211, 153, 0.12);
     color: var(--color-success);
   }
   .dVaultTab[data-tab="commitments"] .dTabIcon {
-    background: rgba(212,168,67,0.12);
+    background: rgba(212, 168, 67, 0.12);
     color: var(--color-brand-amber);
   }
   .dVaultTab[data-tab="world"] .dTabIcon {
-    background: rgba(168,85,247,0.12);
+    background: rgba(168, 85, 247, 0.12);
     color: var(--rarity-epic);
   }
   .dVaultTab[data-tab="secrets"] .dTabIcon {
-    background: rgba(239,68,68,0.12);
+    background: rgba(239, 68, 68, 0.12);
     color: var(--color-danger);
   }
 
@@ -225,14 +229,14 @@
   }
 
   .dTabLabel {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.3;
   }
 
   .dTabCount {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
     line-height: 1.3;
   }
@@ -252,7 +256,7 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--space-2) 0;
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 
   .dStatLabel {
@@ -262,7 +266,7 @@
   .dStatValue {
     color: var(--color-text-secondary);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--font-size-xs);
   }
 
   /* ── Content Area ── */
@@ -275,7 +279,7 @@
 
   .dContentPanel {
     display: none;
-    animation: fadeIn var(--duration-slow) var(--ease-default);
+    animation: fadeIn var(--transition-slow) var(--ease-default);
   }
 
   .active { display: block; }
@@ -285,17 +289,17 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── Memory Section ── */
+  /* ── Memory Section (卡片样式 §4.2) ── */
   .dMemorySection {
     margin-bottom: var(--space-5);
   }
 
   .dSectionCard {
     background: var(--color-surface);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
   }
 
   .dSectionCardHeader {
@@ -305,10 +309,10 @@
     padding: var(--space-4) var(--space-5);
     cursor: pointer;
     user-select: none;
-    transition: background var(--duration-normal) var(--ease-default);
+    transition: background var(--transition-normal);
   }
   .dSectionCardHeader:hover {
-    background: rgba(99,102,241,0.04);
+    background: rgba(99, 102, 241, 0.04);
   }
 
   .dSectionCardTitle {
@@ -328,11 +332,11 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-base);
   }
 
   .dSectionCardCount {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     font-family: var(--font-mono);
     color: var(--color-text-tertiary);
     font-weight: 400;
@@ -345,7 +349,7 @@
     align-items: center;
     justify-content: center;
     color: var(--color-text-tertiary);
-    transition: transform var(--duration-normal) var(--ease-default);
+    transition: transform var(--transition-normal);
   }
 
   .collapsed .dSectionCardToggle {
@@ -370,13 +374,13 @@
     border-radius: var(--radius-md);
     margin-bottom: var(--space-2);
     border: 1px solid var(--color-border-subtle);
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
   }
   .dMemoryItem:hover { border-color: var(--color-border); }
   .dMemoryItem:last-child { margin-bottom: 0; }
 
   .dMemoryItemText {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     line-height: 1.5;
     flex: 1;
@@ -386,7 +390,7 @@
     display: flex;
     gap: var(--space-1);
     opacity: 0;
-    transition: opacity var(--duration-normal) var(--ease-default);
+    transition: opacity var(--transition-normal);
     flex-shrink: 0;
     margin-left: var(--space-3);
   }
@@ -403,15 +407,15 @@
     background: transparent;
     color: var(--color-text-tertiary);
     cursor: pointer;
-    transition: all var(--duration-fast) var(--ease-default);
-    font-size: 12px;
+    transition: all var(--transition-fast);
+    font-size: var(--font-size-xs);
   }
   .dActionBtn:hover {
     background: var(--color-border);
     color: var(--color-text-primary);
   }
   .dActionBtn.danger:hover {
-    background: rgba(239,68,68,0.15);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--color-danger);
   }
 
@@ -450,7 +454,7 @@
 
   .dTimelineItem.current .dTimelineDot {
     background: var(--color-brand-indigo);
-    box-shadow: 0 0 8px rgba(99,102,241,0.5), 0 0 16px rgba(99,102,241,0.25);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5), 0 0 16px rgba(99, 102, 241, 0.25);
     animation: pulseGlow 2s ease-in-out infinite;
   }
 
@@ -459,19 +463,19 @@
   }
 
   @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.5), 0 0 16px rgba(99,102,241,0.25); }
-    50% { box-shadow: 0 0 12px rgba(99,102,241,0.7), 0 0 24px rgba(99,102,241,0.35); }
+    0%, 100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.5), 0 0 16px rgba(99, 102, 241, 0.25); }
+    50% { box-shadow: 0 0 12px rgba(99, 102, 241, 0.7), 0 0 24px rgba(99, 102, 241, 0.35); }
   }
 
   .dTimelineLabel {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     font-family: var(--font-mono);
     color: var(--color-text-tertiary);
     margin-bottom: 2px;
   }
 
   .dTimelineText {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
   }
 
@@ -491,19 +495,19 @@
     margin-bottom: var(--space-2);
     border: 1px solid var(--color-border-subtle);
     cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
   }
   .dSceneListItem:hover {
     border-color: var(--color-border);
-    background: rgba(99,102,241,0.04);
+    background: rgba(99, 102, 241, 0.04);
   }
   .dSceneListItem:last-child { margin-bottom: 0; }
 
   .dSceneChapter {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     font-family: var(--font-mono);
     color: var(--color-brand-indigo);
-    background: rgba(99,102,241,0.1);
+    background: rgba(99, 102, 241, 0.1);
     padding: 2px 8px;
     border-radius: var(--radius-sm);
     white-space: nowrap;
@@ -512,7 +516,7 @@
   }
 
   .dSceneSummary {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     line-height: 1.5;
   }
@@ -532,10 +536,10 @@
     border: 1px solid var(--color-border);
     background: transparent;
     color: var(--color-text-secondary);
-    font-size: 12px;
-    font-family: var(--font-ui);
+    font-size: var(--font-size-xs);
+    font-family: var(--font-body);
     cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
     white-space: nowrap;
   }
   .dFilterBtn:hover {
@@ -543,7 +547,7 @@
     border-color: var(--color-text-tertiary);
   }
   .dFilterBtn.active {
-    background: rgba(212,168,67,0.12);
+    background: rgba(212, 168, 67, 0.12);
     border-color: var(--color-brand-amber);
     color: var(--color-brand-amber);
     font-weight: 500;
@@ -558,31 +562,26 @@
 
   .dForeshadowCard {
     background: var(--color-surface);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: transform 0.2s var(--ease-out-expo),
+                box-shadow 0.2s var(--ease-out-expo),
+                border-color 0.2s ease;
     position: relative;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   }
   .dForeshadowCard:hover {
-    border-color: var(--color-border);
-    box-shadow: var(--shadow-md);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
     transform: translateY(-1px);
   }
 
-  .statusPending {
-    border-left: 3px solid var(--color-brand-amber);
-  }
-  .statusActive {
-    border-left: 3px solid var(--color-brand-indigo);
-  }
-  .statusRecovered {
-    border-left: 3px solid var(--color-success);
-  }
-  .statusLost {
-    border-left: 3px solid var(--color-danger);
-  }
+  .statusPending { border-left: 3px solid var(--color-brand-amber); }
+  .statusActive { border-left: 3px solid var(--color-brand-indigo); }
+  .statusRecovered { border-left: 3px solid var(--color-success); }
+  .statusLost { border-left: 3px solid var(--color-danger); }
 
   .dForeshadowCardHeader {
     display: flex;
@@ -603,13 +602,13 @@
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .high { background: var(--color-danger); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  .high { background: var(--color-danger); box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
   .medium { background: var(--color-warning); }
   .low { background: var(--color-text-disabled); }
 
   .dForeshadowTitle {
     font-family: var(--font-heading);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--color-text-primary);
   }
@@ -618,37 +617,38 @@
     display: inline-block;
     font-size: 10px;
     padding: 0 5px;
-    border-radius: 3px;
-    margin-left: 4px;
+    border-radius: var(--radius-sm);
+    margin-left: var(--space-1);
     font-weight: 500;
   }
-  .foreshadow { background: rgba(99,102,241,0.1); color: var(--color-brand-indigo); }
-  .advance { background: rgba(52,211,153,0.1); color: var(--color-success); }
-  .twist { background: rgba(245,158,11,0.1); color: #f59e0b; }
-  .climax { background: rgba(239,68,68,0.1); color: var(--color-danger); }
-  .wrap { background: rgba(168,85,247,0.1); color: var(--rarity-epic); }
+  .foreshadow { background: rgba(99, 102, 241, 0.1); color: var(--color-brand-indigo); }
+  .advance { background: rgba(52, 211, 153, 0.1); color: var(--color-success); }
+  .twist { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); }
+  .climax { background: rgba(239, 68, 68, 0.1); color: var(--color-danger); }
+  .wrap { background: rgba(168, 85, 247, 0.1); color: var(--rarity-epic); }
 
+  /* Status Badge (§4.5) */
   .dStatusBadge {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     padding: 2px 10px;
     border-radius: var(--radius-sm);
     font-weight: 500;
     white-space: nowrap;
   }
   .dStatusBadge.active {
-    background: rgba(99,102,241,0.12);
+    background: rgba(99, 102, 241, 0.12);
     color: var(--color-brand-indigo);
   }
   .dStatusBadge.pending {
-    background: rgba(212,168,67,0.12);
+    background: rgba(212, 168, 67, 0.12);
     color: var(--color-brand-amber);
   }
   .dStatusBadge.recovered {
-    background: rgba(52,211,153,0.12);
+    background: rgba(52, 211, 153, 0.12);
     color: var(--color-success);
   }
   .dStatusBadge.lost {
-    background: rgba(239,68,68,0.12);
+    background: rgba(239, 68, 68, 0.12);
     color: var(--color-danger);
   }
 
@@ -657,7 +657,7 @@
     align-items: center;
     gap: var(--space-5);
     padding: 0 var(--space-5) var(--space-4);
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
   }
 
@@ -675,7 +675,7 @@
 
   .expanded .dForeshadowCardDetail {
     display: block;
-    animation: slideDown var(--duration-normal) var(--ease-default);
+    animation: slideDown var(--transition-normal) var(--ease-default);
   }
 
   @keyframes slideDown {
@@ -692,7 +692,7 @@
   .dDetailCol { flex: 1; }
 
   .dDetailLabel {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-disabled);
     margin-bottom: var(--space-1);
     text-transform: uppercase;
@@ -700,12 +700,12 @@
   }
 
   .dDetailValue {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     line-height: 1.5;
   }
 
-  /* ── Character Grid ── */
+  /* ── Character Grid (卡片 §4.2) ── */
   .dCharacterGrid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -714,17 +714,20 @@
 
   .dCharacterCard {
     background: var(--color-surface);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-5);
     cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: transform 0.2s var(--ease-out-expo),
+                box-shadow 0.2s var(--ease-out-expo),
+                border-color 0.2s ease;
     position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   }
   .dCharacterCard:hover {
-    border-color: var(--color-border);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px) scale(1.01);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
+    transform: translateY(-2px);
   }
 
   .dCharacterCardTop {
@@ -746,31 +749,11 @@
     font-weight: 700;
     flex-shrink: 0;
   }
-  .protagonist {
-    background: rgba(99,102,241,0.15);
-    color: var(--color-brand-indigo);
-    border: 2px solid rgba(99,102,241,0.3);
-  }
-  .ally {
-    background: rgba(52,211,153,0.12);
-    color: var(--color-success);
-    border: 2px solid rgba(52,211,153,0.25);
-  }
-  .neutral {
-    background: rgba(156,163,196,0.1);
-    color: var(--color-text-secondary);
-    border: 2px solid rgba(156,163,196,0.2);
-  }
-  .opponent {
-    background: rgba(251,191,36,0.12);
-    color: var(--color-warning);
-    border: 2px solid rgba(251,191,36,0.25);
-  }
-  .villain {
-    background: rgba(239,68,68,0.12);
-    color: var(--color-danger);
-    border: 2px solid rgba(239,68,68,0.25);
-  }
+  .protagonist { background: rgba(99, 102, 241, 0.15); color: var(--color-brand-indigo); border: 2px solid rgba(99, 102, 241, 0.3); }
+  .ally { background: rgba(52, 211, 153, 0.12); color: var(--color-success); border: 2px solid rgba(52, 211, 153, 0.25); }
+  .neutral { background: rgba(156, 163, 196, 0.1); color: var(--color-text-secondary); border: 2px solid rgba(156, 163, 196, 0.2); }
+  .opponent { background: rgba(251, 191, 36, 0.12); color: var(--color-warning); border: 2px solid rgba(251, 191, 36, 0.25); }
+  .villain { background: rgba(239, 68, 68, 0.12); color: var(--color-danger); border: 2px solid rgba(239, 68, 68, 0.25); }
 
   .dCharacterInfo {
     flex: 1;
@@ -786,32 +769,17 @@
   }
 
   .dCharacterFaction {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     padding: 1px 8px;
     border-radius: var(--radius-sm);
     display: inline-block;
     margin-top: 2px;
   }
-  .dCharacterFaction.protagonist {
-    background: rgba(99,102,241,0.1);
-    color: var(--color-brand-indigo);
-  }
-  .dCharacterFaction.ally {
-    background: rgba(52,211,153,0.1);
-    color: var(--color-success);
-  }
-  .dCharacterFaction.neutral {
-    background: rgba(156,163,196,0.1);
-    color: var(--color-text-secondary);
-  }
-  .dCharacterFaction.opponent {
-    background: rgba(251,191,36,0.1);
-    color: var(--color-warning);
-  }
-  .dCharacterFaction.villain {
-    background: rgba(239,68,68,0.1);
-    color: var(--color-danger);
-  }
+  .dCharacterFaction.protagonist { background: rgba(99, 102, 241, 0.1); color: var(--color-brand-indigo); }
+  .dCharacterFaction.ally { background: rgba(52, 211, 153, 0.1); color: var(--color-success); }
+  .dCharacterFaction.neutral { background: rgba(156, 163, 196, 0.1); color: var(--color-text-secondary); }
+  .dCharacterFaction.opponent { background: rgba(251, 191, 36, 0.1); color: var(--color-warning); }
+  .dCharacterFaction.villain { background: rgba(239, 68, 68, 0.1); color: var(--color-danger); }
 
   .dCharacterTags {
     display: flex;
@@ -821,7 +789,7 @@
   }
 
   .dCharacterTag {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     padding: 2px 8px;
     border-radius: var(--radius-sm);
     background: var(--color-elevated);
@@ -830,7 +798,7 @@
   }
 
   .dCharacterStatus {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
     display: flex;
     align-items: center;
@@ -846,7 +814,7 @@
   }
 
   .dCharacterChapters {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-disabled);
     text-align: right;
     position: absolute;
@@ -854,6 +822,7 @@
     right: var(--space-5);
   }
 
+  /* Add character button */
   .dAddCharacterBtn {
     display: flex;
     align-items: center;
@@ -864,39 +833,40 @@
     border: 2px dashed var(--color-border);
     border-radius: var(--radius-lg);
     color: var(--color-text-tertiary);
-    font-size: 13px;
-    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-body);
     cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: all var(--transition-normal);
     width: 100%;
   }
   .dAddCharacterBtn:hover {
     border-color: var(--color-brand-indigo);
     color: var(--color-brand-indigo);
-    background: rgba(99,102,241,0.04);
+    background: rgba(99, 102, 241, 0.04);
   }
 
-  /* ── Detail Modal ── */
+  /* ── Detail Modal (§4.6) ── */
   .dDetailOverlay {
     display: flex;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 100;
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-  }
+  background: var(--color-overlay-bg);
+  z-index: 300;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+}
 
   .dDetailModal {
-    background: var(--color-surface);
+    background: var(--color-elevated);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
     width: 480px;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: var(--shadow-lg);
-    animation: modalIn var(--duration-slow) var(--ease-spring);
+    box-shadow: var(--shadow-modal);
+    animation: modalIn var(--transition-slow) var(--ease-spring);
   }
 
   @keyframes modalIn {
@@ -914,8 +884,9 @@
 
   .dDetailModalTitle {
     font-family: var(--font-heading);
-    font-size: 18px;
+    font-size: var(--font-size-xl);
     font-weight: 600;
+    color: var(--color-text-primary);
   }
 
   .dDetailModalClose {
@@ -929,7 +900,7 @@
     background: transparent;
     color: var(--color-text-tertiary);
     cursor: pointer;
-    transition: all var(--duration-fast) var(--ease-default);
+    transition: all var(--transition-fast);
   }
   .dDetailModalClose:hover {
     background: var(--color-border);
@@ -945,7 +916,7 @@
   }
 
   .dDetailFieldLabel {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-disabled);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -953,31 +924,31 @@
   }
 
   .dDetailFieldValue {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     line-height: 1.6;
   }
 
   .dDetailFieldValueItalic {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-tertiary);
     font-style: italic;
   }
 
   .dDetailFieldValueMono {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     font-family: var(--font-mono);
     line-height: 1.6;
   }
 
-  /* ── Secrets Table ── */
+  /* ── Secrets Table (Prompt 3 数据表格规范) ── */
   .dSecretsTable { overflow-x: auto; }
 
   .dSecretsTableEl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 
   .dSecretsTableHeadRow {
@@ -987,10 +958,13 @@
   .dSecretsTh {
     text-align: left;
     padding: var(--space-2) var(--space-3);
-    color: var(--color-text-tertiary);
+    color: var(--color-text-secondary);
     font-weight: 500;
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--color-elevated);
   }
 
   .dSecretsTableRow {
@@ -1013,9 +987,9 @@
     border-radius: var(--radius-sm);
     white-space: nowrap;
   }
-  .absolute { background: rgba(239,68,68,0.1); color: var(--color-danger); }
-  .partial { background: rgba(212,168,67,0.1); color: var(--color-brand-amber); }
-  .open { background: rgba(52,211,153,0.1); color: var(--color-success); }
+  .absolute { background: rgba(239, 68, 68, 0.1); color: var(--color-danger); }
+  .partial { background: rgba(212, 168, 67, 0.1); color: var(--color-brand-amber); }
+  .open { background: rgba(52, 211, 153, 0.1); color: var(--color-success); }
 
   .dSecretDebtHigh { color: var(--color-danger); font-weight: 600; }
   .dSecretDebtMedium { color: var(--color-warning); }
@@ -1036,14 +1010,14 @@
   }
 
   .dSecretPanelTitle {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-text-primary);
     margin-bottom: var(--space-3);
   }
 
   .dSecretDebtAvg {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
     margin-bottom: var(--space-3);
   }
@@ -1055,7 +1029,7 @@
   .dSecretDebtItemLabel {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
     margin-bottom: var(--space-1);
   }
@@ -1071,7 +1045,7 @@
   .dProgressFill {
     height: 100%;
     border-radius: 2px;
-    transition: width var(--duration-slow) var(--ease-default);
+    transition: width var(--transition-slow);
   }
 
   .dSecretDebtFormula {
@@ -1087,17 +1061,17 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
   }
 
   .dSecretSuggestion {
     margin-top: var(--space-3);
     padding: var(--space-2);
-    background: rgba(99,102,241,0.06);
-    border: 1px solid rgba(99,102,241,0.12);
+    background: rgba(99, 102, 241, 0.06);
+    border: 1px solid rgba(99, 102, 241, 0.12);
     border-radius: var(--radius-sm);
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-brand-indigo);
   }
 
@@ -1129,11 +1103,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(99,102,241,0.1);
+    background: rgba(99, 102, 241, 0.1);
   }
 
   .dCharKnowledgeName {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-text-primary);
   }
@@ -1150,7 +1124,7 @@
   }
 
   .dCharKnowledgeKnown, .dCharKnowledgeUnknown {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     padding: 3px 6px;
     border-radius: var(--radius-sm);
   }
@@ -1167,16 +1141,19 @@
 
   .dWorldCardStyle {
     background: var(--color-surface);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-5);
-    transition: all var(--duration-normal) var(--ease-default);
+    transition: transform 0.2s var(--ease-out-expo),
+                box-shadow 0.2s var(--ease-out-expo),
+                border-color 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   }
 
   .dWorldCardStyle:hover {
-    border-color: var(--color-border);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px) scale(1.01);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
+    transform: translateY(-2px);
   }
 
   .dWorldCardName {
@@ -1187,7 +1164,7 @@
   }
 
   .dWorldCardDesc {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
     line-height: 1.6;
     margin-top: var(--space-2);
@@ -1231,8 +1208,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 24px 4px;
-  font-size: 14px;
+  padding: var(--space-2) var(--space-6) var(--space-1);
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-text-primary);
   background: var(--color-bg);
@@ -1242,14 +1219,14 @@
 }
 
 .mTime { font-variant-numeric: tabular-nums; }
-.mIcons { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.mIcons { display: flex; gap: 6px; align-items: center; font-size: var(--font-size-xs); }
 
 /* Top Nav */
 .mTopNav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 16px 12px;
+  padding: 6px var(--space-4) var(--space-3);
   background: var(--color-bg);
   position: sticky;
   top: 28px;
@@ -1258,7 +1235,7 @@
 
 .mBackBtn {
   background: none; border: none; color: var(--color-brand-indigo); font-size: 22px;
-  cursor: pointer; padding: 4px 4px 4px 0;
+  cursor: pointer; padding: var(--space-1) var(--space-1) var(--space-1) 0;
 }
 
 .mTitle {
@@ -1277,7 +1254,7 @@
   position: sticky;
   top: 76px;
   z-index: 98;
-  border-bottom: 1px solid var(--color-text-disabled);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .mTabBar {
@@ -1285,20 +1262,20 @@
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
 }
 .mTabBar::-webkit-scrollbar { display: none; }
 
 .mTabItem {
   flex: none;
   padding: 10px 18px 12px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-text-tertiary);
   cursor: pointer;
   position: relative;
   white-space: nowrap;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
   text-align: center;
   min-width: 80px;
 }
@@ -1310,7 +1287,7 @@
   bottom: 0; left: 50%; transform: translateX(-50%);
   height: 2.5px;
   border-radius: 2px;
-  transition: width 0.25s ease, background 0.25s ease;
+  transition: width var(--transition-normal), background var(--transition-normal);
 }
 
 .mTabItem.active .mIndicator { width: 24px; }
@@ -1318,9 +1295,9 @@
 /* Tab Content */
 .mTabContent {
   display: none;
-  padding: 16px;
+  padding: var(--space-4);
   padding-bottom: 100px;
-  animation: mFadeUp 0.3s ease;
+  animation: mFadeUp var(--transition-slow) var(--ease-default);
 }
 .mTabContent.active { display: block; }
 
@@ -1332,29 +1309,30 @@
 /* Search Box */
 .mSearchBox {
   display: flex; align-items: center;
-  background: var(--color-surface); border-radius: 10px;
+  background: var(--color-elevated);
+  border-radius: var(--radius-md);
   padding: 9px 14px; margin-bottom: 14px;
-  border: 1px solid var(--color-text-disabled);
+  border: 1px solid var(--color-border);
 }
 
-.mSearchIcon { color: var(--color-text-tertiary); margin-right: 8px; font-size: 14px; }
+.mSearchIcon { color: var(--color-text-tertiary); margin-right: var(--space-2); font-size: var(--font-size-base); }
 
 .mSearchBox input {
   flex: 1; background: none; border: none; outline: none;
-  color: var(--color-text-primary); font-size: 14px;
+  color: var(--color-text-primary); font-size: var(--font-size-base);
 }
-.mSearchBox input::placeholder { color: var(--color-text-disabled); }
+.mSearchBox input::placeholder { color: var(--color-text-tertiary); }
 
 /* Character Cards */
 .mCharCard {
   background: var(--color-surface);
-  border-radius: 14px;
-  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-3);
   overflow: hidden;
-  border: 1px solid rgba(99,102,241,0.12);
-  transition: border-color 0.3s;
+  border: 1px solid var(--color-border);
+  transition: border-color var(--transition-normal);
 }
-.mCharCard:hover { border-color: rgba(99,102,241,0.25); }
+.mCharCard:hover { border-color: rgba(99, 102, 241, 0.25); }
 
 .mCharHeader {
   display: flex; align-items: center; padding: 14px;
@@ -1364,12 +1342,12 @@
 .mCharAvatar {
   width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 700; margin-right: 12px;
+  font-size: 18px; font-weight: 700; margin-right: var(--space-3);
   flex-shrink: 0;
 }
-.mv1 { background: rgba(99,102,241,0.2); color: var(--color-brand-indigo); }
-.mv2 { background: rgba(52,211,153,0.15); color: var(--color-success); }
-.mv3 { background: rgba(168,85,247,0.18); color: var(--rarity-epic); }
+.mv1 { background: rgba(99, 102, 241, 0.2); color: var(--color-brand-indigo); }
+.mv2 { background: rgba(52, 211, 153, 0.15); color: var(--color-success); }
+.mv3 { background: rgba(168, 85, 247, 0.18); color: var(--rarity-epic); }
 
 .mCharInfo { flex: 1; }
 
@@ -1380,24 +1358,24 @@
 .mCharTags { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .mCharTag {
-  font-size: 11px; padding: 2px 8px; border-radius: 6px;
-  background: rgba(99,102,241,0.1); color: var(--color-brand-indigo);
+  font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-sm);
+  background: rgba(99, 102, 241, 0.1); color: var(--color-brand-indigo);
 }
 
 .mRoleTag {
-  background: rgba(212,168,67,0.12); color: var(--color-brand-amber);
+  background: rgba(212, 168, 67, 0.12); color: var(--color-brand-amber);
 }
 
 .mCharArrow {
-  color: var(--color-text-disabled); font-size: 12px;
-  transition: transform 0.3s; margin-left: 8px;
+  color: var(--color-text-disabled); font-size: var(--font-size-xs);
+  transition: transform var(--transition-normal); margin-left: var(--space-2);
 }
 
 .expanded .mCharArrow { transform: rotate(180deg); }
 
 .mCharDetail {
   max-height: 0; overflow: hidden;
-  transition: max-height 0.35s ease, padding 0.35s ease;
+  transition: max-height var(--transition-slow), padding var(--transition-slow);
   padding: 0 14px;
 }
 
@@ -1407,28 +1385,28 @@
 }
 
 .mCharDetailInner {
-  border-top: 1px solid var(--color-text-disabled);
-  padding-top: 12px; font-size: 13px; color: var(--color-text-secondary);
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-3); font-size: var(--font-size-sm); color: var(--color-text-secondary);
   line-height: 1.7;
 }
 
-.mCharTraits { margin-bottom: 8px; }
+.mCharTraits { margin-bottom: var(--space-2); }
 .mCharTraits span {
-  display: inline-block; margin-right: 4px;
-  padding: 2px 8px; border-radius: 5px; font-size: 12px;
-  background: rgba(99,102,241,0.08); color: var(--color-text-secondary);
+  display: inline-block; margin-right: var(--space-1);
+  padding: 2px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);
+  background: rgba(99, 102, 241, 0.08); color: var(--color-text-secondary);
 }
 
 .mCharDesc { color: var(--color-text-tertiary); font-size: 12.5px; line-height: 1.6; }
 
 /* Timeline */
-.mTimeline { position: relative; padding-left: 24px; }
+.mTimeline { position: relative; padding-left: var(--space-6); }
 .mTimeline::before {
   content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px;
-  width: 2px; background: var(--color-text-disabled);
+  width: 2px; background: var(--color-border);
 }
 
-.mTlNode { position: relative; padding-bottom: 24px; }
+.mTlNode { position: relative; padding-bottom: var(--space-6); }
 .mTlNode:last-child { padding-bottom: 0; }
 
 .mTlDot {
@@ -1441,7 +1419,7 @@
 
 .mTlNode.current .mTlDot {
   background: var(--color-success);
-  box-shadow: 0 0 10px rgba(52,211,153,0.4);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
 }
 
 .mTlNode.future .mTlDot {
@@ -1449,7 +1427,7 @@
 }
 
 .mTlLabel {
-  font-size: 12px; color: var(--color-success); font-weight: 600;
+  font-size: var(--font-size-xs); color: var(--color-success); font-weight: 600;
   margin-bottom: 3px;
 }
 
@@ -1457,15 +1435,15 @@
 .mTlNode.future .mTlLabel { color: var(--color-text-disabled); }
 
 .mTlTitle {
-  font-size: 14px; color: var(--color-text-primary); font-weight: 500;
+  font-size: var(--font-size-base); color: var(--color-text-primary); font-weight: 500;
   line-height: 1.5;
 }
 .mTlNode.future .mTlTitle { color: var(--color-text-disabled); font-style: italic; }
 
 .mTlCard {
-  background: var(--color-surface); border-radius: 10px;
-  padding: 12px; margin-top: 8px;
-  border: 1px solid rgba(52,211,153,0.1);
+  background: var(--color-surface); border-radius: var(--radius-md);
+  padding: var(--space-3); margin-top: var(--space-2);
+  border: 1px solid rgba(52, 211, 153, 0.1);
   font-size: 12.5px; color: var(--color-text-secondary); line-height: 1.6;
 }
 .mTlNode.future .mTlCard {
@@ -1475,64 +1453,64 @@
 
 .mTlBadge {
   display: inline-block; font-size: 10px; padding: 1px 7px;
-  border-radius: 4px; background: rgba(52,211,153,0.12); color: var(--color-success);
+  border-radius: var(--radius-sm); background: rgba(52, 211, 153, 0.12); color: var(--color-success);
   margin-left: 6px; font-weight: 600;
 }
 
 /* Plot Filter */
 .mFilterBar {
-  display: flex; gap: 8px; margin-bottom: 14px;
+  display: flex; gap: var(--space-2); margin-bottom: 14px;
 }
 
 .mFilterBtn {
-  padding: 6px 14px; border-radius: 20px;
-  font-size: 13px; cursor: pointer; font-weight: 500;
+  padding: 6px 14px; border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm); cursor: pointer; font-weight: 500;
   background: var(--color-surface); color: var(--color-text-tertiary);
-  border: 1px solid var(--color-text-disabled);
-  transition: all 0.2s;
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
 }
 .mFilterBtn.active {
-  background: rgba(251,191,36,0.12);
-  color: var(--color-brand-amber); border-color: rgba(251,191,36,0.3);
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--color-brand-amber); border-color: rgba(251, 191, 36, 0.3);
 }
 
 /* Plot Cards */
 .mPlotCard {
-  background: var(--color-surface); border-radius: 12px;
+  background: var(--color-surface); border-radius: var(--radius-lg);
   margin-bottom: 10px; overflow: hidden;
-  border: 1px solid rgba(251,191,36,0.08);
-  transition: border-color 0.3s;
+  border: 1px solid var(--color-border);
+  transition: border-color var(--transition-normal);
 }
-.mPlotCard:hover { border-color: rgba(251,191,36,0.2); }
+.mPlotCard:hover { border-color: rgba(251, 191, 36, 0.2); }
 
 .mPlotHeader {
   display: flex; align-items: center; padding: 13px 14px;
   cursor: pointer;
 }
 
-.mPlotIcon { font-size: 14px; margin-right: 10px; flex-shrink: 0; }
+.mPlotIcon { font-size: var(--font-size-base); margin-right: 10px; flex-shrink: 0; }
 .mPlotInfo { flex: 1; }
 
-.mPlotTitle { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 2px; }
+.mPlotTitle { font-size: var(--font-size-base); font-weight: 600; color: var(--color-text-primary); margin-bottom: 2px; }
 .mPlotMeta { font-size: 11.5px; color: var(--color-text-tertiary); }
 
 .mPlotStatus {
-  font-size: 11px; padding: 3px 9px; border-radius: 6px;
+  font-size: var(--font-size-xs); padding: 3px 9px; border-radius: var(--radius-sm);
   font-weight: 600; white-space: nowrap;
 }
-.mPlotStatus.pending { background: rgba(251,191,36,0.1); color: var(--color-brand-amber); }
-.mPlotStatus.done { background: rgba(52,211,153,0.1); color: var(--color-success); }
+.mPlotStatus.pending { background: rgba(251, 191, 36, 0.1); color: var(--color-brand-amber); }
+.mPlotStatus.done { background: rgba(52, 211, 153, 0.1); color: var(--color-success); }
 
 .mPlotExpand {
-  color: var(--color-text-disabled); font-size: 11px; margin-left: 8px;
-  transition: transform 0.3s;
+  color: var(--color-text-disabled); font-size: var(--font-size-xs); margin-left: var(--space-2);
+  transition: transform var(--transition-normal);
 }
 
 .expanded .mPlotExpand { transform: rotate(180deg); }
 
 .mPlotDetail {
   max-height: 0; overflow: hidden;
-  transition: max-height 0.3s ease, padding 0.3s ease;
+  transition: max-height var(--transition-normal), padding var(--transition-normal);
   padding: 0 14px;
 }
 
@@ -1541,11 +1519,11 @@
 }
 
 .mPlotDetailInner {
-  border-top: 1px solid var(--color-text-disabled); padding-top: 10px;
+  border-top: 1px solid var(--color-border-subtle); padding-top: 10px;
   font-size: 12.5px; color: var(--color-text-secondary); line-height: 1.7;
 }
 
-.mPlotSuggest { color: var(--color-brand-amber); font-size: 12px; margin-top: 4px; }
+.mPlotSuggest { color: var(--color-brand-amber); font-size: var(--font-size-xs); margin-top: var(--space-1); }
 
 /* World Category Bar */
 .mCatBar {
@@ -1555,15 +1533,15 @@
 .mCatBar::-webkit-scrollbar { display: none; }
 
 .mCatBtn {
-  padding: 6px 13px; border-radius: 20px;
+  padding: 6px 13px; border-radius: var(--radius-pill);
   font-size: 12.5px; cursor: pointer; font-weight: 500;
   background: var(--color-surface); color: var(--color-text-tertiary);
-  border: 1px solid var(--color-text-disabled); white-space: nowrap;
-  transition: all 0.2s;
+  border: 1px solid var(--color-border); white-space: nowrap;
+  transition: all var(--transition-fast);
 }
 .mCatBtn.active {
-  background: rgba(168,85,247,0.12);
-  color: var(--rarity-epic); border-color: rgba(168,85,247,0.3);
+  background: rgba(168, 85, 247, 0.12);
+  color: var(--rarity-epic); border-color: rgba(168, 85, 247, 0.3);
 }
 
 /* World Grid */
@@ -1574,44 +1552,45 @@
 }
 
 .mWorldCard {
-  background: var(--color-surface); border-radius: 12px;
+  background: var(--color-surface); border-radius: var(--radius-lg);
   padding: 14px; cursor: pointer;
-  border: 1px solid rgba(168,85,247,0.08);
-  transition: border-color 0.3s, transform 0.15s;
+  border: 1px solid var(--color-border);
+  transition: border-color var(--transition-normal), transform var(--transition-fast);
 }
-.mWorldCard:hover { border-color: rgba(168,85,247,0.3); transform: translateY(-2px); }
+.mWorldCard:hover { border-color: rgba(168, 85, 247, 0.3); transform: translateY(-2px); }
 .mWorldCard:active { transform: scale(0.97); }
 
 .mWorldIcon {
-  width: 36px; height: 36px; border-radius: 10px;
+  width: 36px; height: 36px; border-radius: var(--radius-md);
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; margin-bottom: 10px;
 }
-.geo { background: rgba(99,102,241,0.15); }
-.sys { background: rgba(168,85,247,0.15); }
-.his { background: rgba(212,168,67,0.15); }
+.geo { background: rgba(99, 102, 241, 0.15); }
+.sys { background: rgba(168, 85, 247, 0.15); }
+.his { background: rgba(212, 168, 67, 0.15); }
 
-.mWorldName { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 4px; }
+.mWorldName { font-size: var(--font-size-base); font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--space-1); }
 
 .mWorldCat {
-  font-size: 11px; padding: 2px 8px; border-radius: 4px;
+  font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-sm);
   display: inline-block; margin-bottom: 6px;
 }
-.mWorldCat.geo { background: rgba(99,102,241,0.1); color: var(--color-brand-indigo); }
-.mWorldCat.sys { background: rgba(168,85,247,0.1); color: var(--rarity-epic); }
-.mWorldCat.his { background: rgba(212,168,67,0.1); color: var(--color-brand-amber); }
+.mWorldCat.geo { background: rgba(99, 102, 241, 0.1); color: var(--color-brand-indigo); }
+.mWorldCat.sys { background: rgba(168, 85, 247, 0.1); color: var(--rarity-epic); }
+.mWorldCat.his { background: rgba(212, 168, 67, 0.1); color: var(--color-brand-amber); }
 
-.mWorldDesc { font-size: 12px; color: var(--color-text-tertiary); line-height: 1.5; }
+.mWorldDesc { font-size: var(--font-size-xs); color: var(--color-text-tertiary); line-height: 1.5; }
 
 /* Bottom Nav */
 .mBottomNav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 428px;
-  display: flex; background: var(--color-bg);
-  border-top: 1px solid var(--color-text-disabled);
+  display: flex;
+  border-top: 1px solid var(--color-border);
   padding: 6px 0 22px; z-index: 100;
-  backdrop-filter: blur(10px);
-  background: rgba(13,15,26,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: var(--color-glass-bg);
 }
 
 .mNavItem {
@@ -1620,8 +1599,8 @@
   padding: 6px 0; cursor: pointer;
 }
 
-.mNavIcon { font-size: 20px; color: var(--color-text-disabled); transition: color 0.2s; }
-.mNavLabel { font-size: 10px; color: var(--color-text-disabled); transition: color 0.2s; }
+.mNavIcon { font-size: 20px; color: var(--color-text-disabled); transition: color var(--transition-fast); }
+.mNavLabel { font-size: 10px; color: var(--color-text-disabled); transition: color var(--transition-fast); }
 
 .mNavItem.active .mNavIcon,
 .mNavItem.active .mNavLabel { color: var(--color-brand-indigo); }

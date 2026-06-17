@@ -629,3 +629,51 @@
     font-size: 16px;
   }
 }
+
+@media (max-width: 640px) {
+  .topNav {
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+  }
+
+  .navTitle {
+    font-size: 14px;
+  }
+
+  .navTab {
+    padding: var(--space-1) var(--space-2);
+    font-size: 11px;
+  }
+
+  .mainContent {
+    padding: var(--space-3);
+  }
+
+  .section {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .sectionTitle {
+    font-size: 14px;
+  }
+
+  .profileRow {
+    gap: var(--space-4);
+  }
+
+  .avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
+  }
+
+  .statsBar {
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+
+  .statValue {
+    font-size: 18px;
+  }
+}
