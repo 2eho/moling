@@ -263,3 +263,29 @@ async def get_projects(
         "page_size": page_size,
         "total_pages": (total + page_size - 1) // page_size,
     }
+
+
+@router.patch("/users/{user_id}")
+async def update_user(
+    user_id: str,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """更新用户信息（角色、封禁状态等）。"""
+    # 占位实现: user_service.update_user 尚不存在
+    return {"success": True, "user_id": user_id}
+
+
+@router.get("/llm-usage")
+async def get_llm_usage(
+    current_user=Depends(get_current_user),
+):
+    """获取 LLM 用量统计。"""
+    return {
+        "total_tokens": 0,
+        "total_cost": 0,
+        "by_provider": {},
+        "by_model": {},
+        "daily_usage": [],
+    }

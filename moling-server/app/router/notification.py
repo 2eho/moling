@@ -18,10 +18,14 @@ async def list_notifications(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     is_read: bool = Query(None, description="已读状态筛选"),
+    unread_only: bool = Query(None, description="仅未读（前端兼容参数）"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
     """获取当前用户的通知列表。"""
+    # 兼容前端 unread_only 参数
+    if unread_only is not None:
+        is_read = not unread_only  # unread_only=true → is_read=false
     result = await notification_service.list_notifications(
         db,
         current_user.id,

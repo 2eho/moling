@@ -21,7 +21,7 @@ class JobStatus(str, Enum):
 jobs_store: Dict[str, dict] = {}
 
 
-def create_job(job_id: str, chapter_id: int, user_id: int) -> dict:
+def create_job(job_id: str, chapter_id: int, user_id: str) -> dict:
     """创建新任务并记录到存储中。
     
     Args:
@@ -37,7 +37,7 @@ def create_job(job_id: str, chapter_id: int, user_id: int) -> dict:
         "chapter_id": chapter_id,
         "user_id": user_id,
         "status": JobStatus.pending,
-        "progress": 0,
+        "progress": {"percent": 0, "stage": "等待中..."},
         "result": None,
         "error": None,
         "created_at": datetime.utcnow().isoformat(),

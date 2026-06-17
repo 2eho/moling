@@ -114,7 +114,7 @@ async def cancel_generation_job(
     if job["status"] not in (JobStatus.pending, JobStatus.running):
         raise HTTPException(status_code=400, detail="当前状态不支持取消")
     
-    update_job(job_id, status=JobStatus.cancelled, progress=0)
+    update_job(job_id, status=JobStatus.cancelled, progress={"percent": 0, "stage": "已取消"})
     
     return {"code": 0, "message": "success", "data": {"status": "cancelled"}}
 
@@ -151,7 +151,7 @@ async def _run_generation_task(
     # 创建新的数据库 session
     async with async_session_factory() as db:
         try:
-            update_job(job_id, status=JobStatus.running, progress=10)
+            update_job(job_id, status=JobStatus.running, progress={"percent": 10, "stage": "AI分析中..."})
             
             # 执行生成（复用现有逻辑）
             result = await generation_service.start_generation(
@@ -161,7 +161,7 @@ async def _run_generation_task(
             update_job(
                 job_id,
                 status=JobStatus.completed,
-                progress=100,
+                progress={"percent": 100, "stage": "生成完成"},
                 result=result,
             )
         except Exception as e:

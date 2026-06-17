@@ -126,7 +126,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete, actionL
       </div>
       <div className={styles.itemContent}>
         <div className={styles.itemTitle}>{notification.title}</div>
-        <div className={styles.itemBody}>{notification.message}</div>
+        <div className={styles.itemBody}>{notification.message || notification.content || ''}</div>
         <div className={styles.itemTime}>{formatTime(notification.created_at)}</div>
       </div>
       <div className={styles.itemActions}>

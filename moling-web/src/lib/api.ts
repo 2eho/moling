@@ -282,7 +282,7 @@ export const generationApi = {
   // 取消任务（对齐 OpenAPI 规范）
   async cancelJob(taskId: string) {
     return apiClient.post<ApiResponse<{ status: string }>>(
-      `/generate/${taskId}/cancel`,
+      `/generate/jobs/${taskId}/cancel`,
       {},
     );
   },

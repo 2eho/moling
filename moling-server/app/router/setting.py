@@ -124,8 +124,10 @@ async def update_health_monitor(
     
     # Update health monitor settings
     settings_update = {
-        "health_monitor_enabled": req.enabled,
-        "health_monitor_rules": req.rules,
+        "health_monitor_r1_enabled": req.r1_enabled,
+        "health_monitor_r2_enabled": req.r2_enabled,
+        "health_monitor_r3_enabled": req.r3_enabled,
+        "health_monitor_anti_fatigue": req.anti_fatigue,
     }
     
     # Save settings
@@ -137,8 +139,10 @@ async def update_health_monitor(
     
     return {
         "message": "健康监控设置已更新",
-        "health_monitor_enabled": req.enabled,
-        "rules": req.rules,
+        "r1_enabled": req.r1_enabled,
+        "r2_enabled": req.r2_enabled,
+        "r3_enabled": req.r3_enabled,
+        "anti_fatigue": req.anti_fatigue,
     }
 
 

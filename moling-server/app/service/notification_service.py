@@ -95,6 +95,7 @@ class NotificationService:
         await db.commit()
         
         return {
+            "updated": updated_count,
             "updated_count": updated_count,
             "message": f"已标记 {updated_count} 条通知为已读",
         }

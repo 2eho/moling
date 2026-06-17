@@ -27,6 +27,7 @@ router = APIRouter(prefix="/projects/{project_id}/import", tags=["Import"])
 @router.post("")
 async def submit_import(
     project_id: int,
+    body: Optional[dict] = None,
     text: Optional[str] = Query(default=None, description="粘贴文本导入"),
     file: Optional[UploadFile] = File(default=None, description="上传文件导入"),
     split_strategies: Optional[str] = Query(
@@ -43,6 +44,12 @@ async def submit_import(
     - 上传文件：传入 file 参数（multipart/form-data）
     - 对应 Phase 0 的采集与分章
     """
+    # 兼容 JSON body 方式（前端 POST JSON body 如 {"text":"...","source_type":"novel"}）
+    source_type = "text"
+    if body is not None:
+        text = body.get("text", text)
+        source_type = body.get("source_type", source_type)
+
     # 如果没有 text，尝试从 file 读取
     if not text and not file:
         raise HTTPException(status_code=400, detail="请提供 text 参数或上传文件")
@@ -74,7 +81,7 @@ async def submit_import(
         db=db,
         project_id=project_id,
         user_id=int(user["id"]),
-        source_type="text",
+        source_type=source_type,
         source_url=None,
         title="",
     )

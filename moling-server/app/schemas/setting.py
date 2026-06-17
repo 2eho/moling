@@ -35,8 +35,10 @@ class UserSettings(BaseModel):
 class HealthMonitorReq(BaseModel):
     """Update health monitoring rules."""
 
-    enabled: bool = Field(..., description="是否启用健康监控")
-    rules: list[str] = Field(default=[], description="监控规则列表")
+    r1_enabled: bool = Field(default=True, description="R1规则启用")
+    r2_enabled: bool = Field(default=True, description="R2规则启用")
+    r3_enabled: bool = Field(default=True, description="R3规则启用")
+    anti_fatigue: bool = Field(default=False, description="防疲劳模式")
 
 
 class Phase4ReviewReq(BaseModel):

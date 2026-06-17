@@ -10,8 +10,14 @@ from pydantic import BaseModel, Field
 class DrawCardReq(BaseModel):
     """Request body for card draw operation."""
 
-    keep_card_ids: list[int] = Field(
+    chapter_id: str = Field(
+        default="", description="章节 ID（前端必传）"
+    )
+    keep_card_ids: list[str] = Field(
         default=[], description="要保留的卡片 ID 列表"
+    )
+    draw_count: int = Field(
+        default=3, ge=1, le=10, description="抽卡数量"
     )
     weights: list[float] = Field(
         default=[], description="各卡片的抽取权重"

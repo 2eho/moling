@@ -213,6 +213,7 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
+  content?: string;  // 后端返回 content，前端兼容
   is_read: boolean;
   related_id?: string;
   related_type?: string;

@@ -118,3 +118,15 @@ async def get_current_subscription(
         "has_subscription": True,
         "subscription": SubscriptionResp.model_validate(subscription),
     }
+
+
+@router.get("/payment-history")
+async def get_payment_history(
+    current_user=Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    """获取用户支付历史记录。"""
+    return [
+        # 示例: 先返回空数据，后续接入数据库
+    ]
