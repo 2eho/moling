@@ -154,18 +154,26 @@ class GenerationService:
             task.progress_percent = 10
             await db.commit()
 
-            # ===== Step 2: Vault Filtering =====
+            # ===== Step 2: Vault Filtering (§3.4 - ID-based with compression) =====
             logger.info(f"Task {task_id}: Step 2 - Vault filtering")
             relevant_vault = await algorithm_service.step2_vault_filter(
-                db, project.id, chapter.id if chapter else None
+                db=db,
+                project_id=project.id,
+                chapter_id=chapter.id if chapter else None,
+                cards=cards if cards else None,
+                chapter_number=chapter.chapter_number if chapter else None,
             )
             task.progress_percent = 15
             await db.commit()
 
-            # ===== Step 3: Dynamic Layer Conflict Detection =====
+            # ===== Step 3: Dynamic Layer Conflict Detection (§3.3) =====
             logger.info(f"Task {task_id}: Step 3 - Conflict detection")
             conflicts = await algorithm_service.step3_conflict_detection(
-                db, project.id, chapter.id if chapter else None, weight_map
+                db=db,
+                project_id=project.id,
+                chapter_id=chapter.id if chapter else None,
+                weight_map=weight_map,
+                cards=cards if cards else None,
             )
             task.progress_percent = 20
             await db.commit()
@@ -178,7 +186,10 @@ class GenerationService:
 
             # ===== Step 5: Weaving Scheme Matching =====
             logger.info(f"Task {task_id}: Step 5 - Weaving scheme matching")
-            weaving_scheme = await algorithm_service.step5_weaving_scheme_matching(cards, req_mode=task.input_params.get("mode", "single"))
+            weaving_scheme = await algorithm_service.step5_weaving_scheme_matching(
+                cards, req_mode=task.input_params.get("mode", "single"),
+                weight_map=weight_map,
+            )
             task.progress_percent = 30
             await db.commit()
 
@@ -193,10 +204,22 @@ class GenerationService:
             # ===== Step 7: Narrative Element Extraction =====
             logger.info(f"Task {task_id}: Step 7 - Narrative element extraction")
             # Extract relevant vault data for prompt building
+            # Supports both dict-based (VaultFilterService) and model-based (legacy) formats
+            vault_chars = relevant_vault.get("characters", [])
+            vault_promises = relevant_vault.get("plot_promises", [])
+            vault_timeline = relevant_vault.get("timeline", [])
+
+            def _safe_name(item):
+                return item["name"] if isinstance(item, dict) else getattr(item, "name", "")
+            def _safe_desc(item):
+                return item.get("description", "") if isinstance(item, dict) else getattr(item, "description", "")
+            def _safe_event(item):
+                return item.get("event", "") if isinstance(item, dict) else getattr(item, "event", "")
+
             narrative_elements = {
-                "active_characters": [c.name for c in relevant_vault.get("characters", [])[:5]],
-                "pending_promises": [p.description for p in relevant_vault.get("plot_promises", [])[:3] if hasattr(p, 'description')],
-                "recent_timeline": [e.event for e in relevant_vault.get("timeline", [])[-3:]] if relevant_vault.get("timeline") else [],
+                "active_characters": [_safe_name(c) for c in vault_chars[:5]],
+                "pending_promises": [_safe_desc(p) for p in vault_promises[:3] if _safe_desc(p)],
+                "recent_timeline": [_safe_event(e) for e in vault_timeline[-3:]] if vault_timeline else [],
             }
             task.progress_percent = 40
             await db.commit()
@@ -484,43 +507,217 @@ class GenerationService:
         inspiration: str,
         relevant_vault: Dict[str, List[Any]],
     ) -> str:
-        """Build the prompt for text generation."""
-        prompt = f"""请创作小说《{project.title}》的新章节。
+        """Build a layered generation prompt per §3.5 Prompt分层组装.
 
-【项目信息】
-- 类型：{project.genre}
-- 简介：{project.synopsis}
-- 世界观：{project.worldview}
+        Three layers are assembled in strict order:
+          Layer 0 — System instruction (always present)
+          Layer 1 — Dynamic layer / story state (front-loaded for Lost-in-the-Middle protection)
+          Layer 2 — Four-vault filtered context (characters, promises, timeline, world)
+          Layer 3 — Chapter direction + optional weaving scheme
 
-【章节信息】
-- 章节标题：{outline['chapter_title']}
-- 章节编号：第{outline['chapter_number']}章
+        All field accesses are None-safe.
+        """
+        sections = []
 
-【创作方向】
-{chr(10).join(f"- {d['card_name']}：{d['direction_text']} (权重: {d['weight']:.2f})" for d in outline['selected_directions'])}
+        # ====================================================================
+        # Layer 0 — 系统指令
+        # ====================================================================
+        chapter_num = outline.get("chapter_number") or (
+            chapter.chapter_number if chapter else None
+        ) or "?"
+        sections.append(
+            f"你是一位专业的网络小说作家。撰写第{chapter_num}章。"
+        )
+        sections.append("=" * 55)
 
-【涉及角色】
-{chr(10).join(f"- {c}" for c in outline['characters'])}
+        # ====================================================================
+        # Layer 1 — 动态层 · 故事此刻状态  (Lost-in-the-Middle protection)
+        # ====================================================================
+        sections.append("[Layer 1: 📋 动态层 · 故事此刻状态]")
+        sections.append("=" * 55)
 
-【最近情节】
-{chr(10).join(f"- {e}" for e in outline['recent_events']) if outline['recent_events'] else "- 开篇"}
+        # 1a. 前情摘要
+        dl = relevant_vault.get("dynamic_layer", {}) or {}
+        summary = (
+            dl.get("summary") if isinstance(dl, dict)
+            else getattr(dl, "summary", None)
+        ) or outline.get("summary") or ""
+        if summary:
+            sections.append(f"【前情摘要】\n{summary}\n")
 
-【活跃伏笔】
-{chr(10).join(f"- {p}" for p in outline['active_promises']) if outline['active_promises'] else "- 暂无"}
+        # 1b. 章节锚点
+        pov = (
+            dl.get("anchor_pov") if isinstance(dl, dict)
+            else getattr(dl, "anchor_pov", None)
+        ) or outline.get("anchor_pov") or "不限"
+        location = (
+            dl.get("anchor_location") if isinstance(dl, dict)
+            else getattr(dl, "anchor_location", None)
+        ) or outline.get("anchor_location") or "不限"
+        time_str = (
+            dl.get("anchor_time") if isinstance(dl, dict)
+            else getattr(dl, "anchor_time", None)
+        ) or outline.get("anchor_time") or "当前"
+        sections.append(
+            f"【章节锚点】\nPOV: {pov} | 地点: {location} | 时间: {time_str}\n"
+        )
 
-【创作灵感】
-{inspiration}
+        # 1c. 连贯性基线
+        must_hold = (
+            dl.get("must_hold") if isinstance(dl, dict)
+            else getattr(dl, "must_hold", None)
+        ) or outline.get("must_hold") or []
+        must_not = (
+            dl.get("must_not") if isinstance(dl, dict)
+            else getattr(dl, "must_not", None)
+        ) or outline.get("must_not") or []
 
-【写作要求】
-1. 字数：约{outline['generation_requirements']['word_count']}字
-2. 风格：{outline['generation_requirements']['style']}
-3. 保持与前文的一致性（角色性格、世界观、时间线）
-4. 推进情节发展，注意伏笔的铺垫和回收
-5. 文笔流畅，叙事自然
+        if must_hold:
+            sections.append(
+                "【连贯性基线 — 硬约束】\n必须保持:\n"
+                + "\n".join(f"- {item}" for item in must_hold)
+            )
+        if must_not:
+            sections.append(
+                "必须避免:\n"
+                + "\n".join(f"- {item}" for item in must_not)
+            )
+        if must_hold or must_not:
+            sections.append("")
 
-请直接开始写作，不要添加任何解释或说明。
-"""
-        return prompt
+        # 1d. 未收束钩子 Top3
+        hooks = (
+            dl.get("unresolved_hooks") if isinstance(dl, dict)
+            else getattr(dl, "unresolved_hooks", None)
+        ) or outline.get("unresolved_hooks") or []
+        if hooks:
+            top_hooks = hooks[:3]
+            sections.append(
+                "【未收束钩子 Top3】\n"
+                + "\n".join(
+                    f"- {h.get('description', h) if isinstance(h, dict) else h}"
+                    for h in top_hooks
+                )
+                + "\n"
+            )
+        sections.append("=" * 55)
+
+        # ====================================================================
+        # Layer 2 — 四库 · 卡片过滤上下文
+        # ====================================================================
+        sections.append("[Layer 2: 📚 四库 · 卡片过滤上下文]")
+        sections.append("=" * 55)
+
+        # 2a. 相关人物设定
+        vault_chars = relevant_vault.get("characters", []) or []
+        if vault_chars:
+            char_lines = []
+            for c in vault_chars:
+                if isinstance(c, dict):
+                    name = c.get("name", "")
+                    role = c.get("role", "")
+                    desc = c.get("description", "") or c.get("personality", "") or ""
+                    state = c.get("current_state", "") or ""
+                    parts = [f"【{name}】"]
+                    if role:
+                        parts.append(f"  定位: {role}")
+                    if desc:
+                        parts.append(f"  描述: {desc}")
+                    if state:
+                        parts.append(f"  当前状态: {state}")
+                    char_lines.append("\n".join(parts))
+                else:
+                    char_lines.append(f"【{getattr(c, 'name', '?')}】\n  描述: {getattr(c, 'description', '')}")
+            sections.append("【相关人物设定】\n" + "\n".join(char_lines) + "\n")
+
+        # 2b. 相关剧情承诺
+        vault_promises = relevant_vault.get("plot_promises", []) or []
+        if vault_promises:
+            promise_lines = []
+            for p in vault_promises:
+                if isinstance(p, dict):
+                    desc = p.get("description", "")
+                    status = p.get("status", "")
+                    urgency = p.get("urgency", 0)
+                    promise_lines.append(f"- {desc} (状态: {status}, 紧迫度: {urgency})")
+                else:
+                    promise_lines.append(f"- {getattr(p, 'description', '')} (状态: {getattr(p, 'status', '')})")
+            sections.append("【相关剧情承诺】\n" + "\n".join(promise_lines) + "\n")
+
+        # 2c. 时间线参考 (±3条)
+        vault_timeline = relevant_vault.get("timeline", []) or []
+        if vault_timeline:
+            timeline_lines = []
+            for e in vault_timeline[-3:]:
+                if isinstance(e, dict):
+                    timeline_lines.append(f"- [{e.get('chapter_number', '?')}] {e.get('event', '')}")
+                else:
+                    timeline_lines.append(f"- [{getattr(e, 'chapter_number', '?')}] {getattr(e, 'event', '')}")
+            sections.append("【时间线参考】\n" + "\n".join(timeline_lines) + "\n")
+
+        # 2d. 世界观规则
+        vault_world = relevant_vault.get("world", []) or []
+        if vault_world:
+            world_lines = []
+            for w in vault_world:
+                if isinstance(w, dict):
+                    name = w.get("name", "")
+                    constraint = w.get("constraint", "") or w.get("description", "") or ""
+                    world_lines.append(f"- {name}: {constraint}")
+                else:
+                    world_lines.append(f"- {getattr(w, 'name', '')}: {getattr(w, 'constraint', '') or getattr(w, 'description', '')}")
+            sections.append("【世界观规则】\n" + "\n".join(world_lines) + "\n")
+        sections.append("=" * 55)
+
+        # ====================================================================
+        # Layer 3 — 本章方向
+        # ====================================================================
+        sections.append("[Layer 3: 🃏 本章方向]")
+        sections.append("=" * 55)
+
+        # 3a. 融合方向
+        selected_dirs = outline.get("selected_directions", []) or []
+        if selected_dirs:
+            dir_lines = []
+            for d in selected_dirs:
+                card_name = d.get("card_name", d.get("name", ""))
+                dir_text = d.get("direction_text", d.get("description", ""))
+                weight = d.get("weight", 1.0)
+                dir_lines.append(f"- {card_name}：{dir_text} (权重: {weight:.2f})")
+            sections.append("【融合方向】\n" + "\n".join(dir_lines) + "\n")
+
+        # 3b. 编织方案 (optional)
+        weaving = outline.get("weaving_scheme") or ""
+        if weaving:
+            if isinstance(weaving, dict):
+                scheme_name = weaving.get("name", weaving.get("scheme", ""))
+                scheme_desc = weaving.get("description", weaving.get("detail", ""))
+                weaving_text = f"{scheme_name}: {scheme_desc}" if scheme_name else scheme_desc
+            else:
+                weaving_text = str(weaving)
+            sections.append(f"【编织方案】\n{weaving_text}\n")
+
+        # 3c. 创作灵感 (from step 8)
+        if inspiration:
+            sections.append(f"【创作灵感】\n{inspiration}\n")
+        sections.append("=" * 55)
+
+        # ====================================================================
+        # 写作要求
+        # ====================================================================
+        gen_req = outline.get("generation_requirements", {}) or {}
+        word_count = gen_req.get("word_count", "2500-3500")
+        style = gen_req.get("style", project.style or "") or ""
+        style_line = f" / 风格: {style}" if style else ""
+        sections.append(
+            f"【写作要求】\n"
+            f"字数 {word_count}{style_line}\n"
+            f"结尾留钩子 / 至少推进一个未收束悬念\n"
+        )
+
+        sections.append("请直接开始写作，不要添加任何解释或说明。")
+
+        return "\n".join(sections)
 
     async def _adjust_content(
         self,

@@ -491,7 +491,7 @@ cat moling-web/.env.local
 cat moling-web/.env.production
 
 # 关键变量：
-# NEXT_PUBLIC_API_BASE_URL=http://124.222.163.79:8080/moling/api/v1
+# NEXT_PUBLIC_API_BASE_URL=/moling/api/v1  # 相对路径，适配任意域名
 # NODE_ENV=production
 
 # 检查变量是否正确注入到构建中

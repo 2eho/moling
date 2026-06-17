@@ -36,7 +36,7 @@
 
 - **前后端分离**：前端（Next.js）+ 后端（FastAPI）
 - **容器化部署**：使用 Docker Compose 编排服务
-- **异步任务处理**：使用 Celery 处理耗时任务（AI 生成、文档处理）
+- **异步任务处理**：使用 FastAPI BackgroundTasks 处理耗时任务（AI 生成），MVP 阶段用内存存储任务状态，后续可升级至 Celery + Redis
 - **缓存优化**：使用 Redis 缓存热点数据
 - **监控告警**：Prometheus + Grafana + Sentry
 

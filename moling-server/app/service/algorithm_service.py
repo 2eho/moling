@@ -3,6 +3,8 @@
 Implements steps 1-6 of the generation pipeline:
 weight allocation, vault filtering, conflict detection,
 direction scoring, weaving scheme matching, and outline filling.
+
+Each step delegates to a dedicated service module for Single Responsibility.
 """
 
 from __future__ import annotations
@@ -13,13 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import vault_dao
 from app.models import CardPool, Chapter, Project
+from app.service.conflict_detection import conflict_detection_service
+from app.service.direction_scoring import direction_scoring_service
+from app.service.vault_filter import vault_filter_service
+from app.service.weaving_scheme import weaving_scheme_service
 
 
 # --- Singleton ---
 class AlgorithmService:
     """Service encapsulating card combination algorithms (steps 1-6).
 
-    Each ``_stepN_*`` method is a pure computation or a direct DAO read;
+    Each ``_stepN_*`` method delegates to a dedicated service module;
     the results are consumed by ``GenerationService.execute_generation_pipeline``.
     """
 
@@ -53,47 +59,75 @@ class AlgorithmService:
 
         return weight_map
 
-    # ----- Step 2: Vault Filtering ---------------------------------------------
+    # ----- Step 2: Vault Filtering (§3.4) --------------------------------------
 
     async def step2_vault_filter(
         self,
         db: AsyncSession,
         project_id: int,
         chapter_id: int | None = None,
-    ) -> Dict[str, List[Any]]:
+        cards: Optional[List[CardPool]] = None,
+        chapter_number: int | None = None,
+    ) -> Dict[str, Any]:
         """Filter relevant vault entities for the current generation context.
 
-        Returns categorised vault entries:
-        ``characters``, ``timeline``, ``plot_promises``, ``world``.
+        Uses VaultFilterService for ID-based filtering with hierarchical
+        compression (§3.4). Falls back to simple Top-N when no cards provided.
+
+        Returns categorised vault entries as serialized dicts:
+        ``characters``, ``timeline``, ``plot_promises``, ``world``,
+        ``compression_level``, ``token_estimate``.
         """
-        relevant: Dict[str, List[Any]] = {
+        if cards:
+            return await vault_filter_service.filter_by_cards(
+                db=db,
+                project_id=project_id,
+                cards=cards,
+                chapter_number=chapter_number,
+            )
+
+        # Fallback: simple Top-N when no cards provided
+        relevant: Dict[str, Any] = {
             "characters": [],
             "timeline": [],
             "plot_promises": [],
             "world": [],
+            "compression_level": 1,
+            "token_estimate": 0,
         }
 
-        # Top 10 most relevant characters
         characters = await vault_dao.get_characters(db, project_id)
-        relevant["characters"] = characters[:10]
-
-        # Last 5 timeline events
-        timeline = await vault_dao.get_timeline(db, project_id)
-        relevant["timeline"] = timeline[-5:] if timeline else []
-
-        # Active / dormant plot promises
-        promises = await vault_dao.get_plot_promises(db, project_id)
-        relevant["plot_promises"] = [
-            p for p in promises if p.status in ("dormant", "active")
+        relevant["characters"] = [
+            {"id": c.id, "name": c.name, "role": c.role, "status": c.status,
+             "current_state": c.current_state, "description": c.description}
+            for c in characters[:10]
         ]
 
-        # Top 10 world entries
+        timeline = await vault_dao.get_timeline(db, project_id)
+        relevant["timeline"] = [
+            {"id": e.id, "event": e.event, "description": e.description,
+             "chapter_number": e.chapter_number, "importance": e.importance}
+            for e in (timeline[-5:] if timeline else [])
+        ]
+
+        promises = await vault_dao.get_plot_promises(db, project_id)
+        relevant["plot_promises"] = [
+            {"id": p.id, "description": p.description, "type": p.type,
+             "hook": p.hook, "status": p.status, "urgency": p.urgency}
+            for p in promises if p.status in ("dormant", "active")
+        ]
+
         world = await vault_dao.get_world_entries(db, project_id)
-        relevant["world"] = world[:10]
+        relevant["world"] = [
+            {"id": w.id, "name": w.name, "description": w.description,
+             "category": w.category, "rule": w.rule, "constraint": w.constraint}
+            for w in world[:10]
+        ]
+        relevant["token_estimate"] = len(characters) * 50 + len(timeline) * 30 + len(promises) * 40 + len(world) * 50
 
         return relevant
 
-    # ----- Step 3: Conflict Detection ------------------------------------------
+    # ----- Step 3: Conflict Detection (§3.3) -----------------------------------
 
     async def step3_conflict_detection(
         self,
@@ -101,16 +135,31 @@ class AlgorithmService:
         project_id: int,
         chapter_id: int | None = None,
         weight_map: Optional[Dict[int, float]] = None,
+        cards: Optional[List[CardPool]] = None,
     ) -> List[Dict[str, Any]]:
         """Detect conflicts with existing dynamic-layer entries.
 
-        .. todo::
-           Implement actual dynamic-layer conflict detection.
-           Currently returns an empty list.
-        """
-        return []
+        Delegates to ConflictDetectionService for:
+        - Baseline coherence conflicts (must_hold / must_not)
+        - Secret matrix conflicts (information asymmetry)
+        - Character state machine conflicts
 
-    # ----- Step 4: Direction Conflict Scoring ----------------------------------
+        Returns a list of conflict dicts with ``type``, ``description``,
+        ``severity``, and ``suggested_fix``.
+        """
+        if not cards:
+            return []
+
+        result = await conflict_detection_service.detect_conflicts(
+            db=db,
+            project_id=project_id,
+            chapter_id=chapter_id or 0,
+            cards=cards,
+            weight_map=weight_map,
+        )
+        return result.get("conflicts", [])
+
+    # ----- Step 4: Direction Conflict Scoring (§3.3) ---------------------------
 
     async def step4_direction_conflict_scoring(
         self,
@@ -119,56 +168,42 @@ class AlgorithmService:
     ) -> Dict[str, Any]:
         """Score conflicts between the selected direction cards.
 
-        Returns a dict with ``has_conflict``, ``conflict_score``, and
-        ``conflict_reasons``.
+        Delegates to DirectionScoringService for:
+        - Direction compatibility matrix
+        - Entity conflict detection
+        - Emotional tone conflict detection
+        - Confidence scoring with LLM fallback
         """
-        conflicts: Dict[str, Any] = {
-            "has_conflict": False,
-            "conflict_score": 0.0,
-            "conflict_reasons": [],
-        }
+        return await direction_scoring_service.score_direction_conflicts(
+            cards=cards,
+            weight_map=weight_map,
+        )
 
-        direction_types = [card.direction_type for card in cards]
-
-        # Example: "稳妥" vs "惊艳" creates narrative tension
-        if "稳妥" in direction_types and "惊艳" in direction_types:
-            conflicts["has_conflict"] = True
-            conflicts["conflict_score"] = 0.7
-            conflicts["conflict_reasons"].append("稳妥与惊艳的方向存在张力")
-
-        return conflicts
-
-    # ----- Step 5: Weaving Scheme Matching -------------------------------------
+    # ----- Step 5: Weaving Scheme Matching (§3.6) ------------------------------
 
     async def step5_weaving_scheme_matching(
         self,
         cards: List[CardPool],
         req_mode: str,
+        weight_map: Optional[Dict[int, float]] = None,
     ) -> Dict[str, Any]:
-        """Match the best weaving scheme for the requested mode."""
-        schemes: Dict[str, Dict[str, str]] = {
-            "single": {
-                "name": "单卡模式",
-                "description": "专注于一个创作方向",
-                "weaving_strategy": "focus",
-            },
-            "dual": {
-                "name": "双卡模式",
-                "description": "融合两个创作方向",
-                "weaving_strategy": "blend",
-            },
-            "all": {
-                "name": "全选模式",
-                "description": "多方向综合",
-                "weaving_strategy": "multi_thread",
-            },
-            "hybrid": {
-                "name": "混合模式",
-                "description": "保留部分，重抽部分",
-                "weaving_strategy": "hybrid",
-            },
-        }
-        return schemes.get(req_mode, schemes["single"])
+        """Match the best weaving scheme for the requested mode.
+
+        Delegates to WeavingSchemeService for:
+        - Causal chain (§3.6.1)
+        - Parallel interweaving (§3.6.2)
+        - Main + side quest (§3.6.3)
+        - Rule-based selection with LLM fallback (§3.6.4)
+        """
+        # Backward compatibility: when weight_map not provided, create uniform weights
+        if weight_map is None:
+            weight_map = {card.id: 1.0 for card in cards}
+
+        return await weaving_scheme_service.match_scheme(
+            cards=cards,
+            weight_map=weight_map,
+            req_mode=req_mode,
+        )
 
     # ----- Step 6: Outline Template Filling ------------------------------------
 
@@ -178,9 +213,23 @@ class AlgorithmService:
         chapter: Optional[Chapter],
         cards: List[CardPool],
         weight_map: Dict[int, float],
-        relevant_vault: Dict[str, List[Any]],
+        relevant_vault: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Fill the outline template with generation parameters."""
+        """Fill the outline template with generation parameters.
+
+        Works with both dict-based vault data (new VaultFilterService) and
+        model-based vault data (legacy format) via safe attribute access.
+        """
+        def safe_get(items: list, attr: str, default: str = "") -> Any:
+            """Get attribute from model or dict items."""
+            results = []
+            for item in items[:5]:
+                if isinstance(item, dict):
+                    results.append(item.get(attr, default))
+                else:
+                    results.append(getattr(item, attr, default))
+            return results
+
         # Build selected-directions list
         directions = [
             {
@@ -192,19 +241,24 @@ class AlgorithmService:
             for card in cards
         ]
 
-        # Vault-derived context
-        character_names = [
-            c.name for c in relevant_vault.get("characters", [])[:5]
-        ]
-        recent_events = [
-            e.event
-            for e in relevant_vault.get("timeline", [])[-3:]
-            if relevant_vault.get("timeline")
-        ]
-        active_promises = [
-            p.description
-            for p in relevant_vault.get("plot_promises", [])[:3]
-        ]
+        # Vault-derived context (supports both dict and model items)
+        vault_chars = relevant_vault.get("characters", [])
+        vault_timeline = relevant_vault.get("timeline", [])
+        vault_promises = relevant_vault.get("plot_promises", [])
+
+        character_names = safe_get(vault_chars, "name")
+
+        # Recent events from timeline
+        recent_events = []
+        if vault_timeline:
+            for e in vault_timeline[-3:]:
+                if isinstance(e, dict):
+                    recent_events.append(e.get("event", ""))
+                else:
+                    recent_events.append(getattr(e, "event", ""))
+
+        # Active promises
+        active_promises = safe_get(vault_promises, "description")
 
         outline: Dict[str, Any] = {
             "project_title": project.title,

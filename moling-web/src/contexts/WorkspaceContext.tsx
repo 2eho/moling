@@ -91,7 +91,7 @@ export function WorkspaceProvider({
   const [vaultData, setVaultData] = useState<VaultData | null>(null);
   const [healthAlerts, setHealthAlerts] = useState<HealthAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [generationProgress, setGenerationProgress] = useState<number>(0);
+  const [generationProgress, setGenerationProgress] = useState<{ percent: number; stage: string }>({ percent: 0, stage: "" });
   const generationPollRef = useRef<NodeJS.Timeout | null>(null);
 
   // 简单的 toast 实现（后续替换为真正的 toast 库）
@@ -235,15 +235,14 @@ export function WorkspaceProvider({
           progress_stage: "等待队列...",
           progress_percent: 0,
         } as GenerationTask);
-        setGenerationProgress(0);
-
+        setGenerationProgress({ percent: 0, stage: "" });
         // 开始轮询（每 2 秒）
         const pollInterval = setInterval(async () => {
           try {
             const statusRes = await generationApi.getJobStatus(jobId);
             const job = statusRes.data;
 
-            setGenerationProgress(job.progress ?? 0);
+            setGenerationProgress(job.progress ?? { percent: 0, stage: "" });
             setGenerationTask(prev => {
               if (!prev) return prev;
               return {
@@ -303,7 +302,7 @@ export function WorkspaceProvider({
     const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     await generationApi.confirm(projectId, chapterId, nonce);
     setGenerationTask(null);
-    setGenerationProgress(0);
+    setGenerationProgress({ percent: 0, stage: "" });
   }, [projectId]);
 
   const reviseChapter = useCallback(async (chapterId: string, reason?: string) => {
@@ -314,7 +313,7 @@ export function WorkspaceProvider({
     }
     await generationApi.revise(projectId, chapterId, reason);
     setGenerationTask(null);
-    setGenerationProgress(0);
+    setGenerationProgress({ percent: 0, stage: "" });
   }, [projectId]);
 
   // 组件卸载时清理轮询定时器

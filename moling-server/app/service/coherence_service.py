@@ -2,13 +2,15 @@
 
 Implements pre-generation and post-generation coherence checks.
 Validates: character consistency, timeline continuity, plot promise status,
-world rule consistency, writing style, narrative pacing, chapter transition.
+world rule consistency, writing style, narrative pacing, chapter transition,
+and secret consistency / debt (\"秘密债务\").
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Dict, List, Any, Optional
 
 from sqlalchemy import select
@@ -17,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.dao import project_dao, chapter_dao, vault_dao
 from app.errors import NotFoundError, ErrorCode, AppError
-from app.models import Project, Chapter, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
+from app.models import Project, Chapter, Secret, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
 from app.llm.client import llm_client
 
 logger = logging.getLogger(__name__)
@@ -247,6 +249,11 @@ class CoherenceService:
                 db, project, previous_chapter, generated_content
             )
             result["checks"]["chapter_transition"] = check7
+            
+            # ===== Check 8: 秘密债务检查 (§5.2 第7项) =====
+            logger.info(f"Post-validation: Check 8 - Secret debt for chapter {chapter_id}")
+            check8 = await self._check_secret_debt(db, project, chapter)
+            result["checks"]["secret_debt"] = check8
             
             # Calculate overall result
             all_passed = all(c["passed"] for c in result["checks"].values())
@@ -926,6 +933,214 @@ class CoherenceService:
                 "score": 0.8,
                 "details": f"检查失败: {str(e)}",
             }
+
+    # ===== Check 8: 秘密债务检查 (§5.2 第7项 + §2.8.2) =====
+
+    async def _check_secret_debt(
+        self,
+        db: AsyncSession,
+        project: Project,
+        chapter: Chapter,
+    ) -> Dict[str, Any]:
+        """秘密债务检查（§2.8.2 + §5.2 第7项）。
+
+        检查项：
+        1. 角色是否说出了TA不知道的秘密 → 冲突标记
+        2. 角色是否对已知秘密做出了矛盾反应 → 冲突标记
+        3. 秘密债务 > 30 → 建议安排揭露（非阻塞提示）
+
+        Args:
+            db: Database session
+            project: Current project
+            chapter: Current chapter (contains chapter_number)
+
+        Returns:
+            Dict with passed/score/details
+        """
+        try:
+            # ---- 1. 从 DB 加载项目所有 Secret ----
+            stmt = select(Secret).where(Secret.project_id == project.id)
+            db_result = await db.execute(stmt)
+            secrets: list[Secret] = list(db_result.scalars().all())
+
+            if not secrets:
+                logger.info("Secret debt check: no secrets found for project %s", project.id)
+                return {
+                    "passed": True,
+                    "score": 1.0,
+                    "details": [],
+                }
+
+            current_chapter = chapter.chapter_number
+            details: list[Dict[str, Any]] = []
+
+            # ---- 2. 对每个秘密计算债务 ----
+            for secret in secrets:
+                # 已公开的秘密不参与计算
+                if secret.secrecy_level in ("revealed", "open"):
+                    continue
+
+                if secret.created_chapter is None:
+                    continue
+
+                chapters_elapsed = current_chapter - secret.created_chapter
+                if chapters_elapsed < 0:
+                    chapters_elapsed = 0
+
+                unknown_count = len(secret.unknown_to) if secret.unknown_to else 0
+                debt = chapters_elapsed * unknown_count
+
+                if debt > 30:
+                    detail = {
+                        "secret": secret.description,
+                        "secret_id": secret.id,
+                        "debt": debt,
+                        "chapters_elapsed": chapters_elapsed,
+                        "unknown_count": unknown_count,
+                        "known_by": secret.known_by,
+                        "unknown_to": secret.unknown_to,
+                        "suggested_fix": f"秘密「{secret.description}」的信息债务过高（{debt}），建议安排揭露",
+                    }
+                    details.append(detail)
+
+            # ---- 3. LLM 检测：角色秘密泄露 / 矛盾反应 ----
+            secrets_for_llm = [s for s in secrets if s.secrecy_level not in ("revealed", "open")]
+            if secrets_for_llm and current_chapter > 0:
+                try:
+                    llm_findings = await self._check_secret_leakage_via_llm(
+                        project, chapter, secrets_for_llm
+                    )
+                    details.extend(llm_findings)
+                except Exception as e:
+                    logger.warning("Secret leakage LLM check failed, skipping: %s", e)
+
+            # ---- 4. 计算得分 ----
+            has_conflicts = any(d.get("type") == "conflict" for d in details)
+            high_debts = [d for d in details if d.get("debt", 0) > 30]
+
+            if not details:
+                result = {
+                    "passed": True,
+                    "score": 1.0,
+                    "details": [],
+                }
+            elif has_conflicts:
+                # 有冲突标记 → 不通过
+                result = {
+                    "passed": False,
+                    "score": max(0.0, 1.0 - 0.15 * len(high_debts) - 0.3),
+                    "details": details,
+                }
+            elif high_debts:
+                # 仅有高债务建议 → 仍可通过，但扣分
+                score = max(0.5, 1.0 - 0.1 * len(high_debts))
+                result = {
+                    "passed": True,
+                    "score": round(score, 2),
+                    "details": details,
+                }
+            else:
+                result = {
+                    "passed": True,
+                    "score": 1.0,
+                    "details": details or [],
+                }
+
+            logger.info(
+                "Secret debt check completed: passed=%s, score=%.2f, details=%d",
+                result["passed"], result["score"], len(details),
+            )
+            return result
+
+        except Exception as e:
+            logger.error("Secret debt check failed: %s", e, exc_info=True)
+            return {
+                "passed": True,
+                "score": 0.8,
+                "details": [{"error": f"秘密债务检查失败: {str(e)}"}],
+            }
+
+    async def _check_secret_leakage_via_llm(
+        self,
+        project: Project,
+        chapter: Chapter,
+        secrets: list[Secret],
+    ) -> list[Dict[str, Any]]:
+        """通过 LLM 检测生成的章节内容中的秘密泄露和矛盾反应。
+
+        Returns:
+            list of detail dicts with type="conflict" or type="suggestion"
+        """
+        # 为 LLM 构建秘密摘要
+        secret_lines = []
+        for s in secrets[:10]:  # 最多传 10 个秘密给 LLM
+            known = ", ".join(s.known_by) if s.known_by else "无"
+            unknown = ", ".join(s.unknown_to) if s.unknown_to else "无"
+            secret_lines.append(
+                f"- 秘密(#{s.id}): {s.description}\n"
+                f"  知晓者: {known} | 不知晓者: {unknown} | "
+                f"保密层级: {s.secrecy_level}"
+            )
+        secret_summary = "\n".join(secret_lines)
+
+        prompt = f"""请分析以下小说章节内容中的秘密一致性问题。
+
+项目：{project.title}
+当前章节：第{chapter.chapter_number}章《{chapter.title}》
+
+项目秘密列表：
+{secret_summary}
+
+章节内容：
+{chapter.content or "（无内容）"}
+
+请检查以下两点：
+1. 是否有角色说出了TA不该知道的秘密？（即 unknown_to 中的角色提到了或明显暗示了某个秘密）
+2. 是否有角色对已知的秘密做出了矛盾或不一致的反应？（即 known_by 中的角色以不符合设定/常识的方式对待这个秘密）
+
+返回 JSON 格式（数组，无发现则返回空数组）：
+[
+  {{
+    "type": "conflict",
+    "secret_id": 1,
+    "character": "角色名",
+    "issue": "问题描述",
+    "severity": "high" 或 "medium"
+  }}
+]
+
+只返回 JSON 数组，不返回其他内容。不要添加 markdown 代码块标记。
+"""
+        try:
+            response = await self._call_llm(prompt)
+            raw = response.strip()
+            # 去除可能的 markdown 代码块
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[-1]
+                raw = raw.rsplit("```", 1)[0]
+            findings = json.loads(raw)
+            if not isinstance(findings, list):
+                logger.warning("Secret leakage LLM returned non-list: %s", findings)
+                return []
+
+            details = []
+            for f in findings:
+                if not isinstance(f, dict):
+                    continue
+                detail = {
+                    "type": f.get("type", "conflict"),
+                    "secret": f"秘密#{f.get('secret_id', '?')} — 角色 {f.get('character', '?')}",
+                    "issue": f.get("issue", ""),
+                    "severity": f.get("severity", "medium"),
+                    "suggested_fix": f"角色「{f.get('character', '?')}」存在秘密一致性问题",
+                }
+                details.append(detail)
+
+            return details
+
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning("Secret leakage LLM parse failed: %s", e)
+            return []
 
     # ===== Helper Methods =====
 

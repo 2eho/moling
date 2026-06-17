@@ -24,6 +24,69 @@ from app.llm.client import llm_client
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+# ---------------------------------------------------------------------------
+# 四库变更提取 JSON Schema 常量 (§11.5)
+# ---------------------------------------------------------------------------
+EXTRACTION_SCHEMA = {
+    "character_updates": [
+        {
+            "action": "create|update|status_change|remove",
+            "name": "角色名称",
+            "changes": ["变更描述"],
+            "confidence": 0.95,
+        }
+    ],
+    "timeline_updates": [
+        {
+            "action": "add|resolve_date|correct",
+            "event": "事件描述",
+            "day": 16,
+            "chapter": 16,
+            "participants": ["角色名"],
+            "importance": "major|minor",
+        }
+    ],
+    "plot_promise_updates": [
+        {
+            "action": "create|advance|redeem|cancel|escalate",
+            "title": "承诺标题",
+            "type": "人物弧光|剧情转折|悬念|关系发展|世界观秘密",
+            "status": "active|advancing|redeemed|abandoned",
+        }
+    ],
+    "world_updates": [
+        {
+            "action": "create|expand|clarify|connect",
+            "name": "条目名称",
+            "category": "geography|history|system|faction|event",
+            "content": "详细内容",
+        }
+    ],
+    "card_pool_entries": [
+        {
+            "type": "剧情|人物|场景|对话",
+            "title": "卡牌标题",
+            "description": "卡牌描述",
+            "rarity": "common|rare|epic",
+            "source_chapter": 16,
+        }
+    ],
+}
+
+# 提取 prompt 的 system prompt
+_SYSTEM_EXTRACTION = (
+    "你是一个小说分析专家。分析以下新章节的内容，提取它对四库的变更。"
+    "请严格按照 JSON 格式输出，不要包含 markdown 代码块标记或其他格式。"
+    "你的回答应当使用中文。"
+)
+
+# 编辑距离阈值用于角色模糊匹配 (§11.7)
+CHARACTER_FUZZY_THRESHOLD = 3
+# 卡牌新鲜期章节数 (§11.7)
+CARD_FRESHNESS_WINDOW = 3
+# 卡牌新鲜期权重倍率 (§11.7)
+CARD_FRESHNESS_MULTIPLIER = 1.5
+
 
 class Phase4Service:
     """Service for Phase 4 storage/收纳 operations."""
@@ -1050,6 +1113,1186 @@ class Phase4Service:
             }
             for t in tasks
         ]
+
+
+    # ==================================================================
+    # §11.4-§11.7 Phase 4 核心服务方法
+    # ==================================================================
+
+    async def run_phase4(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_id: int,
+        chapter_text: str,
+        card_ids: Optional[list] = None,
+    ) -> Dict[str, Any]:
+        """Phase 4 主入口：执行完整的四库变更提取与合并流程。
+
+        Args:
+            db: 数据库会话
+            project_id: 项目 ID
+            chapter_id: 章节 ID
+            chapter_text: 新章节正文
+            card_ids: 本次使用的灵感卡 ID 列表（可选）
+
+        Returns:
+            包含变更摘要的结果字典
+        """
+        logger.info(
+            f"Starting Phase 4 for project={project_id}, chapter={chapter_id}"
+        )
+
+        # 获取当前章节编号
+        chapter = await chapter_dao.get(db, chapter_id)
+        chapter_number = chapter.chapter_number if chapter else 0
+
+        result: Dict[str, Any] = {
+            "version": "",
+            "chapter": chapter_number,
+            "changes": {
+                "characters": {"created": [], "updated": [], "status_changed": []},
+                "timeline": {"added": 0},
+                "plot_promises": {"created": 0, "advanced": 0, "redeemed": 0},
+                "world": {"created": 0, "expanded": 0},
+                "card_pool": {"added": 0},
+            },
+            "summary": "",
+        }
+
+        try:
+            # 步骤 1-3: 构建 prompt → 调用 LLM → 解析结果
+            logger.info("Step [14]: Building extraction prompt and calling LLM")
+            extraction_result = await self._call_extraction_llm(
+                db, project_id, chapter_text, card_ids or []
+            )
+            parsed = self._parse_extraction_result(extraction_result)
+
+            # 步骤 [15]: 合并人物库变更
+            logger.info("Step [15]: Merging character updates")
+            char_result = await self._merge_characters(
+                db, project_id, parsed.get("character_updates", []),
+                chapter_number=chapter_number,
+            )
+            result["changes"]["characters"] = char_result
+
+            # 步骤 [16]: 合并时间线库变更
+            logger.info("Step [16]: Merging timeline updates")
+            timeline_result = await self._merge_timeline(
+                db, project_id, parsed.get("timeline_updates", []),
+                chapter_id=chapter_id, chapter_number=chapter_number,
+            )
+            result["changes"]["timeline"] = timeline_result
+
+            # 步骤 [17]: 合并剧情承诺库变更
+            logger.info("Step [17]: Merging plot promise updates")
+            promise_result = await self._merge_plot_promises(
+                db, project_id, parsed.get("plot_promise_updates", []),
+                chapter_number=chapter_number,
+            )
+            result["changes"]["plot_promises"] = promise_result
+
+            # 步骤 [18]: 合并世界观库变更
+            logger.info("Step [18]: Merging world updates")
+            world_result = await self._merge_world(
+                db, project_id, parsed.get("world_updates", []),
+                chapter_number=chapter_number,
+            )
+            result["changes"]["world"] = world_result
+
+            # 步骤 [19]: 充实卡牌池
+            logger.info("Step [19]: Enriching card pool")
+            card_result = await self._enrich_card_pool(
+                db, project_id, parsed.get("card_pool_entries", []),
+                chapter_number=chapter_number,
+            )
+            result["changes"]["card_pool"] = card_result
+
+            # 步骤 [20]: 归档变更日志
+            logger.info("Step [20]: Archiving changelog")
+            timestamp = int(datetime.now(timezone.utc).timestamp())
+            version = f"v4_ch{chapter_number}_{timestamp}"
+            result["version"] = version
+
+            summary_parts = []
+            if char_result.get("created"):
+                summary_parts.append(f"新增角色 {len(char_result['created'])} 个")
+            if char_result.get("updated"):
+                summary_parts.append(f"更新角色 {len(char_result['updated'])} 个")
+            if char_result.get("status_changed"):
+                summary_parts.append(f"角色状态变更 {len(char_result['status_changed'])} 个")
+            if timeline_result.get("added", 0) > 0:
+                summary_parts.append(f"新增时间线事件 {timeline_result['added']} 个")
+            if promise_result.get("created", 0) > 0:
+                summary_parts.append(f"新增伏笔 {promise_result['created']} 个")
+            if promise_result.get("advanced", 0) > 0:
+                summary_parts.append(f"推进伏笔 {promise_result['advanced']} 个")
+            if world_result.get("created", 0) > 0:
+                summary_parts.append(f"新增世界设定 {world_result['created']} 个")
+            if card_result.get("added", 0) > 0:
+                summary_parts.append(f"新增卡牌 {card_result['added']} 张")
+
+            summary = "、".join(summary_parts) if summary_parts else "无变更"
+            result["summary"] = summary
+
+            await self._archive_changelog(
+                db, project_id, chapter_id, version, chapter_number, result["changes"],
+            )
+
+            await db.commit()
+            logger.info(f"Phase 4 completed: {summary}")
+
+        except Exception as e:
+            logger.error(f"Phase 4 failed: {e}", exc_info=True)
+            result["summary"] = f"Phase 4 执行出错: {str(e)}"
+            # 不抛出异常，返回部分结果（优雅降级）
+
+        return result
+
+    # ------------------------------------------------------------------
+    # §11.5: Prompt 构建
+    # ------------------------------------------------------------------
+
+    async def _build_extraction_prompt(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_text: str,
+        card_ids: list,
+    ) -> str:
+        """构建四库变更提取 LLM prompt (§11.5)。"""
+        vault_summary = await self._get_vault_summary_async(db, project_id)
+
+        prompt = f"""你是一个小说分析专家。分析以下新章节的内容，提取它对四库的变更。
+
+当前四库上下文：
+{vault_summary}
+
+新章节正文：
+{chapter_text}
+
+本次使用的灵感卡 ID：
+{card_ids}
+
+请输出 JSON，格式如下：
+
+{json.dumps(EXTRACTION_SCHEMA, ensure_ascii=False, indent=2)}
+
+注意：
+- character_updates.changes 字段描述具体的变更内容（如"新增","性格由X变为Y","状态由active变为deceased"等）
+- timeline_updates 中 day 字段为绝对时间线天数
+- plot_promise_updates.type 的枚举值为：人物弧光、剧情转折、悬念、关系发展、世界观秘密
+- world_updates.category 的枚举值为：geography、history、system、faction、event
+- card_pool_entries.rarity 的枚举值为：common、rare、epic
+- 只提取本章节中首次出现或发生变更的信息
+- 如果某类信息没有新增或变更，返回空数组
+- 请确保返回的是有效的 JSON 格式，不要包含 markdown 代码块标记"""
+        return prompt
+
+    async def _get_vault_summary_async(
+        self, db: AsyncSession, project_id: int
+    ) -> str:
+        """异步获取四库的摘要信息（各库的 ID 和名称列表）。"""
+        vault_summary_parts = []
+
+        # 获取角色库
+        try:
+            characters = await vault_dao.get_characters(db, project_id)
+            if characters:
+                char_list = [
+                    f"  - ID: {c.id}, 名称: {c.name}" for c in characters
+                ]
+                vault_summary_parts.append(
+                    "人物库：\n" + "\n".join(char_list)
+                )
+            else:
+                vault_summary_parts.append("人物库：(空)")
+        except Exception as e:
+            logger.warning(f"Failed to fetch characters: {e}")
+            vault_summary_parts.append("人物库：(加载失败)")
+
+        # 获取时间线库
+        try:
+            timeline = await vault_dao.get_timeline(db, project_id)
+            if timeline:
+                tl_list = [
+                    f"  - ID: {t.id}, 事件: {t.event}, 章节: ch{t.chapter_number}"
+                    for t in timeline[-10:]
+                ]
+                vault_summary_parts.append(
+                    "时间线库（最近10条）：\n" + "\n".join(tl_list)
+                )
+            else:
+                vault_summary_parts.append("时间线库：(空)")
+        except Exception as e:
+            logger.warning(f"Failed to fetch timeline: {e}")
+            vault_summary_parts.append("时间线库：(加载失败)")
+
+        # 获取剧情承诺库
+        try:
+            promises = await vault_dao.get_plot_promises(db, project_id)
+            if promises:
+                p_list = [
+                    f"  - ID: {p.id}, 描述: {p.description[:50]}, 状态: {p.status}"
+                    for p in promises[-10:]
+                ]
+                vault_summary_parts.append(
+                    "剧情承诺库（最近10条）：\n" + "\n".join(p_list)
+                )
+            else:
+                vault_summary_parts.append("剧情承诺库：(空)")
+        except Exception as e:
+            logger.warning(f"Failed to fetch plot promises: {e}")
+            vault_summary_parts.append("剧情承诺库：(加载失败)")
+
+        # 获取世界观库
+        try:
+            world = await vault_dao.get_world_entries(db, project_id)
+            if world:
+                w_list = [
+                    f"  - ID: {w.id}, 名称: {w.name}, 类别: {w.category}"
+                    for w in world[-10:]
+                ]
+                vault_summary_parts.append(
+                    "世界观库（最近10条）：\n" + "\n".join(w_list)
+                )
+            else:
+                vault_summary_parts.append("世界观库：(空)")
+        except Exception as e:
+            logger.warning(f"Failed to fetch world entries: {e}")
+            vault_summary_parts.append("世界观库：(加载失败)")
+
+        return "\n".join(vault_summary_parts)
+
+    # ------------------------------------------------------------------
+    # §11.5: LLM 调用
+    # ------------------------------------------------------------------
+
+    async def _call_extraction_llm(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_text: str,
+        card_ids: list,
+    ) -> str:
+        """调用 LLM 提取四库变更。"""
+        # 使用 _build_extraction_prompt 构建 prompt
+        prompt = await self._build_extraction_prompt(
+            db, project_id, chapter_text, card_ids
+        )
+
+        messages = [
+            {"role": "system", "content": _SYSTEM_EXTRACTION},
+            {"role": "user", "content": prompt},
+        ]
+
+        try:
+            response = await llm_client.chat(
+                messages=messages,
+                temperature=0.3,
+                max_tokens=4096,
+            )
+            content = response["choices"][0]["message"]["content"]
+            logger.info(
+                f"LLM extraction response received, length={len(content)}"
+            )
+            return content
+        except Exception as e:
+            logger.error(f"LLM extraction call failed: {e}", exc_info=True)
+            # 优雅降级：返回空提取结果
+            return json.dumps(
+                {
+                    "character_updates": [],
+                    "timeline_updates": [],
+                    "plot_promise_updates": [],
+                    "world_updates": [],
+                    "card_pool_entries": [],
+                }
+            )
+
+    # ------------------------------------------------------------------
+    # §11.5: 解析 LLM 返回的 JSON
+    # ------------------------------------------------------------------
+
+    def _parse_extraction_result(self, raw: str) -> Dict[str, List]:
+        """解析 LLM 返回的 JSON 提取结果。"""
+        if not raw or not raw.strip():
+            logger.warning("Empty extraction result from LLM")
+            return self._empty_extraction_result()
+
+        # 清理 markdown 代码块标记
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            # 移除开头的 ```json 或 ``` 行
+            first_newline = cleaned.find("\n")
+            if first_newline >= 0:
+                cleaned = cleaned[first_newline + 1:]  # +1 跳过换行符
+            # 移除结尾的 ``` 行
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+
+        try:
+            # 尝试直接解析为 JSON
+            if cleaned.startswith("{"):
+                result = json.loads(cleaned)
+            else:
+                # 尝试提取 JSON 部分（处理 LLM 可能的额外文本）
+                json_start = cleaned.find("{")
+                json_end = cleaned.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_str = cleaned[json_start:json_end]
+                    result = json.loads(json_str)
+                else:
+                    logger.warning("No JSON found in LLM response")
+                    return self._empty_extraction_result()
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to parse extraction JSON: {e}")
+            logger.debug(f"Raw response: {raw[:500]}")
+            return self._empty_extraction_result()
+
+        # 验证并规范化结果
+        validated: Dict[str, List] = {}
+        validated["character_updates"] = result.get("character_updates", [])
+        validated["timeline_updates"] = result.get("timeline_updates", [])
+        validated["plot_promise_updates"] = result.get("plot_promise_updates", [])
+        validated["world_updates"] = result.get("world_updates", [])
+        validated["card_pool_entries"] = result.get("card_pool_entries", [])
+
+        # 确保每个条目都是 dict
+        for key in validated:
+            validated[key] = [
+                item for item in validated[key] if isinstance(item, dict)
+            ]
+
+        logger.info(
+            f"Parsed extraction: "
+            f"{len(validated['character_updates'])} characters, "
+            f"{len(validated['timeline_updates'])} timeline events, "
+            f"{len(validated['plot_promise_updates'])} plot promises, "
+            f"{len(validated['world_updates'])} world entries, "
+            f"{len(validated['card_pool_entries'])} card entries"
+        )
+        return validated
+
+    @staticmethod
+    def _empty_extraction_result() -> Dict[str, List]:
+        """返回空的提取结果。"""
+        return {
+            "character_updates": [],
+            "timeline_updates": [],
+            "plot_promise_updates": [],
+            "world_updates": [],
+            "card_pool_entries": [],
+        }
+
+    # ------------------------------------------------------------------
+    # §11.7 [15]: 人物库合并
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _calc_edit_distance(s1: str, s2: str) -> int:
+        """计算两个字符串之间的编辑距离（Levenshtein）。"""
+        if len(s1) < len(s2):
+            s1, s2 = s2, s1
+        if not s2:
+            return len(s1)
+
+        prev_row = list(range(len(s2) + 1))
+        for i, c1 in enumerate(s1):
+            curr_row = [i + 1]
+            for j, c2 in enumerate(s2):
+                cost = 0 if c1 == c2 else 1
+                curr_row.append(
+                    min(
+                        curr_row[j] + 1,         # 删除
+                        prev_row[j + 1] + 1,     # 插入
+                        prev_row[j] + cost,       # 替换
+                    )
+                )
+            prev_row = curr_row
+        return prev_row[-1]
+
+    async def _merge_characters(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        updates: List[Dict],
+        chapter_number: int = 0,
+    ) -> Dict[str, List]:
+        """合并人物库变更。
+
+        实现 §11.7 [15]：
+        - create → 检查模糊匹配(name编辑距离<3→update,否则新角色)
+        - update → 变更历史
+        - status_change → 历史状态栈
+        - remove → 标记退场
+        """
+        created: List[Dict] = []
+        updated: List[Dict] = []
+        status_changed: List[Dict] = []
+
+        # 获取当前项目的所有角色（用于模糊匹配）
+        all_characters = await vault_dao.get_characters(db, project_id)
+        char_name_map: Dict[str, VaultCharacter] = {c.name: c for c in all_characters}
+
+        for update in updates:
+            action = update.get("action", "")
+            name = update.get("name", "")
+            confidence = update.get("confidence", 0.8)
+            changes = update.get("changes", [])
+
+            if not name:
+                continue
+
+            if action == "create":
+                # 检查模糊匹配：编辑距离 < 3 → 视为同一个角色，执行 update
+                matched_char = None
+                matched_name = ""
+                for existing_name in char_name_map:
+                    dist = self._calc_edit_distance(name, existing_name)
+                    if dist < CHARACTER_FUZZY_THRESHOLD:
+                        if matched_char is None or dist < self._calc_edit_distance(
+                            name, matched_name
+                        ):
+                            matched_char = char_name_map[existing_name]
+                            matched_name = existing_name
+
+                if matched_char is not None:
+                    # 模糊匹配成功 → update 已有角色
+                    update_fields: Dict[str, Any] = {}
+                    for change in changes:
+                        if isinstance(change, dict):
+                            for key in ("role", "faction", "location", "current_state",
+                                        "motivation", "description", "personality"):
+                                if key in change:
+                                    update_fields[key] = change[key]
+                        elif isinstance(change, str) and ":" in change:
+                            key_val = change.split(":", 1)
+                            if len(key_val) == 2:
+                                update_fields[key_val[0].strip()] = key_val[1].strip()
+
+                    if update_fields or changes:
+                        update_fields["chapter_count"] = (
+                            matched_char.chapter_count or 0
+                        ) + 1
+                        await vault_dao.update_character(
+                            db, matched_char, update_fields
+                        )
+                        updated.append({
+                            "id": str(matched_char.id),
+                            "name": matched_name,
+                            "changes": changes,
+                        })
+                        logger.info(
+                            f"Character fuzzy matched: '{name}' → '{matched_name}' "
+                            f"(edit_distance={self._calc_edit_distance(name, matched_name)})"
+                        )
+                else:
+                    # 真正的创建新角色
+                    new_char = await vault_dao.create_character(
+                        db,
+                        {
+                            "project_id": project_id,
+                            "name": name,
+                            "role": self._extract_change(changes, "role", "neutral"),
+                            "faction": self._extract_change(changes, "faction", ""),
+                            "location": self._extract_change(changes, "location", ""),
+                            "current_state": self._extract_change(changes, "current_state", ""),
+                            "motivation": self._extract_change(changes, "motivation", ""),
+                            "description": self._extract_change(changes, "description", ""),
+                            "personality": self._extract_change(changes, "personality", ""),
+                            "confidence": confidence,
+                            "chapter_count": 1,
+                            "chapter_hist": [chapter_number] if chapter_number else [],
+                        },
+                    )
+                    created.append({
+                        "id": str(new_char.id),
+                        "name": name,
+                    })
+                    logger.info(f"Character created: {name}")
+
+            elif action in ("update",):
+                # 更新已有角色
+                if name in char_name_map:
+                    existing = char_name_map[name]
+                    update_fields = {}
+                    for change in changes:
+                        if isinstance(change, dict):
+                            for key in (
+                                "role", "faction", "location", "current_state",
+                                "motivation", "description", "personality", "emotion",
+                                "traits", "relationships",
+                            ):
+                                if key in change:
+                                    update_fields[key] = change[key]
+                        elif isinstance(change, str) and ":" in change:
+                            key_val = change.split(":", 1)
+                            if len(key_val) == 2:
+                                update_fields[key_val[0].strip()] = key_val[1].strip()
+
+                    if update_fields:
+                        update_fields["chapter_count"] = (
+                            existing.chapter_count or 0
+                        ) + 1
+                        await vault_dao.update_character(db, existing, update_fields)
+                        updated.append({
+                            "id": str(existing.id),
+                            "name": name,
+                            "changes": changes,
+                        })
+                        logger.info(f"Character updated: {name}")
+
+            elif action == "status_change":
+                # 状态变更 → 入历史状态栈
+                if name in char_name_map:
+                    existing = char_name_map[name]
+                    old_status = existing.status
+                    new_status = self._extract_change(changes, "status", "inactive")
+
+                    # 保存到 state_machine
+                    state_machine = existing.state_machine or {}
+                    state_history = state_machine.get("history", [])
+                    state_history.append({
+                        "from": old_status,
+                        "to": new_status,
+                        "chapter": chapter_number,
+                        "reason": changes if isinstance(changes, str) else str(changes),
+                    })
+                    state_machine["history"] = state_history
+                    state_machine["current"] = new_status
+
+                    await vault_dao.update_character(
+                        db,
+                        existing,
+                        {
+                            "status": new_status,
+                            "state_machine": state_machine,
+                        },
+                    )
+                    status_changed.append({
+                        "id": str(existing.id),
+                        "name": name,
+                        "from": old_status,
+                        "to": new_status,
+                    })
+                    logger.info(f"Character status changed: {name}: {old_status} → {new_status}")
+
+            elif action == "remove":
+                # 标记退场（不物理删除）
+                if name in char_name_map:
+                    existing = char_name_map[name]
+                    await vault_dao.update_character(
+                        db, existing, {"status": "deceased"}
+                    )
+                    status_changed.append({
+                        "id": str(existing.id),
+                        "name": name,
+                        "from": existing.status,
+                        "to": "deceased",
+                    })
+                    logger.info(f"Character marked as deceased: {name}")
+
+        return {
+            "created": created,
+            "updated": updated,
+            "status_changed": status_changed,
+        }
+
+    @staticmethod
+    def _extract_change(changes: list, key: str, default: Any = None) -> Any:
+        """从 changes 列表中提取指定 key 的值。"""
+        for change in changes:
+            if isinstance(change, dict) and key in change:
+                return change[key]
+            if isinstance(change, str) and change.startswith(f"{key}:"):
+                return change.split(":", 1)[1].strip()
+        return default
+
+    # ------------------------------------------------------------------
+    # §11.7 [16]: 时间线库合并
+    # ------------------------------------------------------------------
+
+    async def _merge_timeline(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        updates: List[Dict],
+        chapter_id: int = 0,
+        chapter_number: int = 0,
+    ) -> Dict[str, int]:
+        """合并时间线库变更。
+
+        实现 §11.7 [16]：
+        - add → 按 day 排序
+        - resolve_date → 绑定时间
+        - correct → 修正+存档
+        """
+        added = 0
+
+        for update in updates:
+            action = update.get("action", "add")
+
+            if action == "add":
+                event = update.get("event", "")
+                if not event:
+                    continue
+
+                await vault_dao.create_timeline_event(
+                    db,
+                    {
+                        "project_id": project_id,
+                        "event": event,
+                        "description": (
+                            update.get("description") or update.get("event", "")
+                        ),
+                        "day": update.get("day"),
+                        "chapter_number": chapter_number,
+                        "source_chapter": chapter_number,
+                        "importance": update.get("importance", "minor"),
+                        "characters_involved": update.get("participants", []),
+                        "is_key_event": update.get("importance") == "major",
+                    },
+                )
+                added += 1
+                logger.info(f"Timeline event added: {event[:50]}")
+
+            elif action in ("resolve_date", "correct"):
+                # 通过事件名称查找并更新时间
+                event_name = update.get("event", "")
+                if not event_name:
+                    continue
+                try:
+                    all_events = await vault_dao.get_timeline(db, project_id)
+                    target = None
+                    for evt in all_events:
+                        if evt.event == event_name:
+                            target = evt
+                            break
+                    if target:
+                        update_fields = {}
+                        if update.get("day") is not None:
+                            update_fields["day"] = update["day"]
+                        if action == "correct" and update.get("description"):
+                            update_fields["description"] = update["description"]
+                        if update_fields:
+                            await vault_dao.update_timeline_event(
+                                db, target, update_fields
+                            )
+                            logger.info(
+                                f"Timeline event {action}: {event_name[:50]}"
+                            )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to {action} timeline event '{event_name}': {e}"
+                    )
+
+        return {"added": added}
+
+    # ------------------------------------------------------------------
+    # §11.7 [17]: 剧情承诺库合并
+    # ------------------------------------------------------------------
+
+    async def _merge_plot_promises(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        updates: List[Dict],
+        chapter_number: int = 0,
+    ) -> Dict[str, int]:
+        """合并剧情承诺库变更。
+
+        实现 §11.7 [17]：
+        - create → active + 埋设章节
+        - advance → advancing + 推进日志
+        - redeem → 已回收
+        - cancel → 废弃
+        """
+        created = 0
+        advanced = 0
+        redeemed = 0
+
+        for update in updates:
+            action = update.get("action", "")
+            title = update.get("title", "")
+
+            if action == "create":
+                if not title:
+                    continue
+                await vault_dao.create_plot_promise(
+                    db,
+                    {
+                        "project_id": project_id,
+                        "title": title,
+                        "description": title,
+                        "type": self._map_promise_type(update.get("type", "悬念")),
+                        "status": "active",
+                        "urgency": 5,
+                        "planted_chapter": chapter_number,
+                        "advancement_log": [
+                            {
+                                "chapter": chapter_number,
+                                "event": "created",
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            }
+                        ],
+                    },
+                )
+                created += 1
+                logger.info(f"Plot promise created: {title}")
+
+            elif action == "advance":
+                if not title:
+                    continue
+                try:
+                    promises = await vault_dao.get_plot_promises(db, project_id)
+                    target = None
+                    for p in promises:
+                        if p.title == title or (
+                            p.description and title in p.description
+                        ):
+                            target = p
+                            break
+                    if target:
+                        log = target.advancement_log or []
+                        log.append(
+                            {
+                                "chapter": chapter_number,
+                                "event": "advanced",
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            }
+                        )
+                        await vault_dao.update_plot_promise(
+                            db,
+                            target,
+                            {
+                                "status": "advancing",
+                                "advancement_log": log,
+                                "urgency": min(10, (target.urgency or 5) + 1),
+                            },
+                        )
+                        advanced += 1
+                        logger.info(f"Plot promise advanced: {title}")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to advance plot promise '{title}': {e}"
+                    )
+
+            elif action == "redeem":
+                if not title:
+                    continue
+                try:
+                    promises = await vault_dao.get_plot_promises(db, project_id)
+                    target = None
+                    for p in promises:
+                        if p.title == title or (
+                            p.description and title in p.description
+                        ):
+                            target = p
+                            break
+                    if target:
+                        log = target.advancement_log or []
+                        log.append(
+                            {
+                                "chapter": chapter_number,
+                                "event": "redeemed",
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            }
+                        )
+                        await vault_dao.update_plot_promise(
+                            db,
+                            target,
+                            {
+                                "status": "resolved",
+                                "advancement_log": log,
+                            },
+                        )
+                        redeemed += 1
+                        logger.info(f"Plot promise redeemed: {title}")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to redeem plot promise '{title}': {e}"
+                    )
+
+            elif action == "cancel":
+                if not title:
+                    continue
+                try:
+                    promises = await vault_dao.get_plot_promises(db, project_id)
+                    target = None
+                    for p in promises:
+                        if p.title == title or (
+                            p.description and title in p.description
+                        ):
+                            target = p
+                            break
+                    if target:
+                        log = target.advancement_log or []
+                        log.append(
+                            {
+                                "chapter": chapter_number,
+                                "event": "abandoned",
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            }
+                        )
+                        await vault_dao.update_plot_promise(
+                            db,
+                            target,
+                            {
+                                "status": "abandoned",
+                                "advancement_log": log,
+                            },
+                        )
+                        logger.info(f"Plot promise cancelled/abandoned: {title}")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to cancel plot promise '{title}': {e}"
+                    )
+
+        return {"created": created, "advanced": advanced, "redeemed": redeemed}
+
+    @staticmethod
+    def _map_promise_type(ptype: str) -> str:
+        """将中文剧情承诺类型映射到数据库枚举值。"""
+        mapping = {
+            "人物弧光": "arc",
+            "剧情转折": "subplot",
+            "悬念": "mystery",
+            "关系发展": "promise",
+            "世界观秘密": "foreshadowing",
+        }
+        return mapping.get(ptype, "mystery")
+
+    # ------------------------------------------------------------------
+    # §11.7 [18]: 世界观库合并
+    # ------------------------------------------------------------------
+
+    async def _merge_world(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        updates: List[Dict],
+        chapter_number: int = 0,
+    ) -> Dict[str, int]:
+        """合并世界观库变更。
+
+        实现 §11.7 [18]：
+        - create → 新设定 + 分类
+        - expand → 补充说明
+        - clarify → 修正
+        - connect → 关联
+        """
+        created = 0
+        expanded = 0
+
+        for update in updates:
+            action = update.get("action", "")
+            name = update.get("name", "")
+
+            if not name:
+                continue
+
+            if action == "create":
+                await vault_dao.create_world_entry(
+                    db,
+                    {
+                        "project_id": project_id,
+                        "name": name,
+                        "description": update.get("content", ""),
+                        "category": update.get("category", "other"),
+                        "source_chapter": chapter_number,
+                        "reference_chapters": [chapter_number] if chapter_number else [],
+                    },
+                )
+                created += 1
+                logger.info(f"World entry created: {name}")
+
+            elif action in ("expand", "clarify"):
+                # 查找已有条目
+                try:
+                    entries = await vault_dao.get_world_entries(db, project_id)
+                    target = None
+                    for e in entries:
+                        if e.name == name:
+                            target = e
+                            break
+                    if target:
+                        refs = target.reference_chapters or []
+                        if chapter_number and chapter_number not in refs:
+                            refs.append(chapter_number)
+
+                        update_fields: Dict[str, Any] = {
+                            "reference_chapters": refs,
+                        }
+                        new_content = update.get("content", "")
+                        if new_content:
+                            update_fields["description"] = (
+                                target.description
+                                + "\n\n[更新] "
+                                + new_content
+                            )
+
+                        await vault_dao.update_world_entry(
+                            db, target, update_fields
+                        )
+                        expanded += 1
+                        logger.info(f"World entry {action}: {name}")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to {action} world entry '{name}': {e}"
+                    )
+
+            elif action == "connect":
+                # 关联：在相关实体中记录
+                content = update.get("content", "")
+                if content:
+                    try:
+                        entries = await vault_dao.get_world_entries(db, project_id)
+                        target = None
+                        for e in entries:
+                            if e.name == name:
+                                target = e
+                                break
+                        if target:
+                            related = target.related_entities or []
+                            if content not in related:
+                                related.append(content)
+                            await vault_dao.update_world_entry(
+                                db,
+                                target,
+                                {"related_entities": related},
+                            )
+                            expanded += 1
+                            logger.info(
+                                f"World entry connected: {name} <-> {content}"
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to connect world entry '{name}': {e}"
+                        )
+
+        return {"created": created, "expanded": expanded}
+
+    # ------------------------------------------------------------------
+    # §11.7 [19]: 卡牌池充实
+    # ------------------------------------------------------------------
+
+    async def _enrich_card_pool(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        entries: List[Dict],
+        chapter_number: int = 0,
+    ) -> Dict[str, int]:
+        """充实卡牌池。
+
+        实现 §11.7 [19]：
+        - 按 type + rarity 加入
+        - 3 章新鲜期（×1.5）
+        - 相同 title 不重复
+        """
+        added = 0
+
+        # 获取现有卡牌，用于去重
+        try:
+            existing_cards = await card_dao.get_active_cards(db, project_id, count=1000)
+            existing_titles = {c.name for c in existing_cards}
+        except Exception:
+            existing_titles = set()
+
+        for entry in entries:
+            title = entry.get("title", "")
+            if not title or title in existing_titles:
+                continue
+
+            rarity = entry.get("rarity", "common")
+            rarity_weight = {"common": 1, "rare": 2, "epic": 3}.get(rarity, 1)
+
+            try:
+                card = CardPool(
+                    project_id=project_id,
+                    name=title,
+                    description=entry.get("description", ""),
+                    rarity=rarity,
+                    direction_type="interesting",
+                    direction_text=entry.get("description", title),
+                    source_label="Phase4",
+                    source_chapter=chapter_number,
+                    freshness_chapter=chapter_number,
+                    rarity_weight=rarity_weight,
+                    type=entry.get("type", "剧情"),
+                    is_active=True,
+                    status="active",
+                    tags=["phase4", entry.get("type", "剧情"), rarity],
+                )
+                db.add(card)
+                existing_titles.add(title)
+                added += 1
+                logger.info(f"Card pool entry added: {title} (rarity={rarity})")
+            except Exception as e:
+                logger.warning(f"Failed to add card '{title}': {e}")
+
+        logger.info(f"Card pool enriched: {added} new cards added")
+        return {"added": added}
+
+    # ------------------------------------------------------------------
+    # §11.7 [20]: 变更日志归档
+    # ------------------------------------------------------------------
+
+    async def _archive_changelog(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_id: int,
+        version: str,
+        chapter_number: int,
+        changes: Dict[str, Any],
+    ) -> None:
+        """归档变更日志。
+
+        实现 §11.7 [20]：
+        记录 version/chapter/timestamp/changes/summary
+        """
+        from app.models.vault_changelog import VaultChangelog
+
+        timestamp = datetime.now(timezone.utc)
+
+        # 记录角色变更
+        for char in changes.get("characters", {}).get("created", []):
+            log = VaultChangelog(
+                project_id=project_id,
+                chapter_id=chapter_id,
+                change_type="add",
+                entity_type="character",
+                entity_id=char.get("id"),
+                change_reason=f"Phase 4 新增角色: {char.get('name', '')}",
+                meta_data={
+                    "version": version,
+                    "chapter": chapter_number,
+                    "timestamp": timestamp.isoformat(),
+                },
+            )
+            db.add(log)
+
+        for char in changes.get("characters", {}).get("updated", []):
+            log = VaultChangelog(
+                project_id=project_id,
+                chapter_id=chapter_id,
+                change_type="update",
+                entity_type="character",
+                entity_id=char.get("id"),
+                change_reason=f"Phase 4 更新角色: {char.get('name', '')}",
+                meta_data={
+                    "version": version,
+                    "chapter": chapter_number,
+                    "timestamp": timestamp.isoformat(),
+                    "changes": char.get("changes", []),
+                },
+            )
+            db.add(log)
+
+        for char in changes.get("characters", {}).get("status_changed", []):
+            log = VaultChangelog(
+                project_id=project_id,
+                chapter_id=chapter_id,
+                change_type="update",
+                entity_type="character",
+                entity_id=char.get("id"),
+                field_name="status",
+                old_value=char.get("from"),
+                new_value=char.get("to"),
+                change_reason=f"Phase 4 状态变更: {char.get('name', '')}: {char.get('from')} → {char.get('to')}",
+                meta_data={
+                    "version": version,
+                    "chapter": chapter_number,
+                    "timestamp": timestamp.isoformat(),
+                },
+            )
+            db.add(log)
+
+        # 记录时间线变更
+        added_count = changes.get("timeline", {}).get("added", 0)
+        if added_count > 0:
+            log = VaultChangelog(
+                project_id=project_id,
+                chapter_id=chapter_id,
+                change_type="add",
+                entity_type="timeline",
+                change_reason=f"Phase 4 新增 {added_count} 个时间线事件",
+                meta_data={
+                    "version": version,
+                    "chapter": chapter_number,
+                    "timestamp": timestamp.isoformat(),
+                    "count": added_count,
+                },
+            )
+            db.add(log)
+
+        # 记录剧情承诺变更
+        promise_counts = changes.get("plot_promises", {})
+        for action, label in [("created", "新增"), ("advanced", "推进"), ("redeemed", "回收")]:
+            count = promise_counts.get(action, 0)
+            if count > 0:
+                log = VaultChangelog(
+                    project_id=project_id,
+                    chapter_id=chapter_id,
+                    change_type="add" if action == "created" else "update",
+                    entity_type="plot_promise",
+                    change_reason=f"Phase 4 {label} {count} 个剧情承诺",
+                    meta_data={
+                        "version": version,
+                        "chapter": chapter_number,
+                        "timestamp": timestamp.isoformat(),
+                        "count": count,
+                        "action": action,
+                    },
+                )
+                db.add(log)
+
+        # 记录世界观变更
+        world_counts = changes.get("world", {})
+        for action, label in [("created", "新增"), ("expanded", "扩展")]:
+            count = world_counts.get(action, 0)
+            if count > 0:
+                log = VaultChangelog(
+                    project_id=project_id,
+                    chapter_id=chapter_id,
+                    change_type="add" if action == "created" else "update",
+                    entity_type="world",
+                    change_reason=f"Phase 4 {label} {count} 个世界观条目",
+                    meta_data={
+                        "version": version,
+                        "chapter": chapter_number,
+                        "timestamp": timestamp.isoformat(),
+                        "count": count,
+                        "action": action,
+                    },
+                )
+                db.add(log)
+
+        # 记录卡牌池变更
+        card_count = changes.get("card_pool", {}).get("added", 0)
+        if card_count > 0:
+            log = VaultChangelog(
+                project_id=project_id,
+                chapter_id=chapter_id,
+                change_type="add",
+                entity_type="card",
+                change_reason=f"Phase 4 新增 {card_count} 张卡牌",
+                meta_data={
+                    "version": version,
+                    "chapter": chapter_number,
+                    "timestamp": timestamp.isoformat(),
+                    "count": card_count,
+                },
+            )
+            db.add(log)
+
+        logger.info(
+            f"Changelog archived: version={version}, "
+            f"chapter={chapter_number}"
+        )
 
 
 # Singleton instance

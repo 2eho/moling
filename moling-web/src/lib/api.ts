@@ -76,6 +76,11 @@ export const authApi = {
       { token, new_password: newPassword },
     );
   },
+
+  // 更新当前用户资料（对齐 OpenAPI 规范 PUT /auth/me）
+  async updateProfile(data: { nickname?: string; bio?: string; avatar?: string }) {
+    return apiClient.put<ApiResponse<User>>("/auth/me", data);
+  },
 };
 
 // ---- Project API ----
@@ -110,6 +115,11 @@ export const projectApi = {
     return apiClient.delete<ApiResponse<{ deleted: boolean; id: string }>>(
       `/projects/${id}`,
     );
+  },
+
+  // 保存草稿（对齐 OpenAPI 规范 PUT /projects/:id/draft）
+  async saveDraft(id: string, data: Partial<Project>) {
+    return apiClient.put<ApiResponse<Project>>(`/projects/${id}/draft`, data);
   },
 };
 
@@ -256,23 +266,23 @@ export const generationApi = {
     );
   },
 
-  // 查询异步任务状态
-  async getJobStatus(jobId: string) {
+  // 查询异步任务状态（对齐 OpenAPI 规范）
+  async getJobStatus(taskId: string) {
     return apiClient.get<ApiResponse<{
-      job_id: string;
       status: string;
-      progress: number;
-      result?: { content: string };
+      progress?: { percent: number; stage: string };
+      result?: { content: string; chapter_id: string };
       error?: string;
     }>>(
-      `/generate/jobs/${jobId}`,
+      `/generate/${taskId}/status`,
     );
   },
 
-  // 取消任务（可选）
-  async cancelJob(jobId: string) {
-    return apiClient.delete<ApiResponse<{ cancelled: boolean }>>(
-      `/generate/jobs/${jobId}`,
+  // 取消任务（对齐 OpenAPI 规范）
+  async cancelJob(taskId: string) {
+    return apiClient.post<ApiResponse<{ status: string }>>(
+      `/generate/${taskId}/cancel`,
+      {},
     );
   },
 
@@ -289,6 +299,19 @@ export const generationApi = {
     return apiClient.post<ApiResponse<{ revised: boolean; chapter_id: string; suggestion?: string }>>(
       `/projects/${projectId}/chapters/${chapterId}/revise`,
       reason ? { reason } : {},
+    );
+  },
+
+  // 获取生成历史（缺失端点-补）
+  async getHistory(params?: { page?: number; page_size?: number }) {
+    return apiClient.get<ApiResponse<{
+      history: Array<{ task_id: string; chapter_id: string; status: string; created_at: string }>;
+      total: number;
+      page: number;
+      page_size: number;
+    }>>(
+      `/generate/history`,
+      params,
     );
   },
 };
@@ -578,6 +601,20 @@ export const subscriptionApi = {
   },
 
   // cancel 已移除：后端没有取消订阅端点
+
+  // 获取支付记录（对齐 OpenAPI 规范 GET /subscriptions/payment-history）
+  async getPaymentHistory(params?: { page?: number; page_size?: number }) {
+    return apiClient.get<ApiResponse<Array<{
+      id: string;
+      amount: number;
+      currency: string;
+      status: string;
+      created_at: string;
+    }>>>(
+      "/subscriptions/payment-history",
+      params,
+    );
+  },
 };
 
 // ---- Secrets API (D4) ----
@@ -661,6 +698,23 @@ export const weaveApi = {
       { project_id: projectId, pattern_id: patternId, ...params },
     );
   },
+
+  // 获取编织建议（对齐 OpenAPI 规范 GET /weave/suggestions/{pid}）
+  async getSuggestions(projectId: string) {
+    return apiClient.get<ApiResponse<{
+      suggestions: Array<{ pattern_id: string; chapter_id: string; suggestion: string; priority: string }>;
+    }>>(`/weave/suggestions/${projectId}`);
+  },
+
+  // 编织分析（对齐 OpenAPI 规范 GET /weave/analyze/{pid}）
+  async analyze(projectId: string) {
+    return apiClient.get<ApiResponse<{
+      total_patterns: number;
+      applied_patterns: number;
+      suggestions_count: number;
+      analysis: string;
+    }>>(`/weave/analyze/${projectId}`);
+  },
 };
 
 // ---- Import API (D9) ----
@@ -736,11 +790,14 @@ export const importApi = {
     );
   },
 
-  // 获取导入历史：后端暂未实现列表端点，返回空数组
-  async getImportHistory(projectId: string) {
-    // TODO: 后端添加 GET /projects/:pid/import 端点后启用
-    console.warn("getImportHistory: 后端暂未实现，返回空数组");
-    return { items: [], total: 0 };
+  // 获取导入历史（对齐 OpenAPI 规范 GET /import）
+  async getImportHistory(params?: { page?: number; page_size?: number }) {
+    return apiClient.get<ApiResponse<{
+      imports: Array<{ job_id: string; project_id: string; status: string; created_at: string }>;
+      total: number;
+      page: number;
+      page_size: number;
+    }>>("/import", params);
   },
 };
 
@@ -876,5 +933,21 @@ export const adminApi = {
 
   async testLlmConnection() {
     return apiClient.post<ApiResponse<{ success: boolean; message: string }>>("/admin/llm-config/test", {});
+  },
+
+  // 编辑用户（对齐 OpenAPI 规范 PATCH /admin/users/:id）
+  async updateUser(userId: string, data: { role?: string; banned?: boolean }) {
+    return apiClient.patch<ApiResponse<AdminUser>>(`/admin/users/${userId}`, data);
+  },
+
+  // LLM 用量统计（对齐 OpenAPI 规范 GET /admin/llm-usage）
+  async getLlmUsage() {
+    return apiClient.get<ApiResponse<{
+      total_tokens: number;
+      total_cost: number;
+      by_provider: Record<string, number>;
+      by_model: Record<string, number>;
+      daily_usage: Array<{ date: string; tokens: number; cost: number }>;
+    }>>("/admin/llm-usage");
   },
 };
