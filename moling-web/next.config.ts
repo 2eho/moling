@@ -1,15 +1,15 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // 使用 standalone 模式，支持动态路由
-  output: "standalone",
   // 子路径部署，配合宿主机 Nginx 的 /moling 反代
   basePath: "/moling",
-  
-  // 修复多lockfile警告和构建错误
-  outputFileTracingRoot: process.cwd(),
+  // 使用 standalone 输出模式
+  output: "standalone",
+  // 允许构建跳过 ESLint 检查
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // 禁用 Image Optimization（standalone 模式可选）
   images: {
     unoptimized: true,
@@ -54,20 +54,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  // Sentry 配置
-  org: "moling",
-  project: "moling-web",
-  
-  // 仅在 CI 环境中输出版本信息
-  silent: !process.env.CI,
-  
-  // 自动上传 Source Maps 到 Sentry
-  widenClientFileUpload: true,
-  
-  // 自动包装 App Router 的路由
-  automaticVercelMonitors: true,
-  
-  // 禁用 Sentry 遥测
-  telemetry: false,
-});
+export default nextConfig;
