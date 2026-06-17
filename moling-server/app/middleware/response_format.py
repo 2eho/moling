@@ -51,23 +51,13 @@ class ResponseFormatMiddleware(BaseHTTPMiddleware):
             body_attr = response.body
             # 检查是否是协程或异步迭代器
             import inspect
-            if inspect.iscoroutine(body_attr) or inspect.isasyncgen(body_attr):
-                # 如果是异步的，则获取其结果
-                import asyncio
-                try:
-                    loop = asyncio.get_event_loop()
-                    if inspect.iscoroutine(body_attr):
-                        response_body = loop.run_until_complete(body_attr)
-                    else:
-                        # 异步生成器，迭代并连接
-                        chunks = []
-                        async def collect_chunks():
-                            async for chunk in body_attr:
-                                chunks.append(chunk)
-                        loop.run_until_complete(collect_chunks())
-                        response_body = b''.join(chunks)
-                except Exception:
-                    response_body = None
+            if inspect.iscoroutine(body_attr):
+                response_body = await body_attr
+            elif inspect.isasyncgen(body_attr):
+                chunks = []
+                async for chunk in body_attr:
+                    chunks.append(chunk)
+                response_body = b''.join(chunks)
             else:
                 response_body = body_attr
         
