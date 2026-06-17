@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useProjects } from "@/hooks/useProjects";
+import { useAuth } from "@/hooks/useAuth";
 import { ProjectStats } from "@/components/project/ProjectStats";
 import { ProjectCard } from "@/components/project/ProjectCard";
 import { ProjectDetailModal } from "@/components/project/ProjectDetailModal";
@@ -15,10 +16,23 @@ import styles from "./projects.module.css";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { projects, stats, isLoading, deleteProject } = useProjects();
+  const { projects, stats, isLoading, deleteProject, loadProjects } = useProjects();
+  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const hasRefetched = useRef(false); // 防止重复刷新
+
+  // 关键修复：登录后列表自动刷新
+  // 场景：用户从 /auth 登录后跳转过来。
+  // ProjectProvider 在根布局中不会重挂载，但初始 loadProjects()
+  // 在没有 token 时返回空列表。登录后需要重新拉取。
+  useEffect(() => {
+    if (isAuthenticated && !isLoading && projects.length === 0 && !hasRefetched.current) {
+      hasRefetched.current = true;
+      loadProjects();
+    }
+  }, [isAuthenticated, isLoading, projects.length, loadProjects]);
 
   // ✅ 防御性检查：确保 projects 始终是数组
   const safeProjects = Array.isArray(projects) ? projects : [];

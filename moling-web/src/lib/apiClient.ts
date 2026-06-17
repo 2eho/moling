@@ -319,20 +319,30 @@ async function request<T>(
     }
 
     // ---- 401 Auto-Refresh（防并发） ----
-    if (response.status === 401 && getRefreshToken()) {
-      const refreshed = await tryRefreshTokenDeduped();
-      if (refreshed) {
-        // Retry original request with new token
-        headers["Authorization"] = `Bearer ${getAccessToken()}`;
-        response = await fetch(url, { ...fetchOptions, headers });
-      } else {
-        // Refresh failed — clear auth and redirect
-        clearAuth();
+    if (response.status === 401) {
+      if (getRefreshToken()) {
+        // 有 refresh token → 尝试刷新
+        const refreshed = await tryRefreshTokenDeduped();
+        if (refreshed) {
+          // Retry original request with new token
+          headers["Authorization"] = `Bearer ${getAccessToken()}`;
+          response = await fetch(url, { ...fetchOptions, headers });
+        } else {
+          // Refresh failed — clear auth and redirect
+          clearAuth();
+          if (typeof window !== "undefined") {
+            window.location.href = "/auth";
+          }
+          throw new ApiError(401, "认证已过期，请重新登录");
+        }
+      } else if (!getAccessToken()) {
+        // 连 access token 都没有（用户未登录）→ 直接跳转
         if (typeof window !== "undefined") {
           window.location.href = "/auth";
         }
-        throw new ApiError(401, "认证已过期，请重新登录");
+        throw new ApiError(401, "请先登录");
       }
+      // 有 access token 但无 refresh token → 不处理，走下面的通用错误抛出
     }
 
     // ---- Parse Response ----

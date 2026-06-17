@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './Settings.module.css';
 import { settingsApi } from '@/lib/api';
 import type { UserSettings, HealthRules } from '@/lib/types';
 import { safeObject } from '@/lib/apiSafety';
 import { validateForm, clearFieldError, parseApiError } from '@/lib/formValidation';
 import { FormError, FieldError } from '@/components/FormError';
+import { useAuth } from '@/hooks/useAuth';
+import { Spinner } from '@/components/ui/Spinner';
 
 const ACCENT_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981'];
 
@@ -19,6 +22,16 @@ const TAB_LABELS: Record<string, string> = {
 };
 
 export default function SettingsPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // 路由守卫：未登录时重定向到 /auth（hooks 必须放在顶部）
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/auth");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
   const [activeTab, setActiveTab] = useState<'profile' | 'defaults' | 'theme' | 'security' | 'data'>('profile');
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -236,6 +249,18 @@ export default function SettingsPage() {
       setPasswordSaving(false);
     }
   };
+
+  // 认证守卫：未登录时不渲染受保护内容
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--color-bg, #0d0f1a)"
+      }}>
+        <Spinner />
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className={styles.loading}>加载中...</div>;

@@ -50,6 +50,7 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
     drawCards,
     redrawCards,
     generate,
+    createChapter,
     setCurrentChapter,
   } = useWorkspace();
 
@@ -129,8 +130,15 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
     side: "right",
   });
 
-  const handleAddChapter = () => {
-    showToast("info", "新增章节功能即将上线");
+  const handleAddChapter = async () => {
+    const title = window.prompt("请输入新章节标题：", `第${chapters.length + 1}章`);
+    if (!title || !title.trim()) return;
+    try {
+      await createChapter(title.trim());
+      showToast("success", `章节「${title.trim()}」创建成功`);
+    } catch (error: any) {
+      showToast("error", `创建章节失败：${error?.message || "未知错误"}`);
+    }
   };
 
   const handleDrawCards = async (
@@ -423,6 +431,26 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
 export default function WorkspacePage() {
   const params = useParams();
   const projectId = params.projectId as string;
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // 路由守卫：未登录时重定向到 /auth
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/auth");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--color-bg, #0d0f1a)"
+      }}>
+        <Spinner />
+      </div>
+    );
+  }
 
   // 保存最后访问的项目ID
   useEffect(() => {
