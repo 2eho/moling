@@ -60,7 +60,7 @@ export interface WorkspaceContextValue {
   generate: (cardIds: string[], weights?: number[], mode?: string, creativity?: number, wordCount?: number) => Promise<void>;
   confirmChapter: (chapterId: string) => Promise<void>;
   reviseChapter: (chapterId: string, reason?: string) => Promise<void>;
-  createChapter: (title: string) => Promise<void>;
+  createChapter: () => Promise<void>;
   loadVault: (projectId: string) => Promise<void>;
   loadHealthAlerts: (projectId: string) => Promise<void>;
   setCurrentChapter: (chapter: Chapter) => void;
@@ -317,19 +317,17 @@ export function WorkspaceProvider({
     setGenerationProgress({ percent: 0, stage: "" });
   }, [projectId]);
 
-  const createChapter = useCallback(async (title: string) => {
+  const createChapter = useCallback(async () => {
+    const chapterNumber = chapters.length + 1;
     const newChapter = await chapterApi.create({
       project_id: projectId,
-      title,
-      content: "",
-      chapter_number: chapters.length + 1,
-      status: "draft",
+      title: `第${chapterNumber}章`,
     } as any);
     // 追加到章节列表
     setChapters((prev) => [...prev, newChapter.data]);
     // 自动选中新章节
     setCurrentChapterState(newChapter.data);
-  }, [projectId, chapters.length]);
+  }, [projectId]);
 
   // 组件卸载时清理轮询定时器
   useEffect(() => {

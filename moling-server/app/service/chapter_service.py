@@ -33,25 +33,24 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
-        # Check if chapter number already exists
-        existing = await chapter_dao.get_by_number(db, project_id, req.chapter_number)
-        if existing:
-            raise PermissionError(
-                error_code=ErrorCode.CHAPTER_NUMBER_EXISTS,
-                detail=f"Chapter number {req.chapter_number} already exists",
-            )
+        # 自动计算章节序号：取最大 chapter_number + 1
+        max_num_result = await db.execute(
+            select(func.max(Chapter.chapter_number)).where(Chapter.project_id == project_id)
+        )
+        max_num = max_num_result.scalar() or 0
+        chapter_number = max_num + 1
         
         # Create chapter
         chapter = Chapter(
             project_id=project_id,
             title=req.title,
-            chapter_number=req.chapter_number,
+            chapter_number=chapter_number,
             content=None,
             status="draft",
             phase4_status="pending",
@@ -82,9 +81,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
@@ -106,9 +105,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
@@ -138,9 +137,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
@@ -182,9 +181,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
@@ -218,9 +217,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
@@ -263,9 +262,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
@@ -351,9 +350,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
         
@@ -390,9 +389,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
 
@@ -467,9 +466,9 @@ class ChapterService:
                 error_code=ErrorCode.PROJECT_NOT_FOUND,
                 detail="Project not found",
             )
-        if project.user_id != user_id:
+        if str(project.user_id) != str(user_id):
             raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
+                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
                 detail="Not authorized to access this project",
             )
 

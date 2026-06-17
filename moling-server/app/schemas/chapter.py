@@ -9,10 +9,10 @@ from pydantic import BaseModel, Field
 
 
 class CreateChapterReq(BaseModel):
-    """Create a new chapter."""
+    """Create a new chapter. chapter_number 为可选，后端自动计算。"""
 
     title: str = Field(..., min_length=1, max_length=200, description="章节标题")
-    chapter_number: int = Field(..., ge=1, description="章节序号")
+    chapter_number: Optional[int] = Field(default=None, ge=1, description="章节序号（可选，后端自动计算）")
 
 
 class UpdateChapterReq(BaseModel):

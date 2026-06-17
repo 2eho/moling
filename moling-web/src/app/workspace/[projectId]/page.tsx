@@ -131,11 +131,9 @@ function WorkspaceContent({ projectId }: { projectId: string }) {
   });
 
   const handleAddChapter = async () => {
-    const title = window.prompt("请输入新章节标题：", `第${chapters.length + 1}章`);
-    if (!title || !title.trim()) return;
     try {
-      await createChapter(title.trim());
-      showToast("success", `章节「${title.trim()}」创建成功`);
+      await createChapter();
+      showToast("success", "新章节已创建");
     } catch (error: any) {
       showToast("error", `创建章节失败：${error?.message || "未知错误"}`);
     }

@@ -36,6 +36,7 @@ class ErrorCode(int, Enum):
 
     # ---- Chapter (404xx) ----
     CHAPTER_NOT_FOUND = 40403
+    CHAPTER_NUMBER_EXISTS = 40904
 
     # ---- Card Pool / Card (404xx) ----
     CARD_POOL_NOT_FOUND = 40404
@@ -49,6 +50,7 @@ class ErrorCode(int, Enum):
     GENERATION_IN_PROGRESS = 40903
 
     # ---- General (4xx/5xx) ----
+    INVALID_REQUEST = 40001
     VALIDATION_ERROR = 42201
     RATE_LIMIT_EXCEEDED = 42901
     INTERNAL_ERROR = 50001
@@ -70,11 +72,13 @@ _ERROR_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.PROJECT_NOT_FOUND: "项目不存在",
     ErrorCode.PROJECT_ACCESS_DENIED: "无权访问该项目",
     ErrorCode.CHAPTER_NOT_FOUND: "章节不存在",
+    ErrorCode.CHAPTER_NUMBER_EXISTS: "章节编号已存在",
     ErrorCode.CARD_POOL_NOT_FOUND: "卡池不存在",
     ErrorCode.CARD_NOT_FOUND: "卡片不存在",
     ErrorCode.VAULT_ENTRY_NOT_FOUND: "四库条目不存在",
     ErrorCode.GENERATION_TASK_NOT_FOUND: "生成任务不存在",
     ErrorCode.GENERATION_IN_PROGRESS: "正在生成中，请稍后再试",
+    ErrorCode.INVALID_REQUEST: "请求参数无效",
     ErrorCode.VALIDATION_ERROR: "请求参数验证失败",
     ErrorCode.RATE_LIMIT_EXCEEDED: "请求过于频繁，请稍后再试",
     ErrorCode.INTERNAL_ERROR: "服务器内部错误",
@@ -93,11 +97,13 @@ _ERROR_TO_STATUS: dict[ErrorCode, int] = {
     ErrorCode.PROJECT_NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.PROJECT_ACCESS_DENIED: status.HTTP_403_FORBIDDEN,
     ErrorCode.CHAPTER_NOT_FOUND: status.HTTP_404_NOT_FOUND,
+    ErrorCode.CHAPTER_NUMBER_EXISTS: status.HTTP_409_CONFLICT,
     ErrorCode.CARD_POOL_NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.CARD_NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.VAULT_ENTRY_NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.GENERATION_TASK_NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.GENERATION_IN_PROGRESS: status.HTTP_409_CONFLICT,
+    ErrorCode.INVALID_REQUEST: status.HTTP_400_BAD_REQUEST,
     ErrorCode.VALIDATION_ERROR: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ErrorCode.RATE_LIMIT_EXCEEDED: status.HTTP_429_TOO_MANY_REQUESTS,
     ErrorCode.INTERNAL_ERROR: status.HTTP_500_INTERNAL_SERVER_ERROR,
