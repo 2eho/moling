@@ -82,7 +82,7 @@ cat moling-server/.env | grep SENTRY_DSN
 docker logs -f moling-app --tail 100
 
 # Docker Compose 部署
-docker-compose logs -f app
+docker compose logs -f app
 
 # 查看特定时间段的日志
 docker logs moling-app --since "2026-06-16T10:00:00" --until "2026-06-16T11:00:00"
@@ -153,13 +153,13 @@ free -h
 docker restart moling-app
 
 # Docker Compose 部署
-docker-compose restart app
+docker compose restart app
 
 # 等待服务启动（约 10-30 秒）
 sleep 30
 
 # 验证服务恢复
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 ```
 
 #### 方案 2：如果是数据库问题
@@ -208,7 +208,7 @@ docker run -d --name moling-app \
   moling-app:<previous-version>
 
 # 验证服务恢复
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 ```
 
 #### 方案 5：紧急修复（如果有代码错误）
@@ -221,7 +221,7 @@ vim moling-server/app/path/to/file.py
 docker restart moling-app
 
 # 3. 验证修复
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 ```
 
 ### 预防措施
@@ -232,7 +232,7 @@ curl http://localhost:8000/api/health
    services:
      app:
        healthcheck:
-         test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+         test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
          interval: 30s
          timeout: 10s
          retries: 3
@@ -477,7 +477,7 @@ docker update --cpus=4 --memory=8g moling-db
 docker logs moling-web --tail 100
 
 # Docker Compose 部署
-docker-compose logs web
+docker compose logs web
 
 # 查看前端容器状态
 docker ps | grep moling-web

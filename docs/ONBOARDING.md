@@ -1,7 +1,7 @@
 # 墨灵(Moling) 新开发者快速上手指南
 
-> **文档版本**: 1.0.0  
-> **最后更新**: 2026-06-16  
+> **文档版本**: 1.1.0  
+> **最后更新**: 2026-06-18  
 > **维护者**: Moling Team  
 > **适用人员**: 新加入的开发人员
 
@@ -30,9 +30,10 @@
 
 **墨灵(Moling)** 是一个 AI 辅助小说创作平台，帮助用户通过 AI 能力进行小说创作、角色设定、情节设计等。
 
-- **后端技术栈**: FastAPI + PostgreSQL + Redis + Celery
-- **前端技术栈**: Next.js + React + TypeScript
+- **后端技术栈**: FastAPI>=0.115 + PostgreSQL 16 + Redis 7 + Celery>=5.5
+- **前端技术栈**: Next.js ^15.1 + React ^19.0 + TypeScript ^5.7
 - **部署方式**: Docker Compose
+- **监控组件**: Prometheus + Grafana + Sentry
 - **代码仓库**: `[请填写实际的 Git 仓库地址]`
 
 ---
@@ -174,7 +175,7 @@ pip install -e ".[dev]"
 
 ```bash
 # 启动数据库和 Redis
-docker-compose up -d db redis
+docker compose up -d db redis
 
 # 在另一个终端，进入后端目录
 cd moling-server

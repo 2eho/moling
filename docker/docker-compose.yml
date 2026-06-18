@@ -1,18 +1,23 @@
-version: "3.8"
-
 # ==============================================================================
-# Moling Docker Compose 配置
+# Moling Docker Compose — 生产级完整编排
 # ==============================================================================
-# 架构说明:
-#   - frontend: Nginx 提供前端静态文件 + 反向代理后端 API
+# 说明:
+#   - 此文件用于生产环境部署（8 个服务含监控）
+#   - 开发/快速部署用根目录 docker-compose.yml（3 核心服务）
+#   - 网络名统一为 moling-network
+#
+# 服务清单:
+#   - frontend: Nginx（前端静态文件 + 反向代理后端 API）
 #   - app: FastAPI 后端应用
 #   - worker: Celery 异步任务 worker
 #   - db: PostgreSQL 17 + pgvector 扩展
 #   - redis: Redis 7 缓存和消息队列
+#   - prometheus: 指标收集
+#   - grafana: 可视化仪表板
 #
 # 使用说明:
 #   1. 复制 moling-server/.env.example 为 moling-server/.env 并修改配置
-#   2. 运行 docker-compose up -d --build 启动所有服务
+#   2. 运行 docker compose -f docker/docker-compose.yml up -d --build
 #   3. 访问 http://localhost 查看前端
 #   4. 访问 http://localhost/api/v1/docs 查看 API 文档
 # ==============================================================================

@@ -1,6 +1,6 @@
 # 🌿 墨灵 Git 工作流指南
 
-> 版本：v1.0 | 最后更新：2026-06-17 | 适用团队：5人（郝交付、贝洛奇、贾思敏、严过关、卜宕机）
+> 版本：v1.1 | 最后更新：2026-06-18 | 适用团队：5人（郝交付、贝洛奇、贾思敏、严过关、卜宕机）
 
 ---
 
@@ -382,49 +382,32 @@ Approve
 
 ---
 
-## 8. CI 配置优化
+## 8. CI 配置
 
-### 8.1 当前问题
+### 8.1 当前 CI 结构
 
-审查了 `.github/workflows/` 下的 6 个文件，发现如下问题：
+CI 已合并为单一的 `ci.yml`（`.github/workflows/ci.yml`），包含 4 个 Job：
 
-| 问题 | 严重程度 | 说明 |
-|------|----------|------|
-| 🔴 Workflow 文件过多 | 高 | 6 个文件分散管理，触发条件不一致 |
-| 🔴 冗余的 CI 配置 | 中 | `ci.yml` 和 `ci-cd.yml` 功能高度重叠 |
-| 🟡 触发分支不一致 | 中 | 有的监听 `main, master, develop`，有的只监听 `main` |
-| 🟡 宽松模式过度 | 中 | 大量 `|| true` 导致 CI 几乎不会失败 |
-| 🔵 缺少自动 label | 低 | PR 没有按类型自动打标签 |
+| Job | 名称 | 阻断 | 说明 |
+|-----|------|:----:|------|
+| `backend-test` | 后端测试 | ✅ | PostgreSQL 16 + Redis 7，pytest 全量测试 |
+| `frontend-build` | 前端构建验证 | ✅ | Node.js 22，`npm ci` + `npm run build` |
+| `lint` | 代码检查 | ❌ | flake8 + Bandit 安全扫描，`continue-on-error: true` |
+| `openapi-validate` | OpenAPI 校验 | ✅ | 生成并校验 OpenAPI JSON 格式 |
 
-### 8.2 建议合并方案
+**触发条件**：push / PR 到 `develop` 和 `main`  
+**设计原则**：核心检查（测试+构建）必须通过 → 阻断合并；代码检查报告但不阻断
 
-将 6 个 workflow 合并为 3 个：
+### 8.2 合并状态
 
-| 新文件 | 原来合并自 | 触发条件 |
-|--------|-----------|----------|
-| `ci.yml` | `ci.yml` + `ci-cd.yml` + `openapi-check.yml` | push/PR 到 `develop`, `main` |
-| `database.yml` | `database-migration-test.yml` + `backup-test.yml` | 修改 `models/` `alembic/` 或 定时 |
-| `deploy.yml` | 新建（部署专用） | `workflow_dispatch` 手动触发 |
-
-### 8.3 关键优化
-
-**核心检查必须阻断（不再用 `|| true`）：**
-```yaml
-# 改之前
-python -m pytest tests/ -v || true
-
-# 改之后
-python -m pytest tests/ -v --junitxml=report.xml
-```
-
-**路径过滤精确触发：**
-```yaml
-on:
-  push:
-    paths:
-      - 'moling-server/**'
-    # 前端变动不触发后端 CI
-```
+| 项目 | 状态 |
+|------|:----:|
+| Workflow 文件合并（6 → 1） | ✅ 已完成 |
+| 移除 `|| true` 宽松模式 | ✅ 已完成 |
+| 统一触发分支（develop, main） | ✅ 已完成 |
+| Bandit 安全扫描 | ✅ 已集成 |
+| flake8 代码风格检查 | ✅ 已集成 |
+| 前端 lint 非阻断 | ✅ `continue-on-error: true` |
 
 ---
 

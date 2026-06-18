@@ -1,7 +1,7 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.0.0  
-> **最后更新**: 2026-06-16  
+> **文档版本**: 1.2.0  
+> **最后更新**: 2026-06-18  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
 
@@ -16,7 +16,8 @@
 5. [部署架构](#部署架构)
 6. [第三方服务](#第三方服务)
 7. [目录结构](#目录结构)
-8. [安全架构](#安全架构)
+8. [Phase 4 核心架构](#phase-4-核心架构)
+9. [安全架构](#安全架构)
 
 ---
 
@@ -236,87 +237,93 @@ sequenceDiagram
 
 ## 部署架构
 
-### Docker Compose 服务列表
+### Docker Compose 两套编排
+
+项目提供两套 Docker Compose 编排，适用于不同场景：
+
+| 文件 | 用途 | 服务数 | 特点 |
+|------|------|:------:|------|
+| `./docker-compose.yml` | 开发 / 快速部署 | **4** | 仅核心服务（db, redis, app, web），端口全暴露，便于本地调试 |
+| `./docker/docker-compose.yml` | 生产级完整编排 | **8** | 含 Nginx 反向代理、Celery Worker、Prometheus、Grafana；仅 Nginx 对外暴露端口，db/redis 仅内网可达 |
+
+#### 1. 根目录 docker-compose.yml — 开发 / 快速部署
 
 ```yaml
-# 完整的 docker-compose.yml 配置说明
+# 启动: docker compose up -d --build
+# 访问: http://localhost:3000（前端）| http://localhost:8000/docs（后端 API）
 
 services:
-  # 前端服务
-  web:
-    build: ./moling-web
-    container_name: moling-web
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_BASE_URL=${API_BASE_URL}
-
-  # 后端 API 服务
-  app:
-    build: ./moling-server
-    container_name: moling-app
-    ports:
-      - "8000:8000"
-    env_file:
-      - ./moling-server/.env
-    depends_on:
-      - db
-      - redis
-
-  # Celery Worker 服务
-  worker:
-    build: ./moling-server
-    container_name: moling-worker
-    command: celery -A app.core.celery_app worker --loglevel=info
-    env_file:
-      - ./moling-server/.env
-    depends_on:
-      - db
-      - redis
-
-  # PostgreSQL 数据库
   db:
     image: postgres:16-alpine
     container_name: moling-db
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    ports: ["5432:5432"]
 
-  # Redis 缓存/消息队列
   redis:
     image: redis:7-alpine
     container_name: moling-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
+    ports: ["6379:6379"]
+    command: redis-server --appendonly yes
 
-  # Prometheus 监控
-  prometheus:
+  app:
+    build: ./moling-server
+    container_name: moling-app
+    ports: ["8000:8000"]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web:
+    build: ./moling-web
+    container_name: moling-web
+    ports: ["3000:3000"]
+    depends_on: [app]
+```
+
+#### 2. docker/docker-compose.yml — 生产级完整编排
+
+```yaml
+# 启动: docker compose -f docker/docker-compose.yml up -d --build
+# 访问: http://localhost（前端 Nginx :80）| http://localhost/api/v1/docs（API 文档）
+
+services:
+  frontend:       # Nginx（前端 + API 反向代理）
+    build: { context: ../moling-web, dockerfile: Dockerfile }
+    container_name: moling-frontend
+    ports: ["80:80", "443:443"]
+
+  app:            # 后端 FastAPI（仅 expose，不暴露宿主机端口）
+    build: { context: ../moling-server, dockerfile: Dockerfile }
+    container_name: moling-api
+    expose: ["8000"]
+
+  worker:         # Celery Worker
+    build: { context: ../moling-server, dockerfile: Dockerfile }
+    container_name: moling-worker
+    command: celery -A app.core.celery_app worker --loglevel=info
+
+  db:             # PostgreSQL 17 + pgvector
+    image: pgvector/pgvector:pg17
+    container_name: moling-db
+    # 生产环境不对外暴露端口（ports 注释掉）
+
+  redis:          # Redis 7（带密码持久化）
+    image: redis:7-alpine
+    container_name: moling-redis
+    # 生产环境不对外暴露端口（ports 注释掉）
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+  prometheus:     # 监控指标收集
     image: prom/prometheus:latest
     container_name: moling-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheusdata:/prometheus
+    ports: ["9090:9090"]
 
-  # Grafana 可视化
-  grafana:
+  grafana:        # 可视化仪表板
     image: grafana/grafana:latest
     container_name: moling-grafana
-    ports:
-      - "3001:3000"
-    volumes:
-      - ./docker/grafana/provisioning:/etc/grafana/provisioning
-      - grafanadata:/var/lib/grafana
+    ports: ["3001:3000"]    # 宿主机 3001 → 容器内 3000
 ```
+
+> **提示**：两套编排使用相同的 Docker 网络名 `moling-network`，可在同一主机共存（注意端口冲突）。
 
 ### 部署架构图
 
@@ -357,17 +364,20 @@ graph TB
 
 ### 端口映射
 
-| 服务 | 容器内端口 | 宿主机端口 | 说明 |
-|------|------------|------------|------|
-| Nginx | 80/8080 | 8080 | 反向代理入口 |
-| moling-web | 3000 | 3000 | 前端服务（仅内网） |
-| moling-app | 8000 | 8000 | 后端 API（仅内网） |
-| moling-db | 5432 | 5432 | PostgreSQL（仅内网） |
-| moling-redis | 6379 | 6379 | Redis（仅内网） |
-| Prometheus | 9090 | 9090 | 监控指标（仅内网） |
-| Grafana | 3000 | 3001 | 可视化仪表板（仅内网） |
+> **Docker 端口格式**：`"宿主机:容器"`（如 `"3001:3000"` 表示宿主机 3001 → 容器内 3000）
 
-> **安全建议**：生产环境中，仅暴露 Nginx 端口（80/443/8080），其他服务只在 Docker 网络内访问。
+| 服务 | 容器内端口 | 宿主机端口 | Docker 映射 | 说明 |
+|------|:----------:|:----------:|-------------|------|
+| Nginx (frontend) | 80, 443 | 80, 443 | `80:80`, `443:443` | 反向代理入口（仅生产编排；根目录编排无此服务） |
+| moling-web | 3000 | 3000 | `3000:3000` | 前端 Next.js |
+| moling-app | 8000 | 8000 | `8000:8000` | 后端 FastAPI（开发编排暴露；生产编排仅 `expose` 内网可达） |
+| moling-worker | — | — | 无端口 | Celery 异步任务 Worker（仅生产编排） |
+| moling-db | 5432 | 5432 | `5432:5432` | PostgreSQL（开发编排暴露；生产编排注释掉 ports） |
+| moling-redis | 6379 | 6379 | `6379:6379` | Redis（开发编排暴露；生产编排注释掉 ports） |
+| Prometheus | 9090 | 9090 | `9090:9090` | 监控指标收集（仅生产编排） |
+| Grafana | 3000 | 3001 | `3001:3000` | 可视化仪表板（仅生产编排；容器内 3000 → 宿主机 3001） |
+
+> **安全建议**：生产环境中仅暴露 Nginx 端口（80/443），其他服务只在 Docker 网络内访问。根目录 `docker-compose.yml` 为开发便利暴露了所有端口，**切勿直接用于生产**。
 
 ---
 
@@ -506,6 +516,83 @@ MolingProject/
 
 ---
 
+## Phase 4 核心架构
+
+### 状态机
+
+Phase 4 是墨灵的核心流水线：从 LLM 提取章节变更 → 逐库合并 → 事务提交。完整状态定义如下：
+
+```
+IDLE → QUEUED → LOCKING → EXTRACTING → VERIFYING → MERGING → COMMITTING → DONE
+                 ↓           ↓            ↓          ↓         ↓
+               RETRY       RETRY        RETRY      RETRY     FAILED
+                 ↓
+               ⏎ (回补到 QUEUED，最多 5 次)
+                 5 次后 → FAILED
+```
+
+| 状态 | 说明 |
+|------|------|
+| `IDLE` | 初始状态，等待任务 |
+| `QUEUED` | 已入队列 |
+| `LOCKING` | 获取分布式锁 |
+| `EXTRACTING` | 调用 LLM 提取变更 |
+| `VERIFYING` | SourceText Grounding 验证（防幻觉） |
+| `MERGING` | 四库合并（人物/时间线/承诺/世界观） |
+| `COMMITTING` | 事务提交 |
+| `DONE` | 完成 |
+| `FAILED` | 失败（不可恢复） |
+| `RETRY` | 可重试失败（指数退避） |
+
+### 分布式锁
+
+使用 Redis SET NX EX 实现项目级写锁，防止同一项目并发写入：
+
+- **Key**: `phase4:lock:{project_id}`
+- **TTL**: 30s（自动过期防死锁）
+- **轮询策略**: 每 200ms 重试，最多 15 次（总超时 3s）
+- **释放**: 仅锁持有者（通过 `scheduler_id` 验证）可释放
+
+### 幂等性（三层防护）
+
+| 层 | 范围 | 机制 |
+|:--:|------|------|
+| L1 | 内存 | in-memory nonce LRU 缓存（最多 1000 条） |
+| L2 | 数据库 | `Phase4Task.nonce` UNIQUE 约束 |
+| L3 | 业务 | 幂等键 `chapter_id + chapter_text_hash` |
+
+### 失败回补
+
+指数退避重试，防止瞬时故障导致任务失败：
+
+| 重试次数 | 等待间隔 |
+|:--------:|----------|
+| 第 1 次 | 10s |
+| 第 2 次 | 30s |
+| 第 3 次 | 60s |
+| 第 4 次 | 120s |
+| 第 5 次 | 300s |
+| 超过 5 次 | 标记 FAILED，通知用户 |
+
+### 事务边界
+
+```
+LLM 调用（事务外，可重试，不浪费 token）
+    ↓
+savepoint ─ 四库合并写入
+          ├─ 卡牌充实
+          ├─ 卡牌淘汰
+          └─ 变更日志
+    ↓
+savepoint 失败 → 回滚到 savepoint（保留 LLM 结果）
+    ↓
+db.commit() → 全部成功
+```
+
+详细规格见 `docs/SPECIFICATIONS.md`。
+
+---
+
 ## 安全架构
 
 ### 认证和授权
@@ -618,6 +705,7 @@ sequenceDiagram
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.2.0 | 2026-06-18 | 修正 Docker Compose 两套编排说明、端口映射表（Nginx 80/443、Grafana 3001:3000）、新增 Phase 4 核心架构章节 | Moling Team |
 | 1.0.0 | 2026-06-16 | 初始版本 | Moling Team |
 
 ---
