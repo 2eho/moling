@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 # ── 出场方式正则 ──
 _PATTERN_ACTION = re.compile(r'[就便一]?\s*(?:推|走|跑|跳|冲|站|坐|躺|踢|打|抓|拿|拔|抽|举)', re.DOTALL)

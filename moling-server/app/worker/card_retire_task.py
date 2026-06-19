@@ -12,10 +12,6 @@ from __future__ import annotations
 
 import logging
 
-from celery import Task
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.config import get_settings
 from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)

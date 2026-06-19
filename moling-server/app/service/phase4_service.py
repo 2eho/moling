@@ -12,18 +12,18 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.config import get_settings
-from app.dao import chapter_dao, project_dao, vault_dao, card_dao, generation_dao, phase4_dao
-from app.service.card_retire_service import card_retire_service, RetireResult
+from app.dao import chapter_dao, project_dao, vault_dao, card_dao, phase4_dao
+from app.service.card_retire_service import card_retire_service
 from app.service.merge_service import (
     ConfidenceLevel,
     evaluate_confidence,
     should_auto_apply,
 )
 from app.errors import ErrorCode, NotFoundError, ValidationError, AppError
-from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool, GenerationTask
+from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool
 from app.models.phase4_task import Phase4Task
 from app.llm.client import llm_client
 
@@ -160,7 +160,7 @@ class Phase4Service:
                 "message": "该收纳任务已存在",
             }
 
-        from uuid import uuid4
+
         task = Phase4Task(
             nonce=nonce,
             project_id=str(project_id),
@@ -189,7 +189,6 @@ class Phase4Service:
         Returns:
             dict with analysis results
         """
-        import asyncio
         from sqlalchemy.ext.asyncio import (
             AsyncSession,
             async_sessionmaker,
@@ -391,7 +390,7 @@ class Phase4Service:
 
         try:
             if chapter is None or project is None:
-                raise ValueError(f"Chapter or project not found")
+                raise ValueError("Chapter or project not found")
 
             # 3. 调用 LLM 分析章节内容，提取变更
             logger.info(f"Analyzing chapter {chapter.id} content with LLM")

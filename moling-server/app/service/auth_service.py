@@ -8,17 +8,16 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session as SyncSession
 
 from app.config import get_settings
 from app.dao import user_dao
 from app.errors import AuthError, ConflictError, ErrorCode, NotFoundError
-from app.schemas.auth import LoginReq, LogoutReq, PasswordResetReq, PasswordResetRequestReq, RegisterReq, TokenResp, UserResp
+from app.schemas.auth import LoginReq, PasswordResetReq, PasswordResetRequestReq, RegisterReq, TokenResp, UserResp
 
 settings = get_settings()
 
@@ -478,8 +477,6 @@ class AuthService:
 
     async def update_profile(self, db: AsyncSession, user_id: int, req) -> UserResp:
         """Update user profile (username, avatar_url)."""
-        from app.schemas.auth import UpdateProfileReq
-        
         user = await user_dao.get(db, user_id)
         if user is None:
             raise NotFoundError(

@@ -3,14 +3,11 @@
 Business logic for the Four Databases (四库): Characters, Timeline, Plot Promises, World Building.
 """
 
-from typing import Optional
-
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import vault_dao, project_dao, chapter_dao
 from app.errors import NotFoundError, ErrorCode, ForbiddenError
-from app.models import VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, Chapter
+from app.models import VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
 from app.schemas.vault import CharacterResp, TimelineResp, PlotPromiseResp, WorldResp
 
 
@@ -617,9 +614,7 @@ class VaultService:
         Returns:
             dict with update results (counts of created/updated entries)
         """
-        import asyncio
-        from datetime import datetime, timezone
-        from sqlalchemy import func, select
+        from sqlalchemy import select
         from sqlalchemy.ext.asyncio import (
             AsyncSession,
             async_sessionmaker,

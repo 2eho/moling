@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 import platform
 
-from celery import Task
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -69,7 +68,7 @@ def run_generation_task(self, generation_task_id: str) -> dict:
 
         # Execute the generation (service handles db session internally)
         import asyncio
-        result = asyncio.run(service.execute_generation(
+        _ = asyncio.run(service.execute_generation(
             None,  # db session created inside service
             generation_task_id,
         ))

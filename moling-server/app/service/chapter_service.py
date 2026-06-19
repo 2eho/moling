@@ -3,6 +3,7 @@
 Business logic for chapter CRUD operations.
 """
 
+import logging
 from typing import Optional
 from datetime import datetime, timezone
 
@@ -11,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import chapter_dao, project_dao
 from app.errors import NotFoundError, ErrorCode, PermissionError
-from app.models import Chapter, Project
+from app.models import Chapter
 from app.schemas.chapter import CreateChapterReq, UpdateChapterReq, ChapterResp
+
+logger = logging.getLogger(__name__)
 
 
 class ChapterService:

@@ -34,7 +34,7 @@ def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
 
     try:
         import asyncio
-        from sqlalchemy import select, func
+        from sqlalchemy import select
         from sqlalchemy.ext.asyncio import (
             AsyncSession,
             async_sessionmaker,
@@ -42,7 +42,7 @@ def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
         )
 
         from app.config import get_settings
-        from app.dao import chapter_dao, project_dao
+        from app.dao import project_dao
         from app.models.chapter import Chapter
         from app.service.vault_service import VaultService
 

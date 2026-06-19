@@ -12,9 +12,6 @@ from __future__ import annotations
 
 import logging
 
-from celery import Task
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.config import get_settings
 from app.worker.celery_app import celery_app
 
@@ -65,7 +62,7 @@ def update_vault_entries(self, project_id: int, chapter_id: int) -> dict:
         from app.service.vault_service import VaultService
 
         service = VaultService()
-        result = asyncio.run(service.update_from_chapter(project_id, chapter_id))
+        _ = asyncio.run(service.update_from_chapter(project_id, chapter_id))
 
         return {"status": "done", "project_id": project_id, "chapter_id": chapter_id}
 

@@ -5,9 +5,8 @@ Business logic for card pool management and card draw algorithm (Phase 4).
 
 from typing import Optional
 import random
-from datetime import datetime, timezone
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import card_dao, project_dao

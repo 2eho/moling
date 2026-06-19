@@ -84,7 +84,6 @@ def A1_analyze_opening(chapters: list[str]) -> A1Result:
 def _extract_opening_features(text: str) -> dict[str, Any]:
     """提取开篇特征"""
     sentences = [s for s in re.split(r'[。！？!?\n]+', text) if s.strip()]
-    total_words = len(re.findall(r'[\u4e00-\u9fff]', text))
     total_sentences = max(len(sentences), 1)
 
     short_sentences = sum(1 for s in sentences if len(s) <= 15)

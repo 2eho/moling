@@ -14,7 +14,7 @@ Usage:
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional, Set, Tuple
+from typing import Any, List, Optional, Set
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -7,7 +7,6 @@ and raise ``AppError`` exceptions on failures.
 All services are exposed as singleton instances for easy ``Depends()`` injection.
 """
 
-from app.service.auth_service import _auth_service_instance
 from app.service.project_service import project_service
 from app.service.chapter_service import chapter_service
 from app.service.card_service import card_service

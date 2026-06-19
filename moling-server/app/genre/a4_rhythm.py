@@ -8,10 +8,8 @@ A4 节奏曲线拟合
 
 from __future__ import annotations
 
-import math
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
 
 # ── 动作/情绪词词典 ──
 _ACTION_WORDS = re.compile(r'(?:杀|战|逃|追|攻|挡|斗|拔|冲|撞|劈|砍|刺|斩|爆|轰)')
@@ -125,7 +123,7 @@ def A4_fit_rhythm_curve(
     # Step 5: 节奏类型判定
     avg_slope = sum(slopes) / max(len(slopes), 1)
     max_slope = max(slopes) if slopes else 0
-    min_slope = min(slopes) if slopes else 0
+    _ = min(slopes) if slopes else 0
     sign_changes = sum(
         1 for j in range(1, len(slopes))
         if slopes[j] * slopes[j - 1] < 0

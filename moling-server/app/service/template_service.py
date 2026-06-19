@@ -9,7 +9,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dao import template_dao, project_dao
+from app.dao import template_dao
 from app.errors import ErrorCode, NotFoundError
 from app.models import Project
 from app.schemas.template import TemplateResp, CreateTemplateReq, UpdateTemplateReq

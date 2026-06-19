@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 
 from sqlalchemy import select
@@ -364,6 +363,7 @@ class SecretService:
         
         # 2. 根据章节事件传播现有秘密
         logger.info(f"Updating secret matrix for chapter {chapter_id}: propagating secrets")
+        characters = await vault_dao.get_characters(db, project_id)
         propagated = await self._propagate_secrets_from_chapter(
             db, project_id, chapter_id, chapter_content, characters
         )

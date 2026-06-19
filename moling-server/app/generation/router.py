@@ -8,7 +8,6 @@ Endpoints:
 """
 
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession

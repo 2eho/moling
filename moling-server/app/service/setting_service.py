@@ -5,9 +5,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 

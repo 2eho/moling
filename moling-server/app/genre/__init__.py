@@ -29,10 +29,10 @@
 
 from __future__ import annotations
 
-from app.genre.a1_opening import A1_analyze_opening, A1Result, OpeningPattern
-from app.genre.a2_characters import A2_cluster_characters, A2Result, CharacterEntry, CharacterTimingTemplate
-from app.genre.a3_hooks import A3_quantify_hooks, A3Result, ChapterHookResult
-from app.genre.a4_rhythm import A4_fit_rhythm_curve, A4Result, RhythmProfile
+from app.genre.a1_opening import A1_analyze_opening, A1Result
+from app.genre.a2_characters import A2_cluster_characters, A2Result
+from app.genre.a3_hooks import A3_quantify_hooks, A3Result
+from app.genre.a4_rhythm import A4_fit_rhythm_curve, A4Result
 from app.genre.a5_profile_output import A5_summarize_patterns, profile_to_json
 from app.genre.models import GenreProfile
 

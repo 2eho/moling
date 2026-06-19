@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 # ── 钩子类型与关键词模式 ──
@@ -68,7 +67,6 @@ def A3_quantify_hooks(chapters: list[str]) -> A3Result:
     输入：小说的前 3 章全文列表
     输出：每章钩子详情 + 全篇统计
     """
-    total = len(chapters)
     chapter_results: list[ChapterHookResult] = []
 
     for ch_idx, text in enumerate(chapters):
@@ -76,7 +74,6 @@ def A3_quantify_hooks(chapters: list[str]) -> A3Result:
         chapter_results.append(result)
 
     all_densities = [r.hook_density for r in chapter_results]
-    all_scores = [r.total_score for r in chapter_results]
     avg_density = sum(all_densities) / max(len(all_densities), 1)
     max_density = max(all_densities) if all_densities else 0
 

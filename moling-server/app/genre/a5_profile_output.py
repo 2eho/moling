@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from typing import Any
 
 from app.genre.models import GenreProfile
 from app.genre.a1_opening import A1Result
@@ -42,7 +41,7 @@ def A5_summarize_patterns(
     自动执行去版权化过滤（移除受版权保护的角色名/设定名）。
     """
     # 去版权化过滤
-    filtered_chars = _filter_copyrighted(a2.characters)
+    _ = _filter_copyrighted(a2.characters)
     filtered_templates = []
     for t in a2.timing_templates:
         filtered_templates.append(t)

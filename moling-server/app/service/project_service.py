@@ -9,7 +9,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.dao import project_dao, chapter_dao
+from app.dao import project_dao
 from app.errors import NotFoundError, ErrorCode, PermissionError
 from app.models import Project, Chapter
 from app.schemas.project import CreateProjectReq, UpdateProjectReq, ProjectResp, ProjectStatsResp
