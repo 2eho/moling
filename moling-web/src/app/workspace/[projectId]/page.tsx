@@ -7,10 +7,8 @@ import { useTheme, THEMES } from "@/stores/useTheme";
 import type { ThemeId } from "@/stores/useTheme";
 import { Sidebar } from "@/components/vibe/Sidebar";
 import { ThemeSwitcher } from "@/components/vibe/ThemeSwitcher";
-import {
-  PanelRight,
-  X,
-} from "lucide-react";
+import { AgentPanel } from "@/components/vibe/AgentPanel";
+import { PanelRight } from "lucide-react";
 
 /** 多书 Mock 数据 */
 const MOCK_PROJECTS = [
@@ -175,58 +173,10 @@ export default function WorkspacePage() {
       </main>
 
       {/* ================================================================
-          Right Panel — collapsible
+          Right Panel — Agent of Agents 调度中心
           ================================================================ */}
       {rightPanelOpen && (
-        <aside
-          className="shrink-0 h-full border-l flex flex-col transition-all duration-300"
-          style={{
-            width: 260,
-            borderColor: "var(--th-border-subtle)",
-            background: "var(--th-card)",
-          }}
-        >
-          <div
-            className="flex items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: "var(--th-border-subtle)" }}
-          >
-            <span className="text-xs font-semibold" style={{ color: "var(--th-text-2)" }}>
-              项目信息
-            </span>
-            <button
-              onClick={() => setRightPanelOpen(false)}
-              className="p-1 rounded transition-colors hover:opacity-80"
-              style={{ color: "var(--th-text-3)" }}
-              aria-label="关闭右栏"
-            >
-              <X size={14} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            <dl className="space-y-3 text-xs">
-              <div>
-                <dt style={{ color: "var(--th-text-4)" }} className="mb-1">
-                  类型
-                </dt>
-                <dd style={{ color: "var(--th-text-2)" }}>{project.genre}</dd>
-              </div>
-              <div>
-                <dt style={{ color: "var(--th-text-4)" }} className="mb-1">
-                  进度
-                </dt>
-                <dd style={{ color: "var(--th-text-2)" }}>
-                  第 {project.currentChapter} / {project.totalChapters} 章
-                </dd>
-              </div>
-              <div>
-                <dt style={{ color: "var(--th-text-4)" }} className="mb-1">
-                  简介
-                </dt>
-                <dd style={{ color: "var(--th-text-2)" }}>{project.summary}</dd>
-              </div>
-            </dl>
-          </div>
-        </aside>
+        <AgentPanel onClose={() => setRightPanelOpen(false)} />
       )}
     </div>
   );
