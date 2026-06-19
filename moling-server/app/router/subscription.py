@@ -6,8 +6,10 @@ Endpoints for subscription plans and checkout (basic stub).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_current_user, get_db
@@ -32,12 +34,36 @@ async def list_plans(
 
 @router.post("/create-checkout", response_model=dict)
 async def create_checkout(
+    plan_id: int = Query(..., description="订阅方案 ID"),
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Stub endpoint for creating a checkout session (coming soon)."""
+    """创建支付结算会话，返回合理的占位数据。"""
+    # 查询方案信息
+    result = await db.execute(
+        select(Plan).where(Plan.id == plan_id)
+    )
+    plan = result.scalar_one_or_none()
+
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    # 生成占位 checkout 数据
+    import uuid
+    checkout_id = str(uuid.uuid4())
+
     return {
-        "checkout_url": None,
-        "message": "Coming soon",
+        "checkout_id": checkout_id,
+        "checkout_url": f"/checkout/{checkout_id}",
+        "plan": {
+            "id": plan.id,
+            "name": plan.name,
+            "price": plan.price,
+            "currency": plan.currency,
+            "interval": plan.interval,
+        },
+        "status": "pending",
+        "message": "请前往支付页面完成付款",
     }
 
 
@@ -51,7 +77,7 @@ async def create_subscription(
     # Check if user already has an active subscription
     result = await db.execute(
         select(UserSubscription).where(
-            UserSubscription.user_id == int(current_user["id"]),
+            UserSubscription.user_id == str(current_user.id),
             UserSubscription.status.in_(["active", "trialing"]),
         )
     )
@@ -79,8 +105,8 @@ async def create_subscription(
         end_date = now + timedelta(days=30)
 
     subscription = UserSubscription(
-        user_id=int(current_user["id"]),
-        plan_id=req.plan_id,
+        user_id=str(current_user.id),
+        plan_id=str(req.plan_id),
         status="active",
         start_date=now,
         end_date=end_date,
@@ -102,7 +128,7 @@ async def get_current_subscription(
     """Get current user's active subscription."""
     result = await db.execute(
         select(UserSubscription).where(
-            UserSubscription.user_id == int(current_user["id"]),
+            UserSubscription.user_id == str(current_user.id),
             UserSubscription.status.in_(["active", "trialing"]),
         ).order_by(UserSubscription.created_at.desc())
     )
@@ -120,13 +146,48 @@ async def get_current_subscription(
     }
 
 
-@router.get("/payment-history")
+@router.get("/payment-history", response_model=dict)
 async def get_payment_history(
     current_user=Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
 ):
     """获取用户支付历史记录。"""
-    return [
-        # 示例: 先返回空数据，后续接入数据库
-    ]
+    # 查询数据库中的订阅记录作为支付历史
+    result = await db.execute(
+        select(UserSubscription)
+        .where(UserSubscription.user_id == str(current_user.id))
+        .order_by(UserSubscription.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    subscriptions = result.scalars().all()
+
+    # 获取总数
+    count_result = await db.execute(
+        select(func.count()).select_from(UserSubscription)
+        .where(UserSubscription.user_id == str(current_user.id))
+    )
+    total = count_result.scalar() or 0
+
+    items = []
+    for sub in subscriptions:
+        items.append({
+            "id": sub.id,
+            "plan_id": sub.plan_id,
+            "status": sub.status,
+            "amount": 0.0,  # 金额暂不追踪，后续对接支付网关
+            "currency": "CNY",
+            "start_date": sub.start_date.isoformat() if sub.start_date else None,
+            "end_date": sub.end_date.isoformat() if sub.end_date else None,
+            "auto_renew": sub.auto_renew if hasattr(sub, 'auto_renew') else True,
+            "created_at": sub.created_at.isoformat() if sub.created_at else None,
+        })
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }

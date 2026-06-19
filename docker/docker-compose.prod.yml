@@ -1,0 +1,291 @@
+# ==============================================================================
+# 墨灵 Moling — 生产环境 Docker Compose（CI/CD 自动化版）
+# ==============================================================================
+# 说明:
+#   - 此文件专为 CI/CD 自动化部署设计，使用预构建的 GHCR 镜像
+#   - 本地构建用 docker/docker-compose.yml，手动部署用根目录 docker-compose.yml
+#   - 镜像由 GitHub Actions 自动构建并推送到 ghcr.io/<repo>/moling-backend:latest
+#
+# 使用:
+#   docker compose -f docker-compose.prod.yml pull    # 拉取最新镜像
+#   docker compose -f docker-compose.prod.yml up -d   # 启动全部服务
+#   docker compose -f docker-compose.prod.yml ps      # 查看运行状态
+#
+# 服务清单:
+#   - frontend: Nginx（前端静态文件 + API 反向代理）
+#   - app:      FastAPI 后端应用（可横向扩展）
+#   - worker:   Celery 异步任务 worker
+#   - db:       PostgreSQL 17 + pgvector 扩展
+#   - redis:    Redis 7 缓存和消息队列
+#   - prometheus: 指标收集（可选）
+#   - grafana:    可视化仪表板（可选）
+# ==============================================================================
+
+services:
+  # ==========================================================================
+  # Frontend — Nginx 静态文件服务 + API 反向代理
+  # ==========================================================================
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-2eho/moling}/moling-frontend:latest
+    container_name: moling-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ==========================================================================
+  # App — FastAPI 后端应用
+  # ==========================================================================
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY:-2eho/moling}/moling-backend:latest
+    container_name: moling-api
+    expose:
+      - "8000"
+    env_file:
+      - ../moling-server/.env
+    environment:
+      # === 数据库（可通过 GitHub Secrets 覆盖）===
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///app/data/moling.db}
+      # === Redis ===
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-moling_redis_password}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-moling_redis_password}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-moling_redis_password}@redis:6379/2
+      # === 环境标识 ===
+      - ENVIRONMENT=production
+      - DEPLOY_VERSION=${DEPLOY_VERSION:-unknown}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "1G"
+        reservations:
+          cpus: "0.5"
+          memory: "256M"
+
+  # ==========================================================================
+  # Worker — Celery 异步任务
+  # ==========================================================================
+  worker:
+    image: ghcr.io/${GITHUB_REPOSITORY:-2eho/moling}/moling-backend:latest
+    container_name: moling-worker
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
+    env_file:
+      - ../moling-server/.env
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///app/data/moling.db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-moling_redis_password}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-moling_redis_password}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-moling_redis_password}@redis:6379/2
+      - ENVIRONMENT=production
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ==========================================================================
+  # DB — PostgreSQL 17 + pgvector
+  # ==========================================================================
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: moling-db
+    # 生产不对外暴露端口
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-moling}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-moling}
+      POSTGRES_DB: ${POSTGRES_DB:-moling}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-moling} -d ${POSTGRES_DB:-moling}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ==========================================================================
+  # Redis 7
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: moling-redis
+    volumes:
+      - redisdata:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-moling_redis_password}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-moling_redis_password}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
+
+  # ==========================================================================
+  # Prometheus — 可观测性（可选，按需启动）
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: moling-prometheus
+    profiles:
+      - monitoring
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheusdata:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=200h
+      - --web.enable-lifecycle
+    networks:
+      - moling-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Grafana — 可视化仪表板（可选，按需启动）
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: moling-grafana
+    profiles:
+      - monitoring
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - moling-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+# ============================================================================
+# 网络
+# ============================================================================
+networks:
+  moling-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ============================================================================
+# 持久化卷
+# ============================================================================
+volumes:
+  pgdata:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PGDATA_PATH:-./data/postgres}
+  redisdata:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${REDISDATA_PATH:-./data/redis}
+  prometheusdata:
+    driver: local
+  grafanadata:
+    driver: local

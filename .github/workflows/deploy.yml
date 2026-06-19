@@ -1,0 +1,553 @@
+# ==============================================================================
+# 墨灵 Moling — 自动化 CI/CD 部署管道
+# ==============================================================================
+# 触发条件:
+#   push to main      → 自动执行：测试 → 构建镜像 → 部署到生产
+#   workflow_dispatch  → 手动触发，可选环境 (staging/production)
+#
+# 流水线阶段:
+#   1. lint         — 代码质量 + 安全扫描（不阻断）
+#   2. test         — 后端 pytest + 前端构建验证
+#   3. build        — Docker 多平台镜像构建 + 推送到 GHCR
+#   4. deploy       — SSH 远程部署 + 数据库迁移 + 健康检查
+#   5. verify       — 冒烟测试 + 部署状态通知
+#   6. rollback     — 失败自动回滚（保留最近 3 个版本）
+#
+# 需要的 GitHub Secrets:
+#   SSH_HOST         — 生产服务器 IP/域名
+#   SSH_USER         — SSH 用户名
+#   SSH_PRIVATE_KEY  — SSH 私钥
+#   DEPLOY_PATH      — 服务器上的项目路径（如 /opt/moling）
+#   GHCR_TOKEN       — GitHub PAT（用于拉取私有镜像，可选）
+#
+# 服务器要求:
+#   - Docker 24+ / Docker Compose v2
+#   - Nginx（宿主机反向代理到容器）
+#   - 足够的磁盘空间（镜像 + 备份）
+# ==============================================================================
+
+name: "Moling 自动部署"
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".gitignore"
+      - "previews/**"
+      - "specs/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "部署目标环境"
+        required: true
+        type: choice
+        default: "production"
+        options:
+          - production
+          - staging
+      skip_tests:
+        description: "跳过测试（紧急热修复用）"
+        type: boolean
+        default: false
+      skip_build:
+        description: "跳过镜像构建（仅重启服务）"
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/moling-backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/moling-frontend
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "22"
+
+jobs:
+  # ==========================================================================
+  # Job 0: 准备 — 生成部署元数据
+  # ==========================================================================
+  prepare:
+    name: "准备部署"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+      deploy_env: ${{ steps.meta.outputs.deploy_env }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成版本信息
+        id: meta
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          VERSION="$(date +%Y%m%d-%H%M%S)-${SHORT_SHA}"
+          DEPLOY_ENV="${{ github.event.inputs.environment || 'production' }}"
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "deploy_env=${DEPLOY_ENV}" >> $GITHUB_OUTPUT
+
+          echo "📦 版本: ${VERSION}"
+          echo "🌍 环境: ${DEPLOY_ENV}"
+          echo "🔖 提交: ${GITHUB_SHA}"
+
+  # ==========================================================================
+  # Job 1: Lint — 代码质量检查（报告不阻断）
+  # ==========================================================================
+  lint:
+    name: "代码检查"
+    runs-on: ubuntu-latest
+    needs: [prepare]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('moling-server/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: 安装 Lint 工具
+        run: |
+          cd moling-server
+          pip install flake8 bandit safety
+
+      - name: Flake8 代码风格
+        continue-on-error: true
+        run: cd moling-server && flake8 app/ --count --max-line-length=127 --statistics
+
+      - name: Bandit 安全扫描
+        continue-on-error: true
+        run: cd moling-server && bandit -r app/ -f json -o bandit-report.json
+
+      - name: Safety 依赖漏洞
+        continue-on-error: true
+        run: cd moling-server && safety check --json > safety-report.json 2>&1 || true
+
+      - name: 上传扫描报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports-${{ needs.prepare.outputs.short_sha }}
+          path: |
+            moling-server/bandit-report.json
+            moling-server/safety-report.json
+          retention-days: 7
+
+  # ==========================================================================
+  # Job 2: Test — 后端测试 + 前端构建
+  # ==========================================================================
+  test:
+    name: "测试验证"
+    runs-on: ubuntu-latest
+    needs: [prepare]
+    if: ${{ !github.event.inputs.skip_tests }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: moling_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- 后端测试 ---
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-test-${{ hashFiles('moling-server/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: 安装后端依赖
+        run: |
+          cd moling-server
+          pip install ".[dev]"
+          pip install pytest pytest-asyncio httpx pytest-cov
+
+      - name: 运行后端测试
+        env:
+          DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci-only
+          ALGORITHM: HS256
+          LOG_LEVEL: WARNING
+        run: |
+          cd moling-server
+          python -m pytest tests/ -v --tb=short --junitxml=report.xml --cov=app --cov-report=xml
+
+      - name: 上传后端测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-tests-${{ needs.prepare.outputs.short_sha }}
+          path: |
+            moling-server/report.xml
+            moling-server/coverage.xml
+          retention-days: 7
+
+      # --- 前端构建 ---
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: moling-web/package-lock.json
+
+      - name: 安装前端依赖
+        run: cd moling-web && npm ci
+
+      - name: 构建前端
+        run: cd moling-web && npm run build
+
+      - name: TypeScript 类型检查
+        continue-on-error: true
+        run: cd moling-web && npx tsc --noEmit
+
+  # ==========================================================================
+  # Job 3: Build — Docker 镜像构建 + 推送到 GHCR
+  # ==========================================================================
+  build:
+    name: "构建镜像"
+    runs-on: ubuntu-latest
+    needs: [prepare, lint, test]
+    if: |
+      always() &&
+      !github.event.inputs.skip_build &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped')
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            context: ./moling-server
+            dockerfile: ./moling-server/Dockerfile
+            image: ${{ env.IMAGE_NAME_BACKEND }}
+          - component: frontend
+            context: ./moling-web
+            dockerfile: ./moling-web/Dockerfile
+            image: ${{ env.IMAGE_NAME_FRONTEND }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 登录 GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 提取镜像元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=${{ needs.prepare.outputs.version }}
+            type=raw,value=latest
+            type=ref,event=branch
+
+      - name: 构建并推送 ${{ matrix.component }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=/moling/api/v1
+
+      - name: 镜像摘要
+        run: |
+          echo "### 🐳 ${{ matrix.component }} 镜像" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Job 4: Deploy — SSH 远程部署
+  # ==========================================================================
+  deploy:
+    name: "部署到服务器"
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    if: needs.build.result == 'success'
+    environment:
+      name: ${{ needs.prepare.outputs.deploy_env }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 配置 SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 添加服务器主机密钥
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 上传部署配置到服务器
+        run: |
+          scp docker/docker-compose.prod.yml \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/docker-compose.prod.yml
+          scp docker/deploy-remote.sh \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/deploy-remote.sh
+
+      - name: 执行远程部署
+        id: deploy
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} bash -s << 'DEPLOY_EOF'
+            set -e
+
+            DEPLOY_PATH="${DEPLOY_PATH:-/opt/moling}"
+            VERSION="${VERSION}"
+            REGISTRY="${REGISTRY}"
+
+            cd "$DEPLOY_PATH"
+
+            echo "========================================="
+            echo "  Moling 自动部署"
+            echo "  版本: ${VERSION}"
+            echo "  时间: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "========================================="
+
+            # 1. 登录 GHCR
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin 2>/dev/null || true
+
+            # 2. 备份当前运行版本
+            echo "[1/6] 备份当前版本..."
+            docker compose -f docker-compose.prod.yml ps --format json > "backups/state_${VERSION}.json" 2>/dev/null || true
+
+            # 3. 拉取新镜像
+            echo "[2/6] 拉取新镜像..."
+            docker compose -f docker-compose.prod.yml pull app frontend 2>&1
+
+            # 4. 运行数据库迁移
+            echo "[3/6] 数据库迁移..."
+            docker compose -f docker-compose.prod.yml run --rm \
+              -e DATABASE_URL="$DATABASE_URL" \
+              app alembic upgrade head 2>&1
+
+            # 5. 滚动更新服务（零停机）
+            echo "[4/6] 更新服务..."
+            docker compose -f docker-compose.prod.yml up -d \
+              --no-deps --scale app=2 app 2>&1
+
+            # 等待新容器健康
+            echo "[5/6] 等待健康检查..."
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:8000/api/v1/health > /dev/null 2>&1; then
+                echo "✅ 后端健康检查通过"
+                break
+              fi
+              [ $i -eq 30 ] && { echo "❌ 后端健康检查超时"; exit 1; }
+              sleep 2
+            done
+
+            docker compose -f docker-compose.prod.yml up -d \
+              --no-deps frontend 2>&1
+
+            # 6. 清理旧镜像
+            echo "[6/6] 清理旧镜像..."
+            docker image prune -af --filter "until=24h" 2>&1 || true
+
+            echo "========================================="
+            echo "  ✅ 部署完成"
+            echo "========================================="
+          DEPLOY_EOF
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          REGISTRY: ${{ env.REGISTRY }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # ==========================================================================
+  # Job 5: Verify — 部署后验证
+  # ==========================================================================
+  verify:
+    name: "部署验证"
+    runs-on: ubuntu-latest
+    needs: [prepare, deploy]
+    if: needs.deploy.result == 'success'
+    steps:
+      - name: 配置 SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 添加服务器主机密钥
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 冒烟测试
+        id: smoke
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} bash -s << 'SMOKE_EOF'
+            set -e
+
+            BASE_URL="http://localhost:8080"
+
+            echo "🔍 冒烟测试开始..."
+            FAILED=0
+
+            # 测试 1: 后端健康检查
+            echo -n "  [1] 后端 /api/v1/health ... "
+            if curl -sf -o /dev/null "${BASE_URL}/moling/api/v1/health"; then
+              echo "✅"
+            else
+              echo "❌"
+              FAILED=1
+            fi
+
+            # 测试 2: API 文档可访问
+            echo -n "  [2] API 文档 /docs ... "
+            if curl -sf -o /dev/null "${BASE_URL}/moling/api/v1/docs"; then
+              echo "✅"
+            else
+              echo "❌"
+              FAILED=1
+            fi
+
+            # 测试 3: 前端页面
+            echo -n "  [3] 前端页面 /moling ... "
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/moling")
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "301" ] || [ "$STATUS" = "302" ]; then
+              echo "✅ (HTTP ${STATUS})"
+            else
+              echo "❌ (HTTP ${STATUS})"
+              FAILED=1
+            fi
+
+            # 测试 4: Docker 容器状态
+            echo -n "  [4] 容器运行状态 ... "
+            RUNNING=$(docker compose -f docker-compose.prod.yml ps --status running -q 2>/dev/null | wc -l)
+            if [ "$RUNNING" -ge 3 ]; then
+              echo "✅ (${RUNNING} 个运行中)"
+            else
+              echo "❌ (仅 ${RUNNING} 个运行中)"
+              FAILED=1
+            fi
+
+            exit $FAILED
+          SMOKE_EOF
+
+      - name: 记录部署状态
+        if: always()
+        run: |
+          echo "### 🚀 部署报告 — ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "| 项目 | 状态 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 版本 | \`${{ needs.prepare.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 环境 | ${{ needs.prepare.outputs.deploy_env }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 提交 | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.smoke.outcome }}" = "success" ]; then
+            echo "| 冒烟测试 | ✅ 通过 |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 冒烟测试 | ❌ 失败 |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 访问: http://${{ secrets.SSH_HOST }}:8080/moling" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Job 6: Rollback — 失败时自动回滚
+  # ==========================================================================
+  rollback:
+    name: "自动回滚"
+    runs-on: ubuntu-latest
+    needs: [prepare, deploy, verify]
+    if: |
+      always() &&
+      (needs.deploy.result == 'failure' || needs.verify.result == 'failure')
+    steps:
+      - name: 配置 SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 添加服务器主机密钥
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 执行回滚
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} bash -s << 'ROLLBACK_EOF'
+            set -e
+
+            DEPLOY_PATH="${DEPLOY_PATH:-/opt/moling}"
+            cd "$DEPLOY_PATH"
+
+            echo "⚠️  部署失败，执行自动回滚..."
+
+            # 找到上一个版本的镜像标签
+            PREV_TAG=$(docker images ghcr.io/*/moling-backend --format "{{.Tag}}" \
+              | grep -v "latest" \
+              | grep -v "${VERSION}" \
+              | sort -r | head -1)
+
+            if [ -n "$PREV_TAG" ]; then
+              echo "回滚到版本: ${PREV_TAG}"
+
+              # 拉取上一个版本
+              docker compose -f docker-compose.prod.yml pull app frontend 2>/dev/null || true
+
+              # 强制重新创建容器
+              docker compose -f docker-compose.prod.yml up -d \
+                --force-recreate app frontend 2>&1
+            else
+              echo "未找到可回滚的版本，尝试重启当前服务..."
+              docker compose -f docker-compose.prod.yml restart app frontend 2>&1
+            fi
+
+            echo "回滚操作完成"
+          ROLLBACK_EOF
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+
+      - name: 记录回滚
+        if: always()
+        run: |
+          echo "### ⚠️ 自动回滚已执行" >> $GITHUB_STEP_SUMMARY
+          echo "部署版本 \`${{ needs.prepare.outputs.version }}\` 存在问题，已回滚到上一版本。" >> $GITHUB_STEP_SUMMARY

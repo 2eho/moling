@@ -84,7 +84,7 @@ async def create_project_from_template(
     """使用模板创建新项目。"""
     result = await template_service.create_project_from_template(
         db,
-        int(current_user["id"]),
+        str(current_user.id),
         template_id,
         title=title,
         author=author,

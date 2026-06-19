@@ -4,12 +4,15 @@
 可能需要调用 LLM 服务。
 """
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.service.phase4_service import phase4_service
 from app.schemas.phase4 import Phase4SuggestionResp, ApplyPhase4Req, Phase4TaskResp
+from app.models.phase4_task import Phase4Task, Phase4State
+from app.dao.phase4_dao import phase4_dao
 
 router = APIRouter()
 
@@ -90,11 +93,43 @@ async def get_pending_reviews(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    """获取待审核的精修建议列表。"""
-    # MVP 实现：返回空列表（等 service 层完善）
+    """获取待审核的精修建议列表。从 Phase4Task 表查询 status='reviewing' 的记录。"""
+    # 查询 status='reviewing' 的任务
+    result = await db.execute(
+        select(Phase4Task)
+        .where(Phase4Task.status == "reviewing")
+        .order_by(Phase4Task.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    tasks = result.scalars().all()
+
+    # 总数
+    count_result = await db.execute(
+        select(func.count()).select_from(Phase4Task)
+        .where(Phase4Task.status == "reviewing")
+    )
+    total = count_result.scalar() or 0
+
+    reviews = []
+    for t in tasks:
+        reviews.append({
+            "id": t.id,
+            "nonce": t.nonce,
+            "project_id": t.project_id,
+            "chapter_id": t.chapter_id,
+            "status": t.status,
+            "state": t.state,
+            "error_message": t.error_message,
+            "retry_count": t.retry_count,
+            "started_at": t.started_at.isoformat() if t.started_at else None,
+            "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        })
+
     return {
-        "reviews": [],
-        "total": 0,
+        "reviews": reviews,
+        "total": total,
         "page": page,
         "page_size": page_size,
     }
@@ -106,9 +141,26 @@ async def approve_review(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    """批准精修建议。"""
-    # MVP 实现：返回确认（等 service 层完善）
-    return {"approved": True, "review_id": review_id}
+    """批准精修建议，将任务状态更新为 'approved'。"""
+    stmt = select(Phase4Task).where(Phase4Task.id == review_id)
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Review task {review_id} not found",
+        )
+
+    task.status = "approved"
+    task.state = Phase4State.DONE.value
+    await db.commit()
+
+    return {
+        "approved": True,
+        "review_id": review_id,
+        "status": task.status,
+    }
 
 
 @router.post("/reviews/{review_id}/reject", status_code=200)
@@ -118,6 +170,58 @@ async def reject_review(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    """拒绝精修建议并给出理由。"""
+    """拒绝精修建议，记录原因，更新状态为 'rejected'。"""
     reason = req.get("reason", "")
-    return {"rejected": True, "review_id": review_id, "reason": reason}
+    stmt = select(Phase4Task).where(Phase4Task.id == review_id)
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Review task {review_id} not found",
+        )
+
+    task.status = "rejected"
+    task.state = Phase4State.FAILED.value
+    task.error_message = reason or "Review rejected"
+    task.last_error = reason or "Review rejected"
+    await db.commit()
+
+    return {
+        "rejected": True,
+        "review_id": review_id,
+        "reason": reason,
+        "status": task.status,
+    }
+
+
+@router.post("/tasks/{task_id}/retry", status_code=200)
+async def retry_task(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """重置任务状态为 'queued'，允许重新执行。"""
+    stmt = select(Phase4Task).where(Phase4Task.id == task_id)
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task {task_id} not found",
+        )
+
+    task.status = "queued"
+    task.state = Phase4State.QUEUED.value
+    task.error_message = None
+    task.last_error = None
+    await db.commit()
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "status": task.status,
+        "state": task.state,
+    }

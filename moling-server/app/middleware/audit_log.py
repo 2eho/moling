@@ -30,6 +30,13 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         # 记录请求开始时间
         start_time = time.time()
 
+        # 读取请求体并缓存到 request.state（用于错误日志等场景）
+        try:
+            body_bytes = await request.body()
+            request.state.body = body_bytes.decode("utf-8", errors="replace") if body_bytes else None
+        except Exception:
+            request.state.body = None
+
         # 提取请求信息
         audit_entry = {
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
@@ -46,6 +53,7 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         if user:
             audit_entry["user_id"] = user.get("id")
             audit_entry["user_email"] = user.get("email")
+            request.state.user_id = user.get("id")
 
         # 处理请求
         try:
@@ -95,9 +103,25 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
 
     async def _get_current_user(self, request: Request) -> dict | None:
         """尝试从请求中获取当前用户信息."""
-        # 这里简单处理，实际应从 token 中解析
-        # 可以通过 request.user 或其他方式获取
-        return None
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+
+        try:
+            token = auth_header[7:]
+            from jose import jwt
+            from app.config import get_settings
+            s = get_settings()
+            payload = jwt.decode(
+                token, s.SECRET_KEY, algorithms=[s.ALGORITHM],
+                options={"verify_exp": False},  # 审计日志允许过期 token
+            )
+            return {
+                "id": payload.get("sub"),
+                "email": payload.get("email", ""),
+            }
+        except Exception:
+            return None
 
     def _write_audit_log(self, audit_entry: dict) -> None:
         """写入审计日志."""

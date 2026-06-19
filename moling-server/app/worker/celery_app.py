@@ -23,6 +23,7 @@ celery_app = Celery(
         "app.worker.import_task",
         "app.worker.book_analysis_task",
         "app.worker.card_retire_task",
+        "app.worker.vault_reanalyze_task",
     ],
 )
 

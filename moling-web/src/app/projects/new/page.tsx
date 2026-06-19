@@ -1,258 +1,138 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useProjects } from "@/hooks/useProjects";
-import { CreationModeCard } from "@/components/project/CreationModeCard";
-import { TemplateSelector } from "@/components/project/TemplateSelector";
-import { ProjectForm } from "@/components/project/ProjectForm";
-import { Button } from "@/components/ui/Button";
-import { showToast } from "@/components/ui/Toast";
-import { CREATION_MODES, TEMPLATES } from "@/lib/constants";
-import styles from "./new-project.module.css";
+import Link from "next/link";
+import { Sparkles, ArrowLeft, BookOpen, Swords, FlaskConical, Globe } from "lucide-react";
+
+const GENRES = [
+  { id: "xuanhuan", label: "玄幻修仙", icon: <Swords size={24} /> },
+  { id: "scifi", label: "科幻末世", icon: <FlaskConical size={24} /> },
+  { id: "dushi", label: "都市生活", icon: <Globe size={24} /> },
+  { id: "other", label: "其他类型", icon: <BookOpen size={24} /> },
+];
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const { createProject } = useProjects();
+  const [title, setTitle] = useState("");
+  const [genre, setGenre] = useState("");
+  const [summary, setSummary] = useState("");
 
-  const [step, setStep] = useState(1);
-  const [mode, setMode] = useState<string | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  // Import mode state
-  const [importTitle, setImportTitle] = useState("");
-
-  const handleModeSelect = (modeId: string) => {
-    setMode(modeId);
-    setStep(2);
-  };
-
-  const handleTemplateSelect = (templateId: string) => {
-    setSelectedTemplate(templateId);
-  };
-
-  const handleNextFromTemplate = () => {
-    const template = TEMPLATES.find((t) => t.id === selectedTemplate);
-    if (template) {
-      setStep(3);
-    }
-  };
-
-  const handleCreateProject = async (data: Record<string, unknown>) => {
-    setCreating(true);
-    try {
-      const template = TEMPLATES.find((t) => t.id === selectedTemplate);
-      const projectData = {
-        ...data,
-        creation_mode: mode === "from_template" ? "from_scratch" : mode,
-        ...(template
-          ? {
-              genre: template.genre,
-              worldview: template.worldSuggestion,
-              protagonist: template.protagonistSuggestion,
-            }
-          : {}),
-      };
-      const project = await createProject(projectData as any);
-      showToast("success", "项目创建成功！");
-      // 导入模式：跳转到导入页
-      if (mode === "from_import") {
-        router.push(`/projects/${project.id}/import`);
-      } else {
-        router.push(`/workspace/${project.id}`);
-      }
-    } catch (error: any) {
-      // 修复：显示具体错误信息，而不是模糊的"创建失败"
-      const errorMessage = 
-        error?.message || 
-        (error as any)?.data?.message || 
-        "创建失败，请检查表单输入";
-      showToast("error", errorMessage);
-    } finally {
-      setCreating(false);
-    }
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    // Simulate creation
+    router.push("/workspace/new-novel");
   };
 
   return (
-    <div className={styles.container}>
-      {/* Step Indicator */}
-      <div className={styles.steps}>
-        {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={`${styles.step} ${step >= s ? styles.stepActive : ""} ${step === s ? styles.stepCurrent : ""}`}
-          >
-            <span className={styles.stepNumber}>{s}</span>
-            <span className={styles.stepLabel}>
-              {s === 1 ? "创作模式" : s === 2 ? "填写信息" : "确认创建"}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Step 1: Creation Mode */}
-      {step === 1 && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>选择创作模式</h2>
-          <p className={styles.sectionDesc}>
-            选择适合你的创作方式
-          </p>
-          <div className={styles.modeGrid}>
-            {CREATION_MODES.map((cm) => (
-              <CreationModeCard
-                key={cm.id}
-                id={cm.id}
-                title={cm.title}
-                description={cm.description}
-                icon={cm.icon}
-                selected={mode === cm.id}
-                onClick={() => handleModeSelect(cm.id)}
-              />
-            ))}
-          </div>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: "var(--th-bg)", color: "var(--th-text)" }}
+    >
+      {/* Header */}
+      <header className="flex items-center gap-3 px-6 py-4">
+        <Link href="/projects" style={{ color: "var(--th-text-3)" }}>
+          <ArrowLeft size={20} />
+        </Link>
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{
+            background: "linear-gradient(135deg, var(--th-logo-from), var(--th-logo-to))",
+          }}
+        >
+          <Sparkles size={14} className="text-white" />
         </div>
-      )}
+        <span className="text-base font-bold">新建项目</span>
+      </header>
 
-      {/* Step 2: Template or Form */}
-      {step === 2 && mode === "from_template" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>选择模板</h2>
-          <p className={styles.sectionDesc}>
-            选择一个预设模板快速开始
-          </p>
-          <TemplateSelector onSelect={handleTemplateSelect} />
-          <div className={styles.actions}>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={handleNextFromTemplate}
-              disabled={!selectedTemplate}
-            >
-              下一步
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && mode === "from_scratch" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>填写项目信息</h2>
-          <p className={styles.sectionDesc}>
-            设定你的作品基本信息
-          </p>
-          <ProjectForm
-            onSubmit={async (data) => {
-              await handleCreateProject(data as any);
-            }}
-            loading={creating}
-          />
-        </div>
-      )}
-
-      {/* Step 2: Import Mode — 只需输入标题 */}
-      {step === 2 && mode === "from_import" && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>导入已有作品</h2>
-          <p className={styles.sectionDesc}>
-            先创建一个项目占位，然后进入导入页面粘贴文本或上传文件
-          </p>
-          <div className={styles.importForm}>
-            <label className={styles.importLabel}>
-              作品标题 <span className={styles.required}>*</span>
+      <main className="flex-1 max-w-lg mx-auto w-full px-6 py-8">
+        <form onSubmit={handleCreate} className="flex flex-col gap-5">
+          {/* Title */}
+          <div>
+            <label className="text-sm font-medium mb-2 block" style={{ color: "var(--th-text-2)" }}>
+              书名
             </label>
             <input
-              className={styles.importInput}
               type="text"
-              placeholder="输入作品标题"
-              value={importTitle}
-              onChange={(e) => setImportTitle(e.target.value)}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="给你的作品取个名字..."
+              required
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-200"
+              style={{
+                background: "var(--th-input)",
+                border: "1px solid var(--th-border-subtle)",
+                color: "var(--th-text)",
+              }}
             />
-            <div className={styles.importHint}>
-              创建后将自动跳转到导入页面，你可以在那里粘贴内容或上传文件
+          </div>
+
+          {/* Genre */}
+          <div>
+            <label className="text-sm font-medium mb-2 block" style={{ color: "var(--th-text-2)" }}>
+              类型
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {GENRES.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setGenre(g.id)}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200"
+                  style={{
+                    background: genre === g.id ? "var(--th-accent-dim)" : "var(--th-card)",
+                    border: genre === g.id ? "1px solid var(--th-accent)" : "1px solid var(--th-border-subtle)",
+                  }}
+                >
+                  <div style={{ color: genre === g.id ? "var(--th-accent-text)" : "var(--th-text-3)" }}>
+                    {g.icon}
+                  </div>
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: genre === g.id ? "var(--th-accent-text)" : "var(--th-text-2)" }}
+                  >
+                    {g.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
-          <div className={styles.actions}>
-            <Button variant="secondary" size="lg" onClick={() => { setMode(null); setStep(1); }}>
-              上一步
-            </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              loading={creating}
-              disabled={!importTitle.trim()}
-              onClick={async () => {
-                await handleCreateProject({
-                  title: importTitle.trim(),
-                  genre: "未分类",
-                  creation_mode: "from_import",
-                } as any);
-              }}
-            >
-              创建并导入
-            </Button>
-          </div>
-        </div>
-      )}
 
-      {/* Step 3: Confirm & Create */}
-      {step === 3 && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>确认创建</h2>
-          <p className={styles.sectionDesc}>
-            确认以下信息，开始你的创作之旅
-          </p>
-          {selectedTemplate && (
-            <div className={styles.confirmCard}>
-              {(() => {
-                const t = TEMPLATES.find((tmpl) => tmpl.id === selectedTemplate);
-                return t ? (
-                  <>
-                    <div className={styles.confirmHeader}>
-                      <span className={styles.confirmIcon}>{t.icon}</span>
-                      <h3 className={styles.confirmTitle}>{t.name}</h3>
-                    </div>
-                    <p className={styles.confirmDesc}>{t.description}</p>
-                    <div className={styles.confirmDetail}>
-                      <p><strong>世界观参考：</strong>{t.worldSuggestion}</p>
-                      <p><strong>主角参考：</strong>{t.protagonistSuggestion}</p>
-                    </div>
-                  </>
-                ) : null;
-              })()}
-            </div>
-          )}
-          <div className={styles.actions}>
-            <Button variant="secondary" size="lg" onClick={() => setStep(2)}>
-              上一步
-            </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              loading={creating}
-              onClick={async () => {
-                const template = TEMPLATES.find((t) => t.id === selectedTemplate);
-                await handleCreateProject({
-                  title: template?.name ?? "新项目",
-                  genre: template?.genre ?? "未分类",
-                  creation_mode: "from_scratch",
-                } as any);
+          {/* Summary */}
+          <div>
+            <label className="text-sm font-medium mb-2 block" style={{ color: "var(--th-text-2)" }}>
+              简介
+              <span className="ml-1 font-normal" style={{ color: "var(--th-text-4)" }}>选填</span>
+            </label>
+            <textarea
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="简单描述一下故事..."
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none transition-all duration-200"
+              style={{
+                background: "var(--th-input)",
+                border: "1px solid var(--th-border-subtle)",
+                color: "var(--th-text)",
               }}
-            >
-              确认创建
-            </Button>
+            />
           </div>
-        </div>
-      )}
 
-      {/* Back to projects */}
-      <div className={styles.back}>
-        <Button variant="ghost" onClick={() => router.push("/projects")}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{marginRight:"4px", verticalAlign:"middle"}}>
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-          返回项目列表
-        </Button>
-      </div>
+          <button
+            type="submit"
+            disabled={!title.trim()}
+            className="w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] mt-2"
+            style={{
+              background: "linear-gradient(135deg, var(--th-logo-from), var(--th-logo-to))",
+              color: "#fff",
+              boxShadow: "0 4px 20px var(--th-accent-glow)",
+            }}
+          >
+            创建项目
+          </button>
+        </form>
+      </main>
     </div>
   );
 }

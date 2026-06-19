@@ -396,5 +396,129 @@ class CardService:
         return None
 
 
+    async def redraw_cards(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        project_id: int,
+        chapter_id: int,
+        keep_card_ids: list[int],
+        draw_count: int = 3,
+    ) -> dict:
+        """Redraw cards for a chapter, excluding cards already drawn.
+
+        Args:
+            db: Database session
+            user_id: User ID
+            project_id: Project ID
+            chapter_id: Current chapter ID
+            keep_card_ids: Card IDs to keep (exclude from redraw)
+            draw_count: Number of cards to draw
+
+        Returns:
+            Dict with cards list and remaining redraws
+        """
+        # Verify project exists and belongs to user
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="Project not found",
+            )
+        if project.user_id != user_id:
+            raise PermissionError(
+                error_code=ErrorCode.FORBIDDEN,
+                detail="Not authorized to access this project",
+            )
+
+        # Get active cards
+        active_cards = await card_dao.get_active_cards(db, project_id, count=100)
+
+        if not active_cards:
+            raise PermissionError(
+                error_code=ErrorCode.INVALID_REQUEST,
+                detail="No active cards in pool",
+            )
+
+        # Collect already drawn card IDs for this chapter
+        draw_history_records = await card_dao.get_draw_history(
+            db, project_id, chapter_id=chapter_id
+        )
+        drawn_card_ids = set()
+        for record in draw_history_records:
+            if record.card_ids:
+                drawn_card_ids.update(record.card_ids)
+
+        # Exclude keep_card_ids and already drawn cards
+        excluded_ids = set(keep_card_ids or []) | drawn_card_ids
+
+        available_cards = [
+            c for c in active_cards if c.id not in excluded_ids
+        ]
+
+        if not available_cards:
+            # All cards exhausted — return empty
+            return {
+                "cards": [],
+                "remaining_redraws": 0,
+                "message": "No available cards to redraw",
+            }
+
+        # Weighted random selection from available cards
+        card_weights = {
+            c.id: self._calculate_card_weight(c, [])
+            for c in available_cards
+        }
+
+        selected = []
+        pool = available_cards.copy()
+        actual_count = min(draw_count, len(pool))
+
+        for _ in range(actual_count):
+            if not pool:
+                break
+            weights = [card_weights.get(c.id, 1) for c in pool]
+            total_weight = sum(weights)
+            if total_weight <= 0:
+                chosen = random.choice(pool)
+            else:
+                chosen = random.choices(pool, weights=weights, k=1)[0]
+            selected.append(chosen)
+            pool.remove(chosen)
+
+        # Create draw record
+        latest_draw = await card_dao.get_latest_draw(db, project_id, chapter_id=chapter_id)
+        draw_round = (latest_draw.draw_round + 1) if latest_draw else 1
+
+        draw_record = await card_dao.create_draw_record(
+            db,
+            {
+                "project_id": str(project_id),
+                "chapter_id": str(chapter_id),
+                "user_id": user_id,
+                "card_ids": [c.id for c in selected],
+                "mode": "redraw",
+                "weights": [card_weights.get(c.id, 1) for c in selected],
+                "draw_round": draw_round,
+                "remaining_redraws": max(0, self.MAX_DRAW_RETRIES - draw_round),
+            },
+        )
+
+        # Update card draw counts
+        for card in selected:
+            card.draw_count = (card.draw_count or 0) + 1
+            card.last_drawn_chapter = chapter_id
+
+        await db.commit()
+
+        remaining = max(0, self.MAX_DRAW_RETRIES - draw_round)
+
+        return {
+            "cards": [CardResp.model_validate(c).model_dump() for c in selected],
+            "draw_round": draw_round,
+            "remaining_redraws": remaining,
+        }
+
+
 # Singleton instance
 card_service = CardService()

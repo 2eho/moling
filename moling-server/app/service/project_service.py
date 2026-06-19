@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.dao import project_dao, chapter_dao
 from app.errors import NotFoundError, ErrorCode, PermissionError
-from app.models import Project
+from app.models import Project, Chapter
 from app.schemas.project import CreateProjectReq, UpdateProjectReq, ProjectResp, ProjectStatsResp
 
 settings = get_settings()
@@ -85,8 +85,8 @@ class ProjectService:
         
         # Enrich with chapter count
         for project in projects:
-            chapters_stmt = select(func.count()).select_from(project.chapters.property.mapper.class_).where(
-                project.chapters.property.mapper.class_.project_id == project.id
+            chapters_stmt = select(func.count()).select_from(Chapter).where(
+                Chapter.project_id == project.id
             )
             chapters_result = await db.execute(chapters_stmt)
             project.chapter_count = chapters_result.scalar_one()
@@ -121,8 +121,8 @@ class ProjectService:
             )
         
         # Enrich with chapter count
-        chapters_stmt = select(func.count()).select_from(project.chapters.property.mapper.class_).where(
-            project.chapters.property.mapper.class_.project_id == project.id
+        chapters_stmt = select(func.count()).select_from(Chapter).where(
+            Chapter.project_id == project.id
         )
         chapters_result = await db.execute(chapters_stmt)
         project.chapter_count = chapters_result.scalar_one()

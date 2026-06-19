@@ -58,10 +58,6 @@ class ChapterService:
         )
         
         db.add(chapter)
-        
-        # Update project chapter count
-        project.chapter_count = (project.chapter_count or 0) + 1
-        
         await db.commit()
         await db.refresh(chapter)
         

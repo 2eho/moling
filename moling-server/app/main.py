@@ -222,16 +222,110 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     )
 
 
+def _write_error_log(request: Request, exc: Exception) -> None:
+    """写入增强的错误日志，包含请求体、用户 ID、日志轮转。
+
+    日志文件 moling_errors.log 超过 10MB 自动备份为 moling_errors.log.1。
+    """
+    import traceback
+    import os
+    from pathlib import Path
+
+    log_path = Path("moling_errors.log")
+
+    # ---- 日志轮转：超过 10MB 自动备份 ----
+    try:
+        if log_path.exists() and log_path.stat().st_size > 10 * 1024 * 1024:
+            backup_path = Path("moling_errors.log.1")
+            if backup_path.exists():
+                backup_path.unlink()
+            log_path.rename(backup_path)
+    except Exception:
+        pass
+
+    # ---- 构建增强日志内容 ----
+    lines = []
+    lines.append(f"\n{'='*60}")
+    lines.append(f"[{__import__('datetime').datetime.now()}]")
+    lines.append(f"  Method: {request.method}")
+    lines.append(f"  Path: {request.url.path}")
+    lines.append(f"  Query: {str(request.query_params)}")
+
+    # 用户 ID
+    try:
+        user_id = getattr(request.state, "user_id", None)
+        if user_id is None:
+            # 尝试从 JWT token 提取
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]
+                from jose import jwt
+                from app.config import get_settings
+                s = get_settings()
+                payload = jwt.decode(token, s.SECRET_KEY, algorithms=[s.ALGORITHM],
+                                     options={"verify_exp": False})
+                user_id = payload.get("sub", "unknown")
+            else:
+                user_id = "anonymous"
+        lines.append(f"  User: {user_id}")
+    except Exception:
+        lines.append(f"  User: unknown")
+
+    # 请求体（截断超过 2000 字符的内容）
+    try:
+        body = getattr(request.state, "body", None)
+        if body is None:
+            # 无法获取已消费的请求体，记录客户端 IP 作为替代
+            client_ip = request.client.host if request.client else "unknown"
+            lines.append(f"  Client IP: {client_ip}")
+        else:
+            body_str = str(body)
+            if len(body_str) > 2000:
+                body_str = body_str[:2000] + f"... [truncated, total {len(body_str)} chars]"
+            lines.append(f"  Body: {body_str}")
+    except Exception:
+        lines.append(f"  Body: <unavailable>")
+
+    # 客户端 IP
+    try:
+        if request.client:
+            lines.append(f"  Client IP: {request.client.host}")
+    except Exception:
+        pass
+
+    # 请求头（只记录关键头，不含敏感信息）
+    try:
+        safe_headers = {}
+        for key in ["user-agent", "content-type", "x-forwarded-for", "referer"]:
+            val = request.headers.get(key)
+            if val:
+                safe_headers[key] = val
+        if safe_headers:
+            lines.append(f"  Headers: {safe_headers}")
+    except Exception:
+        pass
+
+    # Traceback
+    lines.append(traceback.format_exc())
+
+    # ---- 写入日志文件 ----
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+    except Exception:
+        pass
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unhandled exceptions — never leak internals."""
-    # 打印实际异常信息用于调试
     import traceback
     traceback.print_exc()
-    
+    _write_error_log(request, exc)
+
     # 在开发环境下返回详细错误信息
     error_detail = traceback.format_exc() if settings.ENVIRONMENT == "development" else str(exc)
-    
+
     return JSONResponse(
         status_code=500,
         content={

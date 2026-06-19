@@ -32,9 +32,9 @@ class CreateSubscriptionReq(BaseModel):
 class SubscriptionResp(BaseModel):
     """Subscription detail response."""
 
-    id: int
-    user_id: int
-    plan_id: int
+    id: str
+    user_id: str
+    plan_id: str
     status: str
     start_date: datetime
     end_date: Optional[datetime] = None

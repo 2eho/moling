@@ -1,686 +1,233 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import { ChapterSelector } from "@/components/workspace/ChapterSelector";
-import { HealthAlertBanner } from "@/components/workspace/HealthAlert";
-import { useWorkspace } from "@/hooks/useWorkspace";
-import { useProjectContext } from "@/contexts/ProjectContext";
-import { useAuth } from "@/hooks/useAuth";
-import { useResizablePanel } from "@/hooks/useResizablePanel";
-import { ResizableHandle } from "@/components/ui/ResizableHandle";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { showToast } from "@/components/ui/Toast";
-import { Spinner } from "@/components/ui/Spinner";
-import styles from "./workspace.module.css";
+import { useWritingStore } from "@/stores/useWritingStore";
+import { useTheme, THEMES } from "@/stores/useTheme";
+import type { ThemeId } from "@/stores/useTheme";
+import { Sidebar } from "@/components/vibe/Sidebar";
+import { ThemeSwitcher } from "@/components/vibe/ThemeSwitcher";
+import {
+  PanelRight,
+  X,
+} from "lucide-react";
 
-// ✅ 动态导入
-const Editor = dynamic(
-  () => import("@/components/workspace/Editor").then((mod) => mod.Editor),
-  { loading: () => <div className={styles.editorPlaceholder}><Spinner size="sm" /></div> },
-);
-const GenerationProgress = dynamic(
-  () => import("@/components/workspace/GenerationProgress").then((mod) => mod.GenerationProgress),
-  { ssr: false },
-);
-const CardModal = dynamic(
-  () => import("@/components/workspace/CardModal").then((mod) => mod.CardModal),
-  { ssr: false },
-);
+/** 多书 Mock 数据 */
+const MOCK_PROJECTS = [
+  {
+    id: "novel-001",
+    title: "剑道巅峰",
+    genre: "玄幻修仙",
+    phase: "drafting" as const,
+    currentChapter: 3,
+    totalChapters: 12,
+    summary: "少年林风身怀绝世剑骨，却被视为废材。一朝觉醒，踏上逆天改命之路。",
+    chapters: [
+      { id: 1, title: "废材少年", summary: "...", content: "", status: "completed" as const },
+      { id: 2, title: "剑骨觉醒", summary: "...", content: "", status: "completed" as const },
+      { id: 3, title: "剑指苍穹", summary: "...", content: "", status: "draft" as const },
+    ],
+    characters: [],
+    foreshadowing: [],
+    worldRules: "",
+    styleNotes: "",
+  },
+  {
+    id: "novel-002",
+    title: "都市修仙传",
+    genre: "都市异能",
+    phase: "outline" as const,
+    currentChapter: 1,
+    totalChapters: 24,
+    summary: "现代都市中隐藏的修仙世界，平凡大学生意外觉醒灵根。",
+    chapters: [
+      { id: 1, title: "灵根初醒", summary: "...", content: "", status: "draft" as const },
+      { id: 2, title: "都市暗流", summary: "...", content: "", status: "draft" as const },
+      { id: 3, title: "初入宗门", summary: "...", content: "", status: "draft" as const },
+      { id: 4, title: "破境之战", summary: "...", content: "", status: "draft" as const },
+    ],
+    characters: [],
+    foreshadowing: [],
+    worldRules: "",
+    styleNotes: "",
+  },
+  {
+    id: "novel-003",
+    title: "末世重生",
+    genre: "末世科幻",
+    phase: "character" as const,
+    currentChapter: 2,
+    totalChapters: 18,
+    summary: "重生回到末世降临前三小时，这一世他不再做任何人的棋子。",
+    chapters: [
+      { id: 1, title: "血月降临", summary: "...", content: "", status: "completed" as const },
+      { id: 2, title: "前世记忆", summary: "...", content: "", status: "draft" as const },
+      { id: 3, title: "末日倒计时", summary: "...", content: "", status: "draft" as const },
+      { id: 4, title: "第一滴血", summary: "...", content: "", status: "draft" as const },
+      { id: 5, title: "安全区", summary: "...", content: "", status: "draft" as const },
+    ],
+    characters: [],
+    foreshadowing: [],
+    worldRules: "",
+    styleNotes: "",
+  },
+];
 
-/* ── 四库面板：内联构建 ── */
-function LibraryPanel() {
-  return (
-    <>
-      {/* 角色库 */}
-      <div className={styles.libDrawer}>
-        <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>👤 角色库</span>
-          <span className={styles.libDrawerCount}>—</span>
-        </div>
-        <EmptyState
-          compact
-          icon="👤"
-          title="暂无角色数据"
-          description="导入小说或手动添加角色"
-        />
-      </div>
-
-      {/* 剧情承诺 */}
-      <div className={styles.libDrawer}>
-        <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>🎯 剧情承诺</span>
-          <span className={styles.libDrawerCount}>—</span>
-        </div>
-        <EmptyState
-          compact
-          icon="🎯"
-          title="暂无剧情数据"
-          description="AI 生成章节时会自动提取"
-        />
-      </div>
-
-      {/* 世界观库 */}
-      <div className={styles.libDrawer}>
-        <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>🌍 世界观</span>
-          <span className={styles.libDrawerCount}>—</span>
-        </div>
-        <EmptyState
-          compact
-          icon="🌍"
-          title="暂无世界观数据"
-          description="导入小说可自动提取"
-        />
-      </div>
-
-      {/* 伏笔库 */}
-      <div className={styles.libDrawer}>
-        <div className={styles.libDrawerHeader}>
-          <span className={styles.libDrawerTitle}>🔮 伏笔库</span>
-          <span className={styles.libDrawerCount}>—</span>
-        </div>
-        <EmptyState
-          compact
-          icon="🔮"
-          title="暂无伏笔数据"
-          description="AI 生成章节时会自动追踪"
-        />
-      </div>
-
-      {/* 层级提示 */}
-      <div className={styles.libHint}>
-        点击以上卡片快速预览。需要编辑？前往「📋 深度编辑」或「📊 全局概览」。
-      </div>
-
-      {/* 底部操作 */}
-      <div className={styles.libFooter}>
-        <Link href={`/import`} className={styles.libFooterBtn} style={{ textDecoration: "none" }}>
-          📥 导入素材
-        </Link>
-        <Link href={`/vaults`} className={`${styles.libFooterBtn} ${styles.libFooterBtnPrimary}`} style={{ textDecoration: "none" }}>
-          📊 全局概览
-        </Link>
-      </div>
-    </>
-  );
-}
-
-/* ── AI 工具箱：内联构建 ── */
-function AIToolbox({
-  onOpenCardModal,
-  onRedraw,
-  remainingRedraws,
-  drawResult,
-}: {
-  onOpenCardModal: () => void;
-  onRedraw: () => void;
-  remainingRedraws: number;
-  drawResult: any;
-}) {
-  return (
-    <>
-      {/* 抽卡区 */}
-      <div className={styles.toolSection}>
-        <div className={styles.toolSectionTitle}>
-          <span className={styles.toolSectionDot} style={{ background: "var(--color-brand-amber)" }} />
-          ⚡ 快速灵感
-        </div>
-        <div className={styles.toolSectionHint}>
-          轻量即兴，快速获取创作灵感方向
-        </div>
-
-        {/* 快捷抽卡网格 */}
-        <div className={styles.cardGrid}>
-          <button className={styles.cardBtn} onClick={onOpenCardModal}>
-            <div className={styles.cardRarity} style={{ color: "#67e8f9" }}>✦ 罕见</div>
-            <div className={styles.cardIcon}>⚔</div>
-            <div className={styles.cardName}>临阵突破</div>
-            <div className={styles.cardDesc}>战斗中发现新力量</div>
-          </button>
-          <button className={styles.cardBtn} onClick={onOpenCardModal}>
-            <div className={styles.cardRarity} style={{ color: "#9ca3af" }}>✦ 普通</div>
-            <div className={styles.cardIcon}>🔥</div>
-            <div className={styles.cardName}>情绪爆发</div>
-            <div className={styles.cardDesc}>压抑情感瞬间释放</div>
-          </button>
-          <button className={styles.cardBtn} onClick={onOpenCardModal}>
-            <div className={styles.cardRarity} style={{ color: "#a855f7" }}>✦ 史诗</div>
-            <div className={styles.cardIcon}>🌀</div>
-            <div className={styles.cardName}>命运转折</div>
-            <div className={styles.cardDesc}>关键选择改变一切</div>
-          </button>
-          <button className={styles.cardBtn} onClick={onOpenCardModal}>
-            <div className={styles.cardRarity} style={{ color: "#67e8f9" }}>✦ 稀有</div>
-            <div className={styles.cardIcon}>💫</div>
-            <div className={styles.cardName}>意外援手</div>
-            <div className={styles.cardDesc}>意想不到的外援</div>
-          </button>
-        </div>
-
-        {/* AI 思考状态（有抽卡结果时显示） */}
-        {drawResult && (
-          <div className={styles.agentInline}>
-            <div className={`${styles.agentStepRow} ${styles.agentStepRowDone}`}>
-              <span className={styles.agentStepDot} />
-              读取四库数据
-            </div>
-            <div className={`${styles.agentStepRow} ${styles.agentStepRowActive}`}>
-              <span className={styles.agentStepDot} />
-              匹配文风指纹
-            </div>
-            <div className={styles.agentStepRow}>
-              <span className={styles.agentStepDot} />
-              等待操作...
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* AI 操作 */}
-      <div className={styles.toolSection}>
-        <div className={styles.toolSectionTitle}>
-          <span className={styles.toolSectionDot} style={{ background: "var(--color-brand-indigo)" }} />
-          AI 操作
-        </div>
-
-        <button className={`${styles.actionBtn} ${styles.actionBtnDraw}`} onClick={onOpenCardModal}>
-          <span className={styles.actionBtnIcon}>🎴</span>
-          <div>
-            <div className={styles.actionBtnLabel}>打开抽卡面板</div>
-            <div className={styles.actionBtnHint}>
-              剩余重抽 {remainingRedraws} 次
-            </div>
-          </div>
-        </button>
-
-        <button
-          className={`${styles.actionBtn} ${styles.actionBtnDraw}`}
-          onClick={onRedraw}
-          disabled={remainingRedraws <= 0}
-          style={remainingRedraws <= 0 ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
-        >
-          <span className={styles.actionBtnIcon}>🔄</span>
-          <div>
-            <div className={styles.actionBtnLabel}>重新抽卡</div>
-            <div className={styles.actionBtnHint}>不满意？重新抽取卡牌组合</div>
-          </div>
-        </button>
-
-        <button className={`${styles.actionBtn} ${styles.actionBtnGenerate}`} onClick={onOpenCardModal}>
-          <span className={styles.actionBtnIcon}>✏</span>
-          <div>
-            <div className={styles.actionBtnLabel}>AI 生文</div>
-            <div className={styles.actionBtnHint} style={{ opacity: 0.7 }}>基于卡牌 + 四库记忆生成</div>
-          </div>
-        </button>
-      </div>
-
-      {/* 快捷操作 */}
-      <div className={styles.toolSection}>
-        <div className={styles.toolSectionTitle}>
-          <span className={styles.toolSectionDot} style={{ background: "var(--color-success)" }} />
-          快捷操作
-        </div>
-        <div className={styles.quickActions}>
-          <button className={`${styles.quickBtn} ${styles.quickBtnSuggested}`} onClick={onOpenCardModal}>
-            🎴 抽卡生文
-          </button>
-          <button className={styles.quickBtn} onClick={onOpenCardModal}>
-            📋 大纲优化
-          </button>
-          <button className={styles.quickBtn}>
-            🎭 语气校准
-          </button>
-          <button className={styles.quickBtn}>
-            📖 前章摘要
-          </button>
-          <button className={styles.quickBtn}>
-            ⚡ 节奏分析
-          </button>
-          <button className={styles.quickBtn}>
-            🎯 伏笔检查
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-/* ── 主内容 ── */
-function WorkspaceContent({ projectId }: { projectId: string }) {
-  const {
-    currentChapter,
-    chapters,
-    cards,
-    generationTask,
-    healthAlerts,
-    drawResult,
-    drawCards,
-    redrawCards,
-    generate,
-    createChapter,
-    setCurrentChapter,
-  } = useWorkspace();
-
-  const { currentProject, loadProject, projects } = useProjectContext();
-  const { user, logout } = useAuth();
-  const router = useRouter();
-
-  const [cardModalOpen, setCardModalOpen] = useState(false);
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
-  const [mobileRightOpen, setMobileRightOpen] = useState(false);
-  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-
-  // 检测移动端
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // 手势事件
-  useEffect(() => {
-    const handleOpenReference = () => {
-      if (isMobile) {
-        setMobileLeftOpen(true);
-      } else {
-        setLeftPanelOpen(true);
-      }
-    };
-    const handleOpenAI = () => {
-      if (isMobile) {
-        setMobileRightOpen(true);
-      } else {
-        setRightPanelOpen(true);
-      }
-    };
-    window.addEventListener("open-reference-panel", handleOpenReference);
-    window.addEventListener("open-ai-panel", handleOpenAI);
-    return () => {
-      window.removeEventListener("open-reference-panel", handleOpenReference);
-      window.removeEventListener("open-ai-panel", handleOpenAI);
-    };
-  }, [isMobile]);
-
-  const closeMobileLeft = useCallback(() => setMobileLeftOpen(false), []);
-  const closeMobileRight = useCallback(() => setMobileRightOpen(false), []);
-
-  // 加载项目详情
-  useEffect(() => {
-    if (projectId && !currentProject) {
-      loadProject(projectId);
-    }
-  }, [projectId, currentProject, loadProject]);
-
-  const leftResizable = useResizablePanel({
-    storageKey: "leftPanelWidth",
-    defaultWidth: 280,
-    minWidth: 200,
-    maxWidth: 400,
-    side: "left",
-  });
-  const rightResizable = useResizablePanel({
-    storageKey: "rightPanelWidth",
-    defaultWidth: 320,
-    minWidth: 260,
-    maxWidth: 480,
-    side: "right",
-  });
-
-  const handleAddChapter = async () => {
-    try {
-      await createChapter();
-      showToast("success", "新章节已创建");
-    } catch (error: any) {
-      showToast("error", `创建章节失败：${error?.message || "未知错误"}`);
-    }
-  };
-
-  const handleDrawCards = async (
-    cardIds: string[],
-    weights: number[],
-    mode: string,
-  ) => {
-    try {
-      await drawCards(cardIds, weights, mode);
-    } catch (error: any) {
-      showToast("error", `抽卡失败：${error?.message || "未知错误"}`);
-    }
-  };
-
-  const handleRedraw = async () => {
-    try {
-      await redrawCards(projectId);
-    } catch (error: any) {
-      showToast("error", `重抽失败：${error?.message || "未知错误"}`);
-    }
-  };
-
-  const toggleLeftPanel = () => setLeftPanelOpen(!leftPanelOpen);
-  const toggleRightPanel = () => setRightPanelOpen(!rightPanelOpen);
-  const openMobileLeft = () => setMobileLeftOpen(true);
-  const openMobileRight = () => setMobileRightOpen(true);
-
-  const remainingRedraws = drawResult?.remaining_redraws ?? 3;
-
-  return (
-    <div className={styles.page}>
-      {/* ── Top Bar ── */}
-      <div className={styles.topBar}>
-        <div className={styles.topLeft}>
-          {/* 左面板切换 */}
-          {isMobile ? (
-            <button className={styles.iconBtn} onClick={openMobileLeft} title="打开参考面板">
-              ☰
-            </button>
-          ) : (
-            <button
-              className={styles.iconBtn}
-              onClick={toggleLeftPanel}
-              title={leftPanelOpen ? "折叠左面板" : "展开左面板"}
-              style={leftPanelOpen ? { color: "var(--color-brand-indigo)", background: "var(--color-brand-indigo-dim)" } : undefined}
-            >
-              ☰
-            </button>
-          )}
-
-          {/* 面包屑导航 */}
-          <div className={styles.breadcrumb}>
-            <Link href="/projects" className={styles.breadcrumbLink}>
-              我的作品
-            </Link>
-            <span className={styles.breadcrumbSep}>/</span>
-            <div className={styles.projectSwitcher}>
-              <button
-                className={styles.projectSwitcherBtn}
-                onClick={() => setProjectMenuOpen(!projectMenuOpen)}
-              >
-                {currentProject?.title || "加载中..."}
-              </button>
-              {projectMenuOpen && (
-                <>
-                  <div className={styles.dropdownBackdrop} onClick={() => setProjectMenuOpen(false)} />
-                  <div className={styles.projectDropdown}>
-                    {projects?.map((p) => (
-                      <button
-                        key={p.id}
-                        className={`${styles.projectDropdownItem} ${p.id === projectId ? styles.projectDropdownItemActive : ""}`}
-                        onClick={() => {
-                          setProjectMenuOpen(false);
-                          if (p.id !== projectId) {
-                            router.push(`/workspace/${p.id}`);
-                          }
-                        }}
-                      >
-                        {p.title}
-                      </button>
-                    ))}
-                    <div className={styles.dropdownDivider} />
-                    <button
-                      className={styles.projectDropdownItem}
-                      onClick={() => {
-                        setProjectMenuOpen(false);
-                        router.push("/projects");
-                      }}
-                    >
-                      管理项目...
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* 章节快速切换 */}
-          <ChapterSelector
-            chapters={chapters}
-            currentChapterId={currentChapter?.id}
-            onChange={(ch) => setCurrentChapter(ch)}
-            onAddChapter={handleAddChapter}
-          />
-        </div>
-
-        <div className={styles.topRight}>
-          {/* 健康状态 */}
-          {healthAlerts && healthAlerts.length > 0 && (
-            <span className={styles.iconBtn} title="系统健康状态">
-              🛡
-            </span>
-          )}
-
-          {/* 右面板切换 */}
-          {isMobile ? (
-            <button className={styles.iconBtn} onClick={openMobileRight} title="打开 AI 工具箱">
-              ✦
-            </button>
-          ) : (
-            <button
-              className={styles.iconBtn}
-              onClick={toggleRightPanel}
-              title={rightPanelOpen ? "折叠 AI 工具箱" : "展开 AI 工具箱"}
-              style={rightPanelOpen ? { color: "var(--color-brand-indigo)", background: "var(--color-brand-indigo-dim)" } : undefined}
-            >
-              ✦
-            </button>
-          )}
-
-          {/* 用户菜单 */}
-          {user && (
-            <div className={styles.userSection}>
-              <button
-                className={styles.userAvatarBtn}
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                title="用户菜单"
-              >
-                {user.username?.charAt(0)?.toUpperCase() || "U"}
-              </button>
-              {userMenuOpen && (
-                <>
-                  <div className={styles.dropdownBackdrop} onClick={() => setUserMenuOpen(false)} />
-                  <div className={styles.userDropdown}>
-                    <div className={styles.userInfo}>
-                      <span className={styles.userName}>{user.username || "用户"}</span>
-                      <span className={styles.userEmail}>{user.email}</span>
-                    </div>
-                    <div className={styles.dropdownDivider} />
-                    <button
-                      className={styles.dropdownItem}
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        router.push("/settings");
-                      }}
-                    >
-                      个人设置
-                    </button>
-                    <button
-                      className={`${styles.dropdownItem} ${styles.dropdownDanger}`}
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        logout();
-                      }}
-                    >
-                      退出登录
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Health Alerts ── */}
-      <div className={styles.healthBanner}>
-        <HealthAlertBanner alerts={healthAlerts} />
-      </div>
-
-      {/* ── Generation Progress ── */}
-      {generationTask && (
-        <div className={styles.progressBar}>
-          <GenerationProgress
-            percent={generationTask.progress_percent}
-            stage={generationTask.progress_stage}
-          />
-        </div>
-      )}
-
-      {/* ── Three-column Layout ── */}
-      <div className={styles.main}>
-        {/* Left Panel — Desktop */}
-        {!isMobile && (
-          <div
-            className={`${styles.leftPanel} ${!leftPanelOpen ? styles.leftPanelCollapsed : ""}`}
-            style={leftPanelOpen ? { width: leftResizable.width, minWidth: leftResizable.width } : undefined}
-          >
-            <LibraryPanel />
-          </div>
-        )}
-
-        {/* Left Panel — Mobile Drawer */}
-        {isMobile && (
-          <>
-            <div
-              className={`${styles.overlay} ${mobileLeftOpen ? styles.overlayVisible : ""}`}
-              onClick={closeMobileLeft}
-            />
-            <div className={`${styles.leftPanel} ${mobileLeftOpen ? styles.leftPanelOpen : ""}`}>
-              <LibraryPanel />
-            </div>
-          </>
-        )}
-
-        {/* Resize Handle */}
-        {!isMobile && leftPanelOpen && (
-          <ResizableHandle
-            onMouseDown={leftResizable.onResizeStart}
-            active={leftResizable.isResizing}
-          />
-        )}
-
-        {/* Center: Editor */}
-        <div className={styles.editorArea}>
-          <div className={styles.editorCenter}>
-            <Editor />
-          </div>
-        </div>
-
-        {/* Resize Handle */}
-        {!isMobile && rightPanelOpen && (
-          <ResizableHandle
-            onMouseDown={rightResizable.onResizeStart}
-            active={rightResizable.isResizing}
-          />
-        )}
-
-        {/* Right Panel — Desktop */}
-        {!isMobile && (
-          <div
-            className={`${styles.rightPanel} ${!rightPanelOpen ? styles.rightPanelCollapsed : ""}`}
-            style={rightPanelOpen ? { width: rightResizable.width, minWidth: rightResizable.width } : undefined}
-          >
-            <AIToolbox
-              onOpenCardModal={() => setCardModalOpen(true)}
-              onRedraw={handleRedraw}
-              remainingRedraws={remainingRedraws}
-              drawResult={drawResult}
-            />
-          </div>
-        )}
-
-        {/* Right Panel — Mobile Drawer */}
-        {isMobile && (
-          <>
-            <div
-              className={`${styles.overlay} ${mobileRightOpen ? styles.overlayVisible : ""}`}
-              onClick={closeMobileRight}
-            />
-            <div className={`${styles.rightPanel} ${mobileRightOpen ? styles.rightPanelOpen : ""}`}>
-              <AIToolbox
-                onOpenCardModal={() => setCardModalOpen(true)}
-                onRedraw={handleRedraw}
-                remainingRedraws={remainingRedraws}
-                drawResult={drawResult}
-              />
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* ── Status Bar ── */}
-      <div className={styles.statusBar}>
-        <span className={styles.statusDot} />
-        <span className={styles.statusText}>
-          {generationTask ? "墨灵 · 生成中..." : "墨灵 · 就绪"}
-        </span>
-        {currentChapter && (
-          <span className={styles.statusMeta}>
-            {currentChapter.title || `第 ${currentChapter.chapter_number || "?"} 章`}
-          </span>
-        )}
-      </div>
-
-      {/* ── Card Modal ── */}
-      <CardModal
-        isOpen={cardModalOpen}
-        onClose={() => setCardModalOpen(false)}
-        cards={cards}
-        remainingRedraws={remainingRedraws}
-        onDraw={handleDrawCards}
-        onRedraw={handleRedraw}
-        onConfirm={(cardIds, weights, mode) => {
-          generate(cardIds, weights, mode);
-          setCardModalOpen(false);
-          showToast("info", "正在同步世界设定…");
-        }}
-      />
-    </div>
-  );
-}
-
-/* ── Page Export ── */
 export default function WorkspacePage() {
   const params = useParams();
   const projectId = params.projectId as string;
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.replace("/auth");
-    }
-  }, [authLoading, isAuthenticated, router]);
+  const project = useWritingStore((s) => s.project);
+  const projects = useWritingStore((s) => s.projects);
+  const loadProjects = useWritingStore((s) => s.loadProjects);
+  const setActiveProject = useWritingStore((s) => s.setActiveProject);
+  const { theme, setTheme } = useTheme();
 
-  if (authLoading || !isAuthenticated) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+  /** 加载多书 Mock */
+  useEffect(() => {
+    if (projects.length === 0) {
+      loadProjects(MOCK_PROJECTS);
+    }
+    // 切换到 URL 中的 projectId
+    if (projectId && project?.id !== projectId) {
+      setActiveProject(projectId);
+    }
+  }, [loadProjects, setActiveProject, projectId, project?.id, projects.length]);
+
+  /** Ctrl+Shift+T: 循环切换主题 */
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "T") {
+        e.preventDefault();
+        const idx = THEMES.findIndex((t) => t.id === theme);
+        const next = THEMES[(idx + 1) % THEMES.length];
+        setTheme(next.id as ThemeId);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [theme, setTheme]);
+
+  if (!project) {
     return (
-      <div style={{
-        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: "var(--color-bg, #0d0f1a)"
-      }}>
-        <Spinner />
+      <div
+        className="h-screen flex items-center justify-center"
+        style={{ background: "var(--th-bg)" }}
+      >
+        <p className="text-sm" style={{ color: "var(--th-text-3)" }}>
+          加载中...
+        </p>
       </div>
     );
   }
 
-  useEffect(() => {
-    if (projectId) {
-      localStorage.setItem("lastProjectId", projectId);
-    }
-  }, [projectId]);
-
   return (
-    <WorkspaceProvider projectId={projectId}>
-      <WorkspaceContent projectId={projectId} />
-    </WorkspaceProvider>
+    <div
+      className="h-screen flex overflow-hidden"
+      style={{ background: "var(--th-bg)", color: "var(--th-text)" }}
+    >
+      {/* ================================================================
+          Left Sidebar — collapsible
+          ================================================================ */}
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+      />
+
+      {/* ================================================================
+          Main Stage
+          ================================================================ */}
+      <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
+        {/* Top bar — minimal */}
+        <div className="shrink-0 flex items-center justify-end gap-2 px-4 py-3">
+          <div className="flex-1" />
+          <ThemeSwitcher />
+          <button
+            onClick={() => setRightPanelOpen((v) => !v)}
+            className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+            style={{ color: rightPanelOpen ? "var(--th-accent-text)" : "var(--th-text-3)" }}
+            aria-label="切换右栏"
+          >
+            <PanelRight size={18} />
+          </button>
+        </div>
+
+        {/* Center stage — reserved area (no white empty state) */}
+        <div className="flex-1" />
+
+        {/* Bottom status bar */}
+        <div
+          className="shrink-0 flex items-center justify-between px-4 py-1.5 text-[10px] border-t"
+          style={{
+            borderColor: "var(--th-border-subtle)",
+            color: "var(--th-text-4)",
+          }}
+        >
+          <span>
+            {project.title} · 第 {project.currentChapter} 章 / {project.totalChapters} 章
+          </span>
+          <span>{project.genre}</span>
+        </div>
+      </main>
+
+      {/* ================================================================
+          Right Panel — collapsible
+          ================================================================ */}
+      {rightPanelOpen && (
+        <aside
+          className="shrink-0 h-full border-l flex flex-col transition-all duration-300"
+          style={{
+            width: 260,
+            borderColor: "var(--th-border-subtle)",
+            background: "var(--th-card)",
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3 border-b"
+            style={{ borderColor: "var(--th-border-subtle)" }}
+          >
+            <span className="text-xs font-semibold" style={{ color: "var(--th-text-2)" }}>
+              项目信息
+            </span>
+            <button
+              onClick={() => setRightPanelOpen(false)}
+              className="p-1 rounded transition-colors hover:opacity-80"
+              style={{ color: "var(--th-text-3)" }}
+              aria-label="关闭右栏"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <dl className="space-y-3 text-xs">
+              <div>
+                <dt style={{ color: "var(--th-text-4)" }} className="mb-1">
+                  类型
+                </dt>
+                <dd style={{ color: "var(--th-text-2)" }}>{project.genre}</dd>
+              </div>
+              <div>
+                <dt style={{ color: "var(--th-text-4)" }} className="mb-1">
+                  进度
+                </dt>
+                <dd style={{ color: "var(--th-text-2)" }}>
+                  第 {project.currentChapter} / {project.totalChapters} 章
+                </dd>
+              </div>
+              <div>
+                <dt style={{ color: "var(--th-text-4)" }} className="mb-1">
+                  简介
+                </dt>
+                <dd style={{ color: "var(--th-text-2)" }}>{project.summary}</dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+      )}
+    </div>
   );
 }

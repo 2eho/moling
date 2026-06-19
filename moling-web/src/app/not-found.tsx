@@ -1,36 +1,24 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import styles from "./not-found.module.css";
+import Link from "next/link";
 
 export default function NotFound() {
-  const router = useRouter();
-
   return (
-    <div className={styles.container}>
-      <div className={styles.inner}>
-        <svg className={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 20h9"/>
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-        </svg>
-        <div className={styles.code}>404</div>
-        <h1 className={styles.title}>这章还没写</h1>
-        <p className={styles.desc}>
-          你找的页面不在墨灵的世界观里。
-          <br />
-          可能是链接错了，或者它还在构思中。
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] p-8">
+      <div className="text-center">
+        <h1 className="mb-2 text-6xl font-bold text-[var(--color-brand-indigo)]">
+          404
+        </h1>
+        <p className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">
+          页面不存在
         </p>
-        <Button onClick={() => router.push("/projects")}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{marginRight:"6px", verticalAlign:"middle"}}>
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-          回我的作品
-        </Button>
-        <div className={styles.links}>
-          <button className={styles.linkBtn} onClick={() => router.push("/")}>首页</button>
-          <button className={styles.linkBtn} onClick={() => router.push("/auth")}>登录</button>
-        </div>
+        <p className="mb-6 text-sm text-[var(--color-text-secondary)]">
+          你访问的页面可能已被移除或不存在
+        </p>
+        <Link
+          href="/projects"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-brand-indigo)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-indigo-600)]"
+        >
+          返回项目列表
+        </Link>
       </div>
     </div>
   );

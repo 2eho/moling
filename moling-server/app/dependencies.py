@@ -112,9 +112,6 @@ def _get_db_url() -> str:
       （psycopg 原生支持异步，不依赖 greenlet）
     """
     url = settings.DATABASE_URL
-    if platform.system() == "Windows" and url.startswith("sqlite"):
-        if "aiosqlite" not in url:
-            url = url.replace("sqlite://", "sqlite+aiosqlite://", 1)
     # PostgreSQL：强制使用 psycopg 驱动（异步/同步均支持）
     if url.startswith("postgresql+asyncpg"):
         url = url.replace("postgresql+asyncpg", "postgresql+psycopg", 1)
@@ -177,21 +174,105 @@ def get_sync_db() -> Generator["Session", None, None]:
             session.close()
 
 
+class _SyncAsyncSessionWrapper:
+    """将同步 SQLAlchemy Session 包装为可 await 的伪异步 Session。
+
+    Windows 上 aiosqlite + greenlet 存在兼容问题，此类用线程池
+    执行同步操作，让上层 async/await 代码无需修改。
+    """
+
+    def __init__(self, sync_session: Session):
+        self._sync = sync_session
+
+    def __getattr__(self, name: str):
+        """代理所有属性访问到内部同步 session。"""
+        return getattr(self._sync, name)
+
+    async def commit(self):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        await loop.run_in_executor(None, self._sync.commit)
+
+    async def rollback(self):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        await loop.run_in_executor(None, self._sync.rollback)
+
+    async def close(self):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        await loop.run_in_executor(None, self._sync.close)
+
+    async def refresh(self, instance, attribute_names=None):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: self._sync.refresh(instance, attribute_names),
+        )
+
+    async def execute(self, *args, **kwargs):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self._sync.execute(*args, **kwargs),
+        )
+
+    async def flush(self, *args, **kwargs):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self._sync.flush(*args, **kwargs),
+        )
+
+    def add(self, instance):
+        self._sync.add(instance)
+
+    def add_all(self, instances):
+        self._sync.add_all(instances)
+
+    async def delete(self, instance):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        await loop.run_in_executor(None, lambda: self._sync.delete(instance))
+
+    async def merge(self, instance):
+        from asyncio import get_event_loop
+        loop = get_event_loop()
+        return await loop.run_in_executor(None, lambda: self._sync.merge(instance))
+
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Provide a transactional database session.
 
     The session is automatically committed on success and rolled back on
     error. Always closes the session in the ``finally`` block.
+
+    Windows: 使用同步 session + 线程池包装，避开 aiosqlite greenlet 问题。
     """
-    async with async_session_factory() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+    if platform.system() == "Windows" and _is_sqlite:
+        with _sync_session_factory() as session:
+            wrapped = _SyncAsyncSessionWrapper(session)
+            try:
+                yield wrapped  # type: ignore[misc]
+                await wrapped.commit()
+            except Exception:
+                await wrapped.rollback()
+                raise
+            finally:
+                await wrapped.close()
+    else:
+        async with async_session_factory() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                await session.close()
 
 
 # ---------------------------------------------------------------------------

@@ -56,10 +56,30 @@ async def submit_import(
     
     # 如果从文件上传，读取文件内容
     if file:
+        # 校验文件类型：仅支持 .txt / .md
+        filename = file.filename or ""
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if ext not in ("txt", "md"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的文件类型 .{ext}，仅支持 .txt 和 .md 文件",
+            )
+
+        # 根据扩展名设置 source_type
+        if ext == "md":
+            source_type = "markdown"
+        else:
+            source_type = "text"
+
         try:
             # 读取上传的文件内容
             content = await file.read()
             text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=400,
+                detail="文件编码错误，请确保文件为 UTF-8 编码",
+            )
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"读取文件失败: {str(e)}")
         finally:

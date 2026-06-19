@@ -33,8 +33,8 @@ class CharacterResp(BaseModel):
 class TimelineResp(BaseModel):
     """Vault timeline event response."""
 
-    id: int = Field(..., description="事件 ID")
-    project_id: int = Field(..., description="所属项目 ID")
+    id: str = Field(..., description="事件 ID (UUID)")
+    project_id: str = Field(..., description="所属项目 ID")
     chapter_number: int = Field(..., description="事件章节号")
     event: str = Field(..., description="事件标题")
     description: str = Field(..., description="事件描述")
@@ -67,8 +67,8 @@ class PlotPromiseResp(BaseModel):
 class WorldResp(BaseModel):
     """Vault world entry response."""
 
-    id: int = Field(..., description="条目 ID")
-    project_id: int = Field(..., description="所属项目 ID")
+    id: str = Field(..., description="条目 ID (UUID)")
+    project_id: str = Field(..., description="所属项目 ID")
     term: str = Field(..., description="术语名称")
     description: str = Field(..., description="条目描述")
     category: str = Field(..., description="类别")

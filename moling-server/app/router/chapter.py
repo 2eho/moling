@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user
 from app.schemas.chapter import CreateChapterReq, ChapterResp, UpdateChapterReq
 from app.schemas.generation import GenerateReq
-from app.service import chapter_service, generation_service
+from app.service import chapter_service, generation_service, card_service
 
 router = APIRouter(tags=["chapters"])
 
@@ -24,7 +24,7 @@ async def create_chapter(
     current_user=Depends(get_current_user),
 ) -> ChapterResp:
     """Create a new chapter in a project."""
-    return await chapter_service.create_chapter(db, current_user["id"], project_id, req)
+    return await chapter_service.create_chapter(db, current_user.id, project_id, req)
 
 
 @router.get("/chapters", response_model=list[ChapterResp])
@@ -34,7 +34,7 @@ async def list_chapters(
     current_user=Depends(get_current_user),
 ) -> list[ChapterResp]:
     """List chapters in a project."""
-    return await chapter_service.list_chapters(db, current_user["id"], project_id)
+    return await chapter_service.list_chapters(db, current_user.id, project_id)
 
 
 @router.get("/chapters/current", response_model=ChapterResp)
@@ -44,7 +44,7 @@ async def get_current_chapter(
     current_user=Depends(get_current_user),
 ) -> ChapterResp:
     """Get the current (first) chapter in a project."""
-    chapters = await chapter_service.list_chapters(db, current_user["id"], project_id)
+    chapters = await chapter_service.list_chapters(db, current_user.id, project_id)
     if not chapters:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="No chapters found")
@@ -59,7 +59,7 @@ async def get_chapter(
     current_user=Depends(get_current_user),
 ) -> ChapterResp:
     """Get single chapter by ID."""
-    return await chapter_service.get_chapter(db, current_user["id"], project_id, chapter_id)
+    return await chapter_service.get_chapter(db, current_user.id, project_id, chapter_id)
 
 
 @router.put("/chapters/{chapter_id}", response_model=ChapterResp)
@@ -71,7 +71,7 @@ async def update_chapter(
     current_user=Depends(get_current_user),
 ) -> ChapterResp:
     """Update chapter by ID."""
-    return await chapter_service.update_chapter(db, current_user["id"], project_id, chapter_id, req)
+    return await chapter_service.update_chapter(db, current_user.id, project_id, chapter_id, req)
 
 
 @router.delete("/chapters/{chapter_id}", status_code=204)
@@ -82,7 +82,7 @@ async def delete_chapter(
     current_user=Depends(get_current_user),
 ) -> None:
     """Delete chapter by ID."""
-    await chapter_service.delete_chapter(db, current_user["id"], project_id, chapter_id)
+    await chapter_service.delete_chapter(db, current_user.id, project_id, chapter_id)
 
 
 @router.post("/chapters/reorder", response_model=list[ChapterResp])
@@ -93,7 +93,7 @@ async def reorder_chapters(
     current_user=Depends(get_current_user),
 ) -> list[ChapterResp]:
     """Reorder chapters by providing new chapter numbers."""
-    return await chapter_service.reorder_chapters(db, current_user["id"], project_id, chapter_numbers)
+    return await chapter_service.reorder_chapters(db, current_user.id, project_id, chapter_numbers)
 
 
 @router.post("/chapters/{chapter_id}/confirm", response_model=ChapterResp)
@@ -106,7 +106,7 @@ async def confirm_chapter(
 ) -> ChapterResp:
     """Confirm a chapter and trigger Phase 4 processing."""
     return await chapter_service.confirm_chapter(
-        db, current_user["id"], project_id, chapter_id, confirm_data
+        db, current_user.id, project_id, chapter_id, confirm_data
     )
 
 
@@ -120,7 +120,7 @@ async def revise_chapter(
 ) -> ChapterResp:
     """Mark a chapter for revision (reject/revise)."""
     return await chapter_service.revise_chapter(
-        db, current_user["id"], project_id, chapter_id, revise_data
+        db, current_user.id, project_id, chapter_id, revise_data
     )
 
 
@@ -133,7 +133,7 @@ async def get_chapter_suggestions(
 ) -> dict:
     """获取章节的创作建议。"""
     suggestions = await chapter_service.get_suggestions(
-        db, current_user["id"], project_id, chapter_id
+        db, current_user.id, project_id, chapter_id
     )
     return suggestions
 
@@ -148,7 +148,7 @@ async def send_agent_instruction(
 ) -> dict:
     """向 AI 发送指令（用于章节生成过程中的干预）。"""
     result = await chapter_service.send_agent_instruction(
-        db, current_user["id"], project_id, chapter_id, instruction
+        db, current_user.id, project_id, chapter_id, instruction
     )
     return result
 
@@ -174,7 +174,7 @@ async def generate_chapter_content_sync(
     )
     generate_req = GenerateReq(**req)
     result = await generation_service.start_generation(
-        db, current_user["id"], project_id, chapter_id, generate_req
+        db, current_user.id, project_id, chapter_id, generate_req
     )
     return result
 
@@ -188,15 +188,20 @@ async def redraw_chapter_cards(
     current_user=Depends(get_current_user),
 ) -> dict:
     """重抽卡牌（接口映射文档 4.4.3 节).
-    
+
     排除本章已抽卡，重新抽取。
     请求参数：{keep_card_ids: list[int], draw_count: int = 3}
-    响应：{cards: list, remaining_redraws: int}
+    响应：{cards: list, draw_round: int, remaining_redraws: int}
     """
-    # TODO: 实现重抽逻辑，调用 card_service.redraw()
-    # 当前返回占位符响应
-    return {
-        "cards": [],
-        "remaining_redraws": 3,
-        "message": "重抽功能待实现",
-    }
+    keep_card_ids = data.get("keep_card_ids", [])
+    draw_count = data.get("draw_count", 3)
+
+    result = await card_service.redraw_cards(
+        db,
+        current_user.id,
+        project_id,
+        chapter_id,
+        keep_card_ids=keep_card_ids,
+        draw_count=draw_count,
+    )
+    return result

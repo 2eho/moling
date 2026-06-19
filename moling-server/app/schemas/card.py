@@ -32,7 +32,8 @@ class DrawCardReq(BaseModel):
 class CardResp(BaseModel):
     """Card response (public-facing)."""
 
-    id: int = Field(..., description="卡片 ID")
+    id: str = Field(..., description="卡片 ID (UUID)")
+    project_id: str = Field(..., description="所属项目 ID")
     name: str = Field(..., description="卡片名称")
     description: str = Field(..., description="卡片描述")
     rarity: str = Field(..., description="稀有度")

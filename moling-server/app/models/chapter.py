@@ -14,7 +14,8 @@ class Chapter(BaseModel):
 
     __tablename__ = "chapters"
 
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[int] = mapped_column(
+        Integer,
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

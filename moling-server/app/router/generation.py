@@ -1,4 +1,4 @@
-﻿"""澧ㄧ伒 (Moling) 鈥?Generation API Router.
+"""墨灵 (Moling) — Generation API Router.
 
 Provides endpoints for AI text generation tasks.
 """
@@ -20,7 +20,7 @@ async def get_task_status(
     current_user=Depends(get_current_user),
 ) -> TaskStatusResp:
     """Get generation task status."""
-    return await generation_service.get_task_status(db, current_user["id"], task_id)
+    return await generation_service.get_task_status(db, current_user.id, task_id)
 
 
 @router.post("/{task_id}/cancel", response_model=dict)
@@ -30,7 +30,7 @@ async def cancel_task(
     current_user=Depends(get_current_user),
 ) -> dict:
     """Cancel a generation task."""
-    await generation_service.cancel_task(db, current_user["id"], task_id)
+    await generation_service.cancel_task(db, current_user.id, task_id)
     return {"status": "cancelled", "task_id": task_id}
 
 
@@ -43,6 +43,6 @@ async def get_generation_history(
 ) -> list[dict]:
     """Get generation task history."""
     history = await generation_service.get_history(
-        db, current_user["id"], page, page_size
+        db, current_user.id, page, page_size
     )
     return history

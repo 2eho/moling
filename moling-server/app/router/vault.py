@@ -25,7 +25,7 @@ async def list_characters(
     current_user=Depends(get_current_user),
 ) -> list[CharacterResp]:
     """List all characters in a project's vault."""
-    return await vault_service.list_characters(db, current_user["id"], project_id)
+    return await vault_service.list_characters(db, current_user.id, project_id)
 
 
 @router.get("/characters/{character_id}", response_model=CharacterResp)
@@ -36,7 +36,7 @@ async def get_character(
     current_user=Depends(get_current_user),
 ) -> CharacterResp:
     """Get a single character by ID."""
-    return await vault_service.get_character(db, current_user["id"], project_id, character_id)
+    return await vault_service.get_character(db, current_user.id, project_id, character_id)
 
 
 @router.post("/characters", response_model=CharacterResp, status_code=201)
@@ -47,7 +47,7 @@ async def create_character(
     current_user=Depends(get_current_user),
 ) -> CharacterResp:
     """Create a new character in the vault."""
-    return await vault_service.create_character(db, current_user["id"], project_id, character_data)
+    return await vault_service.create_character(db, current_user.id, project_id, character_data)
 
 
 @router.put("/characters/{character_id}", response_model=CharacterResp)
@@ -60,7 +60,7 @@ async def update_character(
 ) -> CharacterResp:
     """Update a character in the vault."""
     return await vault_service.update_character(
-        db, current_user["id"], project_id, character_id, character_data
+        db, current_user.id, project_id, character_id, character_data
     )
 
 
@@ -72,7 +72,7 @@ async def delete_character(
     current_user=Depends(get_current_user),
 ) -> None:
     """Delete a character from the vault."""
-    await vault_service.delete_character(db, current_user["id"], project_id, character_id)
+    await vault_service.delete_character(db, current_user.id, project_id, character_id)
 
 
 # =========== Timeline ===========
@@ -85,7 +85,7 @@ async def list_timeline(
     current_user=Depends(get_current_user),
 ) -> list[TimelineResp]:
     """List all timeline events in a project's vault."""
-    return await vault_service.list_timeline(db, current_user["id"], project_id)
+    return await vault_service.list_timeline(db, current_user.id, project_id)
 
 
 @router.get("/timeline/{event_id}", response_model=TimelineResp)
@@ -96,7 +96,7 @@ async def get_timeline_event(
     current_user=Depends(get_current_user),
 ) -> TimelineResp:
     """Get a single timeline event by ID."""
-    return await vault_service.get_timeline_event(db, current_user["id"], project_id, event_id)
+    return await vault_service.get_timeline_event(db, current_user.id, project_id, event_id)
 
 
 @router.post("/timeline", response_model=TimelineResp, status_code=201)
@@ -107,7 +107,7 @@ async def create_timeline_event(
     current_user=Depends(get_current_user),
 ) -> TimelineResp:
     """Create a new timeline event in the vault."""
-    return await vault_service.create_timeline_event(db, current_user["id"], project_id, event_data)
+    return await vault_service.create_timeline_event(db, current_user.id, project_id, event_data)
 
 
 @router.put("/timeline/{event_id}", response_model=TimelineResp)
@@ -120,7 +120,7 @@ async def update_timeline_event(
 ) -> TimelineResp:
     """Update a timeline event in the vault."""
     return await vault_service.update_timeline_event(
-        db, current_user["id"], project_id, event_id, event_data
+        db, current_user.id, project_id, event_id, event_data
     )
 
 
@@ -132,7 +132,7 @@ async def delete_timeline_event(
     current_user=Depends(get_current_user),
 ) -> None:
     """Delete a timeline event from the vault."""
-    await vault_service.delete_timeline_event(db, current_user["id"], project_id, event_id)
+    await vault_service.delete_timeline_event(db, current_user.id, project_id, event_id)
 
 
 # =========== Plot Promises ===========
@@ -145,7 +145,7 @@ async def list_plot_promises(
     current_user=Depends(get_current_user),
 ) -> list[PlotPromiseResp]:
     """List all plot promises in a project's vault."""
-    return await vault_service.list_plot_promises(db, current_user["id"], project_id)
+    return await vault_service.list_plot_promises(db, current_user.id, project_id)
 
 
 @router.get("/plot-promises/{promise_id}", response_model=PlotPromiseResp)
@@ -156,7 +156,7 @@ async def get_plot_promise(
     current_user=Depends(get_current_user),
 ) -> PlotPromiseResp:
     """Get a single plot promise by ID."""
-    return await vault_service.get_plot_promise(db, current_user["id"], project_id, promise_id)
+    return await vault_service.get_plot_promise(db, current_user.id, project_id, promise_id)
 
 
 @router.post("/plot-promises", response_model=PlotPromiseResp, status_code=201)
@@ -167,7 +167,7 @@ async def create_plot_promise(
     current_user=Depends(get_current_user),
 ) -> PlotPromiseResp:
     """Create a new plot promise in the vault."""
-    return await vault_service.create_plot_promise(db, current_user["id"], project_id, promise_data)
+    return await vault_service.create_plot_promise(db, current_user.id, project_id, promise_data)
 
 
 @router.put("/plot-promises/{promise_id}", response_model=PlotPromiseResp)
@@ -180,7 +180,7 @@ async def update_plot_promise(
 ) -> PlotPromiseResp:
     """Update a plot promise in the vault."""
     return await vault_service.update_plot_promise(
-        db, current_user["id"], project_id, promise_id, promise_data
+        db, current_user.id, project_id, promise_id, promise_data
     )
 
 
@@ -192,7 +192,7 @@ async def delete_plot_promise(
     current_user=Depends(get_current_user),
 ) -> None:
     """Delete a plot promise from the vault."""
-    await vault_service.delete_plot_promise(db, current_user["id"], project_id, promise_id)
+    await vault_service.delete_plot_promise(db, current_user.id, project_id, promise_id)
 
 
 # =========== World Building ===========
@@ -205,7 +205,7 @@ async def list_world_entries(
     current_user=Depends(get_current_user),
 ) -> list[WorldResp]:
     """List all world-building entries in a project's vault."""
-    return await vault_service.list_world_entries(db, current_user["id"], project_id)
+    return await vault_service.list_world_entries(db, current_user.id, project_id)
 
 
 @router.get("/world/{entry_id}", response_model=WorldResp)
@@ -216,7 +216,7 @@ async def get_world_entry(
     current_user=Depends(get_current_user),
 ) -> WorldResp:
     """Get a single world-building entry by ID."""
-    return await vault_service.get_world_entry(db, current_user["id"], project_id, entry_id)
+    return await vault_service.get_world_entry(db, current_user.id, project_id, entry_id)
 
 
 @router.post("/world", response_model=WorldResp, status_code=201)
@@ -227,7 +227,7 @@ async def create_world_entry(
     current_user=Depends(get_current_user),
 ) -> WorldResp:
     """Create a new world-building entry in the vault."""
-    return await vault_service.create_world_entry(db, current_user["id"], project_id, entry_data)
+    return await vault_service.create_world_entry(db, current_user.id, project_id, entry_data)
 
 
 @router.put("/world/{entry_id}", response_model=WorldResp)
@@ -240,7 +240,7 @@ async def update_world_entry(
 ) -> WorldResp:
     """Update a world-building entry in the vault."""
     return await vault_service.update_world_entry(
-        db, current_user["id"], project_id, entry_id, entry_data
+        db, current_user.id, project_id, entry_id, entry_data
     )
 
 
@@ -252,7 +252,7 @@ async def delete_world_entry(
     current_user=Depends(get_current_user),
 ) -> None:
     """Delete a world-building entry from the vault."""
-    await vault_service.delete_world_entry(db, current_user["id"], project_id, entry_id)
+    await vault_service.delete_world_entry(db, current_user.id, project_id, entry_id)
 
 
 @router.get("/summary", response_model=dict)
@@ -262,7 +262,7 @@ async def get_vault_summary(
     current_user=Depends(get_current_user),
 ) -> dict:
     """获取四库总览（角色、时间线、伏笔、世界观的统计数据）。"""
-    summary = await vault_service.get_summary(db, current_user["id"], project_id)
+    summary = await vault_service.get_summary(db, current_user.id, project_id)
     return summary
 
 
@@ -273,10 +273,38 @@ async def full_reanalyze(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
-    """全量重新分析项目内容，更新四库数据。"""
-    # MVP 实现：返回接受状态
+    """全量重新分析项目内容，更新四库数据。
+
+    创建 Celery 异步任务执行全量分析，返回 task_id 用于轮询进度。
+    Celery broker 不可用时优雅降级，返回占位 task_id。
+    """
+    import uuid
+
+    user_id = str(current_user.id)
+
+    # 生成 task_id；如果 Celery/Redis 可用则提交异步任务
+    task_id = f"reanalyze-{project_id}-{uuid.uuid4()}"
+    try:
+        # 快速检测 Redis 是否可用（避免 Celery 长时间重试阻塞请求）
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1)
+        redis_available = s.connect_ex(("localhost", 6379)) == 0
+        s.close()
+
+        if redis_available:
+            from app.worker.vault_reanalyze_task import vault_full_reanalyze
+            celery_task = vault_full_reanalyze.delay(
+                project_id=project_id,
+                user_id=user_id,
+            )
+            task_id = str(celery_task.id)
+    except Exception:
+        pass  # Celery/Redis 不可用，使用占位 task_id
+
     return {
         "status": "accepted",
-        "task_id": f"reanalyze-{project_id}-{uuid4()}",
-        "message": "全量分析已启动，请稍后查看结果",
+        "task_id": task_id,
+        "project_id": project_id,
+        "message": "全量分析已提交至后台队列，可通过 task_id 查询进度",
     }

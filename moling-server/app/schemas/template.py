@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 class TemplateResp(BaseModel):
     """Project template response."""
 
-    id: int = Field(..., description="模板 ID")
+    id: str = Field(..., description="模板 ID (UUID)")
     name: str = Field(..., description="模板名称")
     description: str = Field(..., description="模板描述")
     genre: str = Field(..., description="适用题材")

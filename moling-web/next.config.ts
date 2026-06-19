@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // 允许构建跳过 ESLint 检查
   eslint: {
+    // Phase 2 解决：Next.js 15 + ESLint 9+ flat config 兼容链
     ignoreDuringBuilds: true,
   },
   // 禁用 Image Optimization（standalone 模式可选）
@@ -15,8 +16,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   typescript: {
-    // TODO: 逐步修复类型问题后移除该配置
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -60,16 +60,26 @@ const nextConfig: NextConfig = {
   // 转发到后端 FastAPI（避免跨域和 404 问题）
   // 生产环境由 Nginx 处理反代，此配置不生效
   // ═══════════════════════════════════════════════════════════
-  async rewrites() {
-    if (process.env.NODE_ENV !== "development") return [];
-
+  // ═══════════════════════════════════════════════════════════
+  // 根路径重定向
+  // ═══════════════════════════════════════════════════════════
+  async redirects() {
     return [
       {
-        source: "/moling/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
+        source: '/',
+        destination: '/moling',
+        basePath: false,
+        permanent: false,
       },
     ];
   },
+
+  rewrites: async () => [
+    {
+      source: "/api/:path*",
+      destination: "http://127.0.0.1:8000/api/:path*",
+    },
+  ],
 };
 
 export default nextConfig;
