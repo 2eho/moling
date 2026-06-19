@@ -38,7 +38,7 @@ DATABASE_URL = os.environ.get(
 if DATABASE_URL.startswith("sqlite+aiosqlite://"):
     SQLALCHEMY_URL = DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://", 1)
 elif "+asyncpg" in DATABASE_URL:
-    SQLALCHEMY_URL = DATABASE_URL.replace("+asyncpg", "")
+    SQLALCHEMY_URL = DATABASE_URL.replace("+asyncpg", "+psycopg")
 else:
     SQLALCHEMY_URL = DATABASE_URL
 

@@ -83,7 +83,7 @@ jobs:
         run: |
           cd moling-server
           cp .env.example .env
-          echo "DATABASE_URL=postgresql://testuser:testpass@localhost:5432/moling_test" >> .env
+          echo "DATABASE_URL=postgresql+psycopg://testuser:testpass@localhost:5432/moling_test" >> .env
 
       - name: 生成迁移脚本（如果不存在）
         run: |
@@ -93,7 +93,7 @@ jobs:
       - name: 运行回滚测试
         run: |
           cd moling-server
-          python scripts/test_rollback.py --db-url "postgresql://testuser:testpass@localhost:5432/moling_test"
+          python scripts/test_rollback.py --db-url "postgresql+psycopg://testuser:testpass@localhost:5432/moling_test"
 
       - name: 测试迁移到特定版本
         run: |
@@ -188,7 +188,7 @@ jobs:
         run: |
           cd moling-server
           cp .env.example .env
-          echo "DATABASE_URL=postgresql://testuser:testpass@localhost:5432/moling_test" >> .env
+          echo "DATABASE_URL=postgresql+psycopg://testuser:testpass@localhost:5432/moling_test" >> .env
           alembic upgrade head
 
       - name: 测试全量备份
