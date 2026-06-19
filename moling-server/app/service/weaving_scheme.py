@@ -9,8 +9,8 @@ from __future__ import annotations
 import json
 import logging
 import math
-from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, List, Tuple
 
 from app.config import get_effective_llm_config
 from app.llm.client import llm_client

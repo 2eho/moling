@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao.base_dao import BaseDAO

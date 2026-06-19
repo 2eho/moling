@@ -36,9 +36,9 @@ DATABASE_URL = os.environ.get(
 # Convert async SQLite URL to sync for Alembic
 # Alembic needs a sync engine; replace aiosqlite with sync sqlite driver
 if DATABASE_URL.startswith("sqlite+aiosqlite://"):
-    SQLALCHEMY_URL = DATABASE_URL.replace(
-        "sqlite+aiosqlite://", "sqlite://", 1
-    )
+    SQLALCHEMY_URL = DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://", 1)
+elif "+asyncpg" in DATABASE_URL:
+    SQLALCHEMY_URL = DATABASE_URL.replace("+asyncpg", "")
 else:
     SQLALCHEMY_URL = DATABASE_URL
 

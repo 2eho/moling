@@ -11,7 +11,6 @@ Fallback: 如果 Redis 不可用，则跳过黑名单检查（降级处理）。
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from app.config import get_settings
 

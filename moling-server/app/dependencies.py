@@ -10,7 +10,6 @@ Provides FastAPI dependency callables for:
 from __future__ import annotations
 
 import platform
-import sys
 
 # ---------------------------------------------------------------------------
 # Windows greenlet 猴子补丁 — 必须在所有 SQLAlchemy 导入之前执行
@@ -48,7 +47,6 @@ if platform.system() == "Windows":
 # ---------------------------------------------------------------------------
 if platform.system() == "Windows":
     import contextlib
-    import threading
     import sqlalchemy.event.attr as _event_attr
 
     def _patched_get_exec_once_mutex():
@@ -89,12 +87,6 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import get_settings
-from app.service.auth_service import AuthService
-from app.service.project_service import ProjectService
-from app.service.chapter_service import ChapterService
-from app.service.generation_service import GenerationService
-from app.service.vault_service import VaultService
-from app.service.secret_service import SecretService
 
 settings = get_settings()
 
@@ -162,7 +154,6 @@ _sync_session_factory = sessionmaker(bind=_sync_engine, expire_on_commit=False)
 
 def get_sync_db() -> Generator["Session", None, None]:
     """提供同步数据库会话（用于 Windows 上避开 async + greenlet 问题）。"""
-    from sqlalchemy.orm import Session
     with _sync_session_factory() as session:
         try:
             yield session

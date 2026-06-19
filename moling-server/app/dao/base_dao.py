@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import Select, delete, func, select, update
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session as SyncSession
 
