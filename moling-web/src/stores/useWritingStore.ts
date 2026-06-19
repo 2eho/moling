@@ -113,6 +113,8 @@ interface WritingStore {
   undo: () => void;
   /** 重新生成选项 */
   generateOptions: () => void;
+  /** 新增章节 — 追加到数组末尾，渲染时倒序后自然置顶 */
+  addChapter: (projectId: string, chapter: Chapter) => void;
   /** 更新 Agent 状态 */
   updateAgents: (agents: AgentStatus[]) => void;
 }
@@ -272,4 +274,27 @@ export const useWritingStore = create<WritingStore>((set, get) => ({
   },
 
   updateAgents: (agents) => set({ agents }),
+
+  addChapter: (projectId, chapter) =>
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              chapters: [...p.chapters, chapter],
+              currentChapter: chapter.id,
+              totalChapters: Math.max(p.totalChapters, chapter.id),
+            }
+          : p,
+      ),
+      project:
+        s.project?.id === projectId
+          ? {
+              ...s.project,
+              chapters: [...s.project.chapters, chapter],
+              currentChapter: chapter.id,
+              totalChapters: Math.max(s.project.totalChapters, chapter.id),
+            }
+          : s.project,
+    })),
 }));

@@ -177,10 +177,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     )}
                   </button>
 
-                  {/* Expanded chapters */}
+                  {/* Expanded chapters — 倒序：最新一章紧贴项目名 */}
                   {isExpanded && proj.chapters.length > 0 && (
                     <div className="ml-7 border-l" style={{ borderColor: "var(--th-border-subtle)" }}>
-                      {proj.chapters.map((ch) => {
+                      {[...proj.chapters].reverse().map((ch) => {
                         const isCurrent = ch.id === proj.currentChapter;
                         return (
                           <button

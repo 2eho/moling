@@ -19,6 +19,7 @@
 #   SSH_PRIVATE_KEY  — SSH 私钥
 #   DEPLOY_PATH      — 服务器上的项目路径（如 /opt/moling）
 #   GHCR_TOKEN       — GitHub PAT（用于拉取私有镜像，可选）
+#   FEISHU_WEBHOOK_URL — 飞书机器人 Webhook URL（可选，用于部署通知）
 #
 # 服务器要求:
 #   - Docker 24+ / Docker Compose v2
@@ -314,6 +315,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: 飞书 — 部署开始
+        if: env.FEISHU_WEBHOOK_URL != ''
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          bash scripts/feishu-notify.sh deploy-start \
+            "${{ needs.prepare.outputs.version }}" \
+            "${{ needs.prepare.outputs.deploy_env }}"
+
       - name: 配置 SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -400,6 +410,24 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: 飞书 — 部署成功
+        if: success() && env.FEISHU_WEBHOOK_URL != ''
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          bash scripts/feishu-notify.sh deploy-success \
+            "${{ needs.prepare.outputs.version }}" \
+            "http://${{ secrets.SSH_HOST }}:8080/moling"
+
+      - name: 飞书 — 部署失败
+        if: failure() && env.FEISHU_WEBHOOK_URL != ''
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          bash scripts/feishu-notify.sh deploy-fail \
+            "${{ needs.prepare.outputs.version }}" \
+            "部署步骤执行失败，即将自动回滚"
 
   # ==========================================================================
   # Job 5: Verify — 部署后验证
@@ -489,6 +517,17 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🔗 访问: http://${{ secrets.SSH_HOST }}:8080/moling" >> $GITHUB_STEP_SUMMARY
 
+      - name: 飞书 — 冒烟测试报告
+        if: env.FEISHU_WEBHOOK_URL != ''
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          if [ "${{ steps.smoke.outcome }}" = "success" ]; then
+            bash scripts/feishu-notify.sh smoke-report "通过" "4/4"
+          else
+            bash scripts/feishu-notify.sh smoke-report "失败" "部分未通过"
+          fi
+
   # ==========================================================================
   # Job 6: Rollback — 失败时自动回滚
   # ==========================================================================
@@ -551,3 +590,12 @@ jobs:
         run: |
           echo "### ⚠️ 自动回滚已执行" >> $GITHUB_STEP_SUMMARY
           echo "部署版本 \`${{ needs.prepare.outputs.version }}\` 存在问题，已回滚到上一版本。" >> $GITHUB_STEP_SUMMARY
+
+      - name: 飞书 — 回滚通知
+        if: env.FEISHU_WEBHOOK_URL != ''
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          bash scripts/feishu-notify.sh rollback \
+            "${{ needs.prepare.outputs.version }}" \
+            "上一稳定版本"
