@@ -156,7 +156,7 @@ class WorldUpdate(BaseModel):
 class CharacterResp(BaseModel):
     """Vault character response."""
 
-    id: int = Field(..., description="角色 ID")
+    id: str = Field(..., description="角色 ID (UUID)")
     project_id: int = Field(..., description="所属项目 ID")
     name: str = Field(..., description="角色名称")
     role: str = Field(..., description="角色定位")
@@ -194,7 +194,7 @@ class TimelineResp(BaseModel):
 class PlotPromiseResp(BaseModel):
     """Vault plot promise response."""
 
-    id: int = Field(..., description="伏笔 ID")
+    id: str = Field(..., description="伏笔 ID (UUID)")
     project_id: int = Field(..., description="所属项目 ID")
     description: str = Field(..., description="伏笔描述")
     type: str = Field(..., description="伏笔类型")

@@ -45,7 +45,7 @@ async def list_characters(
 @router.get("/characters/{character_id}", response_model=CharacterResp)
 async def get_character(
     project_id: int,
-    character_id: int,
+    character_id: str,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> CharacterResp:
@@ -69,7 +69,7 @@ async def create_character(
 @router.put("/characters/{character_id}", response_model=CharacterResp)
 async def update_character(
     project_id: int,
-    character_id: int,
+    character_id: str,
     character_data: CharacterUpdate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),

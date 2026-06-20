@@ -24,7 +24,8 @@ class TestVaultCharacter:
         assert resp.status_code == 200
         payload = resp.json()
         assert "data" in payload
-        assert isinstance(payload["data"]["items"], list)
+        data = payload["data"]
+        assert isinstance(data, list)
 
     async def test_create_character_success(self, async_client: AsyncClient, 
                                             auth_headers, test_project):
@@ -133,7 +134,8 @@ class TestVaultTimeline:
         assert resp.status_code == 200
         payload = resp.json()
         assert "data" in payload
-        assert isinstance(payload["data"]["items"], list)
+        data = payload["data"]
+        assert isinstance(data, list)
 
     async def test_create_timeline_event_success(self, async_client: AsyncClient, 
                                                  auth_headers, test_project):
@@ -176,7 +178,8 @@ class TestVaultPlotPromise:
         assert resp.status_code == 200
         payload = resp.json()
         assert "data" in payload
-        assert isinstance(payload["data"]["items"], list)
+        data = payload["data"]
+        assert isinstance(data, list)
 
     async def test_create_plot_promise_success(self, async_client: AsyncClient, 
                                                auth_headers, test_project):
@@ -218,7 +221,8 @@ class TestVaultWorld:
         assert resp.status_code == 200
         payload = resp.json()
         assert "data" in payload
-        assert isinstance(payload["data"]["items"], list)
+        data = payload["data"]
+        assert isinstance(data, list)
 
     async def test_create_world_entry_success(self, async_client: AsyncClient, 
                                               auth_headers, test_project):

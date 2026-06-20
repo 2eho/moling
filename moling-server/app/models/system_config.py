@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
-from sqlalchemy import String, DateTime, Text, func
+from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base
+from app.models.base import Base, TimestampMixin
 
 
-class SystemConfig(Base):
+class SystemConfig(Base, TimestampMixin):
     """System-wide configuration key-value store.
 
     Used for admin-managed settings like LLM API keys, model selection, etc.
@@ -27,10 +25,4 @@ class SystemConfig(Base):
     )
     description: Mapped[str | None] = mapped_column(
         String(256), nullable=True, comment="配置说明"
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        comment="更新时间",
     )

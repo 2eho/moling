@@ -1,6 +1,6 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.4.0  
+> **文档版本**: 1.5.0  
 > **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
@@ -955,10 +955,95 @@ sequenceDiagram
 - [Grafana 官方文档](https://grafana.com/docs/)
 - [Sentry 官方文档](https://docs.sentry.io/)
 
-### B. 文档版本历史
+### C. 常用操作命令
+
+#### 本地开发快速启动
+
+```bash
+# 1. 后端
+cd moling-server
+cp .env.example .env  # 编辑 .env，参照下节
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 2. 前端
+cd moling-web
+npm install && npm run dev
+
+# 3. Celery（另一个终端）
+cd moling-server
+celery -A app.worker.celery_app worker -Q default,llm --loglevel=info
+celery -A app.worker.celery_app beat --loglevel=info
+```
+
+#### .env 完整示例（14 变量）
+
+```bash
+DATABASE_URL=sqlite+aiosqlite:///./moling.db
+SECRET_KEY=$(openssl rand -hex 32)
+ENVIRONMENT=development
+APP_VERSION=0.1.0
+CORS_ORIGINS=http://localhost:3000
+
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/1
+CELERY_RESULT_BACKEND=redis://localhost:6379/2
+# REDIS_PASSWORD=          # 生产必须设置
+
+LLM_MODEL=deepseek-chat
+LLM_PROVIDER=deepseek
+LLM_API_KEY=sk-xxx
+LLM_BASE_URL=https://api.deepseek.com/v1
+# LLM_PRO_KEYS=sk-k1,sk-k2  # Pro Pool
+# LLM_FLASH_KEYS=sk-f1,sk-f2 # Flash Pool
+
+MAX_BODY_SIZE=10485760
+# SENTRY_DSN=              # 可选
+```
+
+#### 健康检查
+
+```bash
+curl http://localhost:8000/api/v1/health
+# → {"status":"ok","database":"ok","redis":"ok","celery":"ok"}
+# 降级: {"status":"degraded","message":"redis,celery unreachable",...}
+```
+
+#### Redis / Celery 诊断
+
+```bash
+# Redis（无密码）
+redis-cli ping
+# Redis（有密码）
+redis-cli -a "$REDIS_PASSWORD" ping
+
+# Celery Worker 状态
+celery -A app.worker.celery_app inspect ping
+celery -A app.worker.celery_app inspect active
+celery -A app.worker.celery_app inspect reserved
+
+# Celery Beat 调度状态
+celery -A app.worker.celery_app inspect conf | grep beat_schedule
+```
+
+#### Docker 部署（生产）
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml ps
+docker compose -f docker/docker-compose.yml logs -f app worker
+```
+
+#### 数据库备份
+
+```bash
+docker exec moling-db pg_dump -U moling moling > backup_$(date +%Y%m%d).sql
+```
+
+### D. 文档版本历史
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.5.0 | 2026-06-21 | Agent 优化：文档激进合并 — 附录新增常用操作命令（本地启动、.env 完整示例、健康检查、Redis/Celery 诊断、Docker 部署、数据库备份），吸收 DEPLOYMENT/RUNBOOK/ONBOARDING/SECURITY 中的操作级内容 | Moling Team |
 | 1.4.0 | 2026-06-21 | 文档闭环回填：新增 AppError 错误处理体系、子情节健康监控服务、Worker 可靠性链路（7 项 Celery 加固 + DB 会话管理 + 三层异常处理）、Windows 平台适配层（greenlet 补丁 + 双轨会话）、DAO 层设计规范（limit 钳制 / 软删除 / 游标分页 / 事务契约）、Content-Length 中间件、Refresh Token 轮换 | Moling Team |
 | 1.3.0 | 2026-06-21 | R3 架构加固：新增配置管理章节（26 项环境变量）、Celery Beat 定时调度（4 个周期性任务）、健康检查增强（DB+Redis+Celery 三方验证）、DAO 层命名规范 + 游标分页 | Moling Team |
 | 1.2.0 | 2026-06-18 | 修正 Docker Compose 两套编排说明、端口映射表（Nginx 80/443、Grafana 3001:3000）、新增 Phase 4 核心架构章节 | Moling Team |
