@@ -530,7 +530,6 @@ def upgrade() -> None:
             sa.String(36),
             sa.ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
-            index=True,
             comment="用户 ID",
         ),
         sa.Column(
@@ -597,7 +596,6 @@ def upgrade() -> None:
             sa.String(36),
             sa.ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
-            index=True,
             comment="接收通知的用户 ID",
         ),
         sa.Column(
@@ -745,21 +743,18 @@ def upgrade() -> None:
             sa.String(100),
             nullable=False,
             unique=True,
-            index=True,
             comment="幂等性令牌 (格式: ch${chapter}_${timestamp})",
         ),
         sa.Column(
             "project_id",
             sa.String(36),
             nullable=False,
-            index=True,
             comment="项目 ID",
         ),
         sa.Column(
             "chapter_id",
             sa.String(36),
             nullable=False,
-            index=True,
             comment="章节 ID",
         ),
         sa.Column(
