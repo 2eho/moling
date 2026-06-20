@@ -110,7 +110,7 @@ class TestProjectService:
             creation_mode="from_scratch",
         )
         project = await project_service.create_project(
-            test_db, user_id=test_user.id, req=req
+            test_db, user_id=test_user.user.id, req=req
         )
 
         assert project.title == "新项目"

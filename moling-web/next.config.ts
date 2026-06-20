@@ -6,10 +6,10 @@ const nextConfig: NextConfig = {
   basePath: "/moling",
   // 使用 standalone 输出模式
   output: "standalone",
-  // 允许构建跳过 ESLint 检查
+  // ESLint 检查
   eslint: {
-    // Phase 2 解决：Next.js 15 + ESLint 9+ flat config 兼容链
-    ignoreDuringBuilds: true,
+    // Phase 2 完成：ESLint 配置已修复，使用 eslint.config.mjs flat config
+    ignoreDuringBuilds: false,
   },
   // 禁用 Image Optimization（standalone 模式可选）
   images: {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useWritingStore, PHASE_LABELS } from "@/stores/useWritingStore";
 import type { Project } from "@/stores/useWritingStore";
 import { useTheme, THEMES } from "@/stores/useTheme";
@@ -10,7 +11,7 @@ import type { Option } from "@/stores/useWritingStore";
 import { Sidebar } from "@/components/vibe/Sidebar";
 import { ThemeSwitcher } from "@/components/vibe/ThemeSwitcher";
 import { AgentPanel } from "@/components/vibe/AgentPanel";
-import { PanelRight, Send, RefreshCw, BookOpen, Edit3, Eye, CheckCircle2 } from "lucide-react";
+import { PanelRight, Send, RefreshCw, BookOpen, Edit3, Eye, CheckCircle2, Activity, GitBranch, Library } from "lucide-react";
 
 /** 多书 Mock 数据 */
 const MOCK_PROJECTS = [
@@ -471,6 +472,33 @@ export default function WorkspacePage() {
             </span>
           </div>
           <div className="flex-1" />
+          {/* Feature navigation */}
+          <div className="flex items-center gap-1 mr-2">
+            <Link
+              href={`/workspace/${projectId}/health`}
+              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+              style={{ color: "var(--th-text-3)" }}
+              title="健康监控"
+            >
+              <Activity size={16} />
+            </Link>
+            <Link
+              href={`/workspace/${projectId}/phase4/tasks`}
+              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+              style={{ color: "var(--th-text-3)" }}
+              title="Phase 4 任务"
+            >
+              <GitBranch size={16} />
+            </Link>
+            <Link
+              href={`/vaults/${projectId}`}
+              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+              style={{ color: "var(--th-text-3)" }}
+              title="四库系统"
+            >
+              <Library size={16} />
+            </Link>
+          </div>
           <ThemeSwitcher />
           <button
             onClick={() => setRightPanelOpen((v) => !v)}
@@ -486,7 +514,7 @@ export default function WorkspacePage() {
         <div className="flex-1 flex flex-col min-h-0">
           {/* Content area */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               {/* Chapter title */}
               <h2
                 className="text-base font-semibold mb-4"

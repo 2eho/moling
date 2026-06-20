@@ -124,8 +124,7 @@ if not IS_WINDOWS:
     @pytest.fixture()
     def auth_headers(test_user):
         """返回带有 Bearer Token 的认证头。"""
-        token = test_user["access_token"]
-        return {"Authorization": f"Bearer {token}"}
+        return {"Authorization": f"Bearer {test_user.access_token}"}
 
     @pytest_asyncio.fixture()
     async def async_client(test_db):
@@ -155,7 +154,7 @@ if not IS_WINDOWS:
         )
         
         project = await project_service.create_project(
-            test_db, test_user["user"]["id"], req
+            test_db, test_user.user.id, req
         )
         return project
 
@@ -172,6 +171,6 @@ if not IS_WINDOWS:
         )
         
         chapter = await chapter_service.create_chapter(
-            test_db, test_user["user"]["id"], test_project["id"], req
+            test_db, test_user.user.id, test_project.id, req
         )
         return chapter

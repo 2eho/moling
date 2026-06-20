@@ -35,8 +35,19 @@ class GenerationService:
         project_id: int,
         chapter_id: Optional[int],
         req: GenerateReq,
+        task_id: Optional[str] = None,
     ) -> GenerationResp:
-        """Start an AI generation task (12-step pipeline)."""
+        """Start an AI generation task (12-step pipeline).
+        
+        Args:
+            db: 数据库会话
+            user_id: 用户 ID
+            project_id: 项目 ID
+            chapter_id: 章节 ID（可选）
+            req: 生成请求参数
+            task_id: 预分配的任务 ID（可选）。如果不传，则自动生成新 UUID。
+                      当 router 已在请求中预创建 job_id 时使用。
+        """
         # Verify project exists and belongs to user
         project = await project_dao.get(db, project_id)
         if project is None:
@@ -65,8 +76,8 @@ class GenerationService:
                     detail="Chapter does not belong to this project",
                 )
 
-        # Create task record
-        task_id = str(uuid4())
+        # Create task record（使用预分配 ID 或自动生成）
+        task_id = task_id or str(uuid4())
         task = GenerationTask(
             id=task_id,
             project_id=project_id,

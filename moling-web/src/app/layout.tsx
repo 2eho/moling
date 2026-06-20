@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeInitializer } from "@/components/vibe/ThemeInitializer";
+import { QueryProvider } from "@/components/QueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="zh-CN" data-theme="moling" suppressHydrationWarning>
       <body>
         <ThemeInitializer />
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );
