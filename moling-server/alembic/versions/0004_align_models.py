@@ -304,6 +304,10 @@ def upgrade() -> None:
         "ALTER TABLE draw_history "
         "DROP CONSTRAINT IF EXISTS draw_records_user_id_fkey"
     )
+    op.execute(
+        "ALTER TABLE ingest_jobs "
+        "DROP CONSTRAINT IF EXISTS ingest_jobs_user_id_fkey"
+    )
 
     # FKs → chapters.id
     op.execute(
@@ -323,6 +327,7 @@ def upgrade() -> None:
     op.execute(
         "ALTER TABLE generation_tasks ALTER COLUMN chapter_id TYPE VARCHAR(36)"
     )
+    op.execute("ALTER TABLE ingest_jobs ALTER COLUMN user_id TYPE VARCHAR(36)")
     op.execute("ALTER TABLE draw_history ALTER COLUMN user_id TYPE VARCHAR(36)")
     op.execute(
         "ALTER TABLE draw_history ALTER COLUMN chapter_id TYPE VARCHAR(36)"
@@ -342,6 +347,14 @@ def upgrade() -> None:
     # -- 3d. Re-create FKs with correct types --
     op.create_foreign_key(
         None, "projects", "users", ["user_id"], ["id"], ondelete="CASCADE"
+    )
+    op.create_foreign_key(
+        None,
+        "ingest_jobs",
+        "users",
+        ["user_id"],
+        ["id"],
+        ondelete="CASCADE",
     )
     op.create_foreign_key(
         None,
@@ -1046,6 +1059,10 @@ def downgrade() -> None:
         "DROP CONSTRAINT IF EXISTS generation_tasks_users_id_fkey"
     )
     op.execute(
+        "ALTER TABLE ingest_jobs "
+        "DROP CONSTRAINT IF EXISTS ingest_jobs_users_id_fkey"
+    )
+    op.execute(
         "ALTER TABLE projects "
         "DROP CONSTRAINT IF EXISTS projects_users_id_fkey"
     )
@@ -1070,11 +1087,22 @@ def downgrade() -> None:
         "ALTER TABLE generation_tasks ALTER COLUMN user_id TYPE INTEGER"
     )
     op.execute(
+        "ALTER TABLE ingest_jobs ALTER COLUMN user_id TYPE INTEGER"
+    )
+    op.execute(
         "ALTER TABLE projects ALTER COLUMN user_id TYPE INTEGER"
     )
 
     op.create_foreign_key(
         None, "projects", "users", ["user_id"], ["id"], ondelete="CASCADE"
+    )
+    op.create_foreign_key(
+        None,
+        "ingest_jobs",
+        "users",
+        ["user_id"],
+        ["id"],
+        ondelete="CASCADE",
     )
     op.create_foreign_key(
         None,
