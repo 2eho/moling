@@ -41,7 +41,7 @@ jobs:
     services:
       # PostgreSQL 服务
       postgres:
-        image: postgres:17-alpine
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass
@@ -155,7 +155,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17-alpine
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass
@@ -252,7 +252,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17-alpine
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass

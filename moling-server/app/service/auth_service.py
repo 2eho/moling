@@ -96,6 +96,10 @@ def _get_auth_service():
     return _auth_service_instance
 
 
+# Singleton instance exported for service layer imports
+auth_service = _get_auth_service()
+
+
 async def register(db: AsyncSession, req: RegisterReq) -> TokenResp:
     """Register a new user and return tokens."""
     return await _get_auth_service().register(db, req)
