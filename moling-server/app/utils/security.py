@@ -42,7 +42,7 @@ async def verify_project_ownership(
         NotFoundError: 项目不存在
         PermissionError: 项目不属于当前用户
     """
-    from app.dao.project_dao import project_dao
+    from app.dao import project_dao
 
     project = await project_dao.get(db, project_id)
     if project is None:

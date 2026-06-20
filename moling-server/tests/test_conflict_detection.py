@@ -53,7 +53,7 @@ def _make_card(
 
 
 def _make_dynamic_layer(
-    project_id: str = "proj-1",
+    project_id: str = 1,
     chapter_id: str = "chap-1",
     must_hold: list[str] | None = None,
     must_not: list[str] | None = None,
@@ -78,7 +78,7 @@ def _make_secret(
     secrecy_level: str = "hidden",
 ) -> Secret:
     s = Secret(
-        project_id="proj-1",
+        project_id=1,
         description=description,
         known_by=known_by or [],
         unknown_to=unknown_to or [],
@@ -94,7 +94,7 @@ def _make_vault_character(
     state_machine: dict | None = None,
 ) -> VaultCharacter:
     vc = VaultCharacter(
-        project_id="proj-1",
+        project_id=1,
         name=name,
         status="active",
         current_state=current_state,
@@ -223,7 +223,7 @@ class TestSecretConflicts:
         """卡片无角色数据时返回空。"""
         db = AsyncMock()
         cards = [_make_card(characters=[])]
-        result = await self.service._detect_secret_conflicts(db, "proj-1", cards, None)
+        result = await self.service._detect_secret_conflicts(db, 1, cards, None)
         assert result == []
 
     @pytest.mark.asyncio
@@ -232,7 +232,7 @@ class TestSecretConflicts:
         db = AsyncMock()
         db.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
         cards = [_make_card(characters=[{"id": "c1", "name": "张三"}])]
-        result = await self.service._detect_secret_conflicts(db, "proj-1", cards, None)
+        result = await self.service._detect_secret_conflicts(db, 1, cards, None)
         assert result == []
 
     @pytest.mark.asyncio
@@ -249,7 +249,7 @@ class TestSecretConflicts:
         ))
 
         cards = [_make_card(characters=[{"id": "c1", "name": "张三"}])]
-        result = await self.service._detect_secret_conflicts(db, "proj-1", cards, None)
+        result = await self.service._detect_secret_conflicts(db, 1, cards, None)
         assert len(result) == 1
         assert result[0]["type"] == "secret"
         assert "张三" in result[0]["description"]
@@ -267,7 +267,7 @@ class TestSecretConflicts:
             scalars=lambda: MagicMock(all=lambda: [secret])
         ))
         cards = [_make_card(characters=[{"id": "c1", "name": "张三"}])]
-        result = await self.service._detect_secret_conflicts(db, "proj-1", cards, None)
+        result = await self.service._detect_secret_conflicts(db, 1, cards, None)
         assert result == []
 
     @pytest.mark.asyncio
@@ -285,7 +285,7 @@ class TestSecretConflicts:
             {"id": "c1", "name": "A"},
             {"id": "c2", "name": "B"},
         ])]
-        result = await self.service._detect_secret_conflicts(db, "proj-1", cards, None)
+        result = await self.service._detect_secret_conflicts(db, 1, cards, None)
         # A 不知秘密B，B 不知秘密A → 2 个冲突
         assert len(result) == 2
         assert all(c["type"] == "secret" for c in result)
@@ -307,7 +307,7 @@ class TestStateMachineConflicts:
         """卡片无 state_requirement 时返回空。"""
         db = AsyncMock()
         cards = [_make_card(characters=[{"id": "c1", "name": "张三"}])]  # 无 state_requirement
-        result = await self.service._detect_state_machine_conflicts(db, "proj-1", cards)
+        result = await self.service._detect_state_machine_conflicts(db, 1, cards)
         assert result == []
 
     @pytest.mark.asyncio
@@ -320,7 +320,7 @@ class TestStateMachineConflicts:
         cards = [_make_card(characters=[
             {"id": "c1", "name": "张三", "state_requirement": "快乐"},
         ])]
-        result = await self.service._detect_state_machine_conflicts(db, "proj-1", cards)
+        result = await self.service._detect_state_machine_conflicts(db, 1, cards)
         assert result == []
 
     @pytest.mark.asyncio
@@ -334,7 +334,7 @@ class TestStateMachineConflicts:
         cards = [_make_card(characters=[
             {"id": "c1", "name": "张三", "state_requirement": "快乐"},
         ])]
-        result = await self.service._detect_state_machine_conflicts(db, "proj-1", cards)
+        result = await self.service._detect_state_machine_conflicts(db, 1, cards)
         assert result == []
 
     @pytest.mark.asyncio
@@ -348,7 +348,7 @@ class TestStateMachineConflicts:
         cards = [_make_card(characters=[
             {"id": "c1", "name": "张三", "state_requirement": "怀疑"},
         ])]
-        result = await self.service._detect_state_machine_conflicts(db, "proj-1", cards)
+        result = await self.service._detect_state_machine_conflicts(db, 1, cards)
         assert len(result) == 1
         assert result[0]["type"] == "state_machine"
         assert "张三" in result[0]["description"]
@@ -364,7 +364,7 @@ class TestStateMachineConflicts:
         cards = [_make_card(characters=[
             {"id": "c1", "name": "张三", "state_requirement": "平静"},
         ])]
-        result = await self.service._detect_state_machine_conflicts(db, "proj-1", cards)
+        result = await self.service._detect_state_machine_conflicts(db, 1, cards)
         assert result == []
 
     def test_states_conflict_utility(self):
@@ -393,7 +393,7 @@ class TestDetectConflicts:
     async def test_empty_cards(self):
         """空卡片列表应返回无冲突（含置信度字段）。"""
         db = AsyncMock()
-        result = await self.service.detect_conflicts(db, "proj-1", "chap-1", [])
+        result = await self.service.detect_conflicts(db, 1, "chap-1", [])
         assert result == {
             "has_conflict": False,
             "conflict_score": 0.0,
@@ -435,7 +435,7 @@ class TestDetectConflicts:
                 characters=[{"id": "c1", "name": "张三", "state_requirement": "平静"}],
             )
         ]
-        result = await self.service.detect_conflicts(db, "proj-1", "chap-1", cards)
+        result = await self.service.detect_conflicts(db, 1, "chap-1", cards)
         assert result["has_conflict"] is False
         assert result["conflict_score"] == 0.0
         assert result["conflicts"] == []
@@ -480,7 +480,7 @@ class TestDetectConflicts:
                 ],
             )
         ]
-        result = await self.service.detect_conflicts(db, "proj-1", "chap-1", cards)
+        result = await self.service.detect_conflicts(db, 1, "chap-1", cards)
         assert result["has_conflict"] is True
         assert result["conflict_score"] > 0.0
         # 预期: baseline(师徒决裂 vs 师徒关系) + secret(徒弟不知师父是叛徒) + state_machine(信任 vs 怀疑)
@@ -499,7 +499,7 @@ class TestDetectConflicts:
         db = AsyncMock()
         db.execute = AsyncMock(side_effect=Exception("DB connection lost"))
         cards = [_make_card()]
-        result = await self.service.detect_conflicts(db, "proj-1", "chap-1", cards)
+        result = await self.service.detect_conflicts(db, 1, "chap-1", cards)
         assert result["has_conflict"] is False
         assert result["conflict_score"] == 0.0
         assert result["conflicts"] == []
@@ -528,7 +528,7 @@ class TestDetectConflicts:
         cards = [_make_card(
             characters=[{"id": "c1", "name": "张三", "state_requirement": "怀疑"}],
         )]
-        result = await self.service.detect_conflicts(db, "proj-1", "chap-1", cards)
+        result = await self.service.detect_conflicts(db, 1, "chap-1", cards)
         # baseline 跳过，state_machine 检出冲突
         assert result["has_conflict"] is True
         assert len(result["conflicts"]) == 1
@@ -725,7 +725,7 @@ class TestLlmFallback:
     async def test_no_conflicts_skip_fallback(self):
         """无冲突时跳过 LLM fallback。"""
         result = await self.service._llm_fallback_for_conflicts(
-            "proj-1", "chap-1", [], [], 0.0,
+            1, "chap-1", [], [], 0.0,
         )
         assert result is None
 
@@ -750,7 +750,7 @@ class TestLlmFallback:
         # We need confidence < 0.3, so we need score near 0.45
         # Test directly by calling _llm_fallback_for_conflicts
         result = await self.service._llm_fallback_for_conflicts(
-            "proj-1", "chap-1",
+            1, "chap-1",
             [_make_card(name="测试", direction_text="测试方向")],
             conflicts, 0.45,
         )
@@ -770,7 +770,7 @@ class TestLlmFallback:
             {"type": "baseline", "description": "测试冲突", "severity": "medium"},
         ]
         result = await self.service._llm_fallback_for_conflicts(
-            "proj-1", "chap-1",
+            1, "chap-1",
             [_make_card(name="测试", direction_text="测试方向")],
             conflicts, 0.45,
         )
@@ -792,7 +792,7 @@ class TestLlmFallback:
             {"type": "baseline", "description": "测试冲突", "severity": "high"},
         ]
         result = await self.service._llm_fallback_for_conflicts(
-            "proj-1", "chap-1",
+            1, "chap-1",
             [_make_card(name="测试", direction_text="测试方向")],
             conflicts, 0.45,
         )
@@ -813,7 +813,7 @@ class TestLlmFallback:
             {"type": "baseline", "description": "测试冲突", "severity": "medium"},
         ]
         result = await self.service._llm_fallback_for_conflicts(
-            "proj-1", "chap-1",
+            1, "chap-1",
             [_make_card(name="测试", direction_text="测试方向")],
             conflicts, 0.45,
         )

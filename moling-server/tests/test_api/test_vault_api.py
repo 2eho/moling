@@ -5,8 +5,6 @@ from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 
-API_PREFIX = "/api/v1/vault"
-
 
 class TestVaultCharacter:
     """测试人物库端点。"""
@@ -15,13 +13,11 @@ class TestVaultCharacter:
                                           auth_headers, test_project):
         """获取人物列表成功应返回 200 及人物数组。"""
         # Arrange
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
-            f"{API_PREFIX}/characters", 
-            headers=auth_headers,
-            params=params
+            f"/api/v1/projects/{test_project.id}/vault/characters", 
+            headers=auth_headers
         )
 
         # Assert
@@ -39,14 +35,12 @@ class TestVaultCharacter:
             "traits": ["勇敢", "正直"],
             "relationships": {}
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/characters", 
+            f"/api/v1/projects/{test_project.id}/vault/characters", 
             json=payload,
-            headers=auth_headers,
-            params=params
+            headers=auth_headers
         )
 
         # Assert
@@ -62,13 +56,11 @@ class TestVaultCharacter:
             "name": "要更新的角色",
             "description": "描述"
         }
-        params = {"project_id": test_project.id}
         
         create_resp = await async_client.post(
-            f"{API_PREFIX}/characters", 
+            f"/api/v1/projects/{test_project.id}/vault/characters", 
             json=create_payload,
-            headers=auth_headers,
-            params=params
+            headers=auth_headers
         )
         assert create_resp.status_code == 201
         character_id = create_resp.json()["id"]
@@ -81,10 +73,9 @@ class TestVaultCharacter:
 
         # Act
         resp = await async_client.put(
-            f"{API_PREFIX}/characters/{character_id}", 
+            f"/api/v1/projects/{test_project.id}/vault/characters/{character_id}", 
             json=update_payload,
-            headers=auth_headers,
-            params=params
+            headers=auth_headers
         )
 
         # Assert
@@ -100,22 +91,19 @@ class TestVaultCharacter:
             "name": "要删除的角色",
             "description": "描述"
         }
-        params = {"project_id": test_project.id}
         
         create_resp = await async_client.post(
-            f"{API_PREFIX}/characters", 
+            f"/api/v1/projects/{test_project.id}/vault/characters", 
             json=create_payload,
-            headers=auth_headers,
-            params=params
+            headers=auth_headers
         )
         assert create_resp.status_code == 201
         character_id = create_resp.json()["id"]
 
         # Act
         resp = await async_client.delete(
-            f"{API_PREFIX}/characters/{character_id}", 
-            headers=auth_headers,
-            params=params
+            f"/api/v1/projects/{test_project.id}/vault/characters/{character_id}", 
+            headers=auth_headers
         )
 
         # Assert
@@ -129,13 +117,11 @@ class TestVaultTimeline:
                                         auth_headers, test_project):
         """获取时间线事件列表成功应返回 200 及事件数组。"""
         # Arrange
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
-            f"{API_PREFIX}/timeline", 
-            headers=auth_headers,
-            params=params
+            f"/api/v1/projects/{test_project.id}/vault/timeline", 
+            headers=auth_headers
         )
 
         # Assert
@@ -152,14 +138,12 @@ class TestVaultTimeline:
             "description": "这是一个测试事件。",
             "order": 1
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/timeline", 
+            f"/api/v1/projects/{test_project.id}/vault/timeline", 
             json=payload,
-            headers=auth_headers,
-            params=params
+            headers=auth_headers
         )
 
         # Assert
@@ -175,13 +159,11 @@ class TestVaultPlotPromise:
                                               auth_headers, test_project):
         """获取剧情承诺列表成功应返回 200 及承诺数组。"""
         # Arrange
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
-            f"{API_PREFIX}/plot-promises", 
-            headers=auth_headers,
-            params=params
+            f"/api/v1/projects/{test_project.id}/vault/plot-promises", 
+            headers=auth_headers
         )
 
         # Assert
@@ -197,14 +179,12 @@ class TestVaultPlotPromise:
             "promise_text": "测试承诺",
             "status": "pending"
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/plot-promises", 
+            f"/api/v1/projects/{test_project.id}/vault/plot-promises", 
             json=payload,
-            headers=auth_headers,
-            params=params
+            headers=auth_headers
         )
 
         # Assert
@@ -220,13 +200,11 @@ class TestVaultWorld:
                                              auth_headers, test_project):
         """获取世界观条目列表成功应返回 200 及条目数组。"""
         # Arrange
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
-            f"{API_PREFIX}/world", 
-            headers=auth_headers,
-            params=params
+            f"/api/v1/projects/{test_project.id}/vault/world", 
+            headers=auth_headers
         )
 
         # Assert
@@ -243,14 +221,12 @@ class TestVaultWorld:
             "description": "这是一个测试世界观条目。",
             "category": "魔法体系"
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/world", 
+            f"/api/v1/projects/{test_project.id}/vault/world", 
             json=payload,
-            headers=auth_headers,
-            params=params
+            headers=auth_headers
         )
 
         # Assert

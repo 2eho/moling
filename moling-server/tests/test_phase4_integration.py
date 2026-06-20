@@ -100,18 +100,18 @@ if not IS_WINDOWS:
     # 辅助函数
     # ------------------------------------------------------------------
 
-    async def ensure_project(db, pid="proj-test-001"):
+    async def ensure_project(db, pid=99999):
         from app.models import Project
         if await db.get(Project, pid) is None:
             db.add(Project(
                 id=pid, title="测试项目", genre="玄幻",
-                novel_style="热血", status="active",
+                status="active",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
             ))
             await db.commit()
 
-    async def ensure_chapter(db, cid="ch-test-001", pid="proj-test-001"):
+    async def ensure_chapter(db, cid="ch-test-001", pid=99999):
         from app.models import Chapter
         if await db.get(Chapter, cid) is None:
             db.add(Chapter(

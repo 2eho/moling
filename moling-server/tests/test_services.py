@@ -123,7 +123,7 @@ class TestProjectService:
         """列出用户的项目列表，应包含刚创建的项目。"""
         from app.service import project_service
 
-        result = await project_service.list_projects(test_db, test_user.id)
+        result = await project_service.list_projects(test_db, test_user.user.id)
         projects = result["items"]
         assert len(projects) >= 1
         ids = [p.id for p in projects]
@@ -134,7 +134,7 @@ class TestProjectService:
         from app.service import project_service
 
         project = await project_service.get_project(
-            test_db, test_user.id, test_project.id
+            test_db, test_user.user.id, test_project.id
         )
         assert project.id == test_project.id
         assert project.title == "测试项目"
@@ -153,18 +153,18 @@ class TestProjectService:
         from app.service import project_service
 
         await project_service.delete_project(
-            test_db, test_user.id, test_project.id
+            test_db, test_user.user.id, test_project.id
         )
 
         with pytest.raises(NotFoundError):
             await project_service.get_project(
-                test_db, test_user.id, test_project.id
+                test_db, test_user.user.id, test_project.id
             )
 
     async def test_get_project_stats(self, test_db, test_user, test_project):
         """获取项目统计信息。"""
         from app.service import project_service
 
-        stats = await project_service.get_project_stats(test_db, test_user.id)
+        stats = await project_service.get_project_stats(test_db, test_user.user.id)
         assert stats.total_projects >= 1
         assert stats.draft_count >= 1

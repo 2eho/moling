@@ -212,23 +212,23 @@ class TestExtractCardIds:
     def test_single_card_all_fields(self, service):
         """一张卡片包含所有引用字段。"""
         card = make_card(
-            char_refs=[{"id": "c001"}, {"id": "c002"}],
-            prom_refs=[{"id": "p001"}],
+            char_refs=[{"id": 1001}, {"id": 1002}],
+            prom_refs=[{"id": 2001}],
             timeline_pt="15",
-            world_refs=[{"id": "w001"}, {"id": "w002"}],
+            world_refs=[{"id": 3001}, {"id": "w002"}],
         )
         result = service._extract_card_ids([card])
-        assert sorted(result["character_ids"]) == ["c001", "c002"]
-        assert result["promise_ids"] == ["p001"]
+        assert sorted(result["character_ids"]) == [1001, 1002]
+        assert result["promise_ids"] == [2001]
         assert result["timeline_points"] == ["15"]
-        assert sorted(result["world_rule_ids"]) == ["w001", "w002"]
+        assert sorted(result["world_rule_ids"]) == [3001, "w002"]
 
     def test_multiple_cards_dedup(self, service):
         """多张卡片引用同一 ID 应去重。"""
-        c1 = make_card(char_refs=[{"id": "c001"}, {"id": "c002"}])
-        c2 = make_card(char_refs=[{"id": "c001"}, {"id": "c003"}])
+        c1 = make_card(char_refs=[{"id": 1001}, {"id": 1002}])
+        c2 = make_card(char_refs=[{"id": 1001}, {"id": 1003}])
         result = service._extract_card_ids([c1, c2])
-        assert sorted(result["character_ids"]) == ["c001", "c002", "c003"]
+        assert sorted(result["character_ids"]) == [1001, 1002, 1003]
 
     def test_null_fields_ignored(self, service):
         """None / 空列表字段应被安全忽略。"""
@@ -257,29 +257,29 @@ class TestFetchFilteredCharacters:
 
     async def test_match_characters(self, svc, mock_db):
         """正确匹配并返回指定 ID 的人物。"""
-        char_a = make_char(id="c001", name="林夜")
-        char_b = make_char(id="c002", name="苏瑶")
+        char_a = make_char(id=1001, name="林夜")
+        char_b = make_char(id=1002, name="苏瑶")
         mock_db.execute.side_effect = mock_execute(
             "characters", characters=[char_a, char_b]
         )
 
-        result = await svc._fetch_filtered_characters(mock_db, 1, ["c001", "c002"])
+        result = await svc._fetch_filtered_characters(mock_db, 1, [1001, 1002])
         assert len(result) == 2
-        assert result[0].id == "c001"
-        assert result[1].id == "c002"
+        assert result[0].id == 1001
+        assert result[1].id == 1002
 
     async def test_partial_match(self, svc, mock_db):
         """部分 ID 不存在时应只返回存在的。"""
-        char_a = make_char(id="c001", name="林夜")
+        char_a = make_char(id=1001, name="林夜")
         mock_db.execute.side_effect = mock_execute(
             "characters", characters=[char_a]
         )
 
         result = await svc._fetch_filtered_characters(
-            mock_db, 1, ["c001", "c999"]
+            mock_db, 1, [1001, 1999]
         )
         assert len(result) == 1
-        assert result[0].id == "c001"
+        assert result[0].id == 1001
 
 
 @pytest.mark.asyncio
@@ -339,24 +339,24 @@ class TestFetchFilteredPromises:
         assert result == []
 
     async def test_match_promises(self, svc, mock_db):
-        p1 = make_promise(id="p001")
+        p1 = make_promise(id=2001)
         p2 = make_promise(id="p002")
         mock_db.execute.side_effect = mock_execute(
             "promises", promises=[p1, p2]
         )
 
-        result = await svc._fetch_filtered_promises(mock_db, 1, ["p001", "p002"])
+        result = await svc._fetch_filtered_promises(mock_db, 1, [2001, "p002"])
         assert len(result) == 2
 
     async def test_partial_match(self, svc, mock_db):
-        p1 = make_promise(id="p001")
+        p1 = make_promise(id=2001)
         mock_db.execute.side_effect = mock_execute(
             "promises", promises=[p1]
         )
 
-        result = await svc._fetch_filtered_promises(mock_db, 1, ["p001", "p999"])
+        result = await svc._fetch_filtered_promises(mock_db, 1, [2001, "p999"])
         assert len(result) == 1
-        assert result[0].id == "p001"
+        assert result[0].id == 2001
 
 
 @pytest.mark.asyncio
@@ -368,13 +368,13 @@ class TestFetchFilteredWorld:
         assert result == []
 
     async def test_match_world_entries(self, svc, mock_db):
-        w1 = make_world(id="w001", name="筑基期")
+        w1 = make_world(id=3001, name="筑基期")
         w2 = make_world(id="w002", name="金丹期")
         mock_db.execute.side_effect = mock_execute(
             "world", world=[w1, w2]
         )
 
-        result = await svc._fetch_filtered_world(mock_db, 1, ["w001", "w002"])
+        result = await svc._fetch_filtered_world(mock_db, 1, [3001, "w002"])
         assert len(result) == 2
 
 
@@ -464,16 +464,16 @@ class TestFilterByCards:
 
     async def test_full_pipeline_level1(self, svc, mock_dao, mock_db):
         """完整的 Level 1 全流程。"""
-        char_a = make_char(id="c001", name="林夜")
-        char_b = make_char(id="c002", name="苏瑶")
+        char_a = make_char(id=1001, name="林夜")
+        char_b = make_char(id=1002, name="苏瑶")
         events = [make_timeline(id="t0001", chapter_number=5)]
-        prom = make_promise(id="p001")
-        world_entry = make_world(id="w001")
+        prom = make_promise(id=2001)
+        world_entry = make_world(id=3001)
         card = make_card(
-            char_refs=[{"id": "c001"}, {"id": "c002"}],
-            prom_refs=[{"id": "p001"}],
+            char_refs=[{"id": 1001}, {"id": 1002}],
+            prom_refs=[{"id": 2001}],
             timeline_pt="5",
-            world_refs=[{"id": "w001"}],
+            world_refs=[{"id": 3001}],
         )
 
         mock_dao.get_timeline.return_value = events
@@ -495,10 +495,10 @@ class TestFilterByCards:
 
     async def test_full_pipeline_level2(self, svc, mock_dao, mock_db):
         """完整的 Level 2 压缩流程。"""
-        char_a = make_char(id="c001", name="林夜", current_state="正在突破筑基期")
+        char_a = make_char(id=1001, name="林夜", current_state="正在突破筑基期")
         events = [make_timeline(id="t0001", chapter_number=5)]
         card = make_card(
-            char_refs=[{"id": "c001"}],
+            char_refs=[{"id": 1001}],
             timeline_pt="5",
         )
 
@@ -531,7 +531,7 @@ class TestFilterByCards:
     async def test_no_matching_ids(self, svc, mock_dao, mock_db):
         """卡片引用不存在的 ID 应返回空结果（不崩溃）。"""
         card = make_card(
-            char_refs=[{"id": "c999"}],
+            char_refs=[{"id": 1999}],
             timeline_pt="999",
         )
         mock_dao.get_timeline.return_value = []
