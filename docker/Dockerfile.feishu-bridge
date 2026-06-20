@@ -1,0 +1,19 @@
+# ==============================================================================
+# Feishu Alert Bridge — Dockerfile
+# ==============================================================================
+# 轻量 Flask 服务，接收 AlertManager webhook，转换为飞书富文本卡片
+# ==============================================================================
+
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# 安装依赖
+COPY feishu-alert-bridge.py /app/
+RUN pip install --no-cache-dir flask requests
+
+# 暴露端口
+EXPOSE 9094
+
+# 启动
+CMD ["python", "/app/feishu-alert-bridge.py"]

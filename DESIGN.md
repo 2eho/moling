@@ -1,7 +1,16 @@
-# Design System — 墨灵 (Moling) v3.1
+# Design System — 墨灵 (Moling) v4.0
+
+> **v4.0 (2026-06-20)**: 设计系统已升级为 **8 经典主题驱动**（5 暗 + 3 亮），通过 `<html data-theme>` + `--th-*` CSS 变量族实现。旧版 `--color-*` 令牌体系已废止。
+>
+> **实际主题定义在代码中**：`moling-web/src/app/globals.css`（每套主题 ~30 个 `--th-*` 变量）
+> **主题切换逻辑**：`moling-web/src/stores/useTheme.ts`（Zustand + localStorage）
+>
+> 以下 DESIGN.md 内容为历史参考——品牌哲学和排版规则仍然适用，但具体色值应以 globals.css 中的 `[data-theme]` 块为准。
+
+---
 
 > **参考品牌**: Linear (极简暗色) × Raycast (玻璃态光影) × Notion (内容排版)
-> **评分**: 93/100 — 生产级暗色主题设计系统（含完整色阶 + 玻璃态 + 编辑器排版）
+> **旧版评分**: 93/100 — 生产级暗色主题设计系统（含完整色阶 + 玻璃态 + 编辑器排版）
 > **解析度**: AI 可直读，CSS 变量一键映射
 
 ---

@@ -6,19 +6,21 @@
 
 ## 1. 架构决策记录 (ADR)
 
-### ADR-1: 纯 Tailwind CSS 4，零 CSS Module
+### ADR-1: 纯 Tailwind CSS 4 + `--th-*` CSS 变量，零 CSS Module
 
-**决策**：仅使用 Tailwind CSS 4，删除所有 `.module.css` 文件。
+**决策**：仅使用 Tailwind CSS 4 utility classes，所有颜色通过 `--th-*` CSS 变量族引用。删除所有 `.module.css` 文件。
 
 **理由**：
 - 当前 52 个 CSS Module 文件与 Tailwind 混用，导致样式碎片化、维护成本翻倍
-- Tailwind 4 的 `@theme` 指令已能完整表达 DESIGN.md 中定义的设计系统
+- `--th-*` 变量 + `[data-theme]` 选择器实现 8 主题无缝切换，比 Tailwind `@theme` 令牌更灵活
 - 统一的样式方案降低新成员上手成本
 
+**2026-06-20 修正**：原设计中的 Tailwind `@theme` 令牌方案已被 `--th-*` CSS 变量替代。原因：`@theme` 无法实现运行时多主题切换，而 `[data-theme]` 选择器 + CSS 变量可以零 JS 开销切换。
+
 **使用规则**：
-- `globals.css` 负责 `@theme` 令牌定义、`@layer base` 全局重置、`@utility` 自定义工具类
-- 动画定义在 `tailwind.config.ts` 的 `theme.extend.animation` + `keyframes`
-- 复杂组件内部样式使用 `@layer components { ... }` 或直接 inline `className`
+- `globals.css` 负责 8 套 `[data-theme]` 变量定义 + `@layer base` 全局重置
+- 组件中使用 `style={{ color: "var(--th-text)" }}` 或 `className="text-[var(--th-text)]"` 引用主题色
+- 零硬编码色值，零 CSS Module
 
 ### ADR-2: Next.js Middleware 统一认证
 

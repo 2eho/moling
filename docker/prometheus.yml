@@ -14,16 +14,16 @@ global:
   external_labels:
     monitor: 'moling-monitor'
 
-# 告警管理器配置
+# 告警管理器配置 → 飞书
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          # - alertmanager:9093
+          - alertmanager:9093
 
-# 告警规则
+# 告警规则（飞书消息的数据源头）
 rule_files:
-  # - "alert_rules.yml"
+  - "/etc/prometheus/alert_rules.yml"
 
 # 抓取配置
 scrape_configs:

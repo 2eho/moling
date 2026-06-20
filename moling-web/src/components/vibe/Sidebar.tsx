@@ -3,30 +3,136 @@
 import { useRouter } from "next/navigation";
 import {
   PanelLeft,
-  Search,
   Plus,
-  BookOpen,
   Settings,
   ChevronDown,
-  ChevronRight,
   Library,
   Package,
-  Edit3,
+  Pen,
+  Eye,
 } from "lucide-react";
 import { useWritingStore } from "@/stores/useWritingStore";
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  width?: number;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
   const router = useRouter();
   const projects = useWritingStore((s) => s.projects);
   const activeProjectId = useWritingStore((s) => s.activeProjectId);
-  const expandedProjects = useWritingStore((s) => s.expandedProjects);
+  const expandedProjectId = useWritingStore((s) => s.expandedProjectId);
+  const activeChapterId = useWritingStore((s) => s.activeChapterId);
   const setActiveProject = useWritingStore((s) => s.setActiveProject);
+  const setActiveChapter = useWritingStore((s) => s.setActiveChapter);
   const toggleProjectExpand = useWritingStore((s) => s.toggleProjectExpand);
+
+  /** 渲染单个项目卡片 */
+  const renderProject = (proj: typeof projects[number]) => {
+    const isActive = proj.id === activeProjectId;
+    const isExpanded = expandedProjectId === proj.id;
+    const isCompleted = proj.chapters.length > 0 && proj.chapters.every((ch) => ch.status === "completed");
+    return (
+      <div key={proj.id}>
+        {/* Project row — click name to toggle expand */}
+        <button
+          onClick={() => {
+            setActiveProject(proj.id);
+            toggleProjectExpand(proj.id);
+            router.push(`/workspace/${proj.id}`);
+          }}
+          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-colors group"
+          style={{
+            color: isActive ? "var(--th-accent-text)" : "var(--th-text-2)",
+            background: isActive ? "var(--th-accent-dim)" : "transparent",
+          }}
+        >
+          <span
+            className="flex-shrink-0 transition-transform duration-200"
+            style={{
+              color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)",
+              transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+            }}
+          >
+            <ChevronDown size={13} />
+          </span>
+          {isCompleted ? (
+            <Eye
+              size={13}
+              className="shrink-0"
+              style={{ color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)" }}
+            />
+          ) : (
+            <Pen
+              size={13}
+              className="shrink-0"
+              style={{ color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)" }}
+            />
+          )}
+          <span className="flex-1 text-left truncate">{proj.title}</span>
+          {isCompleted && (
+            <span
+              className="text-[9px] px-1 py-0.5 rounded font-medium shrink-0"
+              style={{ background: "var(--th-hover)", color: "var(--th-text-4)" }}
+            >
+              完结
+            </span>
+          )}
+          {isActive && (
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: "var(--th-accent-text)" }}
+            />
+          )}
+        </button>
+
+        {/* Expanded chapters — 倒序：最新一章紧贴项目名 */}
+        {isExpanded && proj.chapters.length > 0 && (
+          <div className="ml-7 border-l" style={{ borderColor: "var(--th-border-subtle)" }}>
+            {[...proj.chapters].reverse().map((ch) => {
+              const isCurrent = ch.id === activeChapterId && isActive;
+              const isEditable = ch.id === proj.chapters.length;
+              const isDisabled = !isActive;
+              return (
+                <button
+                  key={ch.id}
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (isDisabled) return;
+                    setActiveChapter(ch.id);
+                    router.push(`/workspace/${proj.id}`);
+                  }}
+                  className="w-full flex items-center gap-2 pl-3 pr-2.5 py-1.5 text-[11px] transition-colors text-left rounded-r-lg disabled:cursor-not-allowed"
+                  style={{
+                    color: isCurrent ? "var(--th-accent-text)" : "var(--th-text-3)",
+                    background: isCurrent ? "var(--th-accent-dim)" : "transparent",
+                    opacity: isDisabled ? 0.35 : 1,
+                  }}
+                >
+                  <span
+                    className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center shrink-0 font-medium"
+                    style={{
+                      background: ch.status === "completed"
+                        ? "var(--th-accent-dim)"
+                        : isEditable ? "var(--th-accent-text)" : "var(--th-hover)",
+                      color: ch.status === "completed"
+                        ? "var(--th-accent-text)"
+                        : isEditable ? "#fff" : "var(--th-text-3)",
+                    }}
+                  >
+                    {ch.id}
+                  </span>
+                  <span className="truncate">{ch.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (collapsed) {
     return (
@@ -54,7 +160,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside
       className="shrink-0 flex flex-col h-full transition-all duration-300 border-r overflow-hidden"
       style={{
-        width: 240,
+        width: collapsed ? 44 : width,
         borderColor: "var(--th-border-subtle)",
         background: "var(--th-card)",
       }}
@@ -88,22 +194,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       {/* ================================================================
-          Middle: 小说项目列表
+          Middle: 小说项目列表 — 分为连载中 / 已完结
           ================================================================ */}
       <nav className="flex-1 overflow-y-auto" aria-label="项目列表">
-        {/* Section label */}
+        {/* Section label — 连载中 */}
         <div className="flex items-center justify-between px-3.5 py-2">
           <span
             className="text-[10px] font-semibold tracking-wider uppercase select-none"
             style={{ color: "var(--th-text-4)" }}
           >
-            小说
+            连载中
           </span>
           <span
             className="text-[10px] font-medium tabular-nums"
             style={{ color: "var(--th-text-4)" }}
           >
-            {projects.length}
+            {projects.filter((p) => p.chapters.some((ch) => ch.status !== "completed")).length}
           </span>
         </div>
 
@@ -117,104 +223,37 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               暂无项目，点击上方 &ldquo;新建&rdquo; 开始
             </p>
           ) : (
-            projects.map((proj) => {
-              const isActive = proj.id === activeProjectId;
-              const isExpanded = expandedProjects.has(proj.id);
-
-              return (
-                <div key={proj.id}>
-                  {/* Project row */}
-                  <button
-                    onClick={() => {
-                      setActiveProject(proj.id);
-                      router.push(`/workspace/${proj.id}`);
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-colors group"
-                    style={{
-                      color: isActive ? "var(--th-accent-text)" : "var(--th-text-2)",
-                      background: isActive
-                        ? "var(--th-accent-dim)"
-                        : "transparent",
-                    }}
-                  >
-                    {/* Expand toggle */}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleProjectExpand(proj.id);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.stopPropagation();
-                          toggleProjectExpand(proj.id);
-                        }
-                      }}
-                      className="p-0.5 rounded transition-colors hover:opacity-70 flex-shrink-0"
-                      style={{ color: "var(--th-text-3)" }}
-                      aria-label={isExpanded ? "折叠" : "展开"}
-                    >
-                      {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    </span>
-
-                    {/* Icon */}
-                    <Edit3
-                      size={13}
-                      className="shrink-0"
-                      style={{ color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)" }}
-                    />
-
-                    {/* Title + genre */}
-                    <span className="flex-1 text-left truncate">{proj.title}</span>
-
-                    {/* Active indicator */}
-                    {isActive && (
-                      <span
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: "var(--th-accent-text)" }}
-                      />
-                    )}
-                  </button>
-
-                  {/* Expanded chapters — 倒序：最新一章紧贴项目名 */}
-                  {isExpanded && proj.chapters.length > 0 && (
-                    <div className="ml-7 border-l" style={{ borderColor: "var(--th-border-subtle)" }}>
-                      {[...proj.chapters].reverse().map((ch) => {
-                        const isCurrent = ch.id === proj.currentChapter;
-                        return (
-                          <button
-                            key={ch.id}
-                            className="w-full flex items-center gap-2 pl-3 pr-2.5 py-1.5 text-[11px] transition-colors text-left rounded-r-lg"
-                            style={{
-                              color: isCurrent ? "var(--th-accent-text)" : "var(--th-text-3)",
-                              background: isCurrent ? "var(--th-accent-dim)" : "transparent",
-                            }}
-                          >
-                            <span
-                              className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center shrink-0 font-medium"
-                              style={{
-                                background: ch.status === "completed"
-                                  ? "var(--th-accent-dim)"
-                                  : "var(--th-hover)",
-                                color: ch.status === "completed"
-                                  ? "var(--th-accent-text)"
-                                  : "var(--th-text-3)",
-                              }}
-                            >
-                              {ch.id}
-                            </span>
-                            <span className="truncate">{ch.title}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })
+            /* 连载中 */
+            projects.filter((p) => p.chapters.some((ch) => ch.status !== "completed")).map((proj) => renderProject(proj))
           )}
         </div>
+
+        {/* 已完结 — 仅在有已完结项目时显示，与连载中间级 */}
+        {(() => {
+          const completed = projects.filter((p) => p.chapters.length > 0 && p.chapters.every((ch) => ch.status === "completed"));
+          if (completed.length === 0) return null;
+          return (
+            <>
+              <div className="flex items-center justify-between px-3.5 py-2">
+                <span
+                  className="text-[10px] font-semibold tracking-wider uppercase select-none"
+                  style={{ color: "var(--th-text-4)" }}
+                >
+                  已完结
+                </span>
+                <span
+                  className="text-[10px] font-medium tabular-nums"
+                  style={{ color: "var(--th-text-4)" }}
+                >
+                  {completed.length}
+                </span>
+              </div>
+              <div className="px-2 pb-2 space-y-0.5">
+                {completed.map((proj) => renderProject(proj))}
+              </div>
+            </>
+          );
+        })()}
       </nav>
 
       {/* ================================================================

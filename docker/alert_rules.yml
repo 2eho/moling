@@ -1,0 +1,282 @@
+# ==============================================================================
+# Moling 告警规则 — 飞书消息即诊断报告
+# ==============================================================================
+# 每条规则的 annotations 会原样进入飞书卡片，
+# 让飞书消息本身就是完整的故障诊断信息，不需要跳 Grafana。
+# ==============================================================================
+
+groups:
+  # ── 服务存活性 ──────────────────────────────────────────────
+  - name: service_availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="moling-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          title: "🔴 后端服务宕机"
+          current_status: "{{ $labels.instance }} 无响应已达 1 分钟"
+          impact: "所有 API 请求将失败，前端页面功能不可用"
+          runbook: |
+            1. SSH 到服务器: ssh root@124.222.163.79
+            2. 检查容器状态: docker ps -a | grep moling
+            3. 查看后端日志: docker logs moling-app --tail 100
+            4. 如果 OOM，先重启: docker restart moling-app
+            5. 检查数据库连接: docker exec moling-app python -c "from app.database import engine; print(engine.connect())"
+          grafana_link: "http://124.222.163.79:3001/d/moling-overview"
+
+      - alert: FrontendDown
+        expr: up{job="moling-frontend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          title: "🔴 前端服务宕机"
+          current_status: "{{ $labels.instance }} 无响应"
+          impact: "用户无法访问页面"
+          runbook: |
+            1. docker ps -a | grep nginx
+            2. docker restart moling-frontend
+            3. 检查 Nginx 配置: docker exec moling-frontend nginx -t
+          grafana_link: "http://124.222.163.79:3001/d/moling-overview"
+
+  # ── API 错误率 ──────────────────────────────────────────────
+  - name: api_errors
+    rules:
+      - alert: High5xxRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          category: api
+        annotations:
+          title: "🔴 API 5xx 错误率飙升"
+          current_status: "{{ $labels.instance }} 过去 5 分钟 5xx 错误率: {{ $value | humanize }}/s"
+          impact: "用户请求大量失败，可能影响写作进度保存"
+          runbook: |
+            1. 查看后端日志: docker logs moling-app --tail 200 | grep ERROR
+            2. 检查数据库连接池: docker exec moling-app python -c "from app.database import get_pool_status; print(get_pool_status())"
+            3. 检查 Redis: docker exec moling-redis redis-cli PING
+            4. 查看最近部署: git log --oneline -5
+            5. 如为部署引入，立即回滚: git revert HEAD && git push
+          grafana_link: "http://124.222.163.79:3001/d/moling-api?var-instance={{ $labels.instance }}"
+
+      - alert: High4xxRate
+        expr: rate(http_requests_total{status=~"4.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: api
+        annotations:
+          title: "🟡 API 4xx 错误率偏高"
+          current_status: "{{ $labels.instance }} 过去 5 分钟 4xx 错误率: {{ $value | humanize }}/s"
+          impact: "部分客户端请求被拒绝，可能是认证问题或参数校验失败"
+          runbook: |
+            1. 检查认证服务是否正常
+            2. 查看 4xx 分布: 按 status code 分组查看日志
+            3. 如果是 429，触发限流保护，检查是否需要扩容
+          grafana_link: "http://124.222.163.79:3001/d/moling-api"
+
+  # ── 响应延迟 ────────────────────────────────────────────────
+  - name: latency
+    rules:
+      - alert: HighP95Latency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          title: "🟡 P95 响应延迟过高"
+          current_status: "{{ $labels.instance }} P95 延迟: {{ $value }}s（阈值 2s）"
+          impact: "用户操作响应变慢，写作体验下降"
+          runbook: |
+            1. 检查数据库慢查询: 查看 PostgreSQL 慢查询日志
+            2. 检查 CPU/内存: 看是否有资源争抢
+            3. 检查 AI 生成调用耗时: 是否 DeepSeek API 响应慢
+            4. 如果是 AI 响应慢，考虑切换 fallback 模型
+          grafana_link: "http://124.222.163.79:3001/d/moling-api"
+
+      - alert: HighP99Latency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 3m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          title: "🔴 P99 响应延迟严重超标"
+          current_status: "{{ $labels.instance }} P99 延迟: {{ $value }}s（阈值 5s）"
+          impact: "最慢的用户请求已超过 5 秒，可能导致超时和重试风暴"
+          runbook: |
+            1. 立即检查数据库连接数和等待事件
+            2. 检查是否有大事务锁表
+            3. 考虑临时关闭非关键功能降低负载
+            4. 如无法快速恢复，重启后端服务: docker restart moling-app
+          grafana_link: "http://124.222.163.79:3001/d/moling-api"
+
+  # ── 系统资源 ────────────────────────────────────────────────
+  - name: system_resources
+    rules:
+      - alert: HighCPU
+        expr: rate(process_cpu_seconds_total{job="moling-backend"}[1m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          title: "🟡 后端 CPU 使用率过高"
+          current_status: "CPU 使用率: {{ $value | humanize }}%（阈值 80%）"
+          impact: "请求处理变慢，可能触发超时"
+          runbook: |
+            1. 查看哪些进程占用 CPU: docker exec moling-app top -bn1 | head -20
+            2. 检查是否有死循环或大量并发请求
+            3. 查看 AI 生成任务队列积压情况
+            4. 考虑增加 worker 数量或限流
+          grafana_link: "http://124.222.163.79:3001/d/moling-resources"
+
+      - alert: HighMemory
+        expr: process_resident_memory_bytes{job="moling-backend"} / 1024 / 1024 / 1024 > 3
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          title: "🟡 后端内存使用过高"
+          current_status: "内存: {{ $value | humanize }}GB（阈值 3GB）"
+          impact: "继续增长可能导致 OOM Kill"
+          runbook: |
+            1. 检查是否有内存泄漏: 观察内存增长趋势
+            2. 如果有 AI 模型加载，检查是否未释放
+            3. 考虑重启释放内存: docker restart moling-app
+          grafana_link: "http://124.222.163.79:3001/d/moling-resources"
+
+      - alert: DiskFull
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          title: "🔴 磁盘空间不足"
+          current_status: "剩余空间: {{ $value | humanize }}%（阈值 15%）"
+          impact: "日志无法写入，数据库可能停止工作"
+          runbook: |
+            1. 清理 Docker 镜像: docker system prune -a -f
+            2. 清理旧日志: find /var/log -name "*.log" -mtime +30 -delete
+            3. 检查大文件: du -sh /* 2>/dev/null | sort -rh | head -20
+            4. 清理 pip/npm 缓存
+          grafana_link: "http://124.222.163.79:3001/d/moling-resources"
+
+  # ── 数据库 ──────────────────────────────────────────────────
+  - name: database
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_used{job="moling-backend"} / db_connection_pool_size{job="moling-backend"} > 0.85
+        for: 3m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          title: "🔴 数据库连接池耗尽"
+          current_status: "连接池使用率: {{ $value | humanize }}%（阈值 85%）"
+          impact: "新请求无法获取数据库连接，API 将返回 500 错误"
+          runbook: |
+            1. 查看活跃连接: SELECT count(*), state FROM pg_stat_activity GROUP BY state;
+            2. 杀掉 idle in transaction 连接: SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state='idle in transaction';
+            3. 如果持续满，增加连接池大小: 调整 DATABASE_POOL_SIZE 环境变量
+            4. 检查是否有慢查询未提交事务
+          grafana_link: "http://124.222.163.79:3001/d/moling-database"
+
+      - alert: SlowQueries
+        expr: rate(db_query_duration_seconds_count{quantile="0.95"}[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          title: "🟡 数据库慢查询增多"
+          current_status: "P95 查询延迟 5 分钟均值: {{ $value }}"
+          impact: "API 响应变慢，用户感知明显"
+          runbook: |
+            1. 查看正在执行的查询: SELECT pid, now() - pg_stat_activity.query_start AS duration, query FROM pg_stat_activity WHERE state != 'idle' ORDER BY duration DESC;
+            2. 检查是否缺少索引: 对常用查询字段加索引
+            3. 考虑增加数据库连接池
+          grafana_link: "http://124.222.163.79:3001/d/moling-database"
+
+  # ── LLM / AI 服务 ───────────────────────────────────────────
+  - name: llm_service
+    rules:
+      - alert: AIGenerationFailed
+        expr: rate(ai_generation_failures_total[5m]) > 0.03
+        for: 3m
+        labels:
+          severity: critical
+          category: ai
+        annotations:
+          title: "🔴 AI 生成失败率飙升"
+          current_status: "过去 5 分钟 AI 生成失败率: {{ $value | humanize }}/s"
+          impact: "用户续写功能不可用，核心功能中断"
+          runbook: |
+            1. 检查 DeepSeek API Key 是否有效: 查看 LlmConfig 管理页面
+            2. 检查 DeepSeek API 余额和限流状态
+            3. 查看详细错误: docker logs moling-app --tail 200 | grep "DeepSeek\|llm\|AI"
+            4. 如果 DeepSeek 不可用，切换备选模型
+            5. 检查 API 代理配置: http://127.0.0.1:7897
+          grafana_link: "http://124.222.163.79:3001/d/moling-ai"
+
+      - alert: AIGenerationSlow
+        expr: histogram_quantile(0.95, rate(ai_generation_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          category: ai
+        annotations:
+          title: "🟡 AI 生成响应过慢"
+          current_status: "AI 生成 P95 耗时: {{ $value }}s（阈值 30s）"
+          impact: "用户等待时间过长，体验下降"
+          runbook: |
+            1. 检查网络到 DeepSeek API 的延迟
+            2. 检查是否需要切换代理
+            3. 考虑缩短生成上下文长度
+          grafana_link: "http://124.222.163.79:3001/d/moling-ai"
+
+  # ── 证书与安全 ──────────────────────────────────────────────
+  - name: security
+    rules:
+      - alert: SSLCertificateExpiring
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 7
+        for: 1h
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          title: "🟡 SSL 证书即将过期"
+          current_status: "证书将在 {{ $value | humanizeDuration }} 内过期"
+          impact: "过期后用户浏览器会显示安全警告，影响信任"
+          runbook: |
+            1. 使用 certbot 续期: certbot renew --dry-run
+            2. 确认无误后正式续期: certbot renew
+            3. 重载 Nginx: docker exec moling-frontend nginx -s reload
+          grafana_link: ""
+
+  # ── 异步任务 ────────────────────────────────────────────────
+  - name: async_tasks
+    rules:
+      - alert: TaskQueueBacklog
+        expr: task_queue_size{job="moling-backend"} > 50
+        for: 10m
+        labels:
+          severity: warning
+          category: tasks
+        annotations:
+          title: "🟡 异步任务队列积压"
+          current_status: "队列积压任务数: {{ $value }}（阈值 50）"
+          impact: "AI 生成请求排队严重，用户可能等待很久"
+          runbook: |
+            1. 检查 worker 数量: docker ps | grep worker
+            2. 如果 worker 不够，启动更多: docker-compose up -d --scale worker=4
+            3. 检查是否有死任务卡住队列
+          grafana_link: "http://124.222.163.79:3001/d/moling-tasks"

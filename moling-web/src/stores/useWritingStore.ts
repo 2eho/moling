@@ -72,8 +72,10 @@ interface WritingStore {
   projects: Project[];
   /** 当前激活项目 ID */
   activeProjectId: string | null;
-  /** 已展开的项目 ID 集合 */
-  expandedProjects: Set<string>;
+  /** 当前选中的章节 ID（中心区域正在查看的章节） */
+  activeChapterId: number | null;
+  /** 当前展开的项目 ID（同一时间只能展开一个） */
+  expandedProjectId: string | null;
   /** 当前项目 */
   project: Project | null;
   /** 当前选项列表 */
@@ -95,6 +97,8 @@ interface WritingStore {
   loadProject: (project: Project) => void;
   /** 切换激活项目 */
   setActiveProject: (projectId: string) => void;
+  /** 设置当前查看的章节 */
+  setActiveChapter: (chapterId: number) => void;
   /** 添加新项目 */
   addProject: (project: Project) => void;
   /** 切换项目展开/折叠 */
@@ -115,6 +119,8 @@ interface WritingStore {
   generateOptions: () => void;
   /** 新增章节 — 追加到数组末尾，渲染时倒序后自然置顶 */
   addChapter: (projectId: string, chapter: Chapter) => void;
+  /** 完成章节 → 自动创建下一章 */
+  completeChapter: (projectId: string, chapterId: number) => void;
   /** 更新 Agent 状态 */
   updateAgents: (agents: AgentStatus[]) => void;
 }
@@ -149,7 +155,8 @@ export const getPhaseProgress = (phase: Phase): number => {
 export const useWritingStore = create<WritingStore>((set, get) => ({
   projects: [],
   activeProjectId: null,
-  expandedProjects: new Set<string>(),
+  activeChapterId: null,
+  expandedProjectId: null,
   project: null,
   options: [],
   selectedOption: null,
@@ -191,23 +198,23 @@ export const useWritingStore = create<WritingStore>((set, get) => ({
         : {};
     }),
 
+  setActiveChapter: (chapterId) => set({ activeChapterId: chapterId }),
+
   addProject: (project) =>
-    set((s) => ({
-      projects: [...s.projects, project],
-      project: s.project ?? project,
-      activeProjectId: s.activeProjectId ?? project.id,
-    })),
+    set((s) => {
+      const ch1: Chapter = { id: 1, title: "第1章", summary: "", content: "", status: "draft" };
+      const withChapters = { ...project, chapters: [ch1], currentChapter: 1, totalChapters: 1 };
+      return {
+        projects: [...s.projects, withChapters],
+        project: s.project ?? withChapters,
+        activeProjectId: s.activeProjectId ?? project.id,
+      };
+    }),
 
   toggleProjectExpand: (projectId) =>
-    set((s) => {
-      const next = new Set(s.expandedProjects);
-      if (next.has(projectId)) {
-        next.delete(projectId);
-      } else {
-        next.add(projectId);
-      }
-      return { expandedProjects: next };
-    }),
+    set((s) => ({
+      expandedProjectId: s.expandedProjectId === projectId ? null : projectId,
+    })),
 
   setPhase: (phase) =>
     set((s) => ({
@@ -297,4 +304,38 @@ export const useWritingStore = create<WritingStore>((set, get) => ({
             }
           : s.project,
     })),
+
+  completeChapter: (projectId, chapterId) =>
+    set((s) => {
+      const updateP = (p: Project) => {
+        if (p.id !== projectId) return p;
+        const chapters = p.chapters.map((ch) =>
+          ch.id === chapterId ? { ...ch, status: "completed" as const } : ch,
+        );
+        // 全部计划章节完成 → 项目进入已完结
+        const allDone = chapters.length >= p.totalChapters && chapters.every((ch) => ch.status === "completed");
+        if (allDone) {
+          return { ...p, chapters, currentChapter: chapterId, phase: "revision" as Phase };
+        }
+        // 连载中 → 自动创建下一章
+        const nextId = chapterId + 1;
+        const newChapter: Chapter = {
+          id: nextId,
+          title: `第${nextId}章`,
+          summary: "",
+          content: "",
+          status: "draft",
+        };
+        return {
+          ...p,
+          chapters: [...chapters, newChapter],
+          currentChapter: chapterId,
+          totalChapters: Math.max(p.totalChapters, nextId),
+        };
+      };
+      return {
+        projects: s.projects.map(updateP),
+        project: s.project ? updateP(s.project) : s.project,
+      };
+    }),
 }));

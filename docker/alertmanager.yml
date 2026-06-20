@@ -1,0 +1,77 @@
+# ==============================================================================
+# AlertManager 配置 — 飞书优先
+# ==============================================================================
+# 告警分组 → 抑制 → 静默 → 飞书卡片消息
+# 原则: 宁可漏报一两条，也不要飞书群被刷屏
+# ==============================================================================
+
+global:
+  # AlertManager 收到告警后立即处理
+  resolve_timeout: 5m
+
+# ── 路由树 ────────────────────────────────────────────────────
+# 按 severity 分级，critical 即时发送，warning 聚合后发送
+route:
+  receiver: 'feishu-default'
+  group_by: ['alertname', 'severity']
+  group_wait: 30s        # 同组第一条告警等待 30s，收集可能的后续告警
+  group_interval: 5m     # 同组后续告警间隔 5 分钟才发一次（防止刷屏）
+  repeat_interval: 1h    # 未恢复的告警每小时重复一次
+
+  routes:
+    # critical 级别: 立即发送，不聚合等待
+    - match:
+        severity: critical
+      receiver: 'feishu-critical'
+      group_wait: 10s
+      group_interval: 2m
+      repeat_interval: 30m
+
+    # warning 级别: 聚合后发送
+    - match:
+        severity: warning
+      receiver: 'feishu-warning'
+      group_wait: 1m
+      group_interval: 10m
+      repeat_interval: 2h
+
+# ── 抑制规则: 避免告警风暴 ────────────────────────────────────
+# 例如: BackendDown 就不需要再报 High5xxRate
+inhibit_rules:
+  - source_match:
+      severity: critical
+      alertname: BackendDown
+    target_match:
+      severity: critical
+    equal: ['instance']
+
+  - source_match:
+      alertname: DatabaseConnectionPoolExhausted
+    target_match:
+      alertname: High5xxRate
+    equal: ['instance']
+
+# ── 接收器 ────────────────────────────────────────────────────
+receivers:
+  # 默认 → feishu-bridge（转换为富文本卡片后发飞书）
+  - name: 'feishu-default'
+    webhook_configs:
+      - url: 'http://feishu-bridge:9094/alerts'
+        send_resolved: true
+
+  # Critical 专用
+  - name: 'feishu-critical'
+    webhook_configs:
+      - url: 'http://feishu-bridge:9094/alerts'
+        send_resolved: true
+
+  # Warning 专用
+  - name: 'feishu-warning'
+    webhook_configs:
+      - url: 'http://feishu-bridge:9094/alerts'
+        send_resolved: true
+
+# ── 通知模板 ──────────────────────────────────────────────────
+# AlertManager 内置模板，飞书 bridge 会解析这些字段生成卡片
+templates:
+  - '/etc/alertmanager/templates/feishu.tmpl'

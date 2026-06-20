@@ -13,6 +13,8 @@
 #   - db: PostgreSQL 17 + pgvector 扩展
 #   - redis: Redis 7 缓存和消息队列
 #   - prometheus: 指标收集
+#   - alertmanager: 告警路由 → 飞书
+#   - feishu-bridge: AlertManager → 飞书卡片转换
 #   - grafana: 可视化仪表板
 #
 # 使用说明:
@@ -158,6 +160,7 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
       - prometheusdata:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -169,6 +172,47 @@ services:
     networks:
       - moling-network
     restart: unless-stopped
+
+  # ---- AlertManager 告警路由 → 飞书 ----
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: moling-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./feishu.tmpl:/etc/alertmanager/templates/feishu.tmpl:ro
+      - alertmanagerdata:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    env_file:
+      - .env
+    environment:
+      - FEISHU_WEBHOOK_URL=${FEISHU_WEBHOOK_URL:-}
+    networks:
+      - moling-network
+    restart: unless-stopped
+
+  # ---- 飞书告警桥接（AlertManager → 飞书富文本卡片） ----
+  feishu-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.feishu-bridge
+    container_name: moling-feishu-bridge
+    ports:
+      - "9094:9094"
+    env_file:
+      - .env
+    environment:
+      - FEISHU_WEBHOOK_URL=${FEISHU_WEBHOOK_URL:-}
+      - FEISHU_SECRET=${FEISHU_SECRET:-}
+      - GRAFANA_BASE_URL=${GRAFANA_BASE_URL:-http://124.222.163.79:3001}
+    networks:
+      - moling-network
+    restart: unless-stopped
+    depends_on:
+      - alertmanager
 
   # ---- Grafana 可视化仪表板 ----
   grafana:
@@ -206,6 +250,9 @@ volumes:
     driver: local
   # Prometheus 数据
   prometheusdata:
+    driver: local
+  # AlertManager 数据（静默规则等）
+  alertmanagerdata:
     driver: local
   # Grafana 数据
   grafanadata:

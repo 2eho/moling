@@ -47,9 +47,10 @@ const AGENT_META: Record<
 
 interface AgentPanelProps {
   onClose?: () => void;
+  width?: number;
 }
 
-export function AgentPanel({ onClose }: AgentPanelProps) {
+export function AgentPanel({ onClose, width = 260 }: AgentPanelProps) {
   const agents = useWritingStore((s) => s.agents);
   const isGenerating = useWritingStore((s) => s.isGenerating);
   const activeCount = agents.filter(
@@ -61,7 +62,7 @@ export function AgentPanel({ onClose }: AgentPanelProps) {
     <aside
       className="shrink-0 flex flex-col h-full transition-all duration-300 border-l overflow-hidden"
       style={{
-        width: 260,
+        width,
         borderColor: "var(--th-border-subtle)",
         background: "var(--th-card)",
       }}

@@ -1,0 +1,31 @@
+# ==============================================================================
+# AlertManager 飞书模板
+# ==============================================================================
+# 此模板定义告警消息的文本格式（用作飞书 bridge 的 fallback）。
+# 主消息由 feishu-alert-bridge.py 生成富文本卡片。
+# ==============================================================================
+
+{{ define "feishu.title" }}
+{{- if eq .Status "firing" -}}
+[{{ .CommonLabels.severity | toUpper }}] {{ .CommonLabels.alertname }}
+{{- else -}}
+[已恢复] {{ .CommonLabels.alertname }}
+{{- end -}}
+{{ end }}
+
+{{ define "feishu.text" }}
+{{- if eq .Status "firing" -}}
+**状态**: 🔴 触发中
+{{- else -}}
+**状态**: 🟢 已恢复
+{{- end -}}
+
+**告警**: {{ .CommonLabels.alertname }}
+**级别**: {{ .CommonLabels.severity }}
+**实例**: {{ .CommonLabels.instance }}
+
+{{ range .Alerts }}
+─────────────────────
+{{ .Annotations.description }}
+{{ end }}
+{{ end }}
