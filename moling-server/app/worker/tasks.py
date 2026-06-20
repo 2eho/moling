@@ -128,3 +128,55 @@ def run_generation_task(self, generation_task_id: str) -> dict:
         # Mark task as failed — do NOT retry for business logic errors
         asyncio.run(_mark_failed(generation_task_id, str(exc)))
         return {"status": "failed", "task_id": generation_task_id, "error": str(exc)}
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=120, autoretry_for=(SQLAlchemyError, ConnectionError, TimeoutError))
+def health_auto_notify(self) -> dict:
+    """Celery Beat 定时任务：对所有活跃项目进行健康检查并发送通知。
+
+    每 30 分钟执行一次，由 Celery Beat 调度触发。
+    对每个活跃项目运行 R1/R2/R3 健康检查，发现告警时记录 HealthAlert。
+    """
+    logger.info("Health auto-notify: starting periodic health scan")
+
+    async def _run():
+        async with get_worker_session() as db:
+            from app.dao import project_dao
+            from app.service.health_service import health_service
+
+            projects = await project_dao.get_all_active(db)
+            total_alerts = 0
+
+            for project in projects:
+                try:
+                    result = await health_service.run_health_check(
+                        db=db,
+                        user_id="system",
+                        project_id=project.id,
+                    )
+                    alert_count = len(result.get("alerts", []))
+                    if alert_count > 0:
+                        logger.info("Project %s: %s health alerts", project.id, alert_count)
+                    total_alerts += alert_count
+                except Exception as e:
+                    logger.warning("Health notify failed for project %s: %s", project.id, e)
+
+            return {"scanned": len(projects), "total_alerts": total_alerts}
+
+    try:
+        result = asyncio.run(_run())
+        logger.info("Health auto-notify completed: %s projects, %s alerts",
+                     result["scanned"], result["total_alerts"])
+        return {"status": "done", **result}
+
+    except SoftTimeLimitExceeded:
+        logger.error("Health auto-notify timed out")
+        raise
+
+    except (SQLAlchemyError, ConnectionError, TimeoutError) as exc:
+        logger.exception("Health auto-notify failed (retryable)")
+        raise self.retry(exc=exc) from exc
+
+    except Exception as exc:
+        logger.exception("Health auto-notify failed (non-retryable)")
+        return {"status": "failed", "error": str(exc)}

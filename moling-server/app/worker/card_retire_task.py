@@ -135,3 +135,56 @@ def generate_replacement_cards(self, project_id: int, count: int = 5) -> dict:
     except Exception as exc:
         logger.exception("Replacement card generation failed (non-retryable)")
         return {"status": "failed", "project_id": project_id, "error": str(exc)}
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=3600, autoretry_for=_RETRYABLE)
+def card_retire_check(self) -> dict:
+    """Celery Beat 定时任务：扫描所有活跃项目，检查是否有需要退休的卡片。
+
+    每天执行一次（凌晨 2 点），由 Celery Beat 调度触发。
+    对每个活跃项目的卡片池进行新鲜度检查，标记并退休过期卡片。
+    """
+    logger.info("Card retire check: starting daily scan")
+
+    async def _run():
+        async with get_worker_session() as db:
+            from app.dao import project_dao
+            from app.service.card_pool_service import CardPoolService
+
+            projects = await project_dao.get_all_active(db)
+            service = CardPoolService()
+            results = []
+
+            for project in projects:
+                try:
+                    freshness = await service.check_freshness(db, project.id)
+                    expired_count = freshness.get("expired", 0)
+                    if expired_count > 0:
+                        logger.info("Project %s: %s cards expired", project.id, expired_count)
+                    results.append({
+                        "project_id": project.id,
+                        "checked": freshness.get("total", 0),
+                        "expired": expired_count,
+                    })
+                except Exception as e:
+                    logger.warning("Card retire check failed for project %s: %s", project.id, e)
+                    results.append({"project_id": project.id, "error": str(e)})
+
+            return {"scanned": len(projects), "results": results}
+
+    try:
+        result = asyncio.run(_run())
+        logger.info("Card retire check completed: scanned %s projects", result["scanned"])
+        return {"status": "done", **result}
+
+    except SoftTimeLimitExceeded:
+        logger.error("Card retire check timed out")
+        raise
+
+    except _RETRYABLE as exc:
+        logger.exception("Card retire check failed (retryable)")
+        raise self.retry(exc=exc) from exc
+
+    except Exception as exc:
+        logger.exception("Card retire check failed (non-retryable)")
+        return {"status": "failed", "error": str(exc)}

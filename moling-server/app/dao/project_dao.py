@@ -1,6 +1,8 @@
-"""澧ㄧ伒 (Moling) 鈥?Project DAO."""
+"""Project DAO."""
 
 from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +30,48 @@ class ProjectDAO(BaseDAO[Project]):
             .where(Project.user_id == user_id, Project.is_deleted == False)
             .order_by(Project.updated_at.desc())
             .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_all_active(
+        self,
+        db: AsyncSession,
+        limit: int = 200,
+    ) -> list[Project]:
+        """List all active (non-deleted) projects across all users.
+
+        Used by Celery Beat periodic tasks for system-wide scans.
+        """
+        stmt = (
+            select(Project)
+            .where(Project.is_deleted == False, Project.status == "active")
+            .order_by(Project.updated_at.desc())
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_recently_active(
+        self,
+        db: AsyncSession,
+        hours: int = 6,
+        limit: int = 200,
+    ) -> list[Project]:
+        """List projects updated within the last N hours.
+
+        Used by Celery Beat periodic tasks for targeted scans.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        stmt = (
+            select(Project)
+            .where(
+                Project.is_deleted == False,
+                Project.status == "active",
+                Project.updated_at >= cutoff,
+            )
+            .order_by(Project.updated_at.desc())
             .limit(limit)
         )
         result = await db.execute(stmt)

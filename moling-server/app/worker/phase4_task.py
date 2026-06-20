@@ -62,3 +62,54 @@ def run_phase4_analysis(self, project_id: int) -> dict:
     except Exception as exc:
         logger.exception("Phase 4 analysis failed (non-retryable) for project %s", project_id)
         return {"status": "failed", "project_id": project_id, "error": str(exc)}
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=600, autoretry_for=_RETRYABLE)
+def phase4_auto_advance(self) -> dict:
+    """Celery Beat 定时任务：扫描所有启用了自动审核的项目，触发 Phase 4 自动推进。
+
+    每小时执行一次，由 Celery Beat 调度触发。
+    查找 phase4_review_mode="auto" 的项目，检查是否有待推进的章节，
+    如有则触发 Phase 4 分析流水线。
+    """
+    logger.info("Phase 4 auto-advance: starting periodic scan")
+
+    async def _run():
+        async with get_worker_session() as db:
+            from app.dao import project_dao
+            from app.service.phase4_service import Phase4Service
+
+            # 查找所有活跃项目
+            projects = await project_dao.get_all_active(db)
+            service = Phase4Service()
+            results = []
+
+            for project in projects:
+                try:
+                    # 检查项目是否设置了自动审核模式
+                    if getattr(project, "phase4_review_mode", "manual") == "auto":
+                        logger.debug("Auto-advancing project %s", project.id)
+                        result = await service.analyze_project(db, project.id)
+                        results.append({"project_id": project.id, "status": "done", "result": result})
+                except Exception as e:
+                    logger.warning("Auto-advance failed for project %s: %s", project.id, e)
+                    results.append({"project_id": project.id, "status": "failed", "error": str(e)})
+
+            return {"scanned": len(projects), "processed": len(results), "results": results}
+
+    try:
+        result = asyncio.run(_run())
+        logger.info("Phase 4 auto-advance completed: scanned %s projects", result["scanned"])
+        return {"status": "done", **result}
+
+    except SoftTimeLimitExceeded:
+        logger.error("Phase 4 auto-advance timed out")
+        raise
+
+    except _RETRYABLE as exc:
+        logger.exception("Phase 4 auto-advance failed (retryable)")
+        raise self.retry(exc=exc) from exc
+
+    except Exception as exc:
+        logger.exception("Phase 4 auto-advance failed (non-retryable)")
+        return {"status": "failed", "error": str(exc)}

@@ -145,3 +145,47 @@ def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
         logger.exception("Full reanalysis failed with non-retryable error for project %s", project_id)
         idem_mark_failed(task_key)
         return {"status": "failed", "project_id": project_id, "error": str(exc)}
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=600, autoretry_for=_RETRYABLE)
+def vault_periodic_reanalyze(self) -> dict:
+    """Celery Beat 定时任务：定期扫描项目，对活跃项目触发 Vault 重分析。
+
+    每 6 小时执行一次，由 Celery Beat 调度触发。
+    查找最近 6 小时内有章节更新的项目，触发 vault_full_reanalyze。
+    """
+    logger.info("Vault periodic reanalyze: starting scan")
+
+    async def _run():
+        async with get_worker_session() as db:
+            from app.dao import project_dao
+
+            projects = await project_dao.get_recently_active(db, hours=6)
+            triggered = 0
+
+            for project in projects:
+                try:
+                    # 异步触发重分析（不等待结果，避免阻塞扫描）
+                    vault_full_reanalyze.delay(project_id=project.id, user_id="system")
+                    triggered += 1
+                except Exception as e:
+                    logger.warning("Failed to trigger reanalyze for project %s: %s", project.id, e)
+
+            return {"scanned": len(projects), "triggered": triggered}
+
+    try:
+        result = asyncio.run(_run())
+        logger.info("Vault periodic reanalyze completed: %s projects triggered", result["triggered"])
+        return {"status": "done", **result}
+
+    except SoftTimeLimitExceeded:
+        logger.error("Vault periodic reanalyze timed out")
+        raise
+
+    except _RETRYABLE as exc:
+        logger.exception("Vault periodic reanalyze failed (retryable)")
+        raise self.retry(exc=exc) from exc
+
+    except Exception as exc:
+        logger.exception("Vault periodic reanalyze failed (non-retryable)")
+        return {"status": "failed", "error": str(exc)}

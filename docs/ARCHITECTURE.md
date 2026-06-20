@@ -1,7 +1,7 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.2.0  
-> **最后更新**: 2026-06-18  
+> **文档版本**: 1.3.0  
+> **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
 
@@ -595,6 +595,86 @@ db.commit() → 全部成功
 
 ## 安全架构
 
+### 配置管理
+
+> **新增于 2026-06-21 R3 架构加固**
+
+所有运行时配置通过 `app/config.py` Settings 类统一管理，支持环境变量 + `.env` 文件 + 数据库运行时覆写三层优先级。
+
+| 配置项 | 环境变量 | 默认值 | 用途 |
+|--------|---------|--------|------|
+| `DATABASE_URL` | `DATABASE_URL` | `sqlite+aiosqlite:///./moling.db` | 数据库连接串 |
+| `REDIS_URL` | `REDIS_URL` | `redis://localhost:6379/0` | Redis 连接串 |
+| `REDIS_PASSWORD` | `REDIS_PASSWORD` | `None` | Redis 密码 |
+| `SECRET_KEY` | `SECRET_KEY` | (dev default, 生产强制覆盖) | JWT 签名密钥 |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Access Token 过期时间（分钟） |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh Token 过期时间（天） |
+| `LLM_API_BASE` | `LLM_API_BASE` | `https://api.deepseek.com` | LLM API 地址 |
+| `LLM_API_KEY` | `LLM_API_KEY` | (placeholder) | LLM API 密钥 |
+| `LLM_MODEL` | `LLM_MODEL` | `gpt-4o-mini` | 默认 LLM 模型 |
+| `CELERY_BROKER_URL` | `CELERY_BROKER_URL` | `redis://localhost:6379/1` | Celery 消息代理 |
+| `CELERY_RESULT_BACKEND` | `CELERY_RESULT_BACKEND` | `redis://localhost:6379/2` | Celery 结果后端 |
+| `CORS_ORIGINS` | `CORS_ORIGINS` | `localhost:3000,5173` | 允许的跨域来源 |
+| `MAX_BODY_SIZE` | `MAX_BODY_SIZE` | `10MB` | 最大请求体大小 |
+| `RATE_LIMIT_CALLS` | `RATE_LIMIT_CALLS` | `1000` | 限流周期内最大请求数 |
+| `RATE_LIMIT_PERIOD` | `RATE_LIMIT_PERIOD` | `60` | 限流周期（秒） |
+| `LLM_PRO_KEYS` | `LLM_PRO_KEYS` | `[]` | Pro API Key 池（逗号分隔） |
+| `LLM_FLASH_KEYS` | `LLM_FLASH_KEYS` | `[]` | Flash API Key 池（逗号分隔） |
+| `KEY_SELECT_STRATEGY` | `KEY_SELECT_STRATEGY` | `LEAST_USAGE` | Key 选择策略 |
+| `KEY_BACKOFF_BASE` | `KEY_BACKOFF_BASE` | `30` | Key 冷却基础秒数 |
+| `KEY_BACKOFF_MAX` | `KEY_BACKOFF_MAX` | `300` | Key 冷却最大秒数 |
+| `ARCHIVE_DIR` | `ARCHIVE_DIR` | `./archives` | 动态层存档目录 |
+| `SENTRY_DSN` | `SENTRY_DSN` | `None` | Sentry 错误追踪 DSN |
+| `ENVIRONMENT` | `ENVIRONMENT` | `development` | 运行环境 |
+
+**配置优先级**: 数据库运行时覆写 > 环境变量 > `.env` 文件 > 代码默认值
+
+**安全验证器**:
+- 生产环境 `SECRET_KEY` 不能使用默认值 → 启动时拒绝
+- 生产环境 `CORS_ORIGINS` 包含 `*` → 警告
+- `LLM_API_KEY` 为 placeholder → 警告
+- `REDIS_PASSWORD` 未设置（非 dev）→ 警告
+- `DATABASE_URL` 包含弱密码 → 警告
+
+### Celery Beat 定时调度
+
+> **新增于 2026-06-21 R3 架构加固**
+
+4 个周期性任务通过 Celery Beat 自动执行，无需外部 cron 触发：
+
+| 任务 | 调度周期 | 队列 | 用途 |
+|------|---------|------|------|
+| `phase4-auto-advance` | 每小时 | default | 扫描自动审核项目，触发 Phase 4 分析 |
+| `vault-periodic-reanalyze` | 每 6 小时 | default | 对近期活跃项目触发 Vault 重分析 |
+| `card-retire-check` | 每天 | default | 检查卡片池新鲜度，标记过期卡片 |
+| `health-auto-notify` | 每 30 分钟 | default | 活跃项目健康检查，生成 HealthAlert |
+
+**启动命令**:
+```bash
+# Worker（处理任务）
+celery -A app.worker.celery_app worker -Q default,llm --loglevel=info
+
+# Beat（定时调度）
+celery -A app.worker.celery_app beat --loglevel=info
+
+# 或合并运行（开发环境）
+celery -A app.worker.celery_app worker -B -Q default,llm --loglevel=info
+```
+
+### 健康检查
+
+> **更新于 2026-06-21 R3 架构加固**
+
+`GET /api/v1/health` 端点验证三方依赖连通性：
+
+| 检查项 | 方法 | 超时 |
+|--------|------|------|
+| **Database** | `SELECT 1` | 继承 db session 超时 |
+| **Redis** | `PING` | 3s 连接超时 |
+| **Celery** | `control.ping()` | 3s 超时 |
+
+返回状态：`ok`（全部通过）或 `degraded`（任一失败）。`degraded` 时 `message` 字段列出失败的依赖。
+
 ### 认证和授权
 
 ```mermaid
@@ -705,6 +785,7 @@ sequenceDiagram
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.3.0 | 2026-06-21 | R3 架构加固：新增配置管理章节（26 项环境变量）、Celery Beat 定时调度（4 个周期性任务）、健康检查增强（DB+Redis+Celery 三方验证）、DAO 层命名规范 + 游标分页 | Moling Team |
 | 1.2.0 | 2026-06-18 | 修正 Docker Compose 两套编排说明、端口映射表（Nginx 80/443、Grafana 3001:3000）、新增 Phase 4 核心架构章节 | Moling Team |
 | 1.0.0 | 2026-06-16 | 初始版本 | Moling Team |
 

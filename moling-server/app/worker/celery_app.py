@@ -60,4 +60,31 @@ celery_app.conf.update(
     },
     worker_max_tasks_per_child=50,      # 每 worker 处理 50 个任务后重启，防止内存泄漏
     task_store_errors_even_if_ignored=True,
+    # ── Celery Beat 定时调度 ──
+    beat_schedule={
+        # Phase4 自动推进：每小时检查一次
+        "phase4-auto-advance": {
+            "task": "app.worker.phase4_task.phase4_auto_advance",
+            "schedule": 3600.0,  # 1 小时
+            "options": {"queue": "default", "expires": 3000},
+        },
+        # Vault 定期重分析：每 6 小时
+        "vault-periodic-reanalyze": {
+            "task": "app.worker.vault_reanalyze_task.vault_periodic_reanalyze",
+            "schedule": 21600.0,  # 6 小时
+            "options": {"queue": "default", "expires": 18000},
+        },
+        # 卡片退休检查：每天凌晨 2 点
+        "card-retire-check": {
+            "task": "app.worker.card_retire_task.card_retire_check",
+            "schedule": 86400.0,  # 24 小时
+            "options": {"queue": "default", "expires": 72000},
+        },
+        # 健康监控自动通知：每 30 分钟
+        "health-auto-notify": {
+            "task": "app.worker.tasks.health_auto_notify",
+            "schedule": 1800.0,  # 30 分钟
+            "options": {"queue": "default", "expires": 1500},
+        },
+    },
 )

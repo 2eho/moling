@@ -1038,27 +1038,27 @@ def downgrade() -> None:
     # -- Reverse PK/FK type changes --
     op.execute(
         "ALTER TABLE draw_history "
-        "DROP CONSTRAINT IF EXISTS draw_history_chapters_id_fkey"
+        "DROP CONSTRAINT IF EXISTS draw_history_chapter_id_fkey"
     )
     op.execute(
         "ALTER TABLE draw_history "
-        "DROP CONSTRAINT IF EXISTS draw_history_users_id_fkey"
+        "DROP CONSTRAINT IF EXISTS draw_history_user_id_fkey"
     )
     op.execute(
         "ALTER TABLE generation_tasks "
-        "DROP CONSTRAINT IF EXISTS generation_tasks_chapters_id_fkey"
+        "DROP CONSTRAINT IF EXISTS generation_tasks_chapter_id_fkey"
     )
     op.execute(
         "ALTER TABLE generation_tasks "
-        "DROP CONSTRAINT IF EXISTS generation_tasks_users_id_fkey"
+        "DROP CONSTRAINT IF EXISTS generation_tasks_user_id_fkey"
     )
     op.execute(
         "ALTER TABLE ingest_jobs "
-        "DROP CONSTRAINT IF EXISTS ingest_jobs_users_id_fkey"
+        "DROP CONSTRAINT IF EXISTS ingest_jobs_user_id_fkey"
     )
     op.execute(
         "ALTER TABLE projects "
-        "DROP CONSTRAINT IF EXISTS projects_users_id_fkey"
+        "DROP CONSTRAINT IF EXISTS projects_user_id_fkey"
     )
 
     op.execute(
