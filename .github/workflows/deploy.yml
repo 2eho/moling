@@ -63,7 +63,7 @@ env:
   IMAGE_NAME_FRONTEND: ${{ github.repository }}/moling-frontend
   PYTHON_VERSION: "3.13"
   NODE_VERSION: "22"
-  FEISHU_WEBHOOK_URL: ""
+  FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
 jobs:
   # ==========================================================================
@@ -249,11 +249,11 @@ jobs:
           - component: backend
             context: ./moling-server
             dockerfile: ./moling-server/Dockerfile
-            image: ${{ env.IMAGE_NAME_BACKEND }}
+            image: ${{ github.repository }}/moling-backend
           - component: frontend
             context: ./moling-web
             dockerfile: ./moling-web/Dockerfile
-            image: ${{ env.IMAGE_NAME_FRONTEND }}
+            image: ${{ github.repository }}/moling-frontend
 
     steps:
       - uses: actions/checkout@v4
