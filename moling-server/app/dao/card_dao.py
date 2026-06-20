@@ -71,12 +71,14 @@ class CardDAO(BaseDAO[CardPool]):
         db: AsyncSession,
         project_id: int,
         chapter_id: Optional[int] = None,
+        limit: int = 50,
     ) -> list[DrawRecord]:
         """Get draw records for a project, optionally filtered by chapter."""
         stmt = (
             select(DrawRecord)
             .where(DrawRecord.project_id == project_id)
-            .order_by(DrawRecord.drawn_at.desc())
+            .order_by(DrawRecord.created_at.desc(), DrawRecord.drawn_at.desc())
+            .limit(limit)
         )
         if chapter_id is not None:
             stmt = stmt.where(DrawRecord.chapter_id == chapter_id)
@@ -114,3 +116,118 @@ class CardDAO(BaseDAO[CardPool]):
         await db.flush()
         await db.refresh(db_obj)
         return db_obj
+
+    async def list_active_by_project(
+        self,
+        db: AsyncSession,
+        project_id: int,
+    ) -> list[CardPool]:
+        """List all active cards for a project, ordered by rarity desc then id asc."""
+        stmt = (
+            select(CardPool)
+            .where(
+                CardPool.project_id == project_id,
+                CardPool.is_active == True,
+            )
+            .order_by(CardPool.rarity.desc(), CardPool.id.asc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    # ---- Synchronous methods for Celery workers ----
+
+    def list_active_by_project_sync(
+        self,
+        db,  # sync Session
+        project_id: int,
+    ) -> list[CardPool]:
+        """Synchronous: list all active cards for a project."""
+        from sqlalchemy.orm import Session as SyncSession
+
+        stmt = (
+            select(CardPool)
+            .where(
+                CardPool.project_id == project_id,
+                CardPool.is_active == True,
+            )
+            .order_by(CardPool.rarity.desc(), CardPool.id.asc())
+        )
+        result = db.execute(stmt)
+        return list(result.scalars().all())
+
+    def get_active_cards_sync(
+        self,
+        db,  # sync Session
+        project_id: int,
+        count: int = 20,
+    ) -> list[CardPool]:
+        """Synchronous: get active cards for a project."""
+        rarity_order = func.case(
+            (CardPool.rarity == "legendary", 0),
+            (CardPool.rarity == "epic", 1),
+            (CardPool.rarity == "rare", 2),
+            else_=3,
+        )
+        stmt = (
+            select(CardPool)
+            .where(
+                CardPool.project_id == project_id,
+                CardPool.status == "active",
+            )
+            .order_by(rarity_order, func.random())
+            .limit(count)
+        )
+        result = db.execute(stmt)
+        return list(result.scalars().all())
+
+    def list_by_project_sync(
+        self,
+        db,  # sync Session
+        project_id: int,
+    ) -> list[CardPool]:
+        """Synchronous: list all cards for a project."""
+        stmt = (
+            select(CardPool)
+            .where(CardPool.project_id == project_id)
+            .order_by(CardPool.id.asc())
+        )
+        result = db.execute(stmt)
+        return list(result.scalars().all())
+
+    def get_by_ids_sync(
+        self,
+        db,  # sync Session
+        project_id: int,
+        card_ids: list[int],
+    ) -> list[CardPool]:
+        """Synchronous: get cards by their IDs within a project."""
+        stmt = (
+            select(CardPool)
+            .where(
+                CardPool.project_id == project_id,
+                CardPool.id.in_(card_ids),
+            )
+        )
+        result = db.execute(stmt)
+        return list(result.scalars().all())
+
+    def batch_update_is_active_sync(
+        self,
+        db,  # sync Session
+        project_id: int,
+        card_ids: list[int],
+        is_active: bool,
+    ) -> int:
+        """Synchronous: batch update is_active flag, returns updated count."""
+        from sqlalchemy import update
+        stmt = (
+            update(CardPool)
+            .where(
+                CardPool.project_id == project_id,
+                CardPool.id.in_(card_ids),
+            )
+            .values(is_active=is_active)
+        )
+        result = db.execute(stmt)
+        db.commit()
+        return result.rowcount

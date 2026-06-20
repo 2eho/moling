@@ -206,7 +206,12 @@ if static_docs_dir.is_dir():
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
-    """Translate any ``AppError`` subclass into the unified error envelope."""
+    """Translate any ``AppError`` subclass into the unified error envelope.
+
+    Logs to moling_errors.log for auditability and debugging.
+    """
+    _write_error_log(request, exc)
+
     return JSONResponse(
         status_code=exc.status_code,
         content={

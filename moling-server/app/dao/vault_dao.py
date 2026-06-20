@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vault_character import VaultCharacter
@@ -277,3 +277,61 @@ class VaultDAO:
         if db_obj:
             await db.delete(db_obj)
             await db.flush()
+
+    # ---- Aggregation / Counts ----
+
+    async def count_characters(
+        self,
+        db: AsyncSession,
+        project_id: int,
+    ) -> int:
+        """Count vault characters for a project."""
+        stmt = (
+            select(func.count())
+            .select_from(VaultCharacter)
+            .where(VaultCharacter.project_id == project_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    async def count_timeline_events(
+        self,
+        db: AsyncSession,
+        project_id: int,
+    ) -> int:
+        """Count timeline events for a project."""
+        stmt = (
+            select(func.count())
+            .select_from(VaultTimeline)
+            .where(VaultTimeline.project_id == project_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    async def count_plot_promises(
+        self,
+        db: AsyncSession,
+        project_id: int,
+    ) -> int:
+        """Count plot promises for a project."""
+        stmt = (
+            select(func.count())
+            .select_from(VaultPlotPromise)
+            .where(VaultPlotPromise.project_id == project_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    async def count_world_entries(
+        self,
+        db: AsyncSession,
+        project_id: int,
+    ) -> int:
+        """Count world-building entries for a project."""
+        stmt = (
+            select(func.count())
+            .select_from(VaultWorld)
+            .where(VaultWorld.project_id == project_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one()
