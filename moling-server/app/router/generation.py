@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
-from app.schemas.generation import TaskStatusResp
+from app.schemas.generation import TaskStatusResp, TaskCancelResp
 from app.schemas.common import PaginatedResp
 from app.service import generation_service
 
@@ -25,12 +25,12 @@ async def get_task_status(
     return await generation_service.get_task_status(db, current_user.id, task_id)
 
 
-@router.delete("/{task_id}/cancel", response_model=dict)
+@router.delete("/{task_id}/cancel", response_model=TaskCancelResp)
 async def cancel_task(
     task_id: str,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> dict:
+) -> TaskCancelResp:
     """Cancel a generation task."""
     await generation_service.cancel_task(db, current_user.id, task_id)
     return {"status": "cancelled", "task_id": task_id}

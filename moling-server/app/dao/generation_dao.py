@@ -31,7 +31,7 @@ class GenerationDAO(BaseDAO[GenerationTask]):
         """List generation tasks for a project, newest first."""
         stmt = (
             select(GenerationTask)
-            .where(GenerationTask.project_id == project_id)
+            .where(GenerationTask.project_id == project_id, GenerationTask.is_deleted == False)
             .order_by(GenerationTask.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -51,6 +51,7 @@ class GenerationDAO(BaseDAO[GenerationTask]):
             .where(
                 GenerationTask.project_id == project_id,
                 GenerationTask.chapter_id == chapter_id,
+                GenerationTask.is_deleted == False,
             )
             .order_by(GenerationTask.created_at.desc())
         )
@@ -66,7 +67,7 @@ class GenerationDAO(BaseDAO[GenerationTask]):
         """List generation tasks with a specific status (for worker polling)."""
         stmt = (
             select(GenerationTask)
-            .where(GenerationTask.status == status)
+            .where(GenerationTask.status == status, GenerationTask.is_deleted == False)
             .order_by(GenerationTask.created_at.asc())
             .limit(limit)
         )
@@ -85,6 +86,7 @@ class GenerationDAO(BaseDAO[GenerationTask]):
             .where(
                 GenerationTask.chapter_id == chapter_id,
                 GenerationTask.task_type == task_type,
+                GenerationTask.is_deleted == False,
             )
             .order_by(GenerationTask.created_at.desc())
             .limit(1)

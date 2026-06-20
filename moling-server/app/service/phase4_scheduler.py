@@ -1308,3 +1308,7 @@ class Phase4Scheduler:
 
 # Singleton instance
 phase4_scheduler = Phase4Scheduler()
+
+# 注册到 ServiceRegistry（打破循环依赖）
+from app.core.service_registry import service_registry, Phase4SchedulerSentinel
+service_registry.register(Phase4SchedulerSentinel, phase4_scheduler)

@@ -18,6 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user
 from app.ingest.service import IngestService
 
+# 文件上传最大大小（与中间件保持一致）
+_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 router = APIRouter(prefix="/projects/{project_id}/import", tags=["Import"])
 
 
@@ -64,6 +67,12 @@ async def submit_import(
         if ext not in ("txt", "md"):
             raise ValidationError(detail=f"不支持的文件类型 .{ext}，仅支持 .txt 和 .md 文件")
 
+        # 防御层：检查文件大小（防止 chunked 传输绕过 Content-Length 中间件）
+        if file.size is not None and file.size > _MAX_FILE_SIZE:
+            raise ValidationError(
+                detail=f"文件过大（{file.size} bytes），最大允许 {_MAX_FILE_SIZE} bytes"
+            )
+
         # 根据扩展名设置 source_type
         if ext == "md":
             source_type = "markdown"
@@ -73,6 +82,11 @@ async def submit_import(
         try:
             # 读取上传的文件内容
             content = await file.read()
+            # 防御层：读取后再次检查大小
+            if len(content) > _MAX_FILE_SIZE:
+                raise ValidationError(
+                    detail=f"文件过大（{len(content)} bytes），最大允许 {_MAX_FILE_SIZE} bytes"
+                )
             text = content.decode("utf-8")
         except UnicodeDecodeError:
             raise ValidationError(detail="文件编码错误，请确保文件为 UTF-8 编码")

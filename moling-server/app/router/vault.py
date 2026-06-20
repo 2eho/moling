@@ -22,6 +22,7 @@ from app.schemas.vault import (
     WorldResp,
     WorldCreate,
     WorldUpdate,
+    VaultSummaryResp,
 )
 from app.service import vault_service
 
@@ -276,12 +277,12 @@ async def delete_world_entry(
     await vault_service.delete_world_entry(db, current_user.id, project_id, entry_id)
 
 
-@router.get("/summary", response_model=dict)
+@router.get("/summary", response_model=VaultSummaryResp)
 async def get_vault_summary(
     project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> dict:
+) -> VaultSummaryResp:
     """获取四库总览（角色、时间线、伏笔、世界观的统计数据）。"""
     summary = await vault_service.get_summary(db, current_user.id, project_id)
     return summary

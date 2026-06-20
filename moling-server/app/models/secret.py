@@ -3,7 +3,7 @@
 from typing import Optional
 
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel, SoftDeleteMixin
 
@@ -55,6 +55,9 @@ class Secret(BaseModel, SoftDeleteMixin):
         default=0,
         comment="叙事债务值",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="secrets", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Secret id={self.id} project={self.project_id}>"

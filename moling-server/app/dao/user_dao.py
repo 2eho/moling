@@ -25,7 +25,7 @@ class UserDAO(BaseDAO[User]):
         email: str,
     ) -> Optional[User]:
         """Find a user by their email address."""
-        stmt = select(User).where(User.email == email)
+        stmt = select(User).where(User.email == email, User.is_deleted == False)
         result = await db.execute(stmt)  # type: ignore[union-attr]
         return result.scalar_one_or_none()
 
@@ -35,7 +35,7 @@ class UserDAO(BaseDAO[User]):
         username: str,
     ) -> Optional[User]:
         """Find a user by their username."""
-        stmt = select(User).where(User.username == username)
+        stmt = select(User).where(User.username == username, User.is_deleted == False)
         result = await db.execute(stmt)  # type: ignore[union-attr]
         return result.scalar_one_or_none()
 
@@ -45,7 +45,7 @@ class UserDAO(BaseDAO[User]):
         token: str,
     ) -> Optional[User]:
         """Find a user by their password reset token."""
-        stmt = select(User).where(User.reset_token == token)
+        stmt = select(User).where(User.reset_token == token, User.is_deleted == False)
         result = await db.execute(stmt)  # type: ignore[union-attr]
         return result.scalar_one_or_none()
 
@@ -59,7 +59,7 @@ class UserDAO(BaseDAO[User]):
         email: str,
     ) -> Optional[User]:
         """Sync version — use with get_sync_db()."""
-        stmt = select(User).where(User.email == email)
+        stmt = select(User).where(User.email == email, User.is_deleted == False)
         result = db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -69,7 +69,7 @@ class UserDAO(BaseDAO[User]):
         username: str,
     ) -> Optional[User]:
         """Sync version — use with get_sync_db()."""
-        stmt = select(User).where(User.username == username)
+        stmt = select(User).where(User.username == username, User.is_deleted == False)
         result = db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -78,12 +78,15 @@ class UserDAO(BaseDAO[User]):
         db: SyncSession,
         obj_in: dict | BaseModel,
     ) -> User:
-        """Sync create — use with get_sync_db()."""
+        """Sync create — use with get_sync_db().
+        
+        Note: caller is responsible for committing the transaction.
+        """
         if isinstance(obj_in, dict):
             instance = self.model_class(**obj_in)
         else:
             instance = self.model_class(**obj_in.model_dump())
         db.add(instance)
-        db.commit()
+        db.flush()
         db.refresh(instance)
         return instance

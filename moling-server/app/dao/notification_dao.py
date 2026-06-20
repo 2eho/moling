@@ -25,7 +25,7 @@ class NotificationDAO(BaseDAO[Notification]):
         is_read: bool | None = None,
     ) -> list[Notification]:
         """Get notifications for a specific user with pagination."""
-        stmt = select(Notification).where(Notification.user_id == user_id)
+        stmt = select(Notification).where(Notification.user_id == user_id, Notification.is_deleted == False)
         
         if is_read is not None:
             stmt = stmt.where(Notification.is_read == is_read)
@@ -45,7 +45,7 @@ class NotificationDAO(BaseDAO[Notification]):
     ) -> int:
         """Count notifications for a specific user."""
         stmt = select(func.count()).select_from(Notification).where(
-            Notification.user_id == user_id
+            Notification.user_id == user_id, Notification.is_deleted == False
         )
         
         if is_read is not None:

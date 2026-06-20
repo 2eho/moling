@@ -3,7 +3,7 @@
 from typing import Optional
 
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel, SoftDeleteMixin
 
@@ -58,6 +58,9 @@ class VaultWorld(BaseModel, SoftDeleteMixin):
         default=lambda: [],
         comment="引用章节号列表",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="vault_worlds", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<VaultWorld id={self.id} name={self.name!r}>"

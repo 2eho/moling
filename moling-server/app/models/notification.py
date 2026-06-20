@@ -3,7 +3,7 @@
 from typing import Optional
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, SoftDeleteMixin
 
@@ -53,6 +53,10 @@ class Notification(Base, TimestampMixin, SoftDeleteMixin):
         default=None,
         comment="关联项目 ID（可选）",
     )
+
+    # ---- Relationships ----
+    user = relationship("User", back_populates="notifications", lazy="selectin")
+    project = relationship("Project", back_populates="notifications", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Notification id={self.id} user={self.user_id} type={self.type!r}>"

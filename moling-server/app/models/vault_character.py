@@ -3,7 +3,7 @@
 from typing import Optional
 
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON, Float
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel, SoftDeleteMixin
 
@@ -127,6 +127,9 @@ class VaultCharacter(BaseModel, SoftDeleteMixin):
         nullable=True,
         comment="语义嵌入向量 (JSON 数组)",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="vault_characters", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<VaultCharacter id={self.id} name={self.name!r}>"

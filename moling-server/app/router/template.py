@@ -8,18 +8,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.service.template_service import template_service
-from app.schemas.template import TemplateResp, CreateTemplateReq, UpdateTemplateReq
+from app.schemas.template import TemplateResp, CreateTemplateReq, UpdateTemplateReq, TemplateListResp, CreateProjectFromTemplateResp
 
 router = APIRouter()
 
 
-@router.get("", response_model=dict)
+@router.get("", response_model=TemplateListResp)
 async def list_templates(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     genre: str = Query(None, description="按题材筛选"),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+    current_user: dict = Depends(get_current_user),
+) -> TemplateListResp:
     """获取模板列表。"""
     result = await template_service.list_templates(
         db,
@@ -34,6 +35,7 @@ async def list_templates(
 async def get_template(
     template_id: int,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> TemplateResp:
     """获取模板详情。"""
     result = await template_service.get_template(db, template_id)
@@ -73,14 +75,14 @@ async def delete_template(
     await template_service.delete_template(db, template_id)
 
 
-@router.post("/{template_id}/create-project", response_model=dict, status_code=201)
+@router.post("/{template_id}/create-project", response_model=CreateProjectFromTemplateResp, status_code=201)
 async def create_project_from_template(
     template_id: int,
     title: str = Query(..., description="项目标题"),
     author: str = Query(None, description="作者"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
-) -> dict:
+) -> CreateProjectFromTemplateResp:
     """使用模板创建新项目。"""
     result = await template_service.create_project_from_template(
         db,

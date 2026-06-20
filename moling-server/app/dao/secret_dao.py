@@ -35,7 +35,7 @@ class SecretDAO(BaseDAO[Secret]):
         """List all secrets for a project."""
         stmt = (
             select(Secret)
-            .where(Secret.project_id == project_id)
+            .where(Secret.project_id == project_id, Secret.is_deleted == False)
             .order_by(Secret.id.asc())
         )
         result = await db.execute(stmt)
@@ -53,6 +53,7 @@ class SecretDAO(BaseDAO[Secret]):
             .where(
                 Secret.project_id == project_id,
                 Secret.secrecy_level == level,
+                Secret.is_deleted == False,
             )
             .order_by(Secret.id.asc())
         )
@@ -123,7 +124,7 @@ class SecretDAO(BaseDAO[Secret]):
         """Sum the debt of all secrets in a project."""
         stmt = (
             select(func.coalesce(func.sum(Secret.debt), 0))
-            .where(Secret.project_id == project_id)
+            .where(Secret.project_id == project_id, Secret.is_deleted == False)
         )
         result = await db.execute(stmt)
         return result.scalar_one()
@@ -137,7 +138,7 @@ class SecretDAO(BaseDAO[Secret]):
         stmt = (
             select(func.count())
             .select_from(Secret)
-            .where(Secret.project_id == project_id)
+            .where(Secret.project_id == project_id, Secret.is_deleted == False)
         )
         result = await db.execute(stmt)
         return result.scalar_one()

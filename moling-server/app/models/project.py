@@ -108,6 +108,18 @@ class Project(BaseModel, SoftDeleteMixin):
     # ---- Relationships ----
     owner = relationship("User", back_populates="projects", lazy="selectin")
     chapters = relationship("Chapter", back_populates="project", cascade="all, delete-orphan", lazy="selectin")
+    generation_tasks = relationship("GenerationTask", back_populates="project", lazy="selectin")
+    draw_histories = relationship("DrawHistory", back_populates="project", lazy="selectin")
+    health_alerts = relationship("HealthAlert", back_populates="project", lazy="selectin")
+    secrets = relationship("Secret", back_populates="project", lazy="selectin")
+    notifications = relationship("Notification", back_populates="project", lazy="selectin")
+    card_pools = relationship("CardPool", back_populates="project", lazy="selectin")
+    vault_characters = relationship("VaultCharacter", back_populates="project", lazy="selectin")
+    vault_timelines = relationship("VaultTimeline", back_populates="project", lazy="selectin")
+    vault_plot_promises = relationship("VaultPlotPromise", back_populates="project", lazy="selectin")
+    vault_worlds = relationship("VaultWorld", back_populates="project", lazy="selectin")
+    vault_changelogs = relationship("VaultChangelog", back_populates="project", lazy="selectin")
+    dynamic_layers = relationship("DynamicLayer", back_populates="project", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Project id={self.id} title={self.title!r}>"

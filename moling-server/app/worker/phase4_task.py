@@ -6,6 +6,9 @@
 - 执行四库更新
 - 卡牌充实
 - 健康检查
+
+Uses ``get_worker_session()`` from ``app.worker.db`` for unified
+database session management.
 """
 
 from __future__ import annotations
@@ -13,12 +16,19 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from celery.exceptions import SoftTimeLimitExceeded
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.worker.celery_app import celery_app
+from app.worker.db import get_worker_session
 
 logger = logging.getLogger(__name__)
 
+# ── P2 加固：区分可重试/不可重试/超时异常 ──
+_RETRYABLE = (SQLAlchemyError, ConnectionError, TimeoutError)
 
-@celery_app.task(bind=True, max_retries=1, default_retry_delay=300)
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=300, autoretry_for=_RETRYABLE)
 def run_phase4_analysis(self, project_id: int) -> dict:
     """Trigger Phase 4 analysis for a project.
 
@@ -29,17 +39,26 @@ def run_phase4_analysis(self, project_id: int) -> dict:
     """
     logger.info("Starting Phase 4 analysis for project %s", project_id)
 
+    async def _run():
+        async with get_worker_session() as db:
+            from app.service.phase4_service import Phase4Service
+
+            service = Phase4Service()
+            return await service.analyze_project(db, project_id)
+
     try:
-        from app.service.phase4_service import Phase4Service
-
-        service = Phase4Service()
-        result = asyncio.run(
-            asyncio.ensure_future(service.analyze_project(project_id))
-        )
-
+        result = asyncio.run(_run())
         logger.info("Phase 4 analysis completed for project %s", project_id)
         return {"status": "done", "project_id": project_id, "result": result}
 
-    except Exception as exc:
-        logger.exception("Phase 4 analysis failed for project %s", project_id)
+    except SoftTimeLimitExceeded:
+        logger.error("Phase 4 analysis timed out for project %s", project_id)
+        raise
+
+    except _RETRYABLE as exc:
+        logger.exception("Phase 4 analysis failed (retryable) for project %s", project_id)
         raise self.retry(exc=exc) from exc
+
+    except Exception as exc:
+        logger.exception("Phase 4 analysis failed (non-retryable) for project %s", project_id)
+        return {"status": "failed", "project_id": project_id, "error": str(exc)}

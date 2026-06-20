@@ -145,6 +145,7 @@ app = FastAPI(
 
 from app.middleware import (
     AuditLogMiddleware,
+    ContentLengthLimitMiddleware,
     RateLimitMiddleware,
     RequestIDMiddleware,
     ResponseFormatMiddleware,
@@ -158,6 +159,11 @@ settings = get_settings()
 # 使用共享 limiter 实例（避免循环导入）
 from app.limiter import limiter
 app.state.limiter = limiter
+
+# ── Content-Length 限制 ──
+# 读取配置的最大请求体大小（默认 10MB）
+_max_body_size = getattr(settings, 'MAX_BODY_SIZE', 10 * 1024 * 1024)
+app.add_middleware(ContentLengthLimitMiddleware, max_size=_max_body_size)
 
 # 1. Request ID — 为每个请求注入唯一标识（必须在最外层）
 app.add_middleware(RequestIDMiddleware)

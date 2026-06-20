@@ -106,6 +106,9 @@ class Chapter(BaseModel, SoftDeleteMixin):
     # ---- Relationships ----
     project = relationship("Project", back_populates="chapters", lazy="selectin")
     dynamic_layer = relationship("DynamicLayer", back_populates="chapter", cascade="all, delete-orphan", lazy="selectin")
+    generation_tasks = relationship("GenerationTask", back_populates="chapter", lazy="selectin")
+    draw_histories = relationship("DrawHistory", back_populates="chapter", lazy="selectin")
+    vault_changelogs = relationship("VaultChangelog", back_populates="chapter", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Chapter id={self.id} project={self.project_id} #{self.chapter_number}>"

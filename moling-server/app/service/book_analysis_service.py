@@ -18,6 +18,8 @@ import re
 from collections import Counter, defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.dao import chapter_dao
 
 logger = logging.getLogger(__name__)
@@ -65,13 +67,14 @@ class BookAnalysisService:
     # 公共方法
     # ------------------------------------------------------------------
 
-    def analyze_characters(self, project_id: int) -> dict:
+    async def analyze_characters(self, db: AsyncSession, project_id: int) -> dict:
         """分析项目中的角色信息。
 
         逐章扫描正文，提取中英文角色名；统计各角色在全书中出现的
         章节分布、首次出现章节、共现关系，并生成简要档案描述。
 
         Args:
+            db: 数据库会话（由 Worker 通过 get_worker_session() 提供）
             project_id: 项目 ID
 
         Returns:
@@ -89,7 +92,8 @@ class BookAnalysisService:
                 "total_chapters": int,
             }
         """
-        chapters = self._get_chapters_sync(project_id)
+        chapters_raw = await chapter_dao.get_by_project(db, project_id, skip=0, limit=9999)
+        chapters = list(chapters_raw)
         if not chapters:
             logger.info("Project %s has no chapters, returning empty result", project_id)
             return {
@@ -177,13 +181,14 @@ class BookAnalysisService:
             "total_chapters": len(chapters),
         }
 
-    def analyze_plot(self, project_id: int) -> dict:
+    async def analyze_plot(self, db: AsyncSession, project_id: int) -> dict:
         """分析项目的情节结构。
 
         扫描各章节内容，识别情节结构标志（章节过渡、语气变化），
         检测潜在的情节漏洞（未解决的线索/承诺）。
 
         Args:
+            db: 数据库会话（由 Worker 通过 get_worker_session() 提供）
             project_id: 项目 ID
 
         Returns:
@@ -198,7 +203,8 @@ class BookAnalysisService:
                 "potential_gaps": [...],    # 潜在的情节漏洞
             }
         """
-        chapters = self._get_chapters_sync(project_id)
+        chapters_raw = await chapter_dao.get_by_project(db, project_id, skip=0, limit=9999)
+        chapters = list(chapters_raw)
         if not chapters:
             return {
                 "project_id": project_id,
@@ -256,13 +262,14 @@ class BookAnalysisService:
             "potential_gaps": potential_gaps,
         }
 
-    def detect_style(self, project_id: int) -> dict:
+    async def detect_style(self, db: AsyncSession, project_id: int) -> dict:
         """检测项目的写作风格。
 
         计算各章节的平均句长、对话比例、段落长度模式，
         并识别常见重复短语。
 
         Args:
+            db: 数据库会话（由 Worker 通过 get_worker_session() 提供）
             project_id: 项目 ID
 
         Returns:
@@ -276,7 +283,8 @@ class BookAnalysisService:
                 },
             }
         """
-        chapters = self._get_chapters_sync(project_id)
+        chapters_raw = await chapter_dao.get_by_project(db, project_id, skip=0, limit=9999)
+        chapters = list(chapters_raw)
         if not chapters:
             return {
                 "project_id": project_id,

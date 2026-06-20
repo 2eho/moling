@@ -3,7 +3,7 @@
 from typing import Optional
 
 from sqlalchemy import ForeignKey, Integer, JSON, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
@@ -39,6 +39,9 @@ class Template(BaseModel):
         nullable=True,
         comment="创建者用户 ID",
     )
+
+    # ---- Relationships ----
+    user = relationship("User", back_populates="templates", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Template id={self.id} name={self.name!r}>"

@@ -22,6 +22,13 @@ from app.service.algorithm_service import algorithm_service
 from app.service.prompt_service import prompt_service
 from app.llm.client import llm_client
 from app.llm.context_budget import context_budget
+from app.core.service_registry import (
+    service_registry,
+    RunGenTaskSentinel,
+    HealthMonitorServiceSentinel,
+    Phase4SchedulerSentinel,
+    CoherenceServiceSentinel,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -94,10 +101,10 @@ class GenerationService:
 
         # Celery async dispatch
         try:
-            from app.worker.tasks import run_generation_task
+            run_generation_task = service_registry.get(RunGenTaskSentinel)
             run_generation_task.delay(task.id)
             logger.info(f"Task {task.id}: Dispatched to Celery worker")
-        except ImportError:
+        except RuntimeError:
             logger.warning(f"Task {task.id}: Celery worker not available, running synchronously")
             await self.execute_generation_pipeline(db, task.id)
         except Exception as e:
@@ -290,7 +297,7 @@ class GenerationService:
                 # 子情节健康监控 R1/R2/R3 — 纯算法，零 LLM 成本
                 logger.info(f"Task {task_id}: Running health monitor")
                 try:
-                    from app.service.health_monitor import health_monitor_service
+                    health_monitor_service = service_registry.get(HealthMonitorServiceSentinel)
                     health_result = await health_monitor_service.check_health(
                         db,
                         project_id=project.id,
@@ -307,7 +314,7 @@ class GenerationService:
                 # Phase 4 自动编排 — 异步调度，不阻塞主流程
                 logger.info(f"Task {task_id}: Scheduling Phase 4")
                 try:
-                    from app.service.phase4_scheduler import phase4_scheduler
+                    phase4_scheduler = service_registry.get(Phase4SchedulerSentinel)
                     import asyncio
                     card_ids_for_phase4 = task.input_params.get("card_ids", [])
                     asyncio.create_task(
@@ -443,7 +450,7 @@ class GenerationService:
     ) -> Dict[str, Any]:
         """Step 10: Coherence validation using CoherenceService (v2 grouped checks)."""
         try:
-            from app.service.coherence_service import coherence_service
+            coherence_service = service_registry.get(CoherenceServiceSentinel)
             result = await coherence_service.validate_post_generation(
                 db=db,
                 project_id=project.id,

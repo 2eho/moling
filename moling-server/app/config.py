@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
 
+    # ---- Request Size Limits ----
+    # 最大请求体大小（字节），默认 10MB，防止内存 DoS
+    MAX_BODY_SIZE: int = 10 * 1024 * 1024  # 10 MB
+
     # ---- Auth / JWT ----
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     # ^ WARNING: Default key is INSECURE. Production MUST set SECRET_KEY via env.
@@ -83,6 +87,9 @@ class Settings(BaseSettings):
     # 动态层存档目录
     ARCHIVE_DIR: str = "./archives"
 
+    # ---- LLM Model ----
+    LLM_MODEL: str = "gpt-4o-mini"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -122,6 +129,38 @@ class Settings(BaseSettings):
             # here because Pydantic validators run in declaration order and we
             # need access to the fully-constructed model.
             pass
+        return v
+
+    @field_validator("CORS_ORIGINS", mode="after")
+    @classmethod
+    def _warn_wildcard_cors(cls, v: str) -> str:
+        """Warn if CORS_ORIGINS contains '*' in production."""
+        if "*" in [o.strip() for o in v.split(",")]:
+            import os
+            env = os.environ.get("ENVIRONMENT", "development")
+            if env == "production":
+                logger.warning(
+                    "CORS_ORIGINS contains '*' wildcard. This allows ANY origin "
+                    "to access the API. For production, set CORS_ORIGINS to a "
+                    "comma-separated list of allowed domains."
+                )
+        return v
+
+    @field_validator("REDIS_PASSWORD", mode="after")
+    @classmethod
+    def _warn_missing_redis_password(cls, v: str | None) -> str | None:
+        """Warn if Redis has no password in non-development environments."""
+        if v is None or v == "":
+            # Access ENVIRONMENT through a workaround — Pydantic v2 doesn't
+            # guarantee field order, so we check via os.environ directly.
+            import os
+            env = os.environ.get("ENVIRONMENT", "development")
+            if env != "development":
+                logger.warning(
+                    "REDIS_PASSWORD is not set. Redis is accessible without "
+                    "authentication. For production, set REDIS_PASSWORD via "
+                    "environment variable or .env file."
+                )
         return v
 
     @field_validator("SECRET_KEY", mode="after")

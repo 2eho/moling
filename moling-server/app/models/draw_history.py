@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
@@ -75,6 +75,11 @@ class DrawHistory(BaseModel):
         nullable=False,
         comment="抽卡时间",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="draw_histories", lazy="selectin")
+    chapter = relationship("Chapter", back_populates="draw_histories", lazy="selectin")
+    user = relationship("User", back_populates="draw_histories", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<DrawHistory id={self.id} project={self.project_id} round={self.draw_round}>"

@@ -76,9 +76,10 @@ from typing import AsyncGenerator, Generator, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -271,11 +272,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # ---------------------------------------------------------------------------
 
 async def get_redis() -> aioredis.Redis:
-    """Return a Redis connection client (singleton per app)."""
+    """Return a Redis connection client (singleton per app).
+
+    Uses REDIS_PASSWORD if configured, falling back to password embedded
+    in REDIS_URL (standard redis://[:password@]host:port/db format).
+    """
     r = await aioredis.from_url(
         settings.REDIS_URL,
         decode_responses=True,
         socket_connect_timeout=3,
+        password=settings.REDIS_PASSWORD or None,
     )
     return r
 
@@ -293,12 +299,14 @@ def get_current_user(
 ):
     """Extract and validate the JWT, returning the authenticated user.
 
-    Raises 401 if the token is missing, expired, invalid, or blacklisted.
+    Raises AppError (401) if the token is missing, expired, invalid, or blacklisted.
     NOTE: Uses sync DB to avoid Windows + aiosqlite greenlet issues.
     """
+    from app.errors import AppError, ErrorCode, NotFoundError
+
     if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+        raise AppError(
+            ErrorCode.AUTH_INVALID_TOKEN,
             detail="缺少认证令牌",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -310,9 +318,15 @@ def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
+    except ExpiredSignatureError:
+        raise AppError(
+            ErrorCode.AUTH_TOKEN_EXPIRED,
+            detail="Token 已过期，请重新登录",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+        raise AppError(
+            ErrorCode.AUTH_INVALID_TOKEN,
             detail="无效的认证令牌",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -323,16 +337,16 @@ def get_current_user(
         from app.auth.blacklist import is_blacklisted
         
         if is_blacklisted(jti):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+            raise AppError(
+                ErrorCode.AUTH_INVALID_TOKEN,
                 detail="令牌已失效，请重新登录",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
     user_id: Optional[int] = payload.get("sub")
     if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+        raise AppError(
+            ErrorCode.AUTH_INVALID_TOKEN,
             detail="无效的认证令牌",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -343,10 +357,9 @@ def get_current_user(
     # Use sync get to avoid Windows greenlet+aiosqlite issues
     user = dao.get_sync(db, user_id)
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+        raise NotFoundError(
+            ErrorCode.USER_NOT_FOUND,
             detail="用户不存在",
-            headers={"WWW-Authenticate": "Bearer"},
         )
 
     return UserResp.model_validate(user)
@@ -362,7 +375,7 @@ def get_optional_user(
 
     try:
         return get_current_user(credentials, db)
-    except HTTPException:
+    except Exception:
         return None
 
 
@@ -378,9 +391,10 @@ async def require_admin(
     Raises 403 if the user is not an admin.
     Must be added to every admin-only endpoint.
     """
+    from app.errors import PermissionError
+
     if getattr(current_user, "status", None) != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+        raise PermissionError(
             detail="需要管理员权限",
         )
     return current_user

@@ -36,3 +36,23 @@ class UpdateTemplateReq(BaseModel):
     description: Optional[str] = Field(default=None, description="模板描述")
     genre: Optional[str] = Field(default=None, description="适用题材")
     structure: Optional[dict] = Field(default=None, description="模板结构 (JSON)")
+
+
+class TemplateListResp(BaseModel):
+    """Paginated template list response."""
+
+    items: list[TemplateResp] = Field(..., description="模板列表")
+    total: int = Field(..., description="总数量")
+    page: int = Field(..., description="当前页码")
+    page_size: int = Field(..., description="每页数量")
+    total_pages: int = Field(..., description="总页数")
+
+
+class CreateProjectFromTemplateResp(BaseModel):
+    """Response for creating a project from a template."""
+
+    id: int = Field(..., description="项目 ID")
+    title: str = Field(..., description="项目标题")
+    genre: str = Field(..., description="作品题材")
+    template_id: str = Field(..., description="模板 ID (UUID)")
+    message: str = Field(..., description="结果消息")

@@ -14,54 +14,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import platform
 import re
 from pathlib import Path
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.dao import project_dao, chapter_dao
 from app.errors import ErrorCode, NotFoundError, ValidationError
 from app.models import Project, Chapter
 
 logger = logging.getLogger(__name__)
-
-settings = get_settings()
-
-
-# ---------------------------------------------------------------------------
-# 辅助：Worker 场景下的数据库会话工厂
-# ---------------------------------------------------------------------------
-
-def _get_db_url() -> str:
-    """返回适配平台的数据库 URL（Windows + SQLite 用 aiosqlite）."""
-    url = settings.DATABASE_URL
-    if platform.system() == "Windows" and url.startswith("sqlite"):
-        if "aiosqlite" not in url:
-            url = url.replace("sqlite://", "sqlite+aiosqlite://", 1)
-    return url
-
-
-def _create_session_factory() -> async_sessionmaker[AsyncSession]:
-    """构建异步 sessionmaker 实例."""
-    engine = create_async_engine(_get_db_url(), echo=False, pool_size=2)
-    return async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-
-_session_factory: async_sessionmaker[AsyncSession] | None = None
-
-
-def _get_session_factory() -> async_sessionmaker[AsyncSession]:
-    """延迟初始化 session factory（避免模块导入时创建引擎）."""
-    global _session_factory
-    if _session_factory is None:
-        _session_factory = _create_session_factory()
-    return _session_factory
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +259,7 @@ class ImportService:
 
     async def import_book(
         self,
+        db: AsyncSession,
         project_id: int,
         file_path: str,
         import_mode: str = "replace",
@@ -304,6 +267,7 @@ class ImportService:
         """导入书籍文件，创建项目章节结构。
 
         Args:
+            db: 数据库会话（由调用方通过 get_worker_session() 提供）。
             project_id: 项目 ID
             file_path: 上传文件的绝对路径
             import_mode: 导入模式 "replace"（替换全部）/ "append"（追加）
@@ -341,58 +305,56 @@ class ImportService:
         meta = _extract_metadata_from_filename(file_path)
 
         # 4. 写入数据库
-        session_factory = _get_session_factory()
-        async with session_factory() as db:
-            # 获取项目
-            project = await project_dao.get(db, project_id)
-            if project is None:
-                raise NotFoundError(
-                    error_code=ErrorCode.PROJECT_NOT_FOUND,
-                    detail="项目不存在",
-                )
+        # 获取项目
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="项目不存在",
+            )
 
-            # 替换模式：先清空已有章节
-            if import_mode == "replace":
-                existing = await chapter_dao.get_by_project(db, project_id, limit=10000)
-                for ch in existing:
-                    await db.delete(ch)
-                await db.flush()
+        # 替换模式：先清空已有章节
+        if import_mode == "replace":
+            existing = await chapter_dao.get_by_project(db, project_id, limit=10000)
+            for ch in existing:
+                await db.delete(ch)
+            await db.flush()
 
-            # 获取当前最大章节号
-            max_num = await chapter_dao.get_max_chapter_number(db, project_id)
+        # 获取当前最大章节号
+        max_num = await chapter_dao.get_max_chapter_number(db, project_id)
 
-            total_words = 0
-            for idx, ch in enumerate(raw_chapters, start=1):
-                word_count = _count_words(ch["content"])
+        total_words = 0
+        for idx, ch in enumerate(raw_chapters, start=1):
+            word_count = _count_words(ch["content"])
 
-                chapter = Chapter(
-                    project_id=project_id,
-                    title=ch["title"],
-                    content=ch["content"],
-                    chapter_number=max_num + idx,
-                    word_count=word_count,
-                    status="completed",
-                )
-                db.add(chapter)
-                total_words += word_count
+            chapter = Chapter(
+                project_id=project_id,
+                title=ch["title"],
+                content=ch["content"],
+                chapter_number=max_num + idx,
+                word_count=word_count,
+                status="completed",
+            )
+            db.add(chapter)
+            total_words += word_count
 
-            # 更新项目元数据
-            if import_mode == "replace":
-                # 仅当元数据为空时用文件名覆盖
-                if not project.author or project.author.strip() == "":
-                    if meta.get("author"):
-                        project.author = meta["author"]
-                if not project.title or project.title.strip() == "":
-                    if meta.get("title"):
-                        project.title = meta["title"]
+        # 更新项目元数据
+        if import_mode == "replace":
+            # 仅当元数据为空时用文件名覆盖
+            if not project.author or project.author.strip() == "":
+                if meta.get("author"):
+                    project.author = meta["author"]
+            if not project.title or project.title.strip() == "":
+                if meta.get("title"):
+                    project.title = meta["title"]
 
-            # 更新项目字数
-            if import_mode == "replace":
-                project.word_count = total_words
-            else:
-                project.word_count = (project.word_count or 0) + total_words
+        # 更新项目字数
+        if import_mode == "replace":
+            project.word_count = total_words
+        else:
+            project.word_count = (project.word_count or 0) + total_words
 
-            await db.commit()
+        await db.commit()
 
         logger.info("导入完成：project=%s 章节=%d 总字数=%d", project_id, len(raw_chapters), total_words)
 
@@ -403,10 +365,15 @@ class ImportService:
             "total_words": total_words,
         }
 
-    async def analyze_content(self, project_id: int) -> dict:
+    async def analyze_content(
+        self,
+        db: AsyncSession,
+        project_id: int,
+    ) -> dict:
         """分析项目内容，生成章节结构和文风指标。
 
         Args:
+            db: 数据库会话（由调用方通过 get_worker_session() 提供）。
             project_id: 项目 ID
 
         Returns:
@@ -419,78 +386,76 @@ class ImportService:
         """
         logger.info("开始分析项目内容 project=%s", project_id)
 
-        session_factory = _get_session_factory()
-        async with session_factory() as db:
-            # 获取项目
-            project = await project_dao.get(db, project_id)
-            if project is None:
-                raise NotFoundError(
-                    error_code=ErrorCode.PROJECT_NOT_FOUND,
-                    detail="项目不存在",
-                )
-
-            # 获取所有章节
-            chapters = await chapter_dao.get_by_project(db, project_id, limit=10000)
-
-            if not chapters:
-                return {
-                    "project_id": project_id,
-                    "structure": {},
-                    "style": {},
-                    "suggestions": [],
-                }
-
-            # ---- 章节结构分析 ----
-            word_counts = [ch.word_count for ch in chapters]
-            total_words = sum(word_counts)
-            chapter_count = len(chapters)
-            avg_words = total_words / chapter_count if chapter_count else 0
-            word_count_std = 0.0
-            if len(word_counts) > 1:
-                mean = total_words / len(word_counts)
-                word_count_std = (
-                    sum((w - mean) ** 2 for w in word_counts) / len(word_counts)
-                ) ** 0.5
-
-            # 字数分布
-            word_distribution = {
-                "min": min(word_counts) if word_counts else 0,
-                "max": max(word_counts) if word_counts else 0,
-                "avg": round(avg_words, 1),
-                "std": round(word_count_std, 1),
-            }
-
-            # 章节完成率
-            completed = sum(1 for ch in chapters if ch.status == "completed")
-            completion_rate = completed / chapter_count if chapter_count else 0
-
-            structure = {
-                "total_chapters": chapter_count,
-                "total_words": total_words,
-                "avg_words_per_chapter": round(avg_words, 1),
-                "word_count_distribution": word_distribution,
-                "chapter_completion_rate": round(completion_rate * 100, 1),
-            }
-
-            # ---- 文风分析 ----
-            style = self._analyze_style(chapters)
-
-            # ---- 生成建议 ----
-            suggestions = self._generate_suggestions(
-                chapter_count=chapter_count,
-                total_words=total_words,
-                avg_words=avg_words,
-                word_count_std=word_count_std,
-                completion_rate=completion_rate,
-                project_status=project.status,
+        # 获取项目
+        project = await project_dao.get(db, project_id)
+        if project is None:
+            raise NotFoundError(
+                error_code=ErrorCode.PROJECT_NOT_FOUND,
+                detail="项目不存在",
             )
 
+        # 获取所有章节
+        chapters = await chapter_dao.get_by_project(db, project_id, limit=10000)
+
+        if not chapters:
             return {
                 "project_id": project_id,
-                "structure": structure,
-                "style": style,
-                "suggestions": suggestions,
+                "structure": {},
+                "style": {},
+                "suggestions": [],
             }
+
+        # ---- 章节结构分析 ----
+        word_counts = [ch.word_count for ch in chapters]
+        total_words = sum(word_counts)
+        chapter_count = len(chapters)
+        avg_words = total_words / chapter_count if chapter_count else 0
+        word_count_std = 0.0
+        if len(word_counts) > 1:
+            mean = total_words / len(word_counts)
+            word_count_std = (
+                sum((w - mean) ** 2 for w in word_counts) / len(word_counts)
+            ) ** 0.5
+
+        # 字数分布
+        word_distribution = {
+            "min": min(word_counts) if word_counts else 0,
+            "max": max(word_counts) if word_counts else 0,
+            "avg": round(avg_words, 1),
+            "std": round(word_count_std, 1),
+        }
+
+        # 章节完成率
+        completed = sum(1 for ch in chapters if ch.status == "completed")
+        completion_rate = completed / chapter_count if chapter_count else 0
+
+        structure = {
+            "total_chapters": chapter_count,
+            "total_words": total_words,
+            "avg_words_per_chapter": round(avg_words, 1),
+            "word_count_distribution": word_distribution,
+            "chapter_completion_rate": round(completion_rate * 100, 1),
+        }
+
+        # ---- 文风分析 ----
+        style = self._analyze_style(chapters)
+
+        # ---- 生成建议 ----
+        suggestions = self._generate_suggestions(
+            chapter_count=chapter_count,
+            total_words=total_words,
+            avg_words=avg_words,
+            word_count_std=word_count_std,
+            completion_rate=completion_rate,
+            project_status=project.status,
+        )
+
+        return {
+            "project_id": project_id,
+            "structure": structure,
+            "style": style,
+            "suggestions": suggestions,
+        }
 
     # ------------------------------------------------------------------
     # 文风分析私有方法

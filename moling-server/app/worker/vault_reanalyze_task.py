@@ -10,13 +10,24 @@ from __future__ import annotations
 import asyncio
 import logging
 
+# ── HH8: SoftTimeLimitExceeded ──
+from celery.exceptions import SoftTimeLimitExceeded
+# ── HH7: 可重试异常 vs 不可重试异常 ──
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.worker.celery_app import celery_app
 from app.worker.db import get_worker_session
+# ── HH6: 幂等性检查 ──
+from app.worker.idempotency import is_duplicate, mark_completed, mark_failed as idem_mark_failed
 
 logger = logging.getLogger(__name__)
 
+# ── 可重试异常（网络、DB连接等瞬态问题） ──
+_RETRYABLE = (SQLAlchemyError, ConnectionError, TimeoutError)
 
-@celery_app.task(bind=True, max_retries=3, default_retry_delay=120)
+
+@celery_app.task(bind=True, max_retries=3, default_retry_delay=120,
+                 autoretry_for=_RETRYABLE)
 def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
     """Full reanalysis of all chapters in a project.
 
@@ -30,6 +41,14 @@ def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
         project_id: The project ID to reanalyze.
         user_id: The user ID who initiated the reanalysis.
     """
+    task_key = f"vlt:{project_id}:reanalyze"
+
+    # ── HH6: 幂等性检查 ──
+    if is_duplicate(task_key):
+        logger.info("Task vault_full_reanalyze already processed for project %s, skipping",
+                     project_id)
+        return {"status": "already_processed", "project_id": project_id}
+
     logger.info(
         "Starting full reanalysis for project %s (user: %s)", project_id, user_id
     )
@@ -66,6 +85,7 @@ def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
             for chapter in chapters:
                 try:
                     r = await vault.update_from_chapter(
+                        db=db,
                         project_id=project_id,
                         chapter_id=chapter.id,
                     )
@@ -109,8 +129,19 @@ def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
             result["total_updated"],
         )
 
+        mark_completed(task_key)
         return result
 
-    except Exception as exc:
-        logger.exception("Full reanalysis failed for project %s", project_id)
+    except SoftTimeLimitExceeded:
+        logger.error("Task vault_full_reanalyze timed out for project %s", project_id)
+        idem_mark_failed(task_key)
+        raise
+
+    except _RETRYABLE as exc:
+        logger.exception("Full reanalysis failed with retryable error for project %s", project_id)
         raise self.retry(exc=exc) from exc
+
+    except Exception as exc:
+        logger.exception("Full reanalysis failed with non-retryable error for project %s", project_id)
+        idem_mark_failed(task_key)
+        return {"status": "failed", "project_id": project_id, "error": str(exc)}

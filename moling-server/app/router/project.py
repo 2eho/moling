@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
-from app.schemas.project import CreateProjectReq, ProjectResp, ProjectStatsResp, UpdateProjectReq
+from app.schemas.project import CreateProjectReq, ProjectResp, ProjectStatsResp, UpdateProjectReq, ProjectListResp, SingleProjectStatsResp
 from app.service import project_service
 
 router = APIRouter(tags=["projects"])
@@ -25,14 +25,14 @@ async def create_project(
     return await project_service.create_project(db, current_user.id, req)
 
 
-@router.get("", response_model=dict)
+@router.get("", response_model=ProjectListResp)
 async def list_projects(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     status: Optional[str] = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> dict:
+) -> ProjectListResp:
     """List projects with pagination."""
     return await project_service.list_projects(db, current_user.id, page, page_size, status)
 
@@ -46,12 +46,12 @@ async def get_project_stats(
     return await project_service.get_project_stats(db, current_user.id)
 
 
-@router.get("/{project_id}/stats", response_model=dict)
+@router.get("/{project_id}/stats", response_model=SingleProjectStatsResp)
 async def get_single_project_stats(
     project_id: int,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> dict:
+) -> SingleProjectStatsResp:
     """获取单个项目的统计信息。"""
     project = await project_service.get_project(db, current_user.id, project_id)
     return {

@@ -98,7 +98,7 @@ class DynamicLayer(BaseModel):
     )
 
     # ---- Relationships ----
-    project = relationship("Project", lazy="selectin")
+    project = relationship("Project", back_populates="dynamic_layers", lazy="selectin")
     chapter = relationship("Chapter", back_populates="dynamic_layer", lazy="selectin")
 
     def __repr__(self) -> str:

@@ -466,3 +466,7 @@ def _make_result(
 
 # 单例
 health_monitor_service = HealthMonitorService()
+
+# 注册到 ServiceRegistry（打破循环依赖）
+from app.core.service_registry import service_registry, HealthMonitorServiceSentinel
+service_registry.register(HealthMonitorServiceSentinel, health_monitor_service)

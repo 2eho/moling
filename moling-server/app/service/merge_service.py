@@ -1097,22 +1097,24 @@ class MergeService:
             logger.info("无变更日志需要归档")
             return
 
-        for change in changes:
-            log_entry = VaultChangelog(
-                project_id=project_id,
-                change_type=change.change_type,
-                entity_type=change.entity_type,
-                entity_id=change.entity_id,
-                old_value=change.old_value,
-                new_value=change.new_value,
-                change_reason=change.change_reason,
-                meta_data={
-                    "chapter": change.chapter,
-                    "confidence": change.confidence,
-                    "entity_name": change.entity_name,
-                },
-            )
-            db.add(log_entry)
+        async with db.begin_nested() as savepoint:
+            for change in changes:
+                log_entry = VaultChangelog(
+                    project_id=project_id,
+                    change_type=change.change_type,
+                    entity_type=change.entity_type,
+                    entity_id=change.entity_id,
+                    old_value=change.old_value,
+                    new_value=change.new_value,
+                    change_reason=change.change_reason,
+                    meta_data={
+                        "chapter": change.chapter,
+                        "confidence": change.confidence,
+                        "entity_name": change.entity_name,
+                    },
+                )
+                db.add(log_entry)
+            await db.flush()
 
         logger.info(
             "变更日志归档完成: %d 条 (project=%s, chapter=%s)",

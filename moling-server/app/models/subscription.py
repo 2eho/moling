@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
@@ -49,6 +49,9 @@ class Plan(BaseModel):
     def __repr__(self) -> str:
         return f"<Plan id={self.id} name={self.name!r}>"
 
+    # ---- Relationships ----
+    user_subscriptions = relationship("UserSubscription", back_populates="plan", lazy="selectin")
+
 
 class UserSubscription(BaseModel):
     """A user's subscription record."""
@@ -91,3 +94,7 @@ class UserSubscription(BaseModel):
 
     def __repr__(self) -> str:
         return f"<UserSubscription id={self.id} user_id={self.user_id}>"
+
+    # ---- Relationships ----
+    user = relationship("User", back_populates="user_subscriptions", lazy="selectin")
+    plan = relationship("Plan", back_populates="user_subscriptions", lazy="selectin")

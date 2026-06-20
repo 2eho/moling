@@ -36,7 +36,7 @@ class VaultCharacterDAO(BaseDAO[VaultCharacter]):
     ) -> list[VaultCharacter]:
         """List all vault characters for a project."""
         return await self.get_multi(
-            db, filters={"project_id": project_id}, limit=10_000,
+            db, filters={"project_id": project_id}, limit=500,
             order_by="id", descending=False,
         )
 
@@ -70,6 +70,7 @@ class VaultCharacterDAO(BaseDAO[VaultCharacter]):
             .where(
                 VaultCharacter.project_id == project_id,
                 VaultCharacter.id.in_(character_ids),
+                VaultCharacter.is_deleted == False,
             )
             .order_by(VaultCharacter.id.asc())
         )
@@ -85,6 +86,7 @@ class VaultCharacterDAO(BaseDAO[VaultCharacter]):
         stmt = select(VaultCharacter).where(
             VaultCharacter.project_id == project_id,
             VaultCharacter.name == name,
+            VaultCharacter.is_deleted == False,
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -103,7 +105,10 @@ class VaultTimelineDAO(BaseDAO[VaultTimeline]):
     ) -> list[VaultTimeline]:
         stmt = (
             select(VaultTimeline)
-            .where(VaultTimeline.project_id == project_id)
+            .where(
+                VaultTimeline.project_id == project_id,
+                VaultTimeline.is_deleted == False,
+            )
             .order_by(VaultTimeline.chapter_number.asc(), VaultTimeline.id.asc())
         )
         result = await db.execute(stmt)
@@ -129,7 +134,7 @@ class VaultPlotPromiseDAO(BaseDAO[VaultPlotPromise]):
         project_id: str,
     ) -> list[VaultPlotPromise]:
         return await self.get_multi(
-            db, filters={"project_id": project_id}, limit=10_000,
+            db, filters={"project_id": project_id}, limit=500,
             order_by="id", descending=False,
         )
 
@@ -163,6 +168,7 @@ class VaultPlotPromiseDAO(BaseDAO[VaultPlotPromise]):
             .where(
                 VaultPlotPromise.project_id == project_id,
                 VaultPlotPromise.id.in_(promise_ids),
+                VaultPlotPromise.is_deleted == False,
             )
             .order_by(VaultPlotPromise.id.asc())
         )
@@ -178,6 +184,7 @@ class VaultPlotPromiseDAO(BaseDAO[VaultPlotPromise]):
         stmt = select(VaultPlotPromise).where(
             VaultPlotPromise.project_id == project_id,
             VaultPlotPromise.description.contains(description_fragment),
+            VaultPlotPromise.is_deleted == False,
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -195,6 +202,7 @@ class VaultPlotPromiseDAO(BaseDAO[VaultPlotPromise]):
             VaultPlotPromise.type == promise_type,
             VaultPlotPromise.related_characters.contains(char_name),
             VaultPlotPromise.status.in_(statuses),
+            VaultPlotPromise.is_deleted == False,
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -212,7 +220,7 @@ class VaultWorldDAO(BaseDAO[VaultWorld]):
         project_id: str,
     ) -> list[VaultWorld]:
         return await self.get_multi(
-            db, filters={"project_id": project_id}, limit=10_000,
+            db, filters={"project_id": project_id}, limit=500,
             order_by="id", descending=False,
         )
 
@@ -236,6 +244,7 @@ class VaultWorldDAO(BaseDAO[VaultWorld]):
             .where(
                 VaultWorld.project_id == project_id,
                 VaultWorld.id.in_(entry_ids),
+                VaultWorld.is_deleted == False,
             )
             .order_by(VaultWorld.id.asc())
         )
@@ -251,6 +260,7 @@ class VaultWorldDAO(BaseDAO[VaultWorld]):
         stmt = select(VaultWorld).where(
             VaultWorld.project_id == project_id,
             VaultWorld.name == term,
+            VaultWorld.is_deleted == False,
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()

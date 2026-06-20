@@ -346,22 +346,58 @@ class ValidationService:
         """Run all 7 pre-generation checks and aggregate results."""
         checks: List[CheckResult] = []
 
-        check1 = await self.pre_check_character_consistency(db, project_id, cards)
+        try:
+            check1 = await self.pre_check_character_consistency(db, project_id, cards)
+        except Exception as e:
+            check1 = CheckResult(
+                passed=False, name="角色一致性检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check1)
 
-        check2 = await self.pre_check_timeline_continuity(db, project_id, cards)
+        try:
+            check2 = await self.pre_check_timeline_continuity(db, project_id, cards)
+        except Exception as e:
+            check2 = CheckResult(
+                passed=False, name="时间线连续性检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check2)
 
-        check3 = await self.pre_check_plot_promise_logic(db, project_id, cards)
+        try:
+            check3 = await self.pre_check_plot_promise_logic(db, project_id, cards)
+        except Exception as e:
+            check3 = CheckResult(
+                passed=False, name="剧情承诺逻辑检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check3)
 
-        check4 = await self.pre_check_world_rule_compliance(db, project_id, cards)
+        try:
+            check4 = await self.pre_check_world_rule_compliance(db, project_id, cards)
+        except Exception as e:
+            check4 = CheckResult(
+                passed=False, name="世界观规则合规检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check4)
 
-        check5 = await self.pre_check_summary_cohesion(db, project_id)
+        try:
+            check5 = await self.pre_check_summary_cohesion(db, project_id)
+        except Exception as e:
+            check5 = CheckResult(
+                passed=False, name="前情摘要连贯性检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check5)
 
-        check6 = await self.pre_check_baseline_consistency(db, project_id)
+        try:
+            check6 = await self.pre_check_baseline_consistency(db, project_id)
+        except Exception as e:
+            check6 = CheckResult(
+                passed=False, name="基线一致性检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check6)
 
         # Determine overall pass / fail
@@ -753,25 +789,67 @@ class ValidationService:
         """Run all 7 post-generation checks and aggregate results."""
         checks: List[CheckResult] = []
 
-        check1 = await self.post_check_fact_consistency(db, project_id, content)
+        try:
+            check1 = await self.post_check_fact_consistency(db, project_id, content)
+        except Exception as e:
+            check1 = CheckResult(
+                passed=False, name="事实一致性检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check1)
 
-        check2 = await self.post_check_plot_advancement(db, project_id, content, card_ids)
+        try:
+            check2 = await self.post_check_plot_advancement(db, project_id, content, card_ids)
+        except Exception as e:
+            check2 = CheckResult(
+                passed=False, name="剧情推进检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check2)
 
-        check3 = await self.post_check_timeline_consistency(db, project_id, content)
+        try:
+            check3 = await self.post_check_timeline_consistency(db, project_id, content)
+        except Exception as e:
+            check3 = CheckResult(
+                passed=False, name="时间线一致性检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check3)
 
-        check4 = await self.post_check_world_rule_violations(db, project_id, content)
+        try:
+            check4 = await self.post_check_world_rule_violations(db, project_id, content)
+        except Exception as e:
+            check4 = CheckResult(
+                passed=False, name="世界观规则违规检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check4)
 
-        check5 = await self.post_check_baseline_compliance(db, project_id, content)
+        try:
+            check5 = await self.post_check_baseline_compliance(db, project_id, content)
+        except Exception as e:
+            check5 = CheckResult(
+                passed=False, name="基线合规检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check5)
 
-        check6 = await self.post_check_unresolved_hooks(db, project_id, content)
+        try:
+            check6 = await self.post_check_unresolved_hooks(db, project_id, content)
+        except Exception as e:
+            check6 = CheckResult(
+                passed=False, name="未收束钩子检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check6)
 
-        check7 = await self.post_check_secret_consistency(db, project_id, content)
+        try:
+            check7 = await self.post_check_secret_consistency(db, project_id, content)
+        except Exception as e:
+            check7 = CheckResult(
+                passed=False, name="秘密一致性检查",
+                detail=f"检查异常: {str(e)}", severity="error",
+            )
         checks.append(check7)
 
         # Determine overall pass / fail

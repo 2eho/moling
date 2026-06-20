@@ -69,6 +69,11 @@ class User(BaseModel, SoftDeleteMixin):
 
     # ---- Relationships ----
     projects = relationship("Project", back_populates="owner", lazy="selectin")
+    generation_tasks = relationship("GenerationTask", back_populates="user", lazy="selectin")
+    draw_histories = relationship("DrawHistory", back_populates="user", lazy="selectin")
+    notifications = relationship("Notification", back_populates="user", lazy="selectin")
+    templates = relationship("Template", back_populates="user", lazy="selectin")
+    user_subscriptions = relationship("UserSubscription", back_populates="user", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r}>"

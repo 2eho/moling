@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import JSON, ForeignKey, Integer, String, Text, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, SoftDeleteMixin
 
@@ -81,6 +81,11 @@ class GenerationTask(Base, TimestampMixin, SoftDeleteMixin):
         nullable=True,
         comment="错误信息 (任务失败时)",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="generation_tasks", lazy="selectin")
+    chapter = relationship("Chapter", back_populates="generation_tasks", lazy="selectin")
+    user = relationship("User", back_populates="generation_tasks", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<GenerationTask id={self.id} type={self.task_type} status={self.status}>"

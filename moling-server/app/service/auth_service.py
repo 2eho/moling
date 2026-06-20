@@ -380,7 +380,11 @@ class AuthService:
         )
 
     async def refresh_tokens(self, db: AsyncSession, refresh_token: str) -> TokenResp:
-        """Refresh access token using refresh token."""
+        """Refresh access token using refresh token.
+        
+        Implements token rotation: the old refresh token is blacklisted
+        after a new one is issued, preventing token reuse attacks (HH11).
+        """
         try:
             payload = jwt.decode(
                 refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -392,6 +396,9 @@ class AuthService:
                 )
 
             user_id = payload["sub"]
+            
+            # Extract old JTI for rotation (HH11)
+            old_jti = payload.get("jti")
         except JWTError:
             raise AuthError(
                 error_code=ErrorCode.AUTH_INVALID_TOKEN,
@@ -404,6 +411,13 @@ class AuthService:
                 error_code=ErrorCode.USER_NOT_FOUND,
                 detail="User not found",
             )
+
+        # Revoke old refresh token before issuing new one (HH11: token rotation)
+        if old_jti:
+            from app.auth.blacklist import add_to_blacklist
+            old_exp = payload.get("exp", 0)
+            old_ttl = max(0, int(old_exp - datetime.now(timezone.utc).timestamp()))
+            add_to_blacklist(old_jti, old_ttl)
 
         # Create new tokens
         access_token, access_jti, access_expires = _create_access_token(user.id)

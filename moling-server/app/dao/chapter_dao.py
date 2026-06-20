@@ -27,7 +27,7 @@ class ChapterDAO(BaseDAO[Chapter]):
         """List chapters in a project ordered by chapter_number ascending."""
         stmt = (
             select(Chapter)
-            .where(Chapter.project_id == project_id)
+            .where(Chapter.project_id == project_id, Chapter.is_deleted == False)
             .order_by(Chapter.chapter_number.asc())
             .offset(skip)
             .limit(limit)
@@ -47,6 +47,7 @@ class ChapterDAO(BaseDAO[Chapter]):
             .where(
                 Chapter.project_id == project_id,
                 Chapter.chapter_number == chapter_number,
+                Chapter.is_deleted == False,
             )
         )
         result = await db.execute(stmt)
@@ -60,7 +61,7 @@ class ChapterDAO(BaseDAO[Chapter]):
         """Get the most recent (highest chapter_number) chapter."""
         stmt = (
             select(Chapter)
-            .where(Chapter.project_id == project_id)
+            .where(Chapter.project_id == project_id, Chapter.is_deleted == False)
             .order_by(Chapter.chapter_number.desc())
             .limit(1)
         )
@@ -75,7 +76,7 @@ class ChapterDAO(BaseDAO[Chapter]):
         """Return the highest chapter number in a project (0 if empty)."""
         stmt = (
             select(func.coalesce(func.max(Chapter.chapter_number), 0))
-            .where(Chapter.project_id == project_id)
+            .where(Chapter.project_id == project_id, Chapter.is_deleted == False)
         )
         result = await db.execute(stmt)
         return result.scalar_one()
@@ -92,6 +93,7 @@ class ChapterDAO(BaseDAO[Chapter]):
             .where(
                 Chapter.project_id == project_id,
                 Chapter.chapter_number == chapter_number,
+                Chapter.is_deleted == False,
             )
             .limit(1)
         )
@@ -108,7 +110,7 @@ class ChapterDAO(BaseDAO[Chapter]):
     ) -> int:
         """Count chapters in a project, optionally filtered by status."""
         stmt = select(func.count()).select_from(Chapter).where(
-            Chapter.project_id == project_id
+            Chapter.project_id == project_id, Chapter.is_deleted == False
         )
         if status is not None:
             stmt = stmt.where(Chapter.status == status)

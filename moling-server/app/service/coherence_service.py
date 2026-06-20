@@ -621,3 +621,7 @@ class CoherenceService:
 
 # Singleton instance
 coherence_service = CoherenceService()
+
+# 注册到 ServiceRegistry（打破循环依赖）
+from app.core.service_registry import service_registry, CoherenceServiceSentinel
+service_registry.register(CoherenceServiceSentinel, coherence_service)

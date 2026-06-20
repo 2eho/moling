@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import Select, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session as SyncSession
 
+from app.errors import AppError, ErrorCode
 from app.models.base import BaseModel as MolingModel
+
+logger = logging.getLogger(__name__)
+
+# 全局默认最大查询数量，防止单次查询拉取过多数据
+DEFAULT_MAX_LIMIT = 500
 
 ModelT = TypeVar("ModelT", bound=MolingModel)
 CreateSchemaT = TypeVar("CreateSchemaT", bound=BaseModel)
@@ -62,13 +70,17 @@ class BaseDAO(Generic[ModelT]):
         By default excludes soft-deleted records when the model supports it.
         Pass ``include_deleted=True`` to bypass this filter (e.g. for restore).
         """
-        stmt = select(self.model_class).where(self.model_class.id == id)
+        try:
+            stmt = select(self.model_class).where(self.model_class.id == id)
 
-        if not include_deleted and hasattr(self.model_class, 'is_deleted'):
-            stmt = stmt.where(self.model_class.is_deleted == False)
+            if not include_deleted and hasattr(self.model_class, 'is_deleted'):
+                stmt = stmt.where(self.model_class.is_deleted == False)
 
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
+            result = await db.execute(stmt)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError as e:
+            logger.error(f"DAO get({id}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
     def get_sync(
         self,
@@ -94,27 +106,35 @@ class BaseDAO(Generic[ModelT]):
         """Retrieve a paginated list of records with optional filters.
 
         By default excludes soft-deleted records when the model supports it.
+        The ``limit`` parameter is clamped to ``DEFAULT_MAX_LIMIT`` (500).
         """
-        stmt = select(self.model_class)
+        # 上限钳制，防止一次性拉取过多数据
+        limit = min(limit, DEFAULT_MAX_LIMIT)
 
-        if not include_deleted and hasattr(self.model_class, 'is_deleted'):
-            stmt = stmt.where(self.model_class.is_deleted == False)
+        try:
+            stmt = select(self.model_class)
 
-        stmt = self._apply_filters(stmt, filters)
+            if not include_deleted and hasattr(self.model_class, 'is_deleted'):
+                stmt = stmt.where(self.model_class.is_deleted == False)
 
-        if order_by:
-            column = getattr(self.model_class, order_by, None)
-            if column is not None:
-                stmt = stmt.order_by(column.desc() if descending else column.asc())
-        else:
-            if hasattr(self.model_class, 'created_at'):
-                stmt = stmt.order_by(self.model_class.created_at.desc())
+            stmt = self._apply_filters(stmt, filters)
+
+            if order_by:
+                column = getattr(self.model_class, order_by, None)
+                if column is not None:
+                    stmt = stmt.order_by(column.desc() if descending else column.asc())
             else:
-                pass  # 不排序
+                if hasattr(self.model_class, 'created_at'):
+                    stmt = stmt.order_by(self.model_class.created_at.desc())
+                else:
+                    pass  # 不排序
 
-        stmt = stmt.offset(skip).limit(limit)
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
+            stmt = stmt.offset(skip).limit(limit)
+            result = await db.execute(stmt)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            logger.error(f"DAO get_multi({self.model_class.__name__}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
     async def create(
         self,
@@ -122,16 +142,20 @@ class BaseDAO(Generic[ModelT]):
         obj_in: CreateSchemaT | dict[str, Any],
     ) -> ModelT:
         """Create a new record from a Pydantic schema or plain dict."""
-        if isinstance(obj_in, BaseModel):
-            create_data = obj_in.model_dump(exclude_unset=True)
-        else:
-            create_data = obj_in
+        try:
+            if isinstance(obj_in, BaseModel):
+                create_data = obj_in.model_dump(exclude_unset=True)
+            else:
+                create_data = obj_in
 
-        db_obj = self.model_class(**create_data)
-        db.add(db_obj)
-        await db.flush()
-        await db.refresh(db_obj)
-        return db_obj
+            db_obj = self.model_class(**create_data)
+            db.add(db_obj)
+            await db.flush()
+            await db.refresh(db_obj)
+            return db_obj
+        except SQLAlchemyError as e:
+            logger.error(f"DAO create({self.model_class.__name__}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
     async def update(
         self,
@@ -140,17 +164,21 @@ class BaseDAO(Generic[ModelT]):
         obj_in: UpdateSchemaT | dict[str, Any],
     ) -> ModelT:
         """Update an existing record (partial update)."""
-        if isinstance(obj_in, BaseModel):
-            update_data = obj_in.model_dump(exclude_unset=True)
-        else:
-            update_data = obj_in
+        try:
+            if isinstance(obj_in, BaseModel):
+                update_data = obj_in.model_dump(exclude_unset=True)
+            else:
+                update_data = obj_in
 
-        for field, value in update_data.items():
-            setattr(db_obj, field, value)
+            for field, value in update_data.items():
+                setattr(db_obj, field, value)
 
-        await db.flush()
-        await db.refresh(db_obj)
-        return db_obj
+            await db.flush()
+            await db.refresh(db_obj)
+            return db_obj
+        except SQLAlchemyError as e:
+            logger.error(f"DAO update({self.model_class.__name__}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
     async def delete(
         self,
@@ -168,20 +196,24 @@ class BaseDAO(Generic[ModelT]):
         Set ``soft=False`` to perform a physical/hard delete regardless of
         soft-delete support.
         """
-        db_obj = await self.get(db, id, include_deleted=True)
-        if db_obj is None:
-            return None
+        try:
+            db_obj = await self.get(db, id, include_deleted=True)
+            if db_obj is None:
+                return None
 
-        if soft and hasattr(db_obj, 'is_deleted'):
-            db_obj.is_deleted = True
-            db_obj.deleted_at = datetime.now(timezone.utc)
-            await db.flush()
-            await db.refresh(db_obj)
-        else:
-            await db.delete(db_obj)
-            await db.flush()
+            if soft and hasattr(db_obj, 'is_deleted'):
+                db_obj.is_deleted = True
+                db_obj.deleted_at = datetime.now(timezone.utc)
+                await db.flush()
+                await db.refresh(db_obj)
+            else:
+                await db.delete(db_obj)
+                await db.flush()
 
-        return db_obj
+            return db_obj
+        except SQLAlchemyError as e:
+            logger.error(f"DAO delete({id}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
     async def count(
         self,
@@ -194,14 +226,18 @@ class BaseDAO(Generic[ModelT]):
 
         By default excludes soft-deleted records when the model supports it.
         """
-        stmt = select(func.count()).select_from(self.model_class)
+        try:
+            stmt = select(func.count()).select_from(self.model_class)
 
-        if not include_deleted and hasattr(self.model_class, 'is_deleted'):
-            stmt = stmt.where(self.model_class.is_deleted == False)
+            if not include_deleted and hasattr(self.model_class, 'is_deleted'):
+                stmt = stmt.where(self.model_class.is_deleted == False)
 
-        stmt = self._apply_filters(stmt, filters)
-        result = await db.execute(stmt)
-        return result.scalar_one()
+            stmt = self._apply_filters(stmt, filters)
+            result = await db.execute(stmt)
+            return result.scalar_one()
+        except SQLAlchemyError as e:
+            logger.error(f"DAO count({self.model_class.__name__}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
     async def restore(
         self,
@@ -213,15 +249,19 @@ class BaseDAO(Generic[ModelT]):
         Clears ``is_deleted`` and ``deleted_at``.  Returns ``None`` if the
         record does not exist or the model does not support soft-delete.
         """
-        db_obj = await self.get(db, id, include_deleted=True)
-        if db_obj is None or not hasattr(db_obj, 'is_deleted'):
-            return None
+        try:
+            db_obj = await self.get(db, id, include_deleted=True)
+            if db_obj is None or not hasattr(db_obj, 'is_deleted'):
+                return None
 
-        if not db_obj.is_deleted:
-            return db_obj  # Already active — no-op
+            if not db_obj.is_deleted:
+                return db_obj  # Already active — no-op
 
-        db_obj.is_deleted = False
-        db_obj.deleted_at = None
-        await db.flush()
-        await db.refresh(db_obj)
-        return db_obj
+            db_obj.is_deleted = False
+            db_obj.deleted_at = None
+            await db.flush()
+            await db.refresh(db_obj)
+            return db_obj
+        except SQLAlchemyError as e:
+            logger.error(f"DAO restore({id}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))

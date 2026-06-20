@@ -3,7 +3,7 @@
 from typing import Optional
 
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON, Float
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel, SoftDeleteMixin
 
@@ -75,6 +75,9 @@ class VaultPlotPromise(BaseModel, SoftDeleteMixin):
         default=lambda: [],
         comment="推进日志 (事件列表, 含 event_type)",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="vault_plot_promises", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<VaultPlotPromise id={self.id} type={self.type} status={self.status}>"

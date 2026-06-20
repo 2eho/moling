@@ -223,3 +223,20 @@ class WorldResp(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
 
     model_config = {"from_attributes": True}
+
+
+class VaultSummaryData(BaseModel):
+    """四库统计数据."""
+
+    character_count: int = Field(..., description="角色数量")
+    timeline_count: int = Field(..., description="时间线事件数量")
+    promise_count: int = Field(..., description="伏笔数量")
+    world_count: int = Field(..., description="世界观条目数量")
+
+
+class VaultSummaryResp(BaseModel):
+    """四库总览响应."""
+
+    success: bool = Field(..., description="是否成功")
+    summary: VaultSummaryData = Field(..., description="四库统计数据")
+    recent_characters: list[CharacterResp] = Field(..., description="最近更新的角色")

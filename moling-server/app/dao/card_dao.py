@@ -39,6 +39,7 @@ class CardDAO(BaseDAO[CardPool]):
             .where(
                 CardPool.project_id == project_id,
                 CardPool.status == "active",
+                CardPool.is_deleted == False,
             )
             .order_by(rarity_order, func.random())
             .limit(count)
@@ -58,6 +59,7 @@ class CardDAO(BaseDAO[CardPool]):
             .where(
                 CardPool.project_id == project_id,
                 CardPool.rarity == rarity,
+                CardPool.is_deleted == False,
             )
             .order_by(CardPool.id.asc())
         )
@@ -128,6 +130,7 @@ class CardDAO(BaseDAO[CardPool]):
             .where(
                 CardPool.project_id == project_id,
                 CardPool.is_active == True,
+                CardPool.is_deleted == False,
             )
             .order_by(CardPool.rarity.desc(), CardPool.id.asc())
         )
@@ -148,6 +151,7 @@ class CardDAO(BaseDAO[CardPool]):
             .where(
                 CardPool.project_id == project_id,
                 CardPool.id.in_(card_ids),
+                CardPool.is_deleted == False,
             )
         )
         result = await db.execute(stmt)
@@ -163,7 +167,10 @@ class CardDAO(BaseDAO[CardPool]):
             return []
         stmt = (
             select(CardPool)
-            .where(CardPool.id.in_(card_ids))
+            .where(
+                CardPool.id.in_(card_ids),
+                CardPool.is_deleted == False,
+            )
         )
         result = await db.execute(stmt)
         return list(result.scalars().all())
@@ -183,6 +190,7 @@ class CardDAO(BaseDAO[CardPool]):
             .where(
                 CardPool.project_id == project_id,
                 CardPool.is_active == True,
+                CardPool.is_deleted == False,
             )
             .order_by(CardPool.rarity.desc(), CardPool.id.asc())
         )
@@ -207,6 +215,7 @@ class CardDAO(BaseDAO[CardPool]):
             .where(
                 CardPool.project_id == project_id,
                 CardPool.status == "active",
+                CardPool.is_deleted == False,
             )
             .order_by(rarity_order, func.random())
             .limit(count)
@@ -222,7 +231,10 @@ class CardDAO(BaseDAO[CardPool]):
         """Synchronous: list all cards for a project."""
         stmt = (
             select(CardPool)
-            .where(CardPool.project_id == project_id)
+            .where(
+                CardPool.project_id == project_id,
+                CardPool.is_deleted == False,
+            )
             .order_by(CardPool.id.asc())
         )
         result = db.execute(stmt)
@@ -240,6 +252,7 @@ class CardDAO(BaseDAO[CardPool]):
             .where(
                 CardPool.project_id == project_id,
                 CardPool.id.in_(card_ids),
+                CardPool.is_deleted == False,
             )
         )
         result = db.execute(stmt)
@@ -252,7 +265,10 @@ class CardDAO(BaseDAO[CardPool]):
         card_ids: list[int],
         is_active: bool,
     ) -> int:
-        """Synchronous: batch update is_active flag, returns updated count."""
+        """Synchronous: batch update is_active flag, returns updated count.
+        
+        Note: caller is responsible for committing the transaction.
+        """
         from sqlalchemy import update
         stmt = (
             update(CardPool)
@@ -263,5 +279,5 @@ class CardDAO(BaseDAO[CardPool]):
             .values(is_active=is_active)
         )
         result = db.execute(stmt)
-        db.commit()
+        db.flush()
         return result.rowcount

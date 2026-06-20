@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, JSON, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
@@ -70,6 +70,10 @@ class VaultChangelog(BaseModel):
         nullable=True,
         comment="额外元数据",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="vault_changelogs", lazy="selectin")
+    chapter = relationship("Chapter", back_populates="vault_changelogs", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<VaultChangelog id={self.id} type={self.change_type} entity={self.entity_type}>"

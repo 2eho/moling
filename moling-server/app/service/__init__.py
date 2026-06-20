@@ -29,6 +29,7 @@ from app.service.card_pool_service import CardPoolService, card_pool_service
 from app.service.phase4_service import Phase4Service, phase4_service
 from app.service.phase4_scheduler import Phase4Scheduler, phase4_scheduler
 from app.service.health_monitor import HealthMonitorService, health_monitor_service
+from app.service.coherence_service import CoherenceService, coherence_service
 
 __all__ = [
     "auth_service",
@@ -60,4 +61,6 @@ __all__ = [
     "phase4_scheduler",
     "HealthMonitorService",
     "health_monitor_service",
+    "CoherenceService",
+    "coherence_service",
 ]

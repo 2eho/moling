@@ -154,32 +154,84 @@ class RateLimitTracker:
 
 
 # ---------------------------------------------------------------------------
-# Token Budget Management
+# Redis helpers for budget & rate-limit storage
+# ---------------------------------------------------------------------------
+
+def _get_redis_sync():
+    """Get a sync Redis client for budget/rate-limit tracking.
+
+    Uses the same connection parameters as the rest of the app.
+    Returns None on failure (graceful degradation to in-process mode).
+    """
+    try:
+        import redis as sync_redis
+        from app.config import get_settings
+        s = get_settings()
+        r = sync_redis.Redis(
+            host=s.REDIS_HOST or "localhost",
+            port=s.REDIS_PORT or 6379,
+            db=3,  # DB 3: Token budget / rate-limit counters
+            password=s.REDIS_PASSWORD or None,
+            decode_responses=True,
+            socket_connect_timeout=3,
+            socket_timeout=3,
+        )
+        r.ping()
+        return r
+    except Exception:
+        return None
+
+
+def _budget_prefix() -> str:
+    """Namespace prefix to avoid key collisions."""
+    return "moling:budget"
+
+
+# ---------------------------------------------------------------------------
+# Token Budget Management (HH10: Redis-backed, multi-process safe)
 # ---------------------------------------------------------------------------
 
 class TokenBudgetManager:
-    """Control token usage budget."""
+    """Control token usage budget — Redis-backed for multi-worker safety.
+
+    Falls back gracefully to in-process :class:`defaultdict` storage when
+    Redis is unavailable (single-process/dev mode).
+    """
 
     def __init__(self, daily_budget: int = 1000000, monthly_budget: int = 30000000) -> None:
         self.daily_budget = daily_budget
         self.monthly_budget = monthly_budget
-        self.daily_usage: Dict[str, int] = defaultdict(int)  # date -> tokens
-        self.monthly_usage: Dict[str, int] = defaultdict(int)  # month -> tokens
+        # In-process fallback when Redis is down
+        self._daily_usage: Dict[str, int] = defaultdict(int)
+        self._monthly_usage: Dict[str, int] = defaultdict(int)
+        self._redis = _get_redis_sync()
 
     def can_use_tokens(self, estimated_tokens: int) -> bool:
         """Check if token budget allows the request."""
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         this_month = datetime.now(timezone.utc).strftime("%Y-%m")
 
-        daily_used = self.daily_usage.get(today, 0)
-        monthly_used = self.monthly_usage.get(this_month, 0)
+        if self._redis is not None:
+            try:
+                daily_used = int(self._redis.get(f"{_budget_prefix()}:daily:{today}") or 0)
+                monthly_used = int(self._redis.get(f"{_budget_prefix()}:monthly:{this_month}") or 0)
+            except Exception:
+                daily_used = self._daily_usage.get(today, 0)
+                monthly_used = self._monthly_usage.get(this_month, 0)
+        else:
+            daily_used = self._daily_usage.get(today, 0)
+            monthly_used = self._monthly_usage.get(this_month, 0)
 
         if daily_used + estimated_tokens > self.daily_budget:
-            logger.warning(f"Token budget: daily limit exceeded ({daily_used}/{self.daily_budget})")
+            logger.warning(
+                "Token budget: daily limit exceeded (%d/%d)", daily_used, self.daily_budget
+            )
             return False
 
         if monthly_used + estimated_tokens > self.monthly_budget:
-            logger.warning(f"Token budget: monthly limit exceeded ({monthly_used}/{self.monthly_budget})")
+            logger.warning(
+                "Token budget: monthly limit exceeded (%d/%d)", monthly_used, self.monthly_budget
+            )
             return False
 
         return True
@@ -189,25 +241,50 @@ class TokenBudgetManager:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         this_month = datetime.now(timezone.utc).strftime("%Y-%m")
 
-        self.daily_usage[today] = self.daily_usage.get(today, 0) + tokens
-        self.monthly_usage[this_month] = self.monthly_usage.get(this_month, 0) + tokens
+        if self._redis is not None:
+            try:
+                pipe = self._redis.pipeline()
+                pipe.incrby(f"{_budget_prefix()}:daily:{today}", tokens)
+                pipe.expire(f"{_budget_prefix()}:daily:{today}", 86400 * 2)  # 2-day TTL
+                pipe.incrby(f"{_budget_prefix()}:monthly:{this_month}", tokens)
+                pipe.expire(f"{_budget_prefix()}:monthly:{this_month}", 86400 * 45)  # ~1.5-month TTL
+                pipe.execute()
+            except Exception:
+                # Fallback to in-process
+                self._daily_usage[today] = self._daily_usage.get(today, 0) + tokens
+                self._monthly_usage[this_month] = self._monthly_usage.get(this_month, 0) + tokens
+        else:
+            self._daily_usage[today] = self._daily_usage.get(today, 0) + tokens
+            self._monthly_usage[this_month] = self._monthly_usage.get(this_month, 0) + tokens
 
     def get_budget_status(self) -> Dict[str, Any]:
         """Get current budget status."""
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         this_month = datetime.now(timezone.utc).strftime("%Y-%m")
 
+        if self._redis is not None:
+            try:
+                daily_used = int(self._redis.get(f"{_budget_prefix()}:daily:{today}") or 0)
+                monthly_used = int(self._redis.get(f"{_budget_prefix()}:monthly:{this_month}") or 0)
+            except Exception:
+                daily_used = self._daily_usage.get(today, 0)
+                monthly_used = self._monthly_usage.get(this_month, 0)
+        else:
+            daily_used = self._daily_usage.get(today, 0)
+            monthly_used = self._monthly_usage.get(this_month, 0)
+
         return {
             "daily": {
                 "budget": self.daily_budget,
-                "used": self.daily_usage.get(today, 0),
-                "remaining": self.daily_budget - self.daily_usage.get(today, 0),
+                "used": daily_used,
+                "remaining": self.daily_budget - daily_used,
             },
             "monthly": {
                 "budget": self.monthly_budget,
-                "used": self.monthly_usage.get(this_month, 0),
-                "remaining": self.monthly_budget - self.monthly_usage.get(this_month, 0),
+                "used": monthly_used,
+                "remaining": self.monthly_budget - monthly_used,
             },
+            "backend": "redis" if self._redis is not None else "memory",
         }
 
 

@@ -25,7 +25,7 @@ class ProjectDAO(BaseDAO[Project]):
         """List projects owned by a specific user, newest first."""
         stmt = (
             select(Project)
-            .where(Project.user_id == user_id)
+            .where(Project.user_id == user_id, Project.is_deleted == False)
             .order_by(Project.updated_at.desc())
             .offset(skip)
             .limit(limit)
@@ -42,7 +42,7 @@ class ProjectDAO(BaseDAO[Project]):
         stmt = (
             select(func.count())
             .select_from(Project)
-            .where(Project.user_id == user_id)
+            .where(Project.user_id == user_id, Project.is_deleted == False)
         )
         result = await db.execute(stmt)
         return result.scalar_one()
@@ -60,7 +60,7 @@ class ProjectDAO(BaseDAO[Project]):
         active_stmt = (
             select(func.count())
             .select_from(Project)
-            .where(Project.user_id == user_id, Project.status == "active")
+            .where(Project.user_id == user_id, Project.status == "active", Project.is_deleted == False)
         )
         active_result = await db.execute(active_stmt)
         active_count = active_result.scalar_one()
@@ -69,7 +69,7 @@ class ProjectDAO(BaseDAO[Project]):
         draft_stmt = (
             select(func.count())
             .select_from(Project)
-            .where(Project.user_id == user_id, Project.status == "draft")
+            .where(Project.user_id == user_id, Project.status == "draft", Project.is_deleted == False)
         )
         draft_result = await db.execute(draft_stmt)
         draft_count = draft_result.scalar_one()
@@ -77,7 +77,7 @@ class ProjectDAO(BaseDAO[Project]):
         # Total words
         words_stmt = (
             select(func.coalesce(func.sum(Project.word_count), 0))
-            .where(Project.user_id == user_id)
+            .where(Project.user_id == user_id, Project.is_deleted == False)
         )
         words_result = await db.execute(words_stmt)
         total_words = words_result.scalar_one()

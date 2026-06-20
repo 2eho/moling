@@ -93,3 +93,23 @@ class ProjectStatsResp(BaseModel):
     active_count: int = Field(default=0, description="进行中项目数")
     draft_count: int = Field(default=0, description="草稿项目数")
     total_words: int = Field(default=0, description="总字数")
+
+
+class ProjectListResp(BaseModel):
+    """Paginated project list response."""
+
+    items: list[ProjectResp] = Field(..., description="项目列表")
+    total: int = Field(..., description="总数量")
+    page: int = Field(..., description="当前页码")
+    page_size: int = Field(..., description="每页数量")
+    total_pages: int = Field(..., description="总页数")
+
+
+class SingleProjectStatsResp(BaseModel):
+    """Single project statistics."""
+
+    project_id: int = Field(..., description="项目 ID")
+    title: str = Field(..., description="项目标题")
+    total_chapters: int = Field(..., description="总章节数")
+    total_words: int = Field(..., description="总字数")
+    status: str = Field(..., description="项目状态")

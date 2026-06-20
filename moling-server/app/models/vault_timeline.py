@@ -3,7 +3,7 @@
 from typing import Optional
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, JSON, Float
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel, SoftDeleteMixin
 
@@ -84,6 +84,9 @@ class VaultTimeline(BaseModel, SoftDeleteMixin):
         default=lambda: [],
         comment="涉及角色名列表",
     )
+
+    # ---- Relationships ----
+    project = relationship("Project", back_populates="vault_timelines", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<VaultTimeline id={self.id} ch#{self.chapter_number} event={self.event!r}>"

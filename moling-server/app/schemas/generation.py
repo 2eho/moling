@@ -45,3 +45,10 @@ class TaskStatusResp(BaseModel):
     progress_percent: int = Field(default=0, description="进度百分比")
     error_message: Optional[str] = Field(default=None, description="错误信息")
     output_data: Optional[dict] = Field(default=None, description="输出数据")
+
+
+class TaskCancelResp(BaseModel):
+    """Response for cancelling a generation task."""
+
+    status: str = Field(..., description="任务状态")
+    task_id: str = Field(..., description="任务 ID (UUID)")
