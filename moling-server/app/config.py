@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     # ---- LLM Model ----
     LLM_MODEL: str = "gpt-4o-mini"
 
+    # ---- App Metadata ----
+    APP_VERSION: str = "1.0.0"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

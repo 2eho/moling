@@ -17,13 +17,14 @@ from app.dao.subscription_dao import plan_dao, user_subscription_dao
 from app.errors import NotFoundError, ConflictError
 from app.models.subscription import UserSubscription
 from app.schemas.subscription import PlanResp, CreateSubscriptionReq, SubscriptionResp
+from app.models.user import User
 
 router = APIRouter()
 
 
 @router.get("/plans", response_model=list[PlanResp])
 async def list_plans(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[PlanResp]:
     """List all active subscription plans."""
@@ -34,7 +35,7 @@ async def list_plans(
 @router.post("/create-checkout", response_model=dict)
 async def create_checkout(
     plan_id: int = Query(..., description="订阅方案 ID"),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """创建支付结算会话，返回合理的占位数据。"""
@@ -63,7 +64,7 @@ async def create_checkout(
 @router.post("", response_model=SubscriptionResp, status_code=201)
 async def create_subscription(
     req: CreateSubscriptionReq,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SubscriptionResp:
     """Create a new subscription for the current user."""
@@ -106,7 +107,7 @@ async def create_subscription(
 
 @router.get("/current", response_model=dict)
 async def get_current_subscription(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Get current user's active subscription."""

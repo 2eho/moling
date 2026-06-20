@@ -46,3 +46,24 @@ class Phase4ReviewReq(BaseModel):
 
     enabled: bool = Field(..., description="是否启用 Phase 4 审核")
     auto_approve: bool = Field(default=False, description="是否自动通过")
+
+
+class Phase4ModeReq(BaseModel):
+    """Request body for updating Phase 4 review mode (manual/auto)."""
+
+    mode: str = Field(default="manual", description="审核模式: manual 或 auto")
+
+
+class ChangePasswordReq(BaseModel):
+    """Request body for changing password."""
+
+    old_password: str
+    new_password: str
+
+
+class UpdateProfileReq(BaseModel):
+    """Request body for updating user profile."""
+
+    nickname: str | None = None
+    bio: str | None = None
+    avatar_url: str | None = None

@@ -1,4 +1,26 @@
-"""墨灵 (Moling) — Generic Base DAO with CRUD operations (async)."""
+"""墨灵 (Moling) — Generic Base DAO with CRUD operations (async).
+
+DAO 方法命名约定 (R3 架构加固):
+- get(id) — 按主键获取单条记录
+- get_sync(id) — 同步版 get（用于 Celery worker）
+- get_multi(*, skip, limit, filters, order_by) — 分页列表查询（offset/limit）
+- list_cursor(*, cursor, cursor_field, limit, filters, order) — 游标分页列表查询
+- count(filters) — 按条件计数
+- create(obj_in) — 创建单条记录（flush, 不 commit）
+- update(db_obj, obj_in) — 部分更新单条记录（flush, 不 commit）
+- delete(id, soft) — 软删除/物理删除单条记录
+- restore(id) — 恢复软删除记录
+- batch_create(data_list) — 批量创建（子类按需实现）
+- get_by_*(value) — 按唯一键获取单条（子类实现）
+- list_by_*(value, *, offset, limit) — 按条件列表查询（子类实现）
+- count_by_*(value) — 按条件计数（子类实现）
+
+DAO 层契约:
+- 禁止 DAO 内部 commit() — 事务由调用方（Service/Router）管理
+- 禁止 DAO 内部创建 Session/Engine — 接受 db 参数
+- 所有 DAO 方法必须有 try/except 并记录日志
+- 子类 DAO 使用模块级单例 (xxx_dao = XxxDAO())，不使用类级单例
+"""
 
 from __future__ import annotations
 

@@ -10,6 +10,7 @@ from app.dependencies import get_db, get_current_user
 from app.service.notification_service import notification_service
 from app.schemas.notification import NotificationResp
 from app.schemas.common import PaginatedResp
+from app.models.user import User
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ async def list_notifications(
     is_read: bool = Query(None, description="已读状态筛选"),
     unread_only: bool = Query(None, description="仅未读（前端兼容参数）"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PaginatedResp[NotificationResp]:
     """获取当前用户的通知列表。"""
     # 兼容前端 unread_only 参数
@@ -45,7 +46,7 @@ async def list_notifications(
 @router.get("/unread-count", response_model=dict)
 async def get_unread_count(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """获取未读通知数量。"""
     result = await notification_service.get_unread_count(
@@ -59,7 +60,7 @@ async def get_unread_count(
 async def mark_as_read(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> NotificationResp:
     """标记通知为已读。"""
     result = await notification_service.mark_as_read(
@@ -73,7 +74,7 @@ async def mark_as_read(
 @router.post("/read-all", response_model=dict)
 async def mark_all_as_read(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """标记所有通知为已读。"""
     result = await notification_service.mark_all_as_read(
@@ -87,7 +88,7 @@ async def mark_all_as_read(
 async def delete_notification(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> None:
     """删除通知。"""
     await notification_service.delete_notification(

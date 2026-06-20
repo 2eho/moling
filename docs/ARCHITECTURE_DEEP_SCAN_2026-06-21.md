@@ -459,15 +459,15 @@ user_projects = await project_dao.get_multi(db, filters={"user_id": current_user
 
 ### Round 3: 架构加固（下周）— 中等问题
 
-| # | 模块 | 问题 | 预计 |
-|---|------|------|------|
-| RF3.1 | All | 硬编码值移至配置 | 2h |
-| RF3.2 | Router | 请求体 Schema 移至 schemas/ | 1h |
-| RF3.3 | All | 占位符实现填坑 | 3h |
-| RF3.4 | All | ID 类型统一策略 | 4h |
-| RF3.5 | Worker | Celery Beat 定时调度配置 | 2h |
-| RF3.6 | DAO | 命名规范统一 | 1h |
-| RF3.7 | DAO | 游标分页支持 | 2h |
+| # | 模块 | 问题 | 预计 | 状态 |
+|---|------|------|------|------|
+| RF3.1 | All | 硬编码值移至配置 | 2h | ✅ 完成 — config.py 已含 26 项 env var；celery_app.py 使用 settings |
+| RF3.2 | Router | 请求体 Schema 移至 schemas/ | 1h | ✅ 完成 — ChangePasswordReq/UpdateProfileReq/Phase4ReviewReq 已迁移 |
+| RF3.3 | All | 占位符实现填坑 | 3h | ✅ 完成 — 健康检查三方验证；合理占位符保留（待基础设施到位） |
+| RF3.4 | All | ID 类型统一策略 | 4h | ⬜ 待办 — 高风险重构，需专项计划 |
+| RF3.5 | Worker | Celery Beat 定时调度配置 | 2h | ✅ 完成 — 4 个周期性任务 + project_dao.get_all_active/get_recently_active |
+| RF3.6 | DAO | 命名规范统一 | 1h | ✅ 完成 — base_dao.py 文档化命名约定 |
+| RF3.7 | DAO | 游标分页支持 | 2h | ✅ 完成 — base_dao.list_cursor() 通用游标分页方法 |
 
 ### Round 4: 长期提升（本月）— 体系性改进
 

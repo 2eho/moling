@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user
 from app.service.template_service import template_service
 from app.schemas.template import TemplateResp, CreateTemplateReq, UpdateTemplateReq, TemplateListResp, CreateProjectFromTemplateResp
+from app.models.user import User
 
 router = APIRouter()
 
@@ -19,7 +20,7 @@ async def list_templates(
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     genre: str = Query(None, description="按题材筛选"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> TemplateListResp:
     """获取模板列表。"""
     result = await template_service.list_templates(
@@ -35,7 +36,7 @@ async def list_templates(
 async def get_template(
     template_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> TemplateResp:
     """获取模板详情。"""
     result = await template_service.get_template(db, template_id)
@@ -46,7 +47,7 @@ async def get_template(
 async def create_template(
     req: CreateTemplateReq,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> TemplateResp:
     """创建新模板（需要登录）。"""
     result = await template_service.create_template(db, req)
@@ -58,7 +59,7 @@ async def update_template(
     template_id: int,
     req: UpdateTemplateReq,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> TemplateResp:
     """更新模板（需要登录）。"""
     result = await template_service.update_template(db, template_id, req)
@@ -69,7 +70,7 @@ async def update_template(
 async def delete_template(
     template_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> None:
     """删除模板（需要登录）。"""
     await template_service.delete_template(db, template_id)
@@ -81,7 +82,7 @@ async def create_project_from_template(
     title: str = Query(..., description="项目标题"),
     author: str = Query(None, description="作者"),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> CreateProjectFromTemplateResp:
     """使用模板创建新项目。"""
     result = await template_service.create_project_from_template(

@@ -4,41 +4,26 @@
 """
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
+from app.models.user import User
 from app.service.setting_service import setting_service
-from app.schemas.setting import HealthMonitorReq, UserSettings
+from app.schemas.setting import (
+    ChangePasswordReq,
+    HealthMonitorReq,
+    Phase4ModeReq,
+    UpdateProfileReq,
+    UserSettings,
+)
 
 router = APIRouter()
-
-
-class ChangePasswordReq(BaseModel):
-    """Request body for changing password."""
-
-    old_password: str
-    new_password: str
-
-
-class UpdateProfileReq(BaseModel):
-    """Request body for updating user profile."""
-
-    nickname: str | None = None
-    bio: str | None = None
-    avatar_url: str | None = None
-
-
-class Phase4ReviewReq(BaseModel):
-    """Request body for updating Phase 4 review settings."""
-
-    mode: str = "manual"  # "manual" | "auto"
 
 
 @router.get("", response_model=UserSettings)
 async def get_settings(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> UserSettings:
     """获取当前用户的设置。"""
     result = await setting_service.get_settings(
@@ -52,7 +37,7 @@ async def get_settings(
 async def update_settings(
     settings_update: dict,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> UserSettings:
     """更新当前用户的设置（部分更新）。"""
     result = await setting_service.update_settings(
@@ -67,7 +52,7 @@ async def update_settings(
 async def change_password(
     req: ChangePasswordReq,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """修改密码（需要验证旧密码）。"""
     result = await setting_service.change_password(
@@ -82,7 +67,7 @@ async def change_password(
 @router.get("/profile", response_model=dict)
 async def get_profile(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """获取当前用户的个人资料。"""
     result = await setting_service.get_profile(
@@ -96,7 +81,7 @@ async def get_profile(
 async def update_profile(
     req: UpdateProfileReq,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """更新当前用户的个人资料。"""
     result = await setting_service.update_profile(
@@ -113,7 +98,7 @@ async def update_profile(
 async def update_health_monitor(
     req: HealthMonitorReq,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """更新健康监控设置。"""
     # Get current settings
@@ -149,7 +134,7 @@ async def update_health_monitor(
 @router.post("/export", status_code=200)
 async def export_user_data(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """导出用户数据（生成导出链接）。"""
     # 直接返回成功响应，导出功能由 service 层实现
@@ -159,7 +144,7 @@ async def export_user_data(
 @router.post("/clear-cache", status_code=200)
 async def clear_user_cache(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """清除用户缓存。"""
     return {"cleared": True, "message": "缓存已清除"}
@@ -168,7 +153,7 @@ async def clear_user_cache(
 @router.get("/phase4-review", status_code=200)
 async def get_phase4_review_settings(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """获取 Phase 4 审核模式设置。"""
     settings = await setting_service.get_settings(db, current_user.id)
@@ -179,9 +164,9 @@ async def get_phase4_review_settings(
 
 @router.patch("/phase4-review", status_code=200)
 async def update_phase4_review_settings(
-    req: Phase4ReviewReq,
+    req: Phase4ModeReq,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """更新 Phase 4 审核模式。"""
     # 保存到用户设置

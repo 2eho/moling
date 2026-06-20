@@ -1069,22 +1069,22 @@ def downgrade() -> None:
     )
 
     op.execute(
-        "ALTER TABLE draw_history ALTER COLUMN chapter_id TYPE INTEGER"
+        "ALTER TABLE draw_history ALTER COLUMN chapter_id TYPE INTEGER USING chapter_id::integer"
     )
     op.execute(
-        "ALTER TABLE draw_history ALTER COLUMN user_id TYPE INTEGER"
+        "ALTER TABLE draw_history ALTER COLUMN user_id TYPE INTEGER USING user_id::integer"
     )
     op.execute(
-        "ALTER TABLE generation_tasks ALTER COLUMN chapter_id TYPE INTEGER"
+        "ALTER TABLE generation_tasks ALTER COLUMN chapter_id TYPE INTEGER USING chapter_id::integer"
     )
     op.execute(
-        "ALTER TABLE generation_tasks ALTER COLUMN user_id TYPE INTEGER"
+        "ALTER TABLE generation_tasks ALTER COLUMN user_id TYPE INTEGER USING user_id::integer"
     )
     op.execute(
-        "ALTER TABLE ingest_jobs ALTER COLUMN user_id TYPE INTEGER"
+        "ALTER TABLE ingest_jobs ALTER COLUMN user_id TYPE INTEGER USING user_id::integer"
     )
     op.execute(
-        "ALTER TABLE projects ALTER COLUMN user_id TYPE INTEGER"
+        "ALTER TABLE projects ALTER COLUMN user_id TYPE INTEGER USING user_id::integer"
     )
 
     op.create_foreign_key(

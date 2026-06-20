@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user
 from app.service.weave_service import weave_service
 from app.schemas.weave import WeaveSuggestionResp, ApplyWeaveReq, WeaveAnalysisResp
+from app.models.user import User
 
 router = APIRouter()
 
@@ -25,7 +26,7 @@ WEAVE_PATTERNS = [
 @router.get("/patterns", response_model=list[dict])
 async def list_weave_patterns(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     """获取可用的编织模式列表。"""
     return WEAVE_PATTERNS
@@ -35,7 +36,7 @@ async def list_weave_patterns(
 async def get_suggestions(
     project_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> WeaveSuggestionResp:
     """获取项目的编织建议。"""
     result = await weave_service.get_suggestions(db, project_id)
@@ -46,7 +47,7 @@ async def get_suggestions(
 async def apply_suggestions(
     req: ApplyWeaveReq,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """应用编织建议到指定章节。"""
     result = await weave_service.apply_suggestions(db, req)
@@ -57,7 +58,7 @@ async def apply_suggestions(
 async def analyze_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> WeaveAnalysisResp:
     """深度分析项目的编织质量。"""
     result = await weave_service.analyze_project(db, project_id)

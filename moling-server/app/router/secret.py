@@ -14,6 +14,7 @@ from app.schemas.secret import SecretResp, UpdateSecretReq, UpdateSecretsByChara
 from app.service.secret_service import secret_service
 from app.dao import project_dao
 from app.errors import NotFoundError, ForbiddenError
+from app.models.user import User
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ router = APIRouter()
 @router.get("", response_model=list[SecretResp])
 async def list_secrets(
     project_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[SecretResp]:
     """List all secrets for a project."""
@@ -38,7 +39,7 @@ async def list_secrets(
 async def get_secrets_by_character(
     project_id: int,
     character_name: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Get secrets known to and unknown by a character (query by name)."""
@@ -58,7 +59,7 @@ async def update_secrets_by_character(
     project_id: int,
     character_id: int,
     data: UpdateSecretsByCharacterReq,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Update secrets for a character (by ID, for backward compatibility)."""
@@ -79,7 +80,7 @@ async def update_secret(
     project_id: int,
     secret_id: int,
     data: UpdateSecretReq,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Update a specific secret (edit known_by, unknown_to, debt_count)."""
