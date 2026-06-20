@@ -43,6 +43,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 markers = [
     "integration: 集成测试标记，用于标记需要完整环境运行的测试用例",
     "asyncio: 标记异步测试",

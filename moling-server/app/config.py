@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./moling.db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # ---- Redis (用于 Token 黑名单等) ----
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str | None = None
+
     # ---- Auth / JWT ----
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     # ^ WARNING: Default key is INSECURE. Production MUST set SECRET_KEY via env.

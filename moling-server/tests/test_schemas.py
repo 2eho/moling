@@ -201,7 +201,7 @@ class TestChapterResp:
 
 class TestDrawCardReq:
     def test_valid(self):
-        req = DrawCardReq(keep_card_ids=[1], weights=[0.5], mode="single")
+        req = DrawCardReq(keep_card_ids=["card-1"], weights=[0.5], mode="single")
         assert req.mode == "single"
 
     def test_invalid_mode(self):
@@ -221,7 +221,7 @@ class TestCardResp:
 
 class TestGenerateReq:
     def test_valid(self):
-        req = GenerateReq(card_ids=[1, 2], weights=[0.5, 0.5], mode="hybrid")
+        req = GenerateReq(card_ids=["card-1", "card-2"], weights=[0.5, 0.5], mode="hybrid")
         assert req.mode == "hybrid"
 
     def test_invalid_mode(self):
@@ -229,10 +229,11 @@ class TestGenerateReq:
             GenerateReq(card_ids=[], weights=[], mode="bad")
 
     def test_defaults(self):
-        req = GenerateReq()
-        assert req.card_ids == []
+        req = GenerateReq(card_ids=["card-1"])
         assert req.weights == []
         assert req.mode == "single"
+        assert req.creativity == 5
+        assert req.word_count == 2000
 
 
 class TestGenerationResp:

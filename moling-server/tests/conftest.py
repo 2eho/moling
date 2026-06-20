@@ -113,6 +113,7 @@ if not IS_WINDOWS:
             return result
         except Exception:
             # 用户已存在，登录获取 token
+            await test_db.rollback()  # 清理失败的事务
             req = LoginReq(email=email, password=password)
             result = await auth_service.login(test_db, req)
             return result
