@@ -108,7 +108,7 @@ if not IS_WINDOWS:
         
         try:
             # 尝试注册
-            req = RegisterReq(email=email, username="测试用户", password=password)
+            req = RegisterReq(email=email, nickname="测试用户", password=password)
             result = await auth_service.register(test_db, req)
             return result
         except Exception:

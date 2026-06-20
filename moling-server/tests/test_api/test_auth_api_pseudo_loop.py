@@ -127,7 +127,7 @@ class TestRegisterAPI:
         response = pseudo_client.post("/api/v1/auth/register", json=REGISTER_DATA)
 
         assert response.status_code == 201
-        data = response.json()
+        data = response.json()["data"]
         assert "access_token" in data
         assert "token_type" in data
         assert data["token_type"] == "bearer"
@@ -218,7 +218,7 @@ class TestLoginAPI:
         response = pseudo_client.post("/api/v1/auth/login", json=LOGIN_DATA)
 
         assert response.status_code == 200
-        data = response.json()
+        data = response.json()["data"]
         assert data["access_token"] == MOCK_ACCESS_TOKEN
         assert data["token_type"] == "bearer"
 
@@ -316,7 +316,7 @@ class TestRefreshAPI:
         response = pseudo_client.post("/api/v1/auth/refresh", json=REFRESH_DATA)
 
         assert response.status_code == 200
-        data = response.json()
+        data = response.json()["data"]
         assert data["access_token"] == "new-access-token"
         assert data["token_type"] == "bearer"
 
@@ -370,7 +370,7 @@ class TestGetMeAPI:
             headers = {"Authorization": f"Bearer {MOCK_ACCESS_TOKEN}"}
             response = pseudo_client.get("/api/v1/auth/me", headers=headers)
             assert response.status_code == 200
-            data = response.json()
+            data = response.json()["data"]
             assert data["email"] == "test@example.com"
             assert data["nickname"] == "testuser"
         finally:
@@ -465,7 +465,7 @@ class TestAuthIntegration:
         # 2. 登录
         login_resp = pseudo_client.post("/api/v1/auth/login", json=LOGIN_DATA)
         assert login_resp.status_code == 200
-        data = login_resp.json()
+        data = login_resp.json()["data"]
         assert data["access_token"] == "new-access-token"
 
     @patch("app.router.auth.auth_service")
@@ -512,7 +512,7 @@ class TestAuthIntegration:
         # 1. 登录
         login_resp = pseudo_client.post("/api/v1/auth/login", json=LOGIN_DATA)
         assert login_resp.status_code == 200
-        login_data = login_resp.json()
+        login_data = login_resp.json()["data"]
         refresh_token = login_data["refresh_token"]
 
         # 2. 刷新令牌
@@ -521,7 +521,7 @@ class TestAuthIntegration:
             json={"refresh_token": refresh_token},
         )
         assert refresh_resp.status_code == 200
-        refresh_data = refresh_resp.json()
+        refresh_data = refresh_resp.json()["data"]
         assert refresh_data["access_token"] == "refreshed-access-token"
 
     @pytest.mark.xfail(reason="rate limiter may block in test env")
@@ -564,14 +564,14 @@ class TestAuthIntegration:
             # 1. 登录
             login_resp = pseudo_client.post("/api/v1/auth/login", json=LOGIN_DATA)
             assert login_resp.status_code == 200
-            login_data = login_resp.json()
+            login_data = login_resp.json()["data"]
             access_token = login_data["access_token"]
 
             # 2. 获取当前用户
             headers = {"Authorization": f"Bearer {access_token}"}
             me_resp = pseudo_client.get("/api/v1/auth/me", headers=headers)
             assert me_resp.status_code == 200
-            me_data = me_resp.json()
+            me_data = me_resp.json()["data"]
             assert me_data["email"] == "test@example.com"
         finally:
             app.dependency_overrides.clear()

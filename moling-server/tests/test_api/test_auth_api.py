@@ -16,7 +16,7 @@ class TestAuthRegister:
         # Arrange
         payload = {
             "email": "newuser@example.com",
-            "username": "新用户",
+            "nickname": "新用户",
             "password": "Password123!"
         }
 
@@ -25,7 +25,9 @@ class TestAuthRegister:
 
         # Assert
         assert resp.status_code == 201
-        data = resp.json()
+        body = resp.json()
+        assert body["code"] == 0
+        data = body["data"]
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
@@ -38,7 +40,7 @@ class TestAuthRegister:
         # Arrange
         payload = {
             "email": test_user["user"]["email"],
-            "username": "重复用户",
+            "nickname": "重复用户",
             "password": "Password123!"
         }
 
@@ -53,7 +55,7 @@ class TestAuthRegister:
         # Arrange
         payload = {
             "email": "invalid-email",
-            "username": "测试",
+            "nickname": "测试",
             "password": "Password123!"
         }
 
@@ -68,7 +70,7 @@ class TestAuthRegister:
         # Arrange
         payload = {
             "email": "short@example.com",
-            "username": "测试",
+            "nickname": "测试",
             "password": "123"
         }
 
@@ -95,7 +97,9 @@ class TestAuthLogin:
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["code"] == 0
+        data = body["data"]
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
@@ -157,7 +161,9 @@ class TestAuthRefresh:
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["code"] == 0
+        data = body["data"]
         assert "access_token" in data
         assert "refresh_token" in data
         # 新 access_token 应该不同
@@ -175,7 +181,7 @@ class TestAuthRefresh:
         assert resp.status_code == 401
 
     async def test_refresh_empty_token(self, async_client: AsyncClient):
-        """空刷新令牌应返回 422。"""
+        """空刷新令牌应返回 401。"""
         # Arrange
         payload = {"refresh_token": ""}
 
@@ -183,7 +189,7 @@ class TestAuthRefresh:
         resp = await async_client.post(f"{API_PREFIX}/refresh", json=payload)
 
         # Assert
-        assert resp.status_code == 422
+        assert resp.status_code == 401
 
 
 class TestAuthGetMe:
@@ -196,18 +202,20 @@ class TestAuthGetMe:
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        body = resp.json()
+        assert body["code"] == 0
+        data = body["data"]
         assert data["email"] == test_user["user"]["email"]
-        assert data["username"] == test_user["user"]["username"]
+        assert data["nickname"] == test_user["user"]["username"]
         assert "id" in data
 
     async def test_get_me_no_token(self, async_client: AsyncClient):
-        """无令牌请求应返回 403（未认证）。"""
+        """无令牌请求应返回 401（未认证）。"""
         # Act
         resp = await async_client.get(f"{API_PREFIX}/me")
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     async def test_get_me_invalid_token(self, async_client: AsyncClient):
         """无效令牌应返回 401。"""
