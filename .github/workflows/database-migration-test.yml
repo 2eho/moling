@@ -85,10 +85,15 @@ jobs:
           cp .env.example .env
           echo "DATABASE_URL=postgresql+psycopg://testuser:testpass@localhost:5432/moling_test" >> .env
 
-      - name: 生成迁移脚本（如果不存在）
+      - name: 检查现有迁移脚本
         run: |
           cd moling-server
-          alembic revision --autogenerate -m "ci_test_migration" || echo "Migration script already exists"
+          echo "现有迁移脚本:"
+          ls -la alembic/versions/
+          echo "当前 head:"
+          alembic heads
+          echo "当前 base:"
+          alembic history --verbose | tail -5
 
       - name: 运行回滚测试
         run: |
@@ -214,7 +219,7 @@ jobs:
         run: |
           cd moling-server
           # 创建测试数据库
-          psql -h localhost -U testuser -c "CREATE DATABASE moling_restore_test;" || true
+          psql -h localhost -U testuser -d moling_test -c "CREATE DATABASE moling_restore_test;" || true
           # 恢复备份
           gunzip -c backups/*.sql.gz | psql -h localhost -U testuser -d moling_restore_test
           # 验证恢复
@@ -226,7 +231,7 @@ jobs:
       - name: 清理测试数据库
         if: always()
         run: |
-          psql -h localhost -U testuser -c "DROP DATABASE IF EXISTS moling_restore_test;" || true
+          psql -h localhost -U testuser -d moling_test -c "DROP DATABASE IF EXISTS moling_restore_test;" || true
         env:
           PGPASSWORD: testpass
 

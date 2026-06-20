@@ -60,7 +60,8 @@ if not IS_WINDOWS:
     from jose import jwt
     from datetime import datetime, timedelta, timezone
 
-    TEST_DATABASE_URL = "sqlite+aiosqlite://"
+    import os
+    TEST_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite://")
     settings = get_settings()
 
     @pytest.fixture(scope="session")
