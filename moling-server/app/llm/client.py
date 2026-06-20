@@ -31,6 +31,7 @@ from tenacity import (
 
 from app.config import get_effective_llm_config
 from app.errors import AppError, ErrorCode
+from app.llm.context_budget import ContextBudget
 from app.llm.key_manager import KeyManager, key_manager, NoAvailableKeyError
 
 logger = logging.getLogger(__name__)
@@ -469,8 +470,10 @@ class LLMClient:
         self.key_pool = APIKeyPool(api_keys)
         # Rate limit tracker
         self.rate_limiter = RateLimitTracker()
-        # Token budget manager
+        # Token budget manager (user quotas)
         self.budget_manager = TokenBudgetManager()
+        # Context window budget checker (model limits)
+        self._context_budget = ContextBudget()
 
     def _get_config(self) -> dict[str, Any]:
         """Get current LLM config (DB override > env var)."""
@@ -528,6 +531,24 @@ class LLMClient:
                 ErrorCode.RATE_LIMIT_EXCEEDED,
                 detail="Token budget exceeded. Please try again later."
             )
+
+        # Check context window budget (L2 fix: integrate ContextBudget)
+        prompt_text = json.dumps(messages, ensure_ascii=False)
+        ctx_result = self._context_budget.check(
+            prompt_text,
+            model=model,
+            max_output_tokens=max_tokens,
+        )
+        if not ctx_result.within_budget:
+            logger.warning(
+                "Context window exceeded: estimated=%d/%d tokens, "
+                "overflow=%d tokens. Prompt will be truncated by caller.",
+                ctx_result.estimated_input_tokens,
+                ctx_result.available_tokens,
+                abs(ctx_result.remaining_tokens),
+            )
+            # 不在此层截断 — 截断由上游 prompt_service 负责
+            # 这里只做监测和告警
 
         # Try with key pool (with fallback)
         last_error = None

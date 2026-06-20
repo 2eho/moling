@@ -723,19 +723,28 @@ H1 (敏感数据) → H5 (弱密钥) → H6 (连接池) → H2-H4 (运维化)
 S1/S2 (Token 过期) → S3 (密码策略) → S4 (黑名单降级) → S5 (RBAC) → S6 (jose→PyJWT)
 ```
 
-### LLM 集成已知技术债（扫描 v4，2026-06-21）
+### LLM 集成深度修复（扫描 v4，2026-06-21）
 
 > **扫描范围**: `app/llm/` 6 文件（client.py/key_manager.py/context_budget.py/prompts.py） | **发现**: 2 CRITICAL, 2 HIGH, 4 MEDIUM  
-> **报告完整版**: `docs/reports/scan-v4-llm.md`
+> **报告完整版**: `docs/reports/scan-v4-llm.md`  
+> **全部修复时间**: 2026-06-21 03:30
 
 | ID | 严重度 | 问题 | 位置 | 影响 | 状态 |
 |----|:--:|------|------|------|:--:|
 | L1 | CRITICAL | Token 预算绕过：`_chat_stream` 流式请求不调用 `budget_manager.record_usage()` | `client.py:579` | 流式请求 Token 完全不记入预算 | ✅ |
-| L2 | CRITICAL | `ContextBudget` 完整实现但 LLMClient 从未调用 | `context_budget.py` | Prompt 可能超过模型上下文窗口 | |
+| L2 | CRITICAL | `ContextBudget` 完整实现但 LLMClient 从未调用 | `context_budget.py` | Prompt 可能超过模型上下文窗口 | ✅ |
 | L3 | HIGH | KeyManager `_recover_key` 后 backoff_level 不重置 | `key_manager.py` | 已恢复 Key 下次瞬时错误直接进 300s 冷却 | ✅ |
 | L4 | HIGH | `get_effective_llm_config()` 硬编码 default，永远不读 `LLM_MODEL` | `config.py:263` | 配置修改不生效 | ✅ |
+| M1 | MEDIUM | `prompts.py` 中 Prompt 模板无版本号管理 | `prompts.py` | 迭代时难以追溯变更 | ⬜ |
+| M2 | MEDIUM | 缺少 LLM 响应 schema validation | `client.py` | 格式错误静默传播 | ⬜ |
+| M3 | MEDIUM | 流式响应无 timeout 超时处理 | `client.py` | 长连接无保护 | ⬜ |
+| M4 | MEDIUM | KeyManager 缺少 key 级别的并发锁 | `key_manager.py` | 高并发下可能重复选 key | ⬜ |
 
-**修复优先级**: `L1 (Token 漏记) → L4 (配置失效) → L2 (ContextBudget 集成) → L3 (backoff 重置)`
+**修复详情**:
+- **L1** (`client.py:584`): 流式路径新增 `budget_manager.record_usage()` + `report_success()`
+- **L2** (`client.py`): `__init__` 中初始化 `ContextBudget` 实例，`chat()` 中调用 `check()` 做上下文窗口监测
+- **L3** (`key_manager.py:257`): `_recover_key()` 中 `health.backoff_level = 0`
+- **L4** (`config.py:263`): `get_effective_llm_config()` 正确读取 `_OVERRIDES.get("llm_model") or s.LLM_MODEL`
 
 ---
 
