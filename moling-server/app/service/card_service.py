@@ -6,7 +6,6 @@ Business logic for card pool management and card draw algorithm (Phase 4).
 from typing import Optional
 import random
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import card_dao, project_dao
@@ -57,17 +56,8 @@ class CardService:
                 detail="Not authorized to access this project",
             )
         
-        # Get all active cards
-        stmt = (
-            select(CardPool)
-            .where(
-                CardPool.project_id == project_id,
-                CardPool.is_active == True,
-            )
-            .order_by(CardPool.rarity.desc(), CardPool.id.asc())
-        )
-        result = await db.execute(stmt)
-        cards = list(result.scalars().all())
+        # Get all active cards via DAO
+        cards = await card_dao.list_active_by_project(db, project_id)
         
         # Calculate stats
         by_rarity = {}
@@ -164,7 +154,7 @@ class CardService:
             card_ids = record.card_ids if hasattr(record, 'card_ids') else []
             cards = [c for c in active_cards if c.id in card_ids]
             draw_history.append({
-                "round": record.round,
+                "round": record.draw_round,
                 "cards": cards,
             })
         
@@ -219,13 +209,13 @@ class CardService:
         
         # Get draw round
         latest_draw = await card_dao.get_latest_draw(db, project_id)
-        draw_round = (latest_draw.round + 1) if latest_draw else 1
+        draw_round = (latest_draw.draw_round + 1) if latest_draw else 1
         
         # Create draw record
         draw_record = await card_dao.create_draw_record(
             db,
             {
-                "project_id": project_id,
+                "project_id": str(project_id),
                 "round": draw_round,
                 "card_ids": [c.id for c in selected],
                 "mode": req.mode,
@@ -352,26 +342,13 @@ class CardService:
                 detail="Not authorized to access this project",
             )
 
-        from app.models.draw_history import DrawHistory
-        from sqlalchemy import select
-
-        # Build query
-        stmt = select(DrawHistory).where(
-            DrawHistory.project_id == project_id
-        )
-        if chapter_id:
-            stmt = stmt.where(DrawHistory.chapter_id == chapter_id)
-
-        stmt = stmt.order_by(DrawHistory.created_at.desc()).limit(50)
-
-        result = await db.execute(stmt)
-        records = list(result.scalars().all())
+        records = await card_dao.get_draw_history(db, project_id, chapter_id)
 
         history = []
         for record in records:
             history.append({
                 "id": record.id,
-                "round": record.round,
+                "round": record.draw_round,
                 "card_ids": record.card_ids,
                 "mode": record.mode,
                 "chapter_id": record.chapter_id,
@@ -390,7 +367,7 @@ class CardService:
         """Get a single draw history record by draw_id."""
         history = await self.get_draw_history(db, user_id, project_id)
         for item in history:
-            if item.get("id") == draw_id or item.id == draw_id:
+            if item.get("id") == draw_id:
                 return item
         return None
 
