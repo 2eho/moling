@@ -11,7 +11,7 @@ class TestVaultCharacter:
 
     async def test_list_characters_success(self, async_client: AsyncClient, 
                                           auth_headers, test_project):
-        """获取人物列表成功应返回 200 及人物数组。"""
+        """获取人物列表成功应返回 200 及人物数组（APIResponse 包裹）。"""
         # Arrange
 
         # Act
@@ -22,8 +22,9 @@ class TestVaultCharacter:
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        payload = resp.json()
+        assert "data" in payload
+        assert isinstance(payload["data"]["items"], list)
 
     async def test_create_character_success(self, async_client: AsyncClient, 
                                             auth_headers, test_project):
@@ -31,6 +32,7 @@ class TestVaultCharacter:
         # Arrange
         payload = {
             "name": "测试角色",
+            "role": "主角",
             "description": "这是一个测试角色。",
             "traits": ["勇敢", "正直"],
             "relationships": {}
@@ -46,7 +48,7 @@ class TestVaultCharacter:
         # Assert
         assert resp.status_code == 201
         data = resp.json()
-        assert data["name"] == "测试角色"
+        assert data["data"]["name"] == "测试角色"
 
     async def test_update_character_success(self, async_client: AsyncClient, 
                                             auth_headers, test_project):
@@ -54,6 +56,7 @@ class TestVaultCharacter:
         # Arrange - 先创建一个人物
         create_payload = {
             "name": "要更新的角色",
+            "role": "配角",
             "description": "描述"
         }
         
@@ -63,11 +66,12 @@ class TestVaultCharacter:
             headers=auth_headers
         )
         assert create_resp.status_code == 201
-        character_id = create_resp.json()["id"]
+        character_id = create_resp.json()["data"]["id"]
 
         # 更新
         update_payload = {
             "name": "更新后的角色",
+            "role": "配角",
             "description": "更新后的描述"
         }
 
@@ -81,7 +85,7 @@ class TestVaultCharacter:
         # Assert
         assert resp.status_code == 200
         data = resp.json()
-        assert data["name"] == "更新后的角色"
+        assert data["data"]["name"] == "更新后的角色"
 
     async def test_delete_character_success(self, async_client: AsyncClient, 
                                             auth_headers, test_project):
@@ -89,6 +93,7 @@ class TestVaultCharacter:
         # Arrange - 先创建一个人物
         create_payload = {
             "name": "要删除的角色",
+            "role": "龙套",
             "description": "描述"
         }
         
@@ -98,7 +103,7 @@ class TestVaultCharacter:
             headers=auth_headers
         )
         assert create_resp.status_code == 201
-        character_id = create_resp.json()["id"]
+        character_id = create_resp.json()["data"]["id"]
 
         # Act
         resp = await async_client.delete(
@@ -115,7 +120,7 @@ class TestVaultTimeline:
 
     async def test_list_timeline_success(self, async_client: AsyncClient, 
                                         auth_headers, test_project):
-        """获取时间线事件列表成功应返回 200 及事件数组。"""
+        """获取时间线事件列表成功应返回 200 及事件数组（APIResponse 包裹）。"""
         # Arrange
 
         # Act
@@ -126,17 +131,18 @@ class TestVaultTimeline:
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        payload = resp.json()
+        assert "data" in payload
+        assert isinstance(payload["data"]["items"], list)
 
     async def test_create_timeline_event_success(self, async_client: AsyncClient, 
                                                  auth_headers, test_project):
         """创建时间线事件成功应返回 201 及 TimelineResp。"""
         # Arrange
         payload = {
-            "event_name": "测试事件",
+            "chapter_number": 1,
+            "event": "测试事件",
             "description": "这是一个测试事件。",
-            "order": 1
         }
 
         # Act
@@ -149,7 +155,7 @@ class TestVaultTimeline:
         # Assert
         assert resp.status_code == 201
         data = resp.json()
-        assert data["event_name"] == "测试事件"
+        assert data["data"]["event"] == "测试事件"
 
 
 class TestVaultPlotPromise:
@@ -157,7 +163,7 @@ class TestVaultPlotPromise:
 
     async def test_list_plot_promises_success(self, async_client: AsyncClient, 
                                               auth_headers, test_project):
-        """获取剧情承诺列表成功应返回 200 及承诺数组。"""
+        """获取剧情承诺列表成功应返回 200 及承诺数组（APIResponse 包裹）。"""
         # Arrange
 
         # Act
@@ -168,16 +174,17 @@ class TestVaultPlotPromise:
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        payload = resp.json()
+        assert "data" in payload
+        assert isinstance(payload["data"]["items"], list)
 
     async def test_create_plot_promise_success(self, async_client: AsyncClient, 
                                                auth_headers, test_project):
         """创建剧情承诺成功应返回 201 及 PlotPromiseResp。"""
         # Arrange
         payload = {
-            "promise_text": "测试承诺",
-            "status": "pending"
+            "description": "测试承诺",
+            "type": "伏笔",
         }
 
         # Act
@@ -190,7 +197,7 @@ class TestVaultPlotPromise:
         # Assert
         assert resp.status_code == 201
         data = resp.json()
-        assert data["promise_text"] == "测试承诺"
+        assert data["data"]["description"] == "测试承诺"
 
 
 class TestVaultWorld:
@@ -198,7 +205,7 @@ class TestVaultWorld:
 
     async def test_list_world_entries_success(self, async_client: AsyncClient, 
                                              auth_headers, test_project):
-        """获取世界观条目列表成功应返回 200 及条目数组。"""
+        """获取世界观条目列表成功应返回 200 及条目数组（APIResponse 包裹）。"""
         # Arrange
 
         # Act
@@ -209,15 +216,16 @@ class TestVaultWorld:
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        payload = resp.json()
+        assert "data" in payload
+        assert isinstance(payload["data"]["items"], list)
 
     async def test_create_world_entry_success(self, async_client: AsyncClient, 
                                               auth_headers, test_project):
         """创建世界观条目成功应返回 201 及 WorldResp。"""
         # Arrange
         payload = {
-            "entry_name": "测试世界观",
+            "name": "测试世界观",
             "description": "这是一个测试世界观条目。",
             "category": "魔法体系"
         }
@@ -232,4 +240,4 @@ class TestVaultWorld:
         # Assert
         assert resp.status_code == 201
         data = resp.json()
-        assert data["entry_name"] == "测试世界观"
+        assert data["data"]["name"] == "测试世界观"

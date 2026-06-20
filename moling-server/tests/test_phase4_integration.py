@@ -100,11 +100,16 @@ if not IS_WINDOWS:
     # 辅助函数
     # ------------------------------------------------------------------
 
-    async def ensure_project(db, pid=99999):
-        from app.models import Project
+    async def ensure_project(db, pid=99999, uid="user-test-001"):
+        from app.models import Project, User
+        if await db.get(User, uid) is None:
+            db.add(User(id=uid, email="test@phase4.local", username="phase4_test",
+                        password_hash="$2b$12$dummy", created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc)))
+            await db.flush()
         if await db.get(Project, pid) is None:
             db.add(Project(
-                id=pid, title="测试项目", genre="玄幻",
+                id=pid, user_id=uid, title="测试项目", genre="玄幻",
                 status="active",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),

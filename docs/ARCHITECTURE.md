@@ -528,11 +528,17 @@ MolingProject/
 │   ├── deploy.sh              # Linux 部署脚本
 │   └── DEPLOYMENT.md         # 部署文档
 ├── docs/                      # 项目文档
-│   ├── RUNBOOK.md             # 故障处理 SOP
-│   ├── ARCHITECTURE.md       # 系统架构说明（本文档）
-│   ├── ONBOARDING.md          # 新开发者快速上手
-│   ├── DEPLOYMENT_GUIDE.md   # 部署指南
-│   └── MONITORING_SETUP.md   # 监控配置指南
+│   ├── README.md              # 文档索引
+│   ├── ARCHITECTURE.md        # 系统架构（本文档）
+│   ├── SPECIFICATIONS.md      # 功能规格
+│   ├── DEPLOYMENT.md          # 部署指南
+│   ├── SECURITY_HARDENING.md  # 安全加固
+│   ├── ONBOARDING.md          # 开发上手
+│   ├── design/                # 设计文档
+│   ├── operations/            # 运维手册（RUNBOOK/备份/监控/CI/CD）
+│   ├── reports/               # 审计报告
+│   ├── guides/                # 开发指南
+│   └── archive/               # 历史归档
 ├── .github/                   # GitHub 配置
 │   └── workflows/             # CI/CD 流水线
 │       ├── ci-cd.yml         # CI/CD 配置
