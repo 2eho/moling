@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 async def I10_conflict_check(
     db: AsyncSession,
-    project_id: int,
+    project_id: str,
     new_data: dict,
 ) -> list[dict]:
     """
@@ -57,7 +57,7 @@ async def I10_conflict_check(
 
 async def _check_character_conflicts(
     db: AsyncSession,
-    project_id: int,
+    project_id: str,
     new_data: dict,
 ) -> list[dict]:
     """检查角色冲突：同名不同设定。"""
@@ -112,7 +112,7 @@ async def _check_character_conflicts(
 
 async def _check_timeline_conflicts(
     db: AsyncSession,
-    project_id: int,
+    project_id: str,
     new_data: dict,
 ) -> list[dict]:
     """检查时间线冲突。"""
@@ -142,7 +142,7 @@ async def _check_timeline_conflicts(
 
 async def _check_world_conflicts(
     db: AsyncSession,
-    project_id: int,
+    project_id: str,
     new_data: dict,
 ) -> list[dict]:
     """检查世界观冲突。"""

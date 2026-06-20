@@ -33,7 +33,7 @@ class Phase3Committer:
     def __init__(
         self,
         db: AsyncSession,
-        project_id: int,
+        project_id: str,
         resolve_strategy: str = "keep_existing",
     ):
         self.db = db

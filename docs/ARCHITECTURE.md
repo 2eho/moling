@@ -890,6 +890,31 @@ sequenceDiagram
 | `count(filters)` | `int` | 计数，默认排除软删除 |
 | `list_cursor(cursor, cursor_field, limit)` | `tuple[list, cursor]` | 游标分页查询 |
 
+### Model 层时间戳统一 (TimestampMixin)
+
+> **更新于 2026-06-21 — SystemConfig 迁移**
+
+`app/models/mixins.py` 定义了 `TimestampMixin`，为所有模型提供统一的 `created_at` / `updated_at` 字段管理：
+
+- `created_at`: `DateTime(UTC, default=func.now(), nullable=False)` — 记录创建时自动填充
+- `updated_at`: `DateTime(UTC, default=func.now(), onupdate=func.now(), nullable=False)` — 每次更新自动刷新
+
+**SystemConfig 迁移**：`app/models/system_config.py` 的原 `SystemConfig` 模型手动管理 `updated_at` 字段。现已重构为继承 `TimestampMixin`，移除手动 `updated_at` 逻辑，新增 `created_at`。
+
+**Alembic 迁移**：`alembic/versions/0005_add_system_config_created_at.py` 为 `system_config` 表新增 `created_at` 列。
+
+此变更是统一模型基础设施的第一步，后续所有模型应逐步迁移到 `TimestampMixin`。
+
+### Schema 层 UUID 类型修正
+
+> **更新于 2026-06-21 — vault Response Schema 修复**
+
+`app/schemas/vault.py` 的 `CharacterResp.id` 和 `PlotPromiseResp.id` 字段原定义为 `int`，但底层 BaseModel 主键为 `String(36)` UUID。修正为 `str` 以匹配 ORM 类型。
+
+`app/router/vault.py` 的路由参数 `character_id` 同步从 `int` 改为 `str`，保持路径参数与 Schema 类型一致。
+
+此修复属于 ID 类型统一计划（见 `docs/id-type-unification-plan.md`）的战术执行，消除了 Schema 层与 ORM 层的类型不一致。
+
 ---
 
 ## 性能优化
@@ -1043,6 +1068,7 @@ docker exec moling-db pg_dump -U moling moling > backup_$(date +%Y%m%d).sql
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.5.1 | 2026-06-21 | 文档债消灭：新增 Model 层时间戳统一 (TimestampMixin + SystemConfig 迁移 0005)、Schema 层 UUID 类型修正 (vault Response Schema int→str) | Moling Team |
 | 1.5.0 | 2026-06-21 | Agent 优化：文档激进合并 — 附录新增常用操作命令（本地启动、.env 完整示例、健康检查、Redis/Celery 诊断、Docker 部署、数据库备份），吸收 DEPLOYMENT/RUNBOOK/ONBOARDING/SECURITY 中的操作级内容 | Moling Team |
 | 1.4.0 | 2026-06-21 | 文档闭环回填：新增 AppError 错误处理体系、子情节健康监控服务、Worker 可靠性链路（7 项 Celery 加固 + DB 会话管理 + 三层异常处理）、Windows 平台适配层（greenlet 补丁 + 双轨会话）、DAO 层设计规范（limit 钳制 / 软删除 / 游标分页 / 事务契约）、Content-Length 中间件、Refresh Token 轮换 | Moling Team |
 | 1.3.0 | 2026-06-21 | R3 架构加固：新增配置管理章节（26 项环境变量）、Celery Beat 定时调度（4 个周期性任务）、健康检查增强（DB+Redis+Celery 三方验证）、DAO 层命名规范 + 游标分页 | Moling Team |

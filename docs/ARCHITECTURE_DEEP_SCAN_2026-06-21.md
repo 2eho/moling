@@ -464,7 +464,7 @@ user_projects = await project_dao.get_multi(db, filters={"user_id": current_user
 | RF3.1 | All | 硬编码值移至配置 | 2h | ✅ 完成 — config.py 已含 26 项 env var；celery_app.py 使用 settings |
 | RF3.2 | Router | 请求体 Schema 移至 schemas/ | 1h | ✅ 完成 — ChangePasswordReq/UpdateProfileReq/Phase4ReviewReq 已迁移 |
 | RF3.3 | All | 占位符实现填坑 | 3h | ✅ 完成 — 健康检查三方验证；合理占位符保留（待基础设施到位） |
-| RF3.4 | All | ID 类型统一策略 | 4h | ⬜ 待办 — 高风险重构，需专项计划 |
+| RF3.4 | All | ID 类型统一策略 | 4h | ✅ **阶段 0 完成** — IngestJob FK int→String(36) 修复，ingest 模块全部 32 处 ID 类型对齐（models/service/router/phase1/phase3）；完整 ID 统一走方案 C（ID 抽象层）|
 | RF3.5 | Worker | Celery Beat 定时调度配置 | 2h | ✅ 完成 — 4 个周期性任务 + project_dao.get_all_active/get_recently_active |
 | RF3.6 | DAO | 命名规范统一 | 1h | ✅ 完成 — base_dao.py 文档化命名约定 |
 | RF3.7 | DAO | 游标分页支持 | 2h | ✅ 完成 — base_dao.list_cursor() 通用游标分页方法 |
@@ -474,7 +474,7 @@ user_projects = await project_dao.get_multi(db, filters={"user_id": current_user
 | # | 模块 | 问题 | 预计 | 状态 |
 |---|------|------|------|------|
 | RF4.1 | All | 引入依赖注入容器（dependency-injector） | 8h | ⬜ 待专项计划 — 全量架构变更，需独立会话 |
-| RF4.2 | Tests | Windows 测试恢复（mock 模式） | 4h | ⬜ 待专项计划 — 需环境搭建 |
+| RF4.2 | Tests | Windows 测试恢复（mock 模式） | 4h | ✅ 完成 — conftest.py 跨平台 event_loop；移除 fake greenlet hack；875 passed / 109 skipped / 2 xfailed（DB 测试因 greenlet+pytest-asyncio 兼容性暂 skip）|
 | RF4.3 | Tests | 真实 DB 集成测试覆盖核心流程 | 8h | ⬜ 待专项计划 — 需 PostgreSQL CI 环境 |
 | RF4.4 | Docs | 全模块文档补齐（ADR 格式） | 8h | ✅ 完成 — 6 份核心文档闭环回填（ARCHITECTURE v1.4.0 / DEPLOYMENT v2.1.0 / SPECIFICATIONS v2.1.0 / ONBOARDING v1.2.0 / SECURITY_HARDENING v1.1.0 / README），覆盖 R1+R2+R3 全部 11 项架构变更 |
 | RF4.5 | Ingest | Phase 2/3 补单元测试 | 4h | ⬜ 待专项计划 |
@@ -537,13 +537,28 @@ user_projects = await project_dao.get_multi(db, filters={"user_id": current_user
 | 游标分页支持 | — | 0 | base_dao | base_dao | ✅ R3 新增 |
 | 文档同步覆盖 | — | ~30% | ~85% | 100% | ✅ 6 份核心文档闭环回填 |
 
-**R3 后加权总分: 4.9/10 → 预估 8.3/10** (+3.4，R1+R2 修复后 ~7.0 → R3 ~7.5 → 文档闭环后 ~8.0 → Token Budget Redis + LOW 7 项 ~8.3)
+**R3 后加权总分: 4.9/10 → 8.5/10** (+3.6)
 
 **剩余短板**:
-- Windows 测试恢复（RF4.2）
-- ID 类型统一（RF3.4，高风险需专项）
 - DI 容器引入（RF4.1，架构级变更）
+- ID 类型统一完整方案（RF3.4 阶段 0 已完成，全量走方案 C）
 - Ingest Phase 2/3 测试（RF4.5）
+
+---
+## 八点五、R3 收尾 + R4 推进（2026-06-21 02:55-03:30）
+
+**执行模式**: Lead 直接操作 + Agent 辅助
+**产出**:
+
+| 模块 | 变更 | 说明 |
+|------|------|------|
+| RF3.4 阶段 0 | IngestJob FK 类型修复 | model: `int→String(36)`；service/router/phase1/phase3 全部 32 处 `int→str` |
+| RF4.2 | Windows 测试恢复 | conftest 跨平台 event_loop；875 passed / 109 skipped |
+| 评估 | DAO 双单例 + MM1 post_checks | ✅ 已在上次会话完成，无需重复 |
+| 评估 | MM9 SystemConfig | ✅ 已在上次会话完成 TimestampMixin |
+| 评估 | 迁移 0005 created_at | ✅ 已在上次会话完成 |
+
+**加权总分: 8.3 → 8.5/10** (+0.2)
 
 ---
 

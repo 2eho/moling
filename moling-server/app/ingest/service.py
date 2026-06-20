@@ -141,8 +141,8 @@ class IngestService:
     @staticmethod
     async def create_job(
         db: AsyncSession,
-        project_id: int,
-        user_id: int,
+        project_id: str,
+        user_id: str,
         source_type: str,
         source_url: Optional[str] = None,
         title: str = "",
@@ -165,7 +165,7 @@ class IngestService:
         return job
 
     @staticmethod
-    async def get_job(db: AsyncSession, job_id: int) -> IngestJob:
+    async def get_job(db: AsyncSession, job_id: str) -> IngestJob:
         """获取导入任务详情。"""
         job = await db.get(IngestJob, job_id)
         if not job:
@@ -174,7 +174,7 @@ class IngestService:
 
     @staticmethod
     async def get_jobs_for_project(
-        db: AsyncSession, project_id: int
+        db: AsyncSession, project_id: str
     ) -> list[IngestJob]:
         """获取项目的所有导入任务。"""
         result = await db.execute(
@@ -191,7 +191,7 @@ class IngestService:
     @staticmethod
     async def run_phase1(
         db: AsyncSession,
-        job_id: int,
+        job_id: str,
         chapters_data: Optional[list[dict]] = None,
     ) -> dict:
         """
@@ -314,7 +314,7 @@ class IngestService:
     @staticmethod
     async def run_phase2(
         db: AsyncSession,
-        job_id: int,
+        job_id: str,
     ) -> dict:
         """
         执行 Phase 2 近三章动态层分析。
@@ -410,7 +410,7 @@ class IngestService:
     @staticmethod
     async def run_phase3(
         db: AsyncSession,
-        job_id: int,
+        job_id: str,
         resolve_strategy: str = "keep_existing",
     ) -> dict:
         """
@@ -491,8 +491,8 @@ class IngestService:
     @staticmethod
     async def full_import(
         db: AsyncSession,
-        project_id: int,
-        user_id: int,
+        project_id: str,
+        user_id: str,
         chapters_data: list[dict],
         source_type: str = "text",
         title: str = "",

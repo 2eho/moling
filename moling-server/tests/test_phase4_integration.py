@@ -109,7 +109,7 @@ if not IS_WINDOWS:
             await db.flush()
         if await db.get(Project, pid) is None:
             db.add(Project(
-                id=pid, user_id=uid, title="测试项目", genre="玄幻",
+                id=pid, user_id=uid, title="测试项目", author="测试作者", genre="玄幻",
                 status="active",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),

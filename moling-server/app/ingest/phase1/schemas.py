@@ -123,7 +123,7 @@ class MergedWorldItem:
 @dataclass
 class Phase1Input:
     """Phase 1 输入 — 由 Phase 0 产生的拆解结果"""
-    project_id: int
+    project_id: str
     chapters: list[dict]  # DissectResult.chapters 的 dict 格式
     total_chapters: int = 0
 

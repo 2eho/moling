@@ -46,8 +46,8 @@ class ConflictItem:
 @dataclass
 class Phase3Input:
     """Phase 3 输入"""
-    project_id: int
-    job_id: int
+    project_id: str
+    job_id: str
     phase1_result: dict
     phase2_result: Optional[dict] = None
     resolve_strategy: str = "keep_existing"  # keep_existing / merge / replace

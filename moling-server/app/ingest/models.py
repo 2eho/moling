@@ -19,13 +19,15 @@ class IngestJob(BaseModel):
 
     __tablename__ = "ingest_jobs"
 
-    project_id: Mapped[int] = mapped_column(
+    project_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="所属项目 ID",
     )
-    user_id: Mapped[int] = mapped_column(
+    user_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         comment="发起导入的用户 ID",

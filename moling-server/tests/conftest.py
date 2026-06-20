@@ -1,26 +1,20 @@
 """墨灵 (Moling) — Pytest 配置。
 
 提供测试固件：测试数据库、认证头、测试项目等。
+支持 Windows / Linux / macOS 全平台。
 """
 
 import sys
 import platform
-import pytest
+import os
 import asyncio
+import pytest
 from typing import AsyncGenerator, Dict, Any
 
 # ---------------------------------------------------------------------------
-# Windows 兼容处理
+# 平台检测
 # ---------------------------------------------------------------------------
 IS_WINDOWS = platform.system() == "Windows"
-
-if IS_WINDOWS:
-    # 阻止 greenlet 被导入
-    _fake_gl = type(sys)("greenlet")
-    _fake_gl.getcurrent = lambda: None
-    _fake_gl.greenlet = type("greenlet", (), {"spawn": lambda self, fn, *a, **k: None})
-    _fake_gl.error = type("error", (Exception,), {})
-    sys.modules["greenlet"] = _fake_gl
 
 # ---------------------------------------------------------------------------
 # 导入
@@ -34,24 +28,18 @@ from app.dependencies import get_db, get_current_user, get_optional_user
 from app.models.base import Base
 
 # ---------------------------------------------------------------------------
-# Windows: 自动 skip 数据库测试
+# 全平台：event_loop fixture（异步测试必需）
 # ---------------------------------------------------------------------------
 
-def pytest_collection_modifyitems(config, items):
-    """Windows 上跳过需要数据库的测试。"""
-    if not IS_WINDOWS:
-        return
-    skip_reason = "Windows: 跳过数据库测试（greenlet DLL 不可用）"
-    db_fixtures = {"async_client", "test_db", "test_user", "auth_headers", 
-                   "test_project", "test_chapter"}
-    for item in items:
-        fixturenames = set(getattr(item, "fixturenames", []))
-        if fixturenames & db_fixtures:
-            item.add_marker(pytest.mark.skip(reason=skip_reason))
-
+@pytest.fixture(scope="session")
+def event_loop():
+    """会话级别事件循环 — 全平台提供。"""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 # ---------------------------------------------------------------------------
-# Linux / macOS: 数据库和客户端固件
+# 非 Windows 平台：数据库固件
 # ---------------------------------------------------------------------------
 
 if not IS_WINDOWS:
@@ -61,17 +49,9 @@ if not IS_WINDOWS:
     from jose import jwt
     from datetime import datetime, timedelta, timezone
 
-    import os
-    TEST_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite://")
+    TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite://")
     settings = get_settings()
     _IS_PG = "postgresql" in TEST_DATABASE_URL
-
-    @pytest.fixture(scope="session")
-    def event_loop():
-        """会话级别事件循环。"""
-        loop = asyncio.new_event_loop()
-        yield loop
-        loop.close()
 
     @pytest_asyncio.fixture(scope="session")
     async def test_engine():
@@ -92,7 +72,7 @@ if not IS_WINDOWS:
         async with session_factory() as session:
             yield session
 
-    def _create_test_token(user_id: int) -> str:
+    def _create_test_token(user_id) -> str:
         """为指定用户 ID 创建 JWT 测试令牌。"""
         now = datetime.now(timezone.utc)
         payload = {
@@ -182,3 +162,19 @@ if not IS_WINDOWS:
             test_db, test_user.user.id, test_project.id, req
         )
         return chapter
+
+# ---------------------------------------------------------------------------
+# 收集阶段：Windows 跳过需要数据库固件的测试
+# ---------------------------------------------------------------------------
+
+def pytest_collection_modifyitems(config, items):
+    """Windows 上跳过需要数据库固件的测试（greenlet 兼容性限制）。"""
+    if not IS_WINDOWS:
+        return
+    skip_reason = "Windows: 跳过数据库测试（greenlet + pytest-asyncio 兼容性限制）"
+    db_fixtures = {"async_client", "test_db", "test_user", "auth_headers", 
+                   "test_project", "test_chapter", "test_engine"}
+    for item in items:
+        fixturenames = set(getattr(item, "fixturenames", []))
+        if fixturenames & db_fixtures:
+            item.add_marker(pytest.mark.skip(reason=skip_reason))

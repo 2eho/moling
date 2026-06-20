@@ -31,7 +31,7 @@ router = APIRouter(prefix="/projects/{project_id}/import", tags=["Import"])
 
 @router.post("")
 async def submit_import(
-    project_id: int,
+    project_id: str,
     body: Optional[dict] = None,
     text: Optional[str] = Query(default=None, description="粘贴文本导入"),
     file: Optional[UploadFile] = File(default=None, description="上传文件导入"),
@@ -133,8 +133,8 @@ async def submit_import(
 
 @router.get("/{job_id}")
 async def get_import_job(
-    project_id: int,
-    job_id: int,
+    project_id: str,
+    job_id: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -174,7 +174,7 @@ async def get_import_job(
 
 @router.get("")
 async def list_import_jobs(
-    project_id: int,
+    project_id: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -205,8 +205,8 @@ async def list_import_jobs(
 
 @router.post("/{job_id}/phase1")
 async def run_phase1(
-    project_id: int,
-    job_id: int,
+    project_id: str,
+    job_id: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -216,8 +216,8 @@ async def run_phase1(
 
 @router.get("/{job_id}/phase1/result")
 async def get_phase1_result(
-    project_id: int,
-    job_id: int,
+    project_id: str,
+    job_id: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -239,8 +239,8 @@ async def get_phase1_result(
 
 @router.post("/{job_id}/phase2")
 async def run_phase2(
-    project_id: int,
-    job_id: int,
+    project_id: str,
+    job_id: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -250,8 +250,8 @@ async def run_phase2(
 
 @router.get("/{job_id}/phase2/result")
 async def get_phase2_result(
-    project_id: int,
-    job_id: int,
+    project_id: str,
+    job_id: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -273,8 +273,8 @@ async def get_phase2_result(
 
 @router.post("/{job_id}/confirm")
 async def confirm_import(
-    project_id: int,
-    job_id: int,
+    project_id: str,
+    job_id: str,
     resolve_strategy: str = Query(
         default="keep_existing",
         description="冲突解决策略: keep_existing / merge / replace",
@@ -288,8 +288,8 @@ async def confirm_import(
 
 @router.get("/{job_id}/phase3/result")
 async def get_phase3_result(
-    project_id: int,
-    job_id: int,
+    project_id: str,
+    job_id: str,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
@@ -311,7 +311,7 @@ async def get_phase3_result(
 
 @router.post("/full-import")
 async def full_import(
-    project_id: int,
+    project_id: str,
     text: str = Query(..., description="小说正文纯文本"),
     title: str = Query("", description="作品名称"),
     resolve_strategy: str = Query(
