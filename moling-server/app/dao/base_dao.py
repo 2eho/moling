@@ -287,3 +287,68 @@ class BaseDAO(Generic[ModelT]):
         except SQLAlchemyError as e:
             logger.error(f"DAO restore({id}) failed: {e}")
             raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
+
+    async def list_cursor(
+        self,
+        db: AsyncSession,
+        *,
+        cursor: Any = None,
+        cursor_field: str = "id",
+        limit: int = 50,
+        filters: dict[str, Any] | None = None,
+        order: str = "desc",
+        include_deleted: bool = False,
+    ) -> tuple[list[ModelT], Any | None]:
+        """游标分页查询，返回 (items, next_cursor)。
+
+        Args:
+            cursor: 上一页最后一条的 cursor_field 值，None 表示第一页
+            cursor_field: 用作游标的字段名（默认 "id"）
+            limit: 每页条数（最大 200，默认 50）
+            filters: 额外的等值过滤条件
+            order: "asc" 或 "desc"
+            include_deleted: 是否包含软删除记录
+
+        Returns:
+            (items, next_cursor) — next_cursor 为 None 表示没有更多数据
+        """
+        _CURSOR_MAX_LIMIT = 200
+        limit = min(max(limit, 1), _CURSOR_MAX_LIMIT)
+
+        try:
+            column = getattr(self.model_class, cursor_field, None)
+            if column is None:
+                raise ValueError(f"Model {self.model_class.__name__} has no field '{cursor_field}'")
+
+            stmt = select(self.model_class)
+
+            if not include_deleted and hasattr(self.model_class, 'is_deleted'):
+                stmt = stmt.where(self.model_class.is_deleted == False)
+
+            stmt = self._apply_filters(stmt, filters)
+
+            # 游标条件
+            if cursor is not None:
+                if order == "desc":
+                    stmt = stmt.where(column < cursor)
+                else:
+                    stmt = stmt.where(column > cursor)
+
+            # 排序
+            stmt = stmt.order_by(column.desc() if order == "desc" else column.asc())
+
+            # 多取一条判断是否有下一页
+            stmt = stmt.limit(limit + 1)
+
+            result = await db.execute(stmt)
+            rows = list(result.scalars().all())
+
+            has_more = len(rows) > limit
+            items = rows[:limit]
+            next_cursor = getattr(items[-1], cursor_field) if has_more and items else None
+
+            return items, next_cursor
+
+        except (SQLAlchemyError, ValueError) as e:
+            logger.error(f"DAO list_cursor({self.model_class.__name__}) failed: {e}")
+            raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))

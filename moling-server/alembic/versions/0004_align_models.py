@@ -300,9 +300,15 @@ def upgrade() -> None:
         "ALTER TABLE generation_tasks "
         "DROP CONSTRAINT IF EXISTS generation_tasks_user_id_fkey"
     )
+    # draw_history may have FK names from either draw_records or draw_history
+    # depending on whether this is a first upgrade or a re-upgrade after rollback
     op.execute(
         "ALTER TABLE draw_history "
         "DROP CONSTRAINT IF EXISTS draw_records_user_id_fkey"
+    )
+    op.execute(
+        "ALTER TABLE draw_history "
+        "DROP CONSTRAINT IF EXISTS draw_history_user_id_fkey"
     )
     op.execute(
         "ALTER TABLE ingest_jobs "
@@ -317,6 +323,10 @@ def upgrade() -> None:
     op.execute(
         "ALTER TABLE draw_history "
         "DROP CONSTRAINT IF EXISTS draw_records_chapter_id_fkey"
+    )
+    op.execute(
+        "ALTER TABLE draw_history "
+        "DROP CONSTRAINT IF EXISTS draw_history_chapter_id_fkey"
     )
 
     # -- 3b. Alter FK column types to match new PK type --
