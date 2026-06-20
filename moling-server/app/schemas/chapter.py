@@ -26,7 +26,7 @@ class ChapterResp(BaseModel):
     """Chapter response (without dynamic_layer)."""
 
     id: str = Field(..., description="章节 ID (UUID)")
-    project_id: str = Field(..., description="所属项目 ID (UUID)")
+    project_id: int = Field(..., description="所属项目 ID")
     title: str = Field(..., description="章节标题")
     content: Optional[str] = Field(default=None, description="章节正文")
     chapter_number: int = Field(..., description="章节序号")
