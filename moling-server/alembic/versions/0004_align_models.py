@@ -30,7 +30,7 @@ import sqlalchemy as sa
 
 
 revision: str = "0004"
-down_revision: Union[str, None] = "0003"
+down_revision: Union[str, None] = "0002_add_ingest_jobs"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
