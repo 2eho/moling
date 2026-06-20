@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import platform
@@ -158,74 +159,87 @@ def _split_chapters(text: str) -> list[dict[str, str]]:
 # 文件解析辅助
 # ---------------------------------------------------------------------------
 
-def _parse_txt(file_path: str) -> str:
+async def _parse_txt(file_path: str) -> str:
     """解析纯文本文件，尝试多种编码."""
     encodings = ["utf-8", "gbk", "gb2312", "gb18030", "latin-1"]
-    for enc in encodings:
-        try:
-            with open(file_path, "r", encoding=enc) as fh:
-                return fh.read()
-        except (UnicodeDecodeError, UnicodeError):
-            continue
-    raise ValidationError(
-        error_code=ErrorCode.VALIDATION_ERROR,
-        detail="无法识别文件编码，请确认文件为 UTF-8 或 GBK 编码",
-    )
+
+    def _read():
+        for enc in encodings:
+            try:
+                with open(file_path, "r", encoding=enc) as fh:
+                    return fh.read()
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        raise ValidationError(
+            error_code=ErrorCode.VALIDATION_ERROR,
+            detail="无法识别文件编码，请确认文件为 UTF-8 或 GBK 编码",
+        )
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _read)
 
 
-def _parse_docx(file_path: str) -> str:
+async def _parse_docx(file_path: str) -> str:
     """解析 docx 文件，提取纯文本."""
     try:
         from docx import Document
     except ImportError:
         logger.warning("python-docx 未安装，退回 TXT 解析")
-        return _parse_txt(file_path)
+        return await _parse_txt(file_path)
 
-    doc = Document(file_path)
-    paragraphs = []
-    for para in doc.paragraphs:
-        if para.text.strip():
-            paragraphs.append(para.text)
-    return "\n".join(paragraphs)
+    def _read():
+        doc = Document(file_path)
+        paragraphs = []
+        for para in doc.paragraphs:
+            if para.text.strip():
+                paragraphs.append(para.text)
+        return "\n".join(paragraphs)
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _read)
 
 
-def _parse_epub(file_path: str) -> str:
+async def _parse_epub(file_path: str) -> str:
     """解析 epub 文件，提取章节文本."""
     try:
         from ebooklib import epub
     except ImportError:
         logger.warning("ebooklib 未安装，退回 TXT 解析")
-        return _parse_txt(file_path)
+        return await _parse_txt(file_path)
 
-    book = epub.read_epub(file_path)
-    items = []
-    for item in book.get_items():
-        if item.get_type() == 9:  # ITEM_DOCUMENT
-            content = item.get_content().decode("utf-8", errors="replace")
-            # 简单去除 HTML 标签
-            content = re.sub(r"<[^>]+>", "", content)
-            content = re.sub(r"\s+", " ", content).strip()
-            if content:
-                items.append(content)
+    def _read():
+        book = epub.read_epub(file_path)
+        items = []
+        for item in book.get_items():
+            if item.get_type() == 9:  # ITEM_DOCUMENT
+                content = item.get_content().decode("utf-8", errors="replace")
+                # 简单去除 HTML 标签
+                content = re.sub(r"<[^>]+>", "", content)
+                content = re.sub(r"\s+", " ", content).strip()
+                if content:
+                    items.append(content)
 
-    if not items:
-        raise ValidationError(
-            error_code=ErrorCode.VALIDATION_ERROR,
-            detail="epub 文件中未找到可读内容",
-        )
+        if not items:
+            raise ValidationError(
+                error_code=ErrorCode.VALIDATION_ERROR,
+                detail="epub 文件中未找到可读内容",
+            )
 
-    return "\n\n".join(items)
+        return "\n\n".join(items)
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _read)
 
 
-def _parse_file(file_path: str) -> str:
+async def _parse_file(file_path: str) -> str:
     """根据文件扩展名选择解析器."""
     suffix = Path(file_path).suffix.lower()
     if suffix == ".txt":
-        return _parse_txt(file_path)
+        return await _parse_txt(file_path)
     elif suffix == ".docx":
-        return _parse_docx(file_path)
+        return await _parse_docx(file_path)
     elif suffix == ".epub":
-        return _parse_epub(file_path)
+        return await _parse_epub(file_path)
     else:
         raise ValidationError(
             error_code=ErrorCode.VALIDATION_ERROR,
@@ -306,7 +320,7 @@ class ImportService:
             )
 
         # 1. 解析文件
-        raw_text = _parse_file(file_path)
+        raw_text = await _parse_file(file_path)
         if not raw_text or not raw_text.strip():
             raise ValidationError(
                 error_code=ErrorCode.VALIDATION_ERROR,

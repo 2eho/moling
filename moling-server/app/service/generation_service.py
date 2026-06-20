@@ -839,7 +839,7 @@ class GenerationService:
 
         # Verify ownership
         if task.user_id != user_id:
-            raise PermissionError(
+            raise AppError(
                 error_code=ErrorCode.FORBIDDEN,
                 detail="Not authorized to access this task",
             )
@@ -870,14 +870,14 @@ class GenerationService:
 
         # Verify ownership
         if task.user_id != user_id:
-            raise PermissionError(
+            raise AppError(
                 error_code=ErrorCode.FORBIDDEN,
                 detail="Not authorized to cancel this task",
             )
 
         # Only pending/running tasks can be cancelled
         if task.status not in ("pending", "running"):
-            raise PermissionError(
+            raise AppError(
                 error_code=ErrorCode.INVALID_REQUEST,
                 detail=f"Cannot cancel task in status: {task.status}",
             )

@@ -6,6 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session as SyncSession
 
 from app.dao.base_dao import BaseDAO
@@ -20,7 +21,7 @@ class UserDAO(BaseDAO[User]):
 
     async def get_by_email(
         self,
-        db: SyncSession,  # type: ignore[override]
+        db: AsyncSession,
         email: str,
     ) -> Optional[User]:
         """Find a user by their email address."""
@@ -30,7 +31,7 @@ class UserDAO(BaseDAO[User]):
 
     async def get_by_username(
         self,
-        db: SyncSession,  # type: ignore[override]
+        db: AsyncSession,
         username: str,
     ) -> Optional[User]:
         """Find a user by their username."""
@@ -40,7 +41,7 @@ class UserDAO(BaseDAO[User]):
 
     async def get_by_reset_token(
         self,
-        db: SyncSession,  # type: ignore[override]
+        db: AsyncSession,
         token: str,
     ) -> Optional[User]:
         """Find a user by their password reset token."""

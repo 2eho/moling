@@ -26,10 +26,11 @@ from app.dao import (
     system_config_dao,
 )
 from app.dependencies import get_current_user, get_db
+from app.errors import ErrorCode, PermissionError, NotFoundError
 from app.schemas.admin import LLMConfigReq, LLMConfigResp, AdminStatsResp, UserManageResp, ProjectManageResp, UpdateUserReq
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["admin"])
+admin_router = APIRouter(tags=["admin"])
 
 
 # ---------------------------------------------------------------------------
@@ -68,13 +69,30 @@ async def _save_config_to_db(
 
 
 # ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+
+async def require_admin(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Verify the current user has admin role."""
+    if not getattr(current_user, "is_admin", False) and getattr(current_user, "role", None) != "admin":
+        raise PermissionError(
+            error_code=ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS,
+            detail="需要管理员权限",
+        )
+    return current_user
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
 
-@router.get("/llm-config", response_model=LLMConfigResp)
+@admin_router.get("/llm-config", response_model=LLMConfigResp)
 async def get_llm_config(
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Get current LLM configuration (masked for security)."""
@@ -93,10 +111,10 @@ async def get_llm_config(
     )
 
 
-@router.post("/llm-config", response_model=LLMConfigResp)
+@admin_router.post("/llm-config", response_model=LLMConfigResp)
 async def save_llm_config(
     req: LLMConfigReq,
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Save LLM configuration to database and update runtime overrides."""
@@ -116,9 +134,9 @@ async def save_llm_config(
     )
 
 
-@router.post("/llm-config/test")
+@admin_router.post("/llm-config/test")
 async def test_llm_connection(
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Test LLM API connection with current config."""
@@ -155,9 +173,9 @@ async def test_llm_connection(
         return {"ok": False, "msg": f"连接失败: {str(e)}"}
 
 
-@router.get("/stats", response_model=AdminStatsResp)
+@admin_router.get("/stats", response_model=AdminStatsResp)
 async def get_admin_stats(
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Get admin statistics (user count, project count, etc.)."""
@@ -174,12 +192,12 @@ async def get_admin_stats(
     )
 
 
-@router.get("/users", response_model=dict)
+@admin_router.get("/users", response_model=dict)
 async def get_users(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Get user list (admin only)."""
@@ -200,12 +218,12 @@ async def get_users(
     }
 
 
-@router.get("/projects", response_model=dict)
+@admin_router.get("/projects", response_model=dict)
 async def get_projects(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Get project list (admin only)."""
@@ -226,21 +244,32 @@ async def get_projects(
     }
 
 
-@router.patch("/users/{user_id}")
+@admin_router.patch("/users/{user_id}")
 async def update_user(
     user_id: str,
     data: UpdateUserReq,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
-    """更新用户信息（角色、封禁状态等）。"""
-    # 占位实现: user_service.update_user 尚不存在
-    return {"success": True, "user_id": user_id}
+    """Update user info (role, ban status, etc.)."""
+    user = await user_dao.get(db, user_id)
+    if not user:
+        raise NotFoundError(ErrorCode.USER_NOT_FOUND)
+
+    update_data = data.model_dump(exclude_unset=True)
+    if update_data:
+        for field, value in update_data.items():
+            if hasattr(user, field):
+                setattr(user, field, value)
+        await db.commit()
+        await db.refresh(user)
+
+    return {"success": True, "user_id": user_id, "updated_fields": list(update_data.keys())}
 
 
-@router.get("/llm-usage")
+@admin_router.get("/llm-usage")
 async def get_llm_usage(
-    current_user=Depends(get_current_user),
+    _admin=Depends(require_admin),
 ):
     """获取 LLM 用量统计 — 从 TokenBudgetManager 和 KeyManager 查询实时数据。"""
     try:

@@ -101,11 +101,12 @@ class SecretDAO(BaseDAO[Secret]):
         """
         total = 0
         for upd in updates:
-            secret_id = upd.pop("id")
+            secret_id = upd["id"]
+            values = {k: v for k, v in upd.items() if k != "id"}
             stmt = (
                 update(Secret)
                 .where(Secret.id == secret_id)
-                .values(**upd)
+                .values(**values)
             )
             result = await db.execute(stmt)
             total += result.rowcount

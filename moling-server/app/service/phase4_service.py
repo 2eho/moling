@@ -179,19 +179,9 @@ class Phase4Service:
         Returns:
             dict with analysis results
         """
-        from sqlalchemy.ext.asyncio import (
-            AsyncSession,
-            async_sessionmaker,
-            create_async_engine,
-        )
+        from app.dependencies import async_session_factory
 
-        settings = get_settings()
-        engine = create_async_engine(settings.DATABASE_URL, echo=False)
-        SessionLocal = async_sessionmaker(
-            engine, expire_on_commit=False, class_=AsyncSession
-        )
-
-        async with SessionLocal() as db:
+        async with async_session_factory() as db:
             # 1. 验证项目存在
             project = await project_dao.get(db, project_id)
             if project is None:

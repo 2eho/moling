@@ -17,7 +17,8 @@ class VaultChangelog(BaseModel):
 
     __tablename__ = "vault_changelog"
 
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[int] = mapped_column(
+        Integer,
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -68,12 +69,6 @@ class VaultChangelog(BaseModel):
         JSON,
         nullable=True,
         comment="额外元数据",
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-        comment="创建时间",
     )
 
     def __repr__(self) -> str:

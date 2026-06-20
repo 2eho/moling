@@ -38,9 +38,9 @@ _failed_count = 0
 for module_path, attr_name, prefix, tags in _ROUTER_REGISTRY:
     try:
         mod = __import__(module_path, fromlist=[attr_name])
-        router = getattr(mod, "router", None)
+        router = getattr(mod, attr_name, None)
         if router is None:
-            logger.error("Router '%s' loaded but has no 'router' attribute", module_path)
+            logger.error("Router '%s' loaded but has no '%s' attribute", module_path, attr_name)
             _failed_count += 1
             continue
         api_router.include_router(router, prefix=prefix, tags=tags)
