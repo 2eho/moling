@@ -1,6 +1,6 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.5.0  
+> **文档版本**: 1.6.0  
 > **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
@@ -626,9 +626,106 @@ db.commit() → 全部成功
 
 详细规格见 `docs/SPECIFICATIONS.md`。
 
+### Phase 4 已知技术债（扫描 v4，2026-06-21）
+
+> **扫描范围**: 15 文件 ~9000 行 | **加权总分**: 71.5/100 (B 级)  
+> **报告完整版**: `docs/reports/scan-v4-phase4.md`
+
+#### Critical (P0 — 必须修复)
+
+| ID | 问题 | 影响 | 位置 |
+|----|------|------|------|
+| P2-2 | Redis 释放锁无 owner 验证：`release_lock()` 用 `DELETE` 直接删 key，未通过 Lua 脚本检查 owner | 锁过期后被其他 Worker 持有，当前 Worker 可能删除他人持有的锁 | `phase4_store.py:107-108` |
+| P9-2 | R2 健康规则依赖的 `event_type` 字段不存在：`advancement_log` 条目只存储 `chapter/event/timestamp`，无 `event_type` | R2 告警（连续 4+ 次同类型重复推进）**永不被触发** | `health_monitor.py` + `plot_promise.py` 模型 |
+| P5-3 | 连续失败计数器 `self._state.consecutive_failures` 全局共享（非 per-project） | 项目 A 的失败会导致项目 B 收到错误级别的告警 | `phase4_scheduler.py` |
+| P6-4 | `merge_plot_promises` 的 stale 检查仅看 `planted_chapter`，忽略 `advancement_log` 中的推进记录 | 已在第 25 章推进的承诺在第 30 章被误标 stale | `merge_service.py:772-788` |
+
+#### High (P1 — 强烈建议)
+
+| ID | 问题 | 影响 | 位置 |
+|----|------|------|------|
+| P1-3 | `state`(Phase4State enum) 与 `status`(str) 双状态系统：多处同时更新但可能不一致 | 状态查询不可靠 | `phase4_task.py` 模型 + `phase4_service.py` |
+| P7-2 | 两套 LLM 提取体系：`execute_storage` 走 `_analyze_chapter_content`（旧版），`run_phase4` 走 `_call_extraction_llm`（新版） | 提取结果结构不一致，维护成本翻倍 | `phase4_service.py` |
+| P11-1 | 导入引擎无 BulkInserter：章节创建逐条 `db.add()`，1000+ 章导入性能差 | 大型导入极慢 | `import_service.py:327-339` |
+| P11-2 | 导入引擎无 savepoint 事务回滚保护：第 50/100 章失败时前 49 章状态不确定 | 数据安全风险 | `import_service.py` |
+
+#### 修复优先级
+
+```
+P2-2 (锁安全) → P9-2 (R2 失效) → P5-3 (全局计数器)
+    ↓
+P11-1 → P11-2 (导入引擎) → P1-3 (双状态) → P7-2 (两套提取)
+```
+
+所有修复完成后目标分数：**85+/100 (A 级)**
+
 ---
 
 ## 安全架构
+
+### Core/Middleware 已知技术债（扫描 v4，2026-06-21）
+
+> **扫描范围**: core/ + middleware/ + 上下文文件 | **发现**: 4 CRITICAL, 6 HIGH, 7 MEDIUM, 12 LOW  
+> **报告完整版**: `docs/reports/scan-v4-core.md`
+
+#### Critical (P0)
+
+| ID | 问题 | 位置 | 影响 |
+|----|------|------|------|
+| C1 | greenlet 补丁块中引用未定义的 `logger` — Windows 启动时 NameError | `dependencies.py:41,65` | Windows 应用完全不可用 |
+| C2 | 审计日志无条件 `await request.body()` — 全量缓冲至内存 | `audit_log.py:67-70` | OOM 攻击向量 |
+| C3 | ResponseFormat 全量缓冲响应体 — 流式 SSE/文件下载不可用 | `response_format.py:46-61` | 文件下载 OOM，SSE 完全不可用 |
+| C4 | 纯内存限流 — 多 Worker 独立计数 | `rate_limit.py:38-39` | 限流形同虚设（实际=配置×worker数） |
+
+#### High (P1)
+
+| ID | 问题 | 位置 | 影响 |
+|----|------|------|------|
+| H1 | 审计日志敏感数据过滤仅检查 query string | `audit_log.py:161` | Token/API Key 明文泄露到日志 |
+| H2 | 日志路径/轮转/保留全部硬编码 | `audit_log.py:15-55` | 运维不可控 |
+| H3 | 审计日志仅按时间轮转无大小保护 | `audit_log.py:31` | 磁盘写满风险 |
+| H4 | Content-Length limit 与 config 脱节 | `content_length_limit.py:16` vs `main.py:166` | 修改配置不生效 |
+| H5 | SECRET_KEY validator 依赖 Pydantic 字段声明顺序 | `config.py:174-177` | 生产可能用弱密钥 |
+| H6 | PostgreSQL 连接池缺 pool_recycle/pool_pre_ping | `dependencies.py:127-132` | 空闲连接过期异常 |
+
+#### 修复优先级
+
+```
+C1 (Windows 崩溃) → C2/C3 (OOM) → C4 (限流)
+    ↓
+H1 (敏感数据) → H5 (弱密钥) → H6 (连接池) → H2-H4 (运维化)
+```
+
+### 认证安全已知技术债（扫描 v4，2026-06-21）
+
+> **扫描范围**: config.py/auth_service.py/blacklist.py/dependencies.py | **发现**: 3 P0, 3 P1  
+> **报告完整版**: `docs/reports/scan-v4-security.md`
+
+#### P0 (立即修复)
+
+| ID | 问题 | 位置 | 影响 |
+|----|------|------|------|
+| S1 | Access Token 硬编码 `timedelta(minutes=15)` 忽视 `ACCESS_TOKEN_EXPIRE_MINUTES` 配置 | `auth_service.py:52` | 配置修改不生效，Token 过期时间不可控 |
+| S2 | Refresh Token 硬编码 `timedelta(days=30)` 忽视 `REFRESH_TOKEN_EXPIRE_DAYS=7` 配置 | `auth_service.py:67` | 实际有效期是配置的 4 倍，扩大泄露窗口 |
+| S3 | 密码策略不足：无账户锁定、无复杂度要求（允许 `12345678`）、无密码历史、无强度检查 | `auth_service.py` | 暴力破解风险 + 弱密码风险 |
+
+#### P1 (尽快修复)
+
+| ID | 问题 | 位置 | 影响 |
+|----|------|------|------|
+| S4 | 黑名单降级策略：Redis 不可用时 `is_blacklisted()` 返回 False | `auth/blacklist.py` | 所有已登出 Token 仍然有效 |
+| S5 | RBAC 不成熟：`status` 字段既是账户状态又是角色 | `models/user.py` | 权限模型脆弱，无法扩展 |
+| S6 | python-jose 维护停滞（最后更新 2021） | `dependencies.py` | 建议迁移 PyJWT |
+
+#### 修复优先级
+
+```
+S1/S2 (Token 过期) → S3 (密码策略) → S4 (黑名单降级) → S5 (RBAC) → S6 (jose→PyJWT)
+```
+
+---
+
+## 安全架构 (继续)
 
 ### 配置管理
 
@@ -1068,6 +1165,9 @@ docker exec moling-db pg_dump -U moling moling > backup_$(date +%Y%m%d).sql
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.6.2 | 2026-06-21 | 文档债：新增认证安全扫描 v4 发现 — 3 P0 + 3 P1 安全技术债入档（S1-S6 Token过期/密码/RBAC/黑名单降级/jose迁移） | Moling Team |
+| 1.6.1 | 2026-06-21 | 文档债：新增 Core/Middleware 深度扫描 v4 发现 — 4 Critical + 6 High 已知技术债入档（C1-C4 Windows/限流/审计/OOM） | Moling Team |
+| 1.6.0 | 2026-06-21 | 文档债：回填 Phase 4 深度扫描 v4 发现（71.5/100 B级）—— 4 Critical + 4 High 已知技术债入档，含修复优先级路线图 | Moling Team |
 | 1.5.1 | 2026-06-21 | 文档债消灭：新增 Model 层时间戳统一 (TimestampMixin + SystemConfig 迁移 0005)、Schema 层 UUID 类型修正 (vault Response Schema int→str) | Moling Team |
 | 1.5.0 | 2026-06-21 | Agent 优化：文档激进合并 — 附录新增常用操作命令（本地启动、.env 完整示例、健康检查、Redis/Celery 诊断、Docker 部署、数据库备份），吸收 DEPLOYMENT/RUNBOOK/ONBOARDING/SECURITY 中的操作级内容 | Moling Team |
 | 1.4.0 | 2026-06-21 | 文档闭环回填：新增 AppError 错误处理体系、子情节健康监控服务、Worker 可靠性链路（7 项 Celery 加固 + DB 会话管理 + 三层异常处理）、Windows 平台适配层（greenlet 补丁 + 双轨会话）、DAO 层设计规范（limit 钳制 / 软删除 / 游标分页 / 事务契约）、Content-Length 中间件、Refresh Token 轮换 | Moling Team |
