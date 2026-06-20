@@ -13,33 +13,15 @@ in ``app/worker/card_retire_task.py``.
 from __future__ import annotations
 
 import logging
-import platform
 from typing import Any
 
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from app.config import get_settings
+from app.dao import card_dao
+from app.dependencies import sync_session_factory
 from app.models.card_pool import CardPool
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Sync engine — Celery workers cannot use async sessions directly
-# ---------------------------------------------------------------------------
-
-def _get_sync_db_url() -> str:
-    """Derive a sync-compatible database URL from settings."""
-    settings = get_settings()
-    url = settings.DATABASE_URL
-    if platform.system() == "Windows" and url.startswith("sqlite"):
-        url = url.replace("sqlite+aiosqlite://", "sqlite://")
-    return url
-
-
-_sync_engine = create_engine(_get_sync_db_url(), echo=False, pool_pre_ping=True)
-_SessionLocal = sessionmaker(bind=_sync_engine, expire_on_commit=False)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -76,8 +58,8 @@ class CardPoolService:
 
     @staticmethod
     def _get_session() -> Session:
-        """Return a fresh sync database session."""
-        return _SessionLocal()
+        """Return a fresh sync database session from the shared factory."""
+        return sync_session_factory()
 
     @staticmethod
     def _calc_freshness_score(card: CardPool) -> float:
@@ -122,14 +104,7 @@ class CardPoolService:
         """
         session = self._get_session()
         try:
-            stmt = (
-                select(CardPool)
-                .where(
-                    CardPool.project_id == str(project_id),
-                    CardPool.is_active == True,
-                )
-            )
-            cards = list(session.execute(stmt).scalars().all())
+            cards = card_dao.list_active_by_project_sync(session, project_id)
 
             stale_ids: list[int] = []
             for card in cards:
@@ -159,14 +134,7 @@ class CardPoolService:
         """
         session = self._get_session()
         try:
-            stmt = (
-                select(CardPool)
-                .where(
-                    CardPool.project_id == str(project_id),
-                    CardPool.id.in_(card_ids),
-                )
-            )
-            cards = list(session.execute(stmt).scalars().all())
+            cards = card_dao.get_by_ids_sync(session, project_id, card_ids)
 
             now_chapter = 0
             for card in cards:
@@ -203,10 +171,7 @@ class CardPoolService:
         session = self._get_session()
         try:
             # Fetch existing cards to analyse coverage
-            stmt = select(CardPool).where(
-                CardPool.project_id == str(project_id),
-            )
-            existing_cards = list(session.execute(stmt).scalars().all())
+            existing_cards = card_dao.list_by_project_sync(session, project_id)
 
             # Build direction-type frequency map
             direction_counts: dict[str, int] = {}

@@ -57,7 +57,7 @@ class AdminStatsResp(BaseModel):
 class UserManageResp(BaseModel):
     """User management response."""
 
-    id: int = Field(..., description="用户 ID")
+    id: str = Field(..., description="用户 ID (UUID)")
     email: str = Field(..., description="邮箱")
     username: str = Field(..., description="用户名")
     status: str = Field(..., description="状态")
@@ -69,9 +69,9 @@ class UserManageResp(BaseModel):
 class ProjectManageResp(BaseModel):
     """Project management response."""
 
-    id: int = Field(..., description="项目 ID")
+    id: str = Field(..., description="项目 ID (UUID)")
     title: str = Field(..., description="项目标题")
-    user_id: int = Field(..., description="用户 ID")
+    user_id: str = Field(..., description="用户 ID (UUID)")
     status: str = Field(..., description="状态")
     chapter_count: int = Field(default=0, description="章节数")
     word_count: int = Field(default=0, description="字数")

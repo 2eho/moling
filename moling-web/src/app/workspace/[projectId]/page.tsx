@@ -11,7 +11,7 @@ import type { Option } from "@/stores/useWritingStore";
 import { Sidebar } from "@/components/vibe/Sidebar";
 import { ThemeSwitcher } from "@/components/vibe/ThemeSwitcher";
 import { AgentPanel } from "@/components/vibe/AgentPanel";
-import { PanelRight, Send, RefreshCw, BookOpen, Edit3, Eye, CheckCircle2, Activity, GitBranch, Library } from "lucide-react";
+import { PanelRight, Send, RefreshCw, BookOpen, Edit3, Eye, CheckCircle2, Copy, Menu, X, Plus, ChevronDown, ChevronLeft, ChevronRight, Library, Package, Settings } from "lucide-react";
 
 /** 多书 Mock 数据 */
 const MOCK_PROJECTS = [
@@ -122,7 +122,7 @@ const MOCK_OPTIONS: Option[] = [
   },
 ];
 
-function OptionsPanel({ project }: { project: Project }) {
+function OptionsPanel({ project, onDraftStep }: { project: Project; onDraftStep?: () => void }) {
   const [options] = useState<Option[]>(MOCK_OPTIONS);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [customInput, setCustomInput] = useState("");
@@ -136,6 +136,7 @@ function OptionsPanel({ project }: { project: Project }) {
   const handleConfirm = () => {
     // TODO: 确认选择，推进剧情
     setIsGenerating(true);
+    onDraftStep?.();
     setTimeout(() => {
       setIsGenerating(false);
       setSelectedOption(null);
@@ -279,6 +280,7 @@ function OptionsPanel({ project }: { project: Project }) {
               onClick={() => {
                 if (!customInput.trim()) return;
                 setIsGenerating(true);
+                onDraftStep?.();
                 setTimeout(() => {
                   setIsGenerating(false);
                   setCustomInput("");
@@ -305,6 +307,179 @@ function OptionsPanel({ project }: { project: Project }) {
   );
 }
 
+/** Mobile sidebar content — extracted for overlay use */
+function MobileSidebarContent({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const projects = useWritingStore((s) => s.projects);
+  const activeProjectId = useWritingStore((s) => s.activeProjectId);
+  const expandedProjectId = useWritingStore((s) => s.expandedProjectId);
+  const activeChapterId = useWritingStore((s) => s.activeChapterId);
+  const setActiveProject = useWritingStore((s) => s.setActiveProject);
+  const setActiveChapter = useWritingStore((s) => s.setActiveChapter);
+  const toggleProjectExpand = useWritingStore((s) => s.toggleProjectExpand);
+
+  const handleProjectClick = (projId: string) => {
+    setActiveProject(projId);
+    toggleProjectExpand(projId);
+    router.push(`/workspace/${projId}`);
+    onClose();
+  };
+
+  const handleChapterClick = (projId: string, chId: number) => {
+    setActiveChapter(chId);
+    router.push(`/workspace/${projId}`);
+    onClose();
+  };
+
+  // Filter projects
+  const ongoing = projects.filter((p) => p.chapters.some((ch) => ch.status !== "completed"));
+  const completed = projects.filter((p) => p.chapters.length > 0 && p.chapters.every((ch) => ch.status === "completed"));
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* New project */}
+      <div className="px-3 py-3">
+        <button
+          onClick={() => { router.push("/projects/new"); onClose(); }}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          style={{ background: "var(--th-accent-dim)", color: "var(--th-accent-text)" }}
+        >
+          <Plus size={16} />
+          <span>新建项目</span>
+        </button>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-2">
+        {/* 连载中 */}
+        <div className="flex items-center justify-between px-2.5 py-2">
+          <span className="text-[10px] font-semibold tracking-wider uppercase" style={{ color: "var(--th-text-4)" }}>连载中</span>
+          <span className="text-[10px]" style={{ color: "var(--th-text-4)" }}>{ongoing.length}</span>
+        </div>
+
+        {ongoing.map((proj) => {
+          const isActive = proj.id === activeProjectId;
+          const isExpanded = expandedProjectId === proj.id;
+          return (
+            <div key={proj.id} className="mb-0.5">
+              <button
+                onClick={() => handleProjectClick(proj.id)}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-sm transition-colors"
+                style={{
+                  color: isActive ? "var(--th-accent-text)" : "var(--th-text-2)",
+                  background: isActive ? "var(--th-accent-dim)" : "transparent",
+                }}
+              >
+                <span style={{ transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>
+                  <ChevronDown size={14} />
+                </span>
+                <span className="flex-1 text-left truncate font-medium">{proj.title}</span>
+              </button>
+
+              {isExpanded && (
+                <div className="ml-7 border-l" style={{ borderColor: "var(--th-border-subtle)" }}>
+                  {[...proj.chapters].reverse().map((ch) => (
+                    <button
+                      key={ch.id}
+                      onClick={() => handleChapterClick(proj.id, ch.id)}
+                      className="w-full flex items-center gap-2.5 pl-3 pr-2.5 py-2 text-xs transition-colors text-left rounded-r-lg"
+                      style={{
+                        color: ch.id === activeChapterId ? "var(--th-accent-text)" : "var(--th-text-3)",
+                        background: ch.id === activeChapterId ? "var(--th-accent-dim)" : "transparent",
+                      }}
+                    >
+                      <span className="w-5 h-5 rounded-full text-[10px] flex items-center justify-center shrink-0 font-medium"
+                        style={{
+                          background: ch.status === "completed" ? "var(--th-accent-dim)" : "var(--th-accent-text)",
+                          color: ch.status === "completed" ? "var(--th-accent-text)" : "#fff",
+                        }}
+                      >{ch.id}</span>
+                      <span className="truncate">{ch.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* 已完结 */}
+        {completed.length > 0 && (
+          <>
+            <div className="flex items-center justify-between px-2.5 py-2 mt-3">
+              <span className="text-[10px] font-semibold tracking-wider uppercase" style={{ color: "var(--th-text-4)" }}>已完结</span>
+              <span className="text-[10px]" style={{ color: "var(--th-text-4)" }}>{completed.length}</span>
+            </div>
+            {completed.map((proj) => {
+              const isActive = proj.id === activeProjectId;
+              const isExpanded = expandedProjectId === proj.id;
+              return (
+                <div key={proj.id} className="mb-0.5">
+                  <button
+                    onClick={() => handleProjectClick(proj.id)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-sm transition-colors"
+                    style={{
+                      color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)",
+                      background: isActive ? "var(--th-accent-dim)" : "transparent",
+                    }}
+                  >
+                    <span style={{ transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>
+                      <ChevronDown size={14} />
+                    </span>
+                    <span className="flex-1 text-left truncate">{proj.title}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "var(--th-hover)", color: "var(--th-text-4)" }}>完结</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-7 border-l" style={{ borderColor: "var(--th-border-subtle)" }}>
+                      {[...proj.chapters].reverse().map((ch) => (
+                        <button
+                          key={ch.id}
+                          onClick={() => handleChapterClick(proj.id, ch.id)}
+                          className="w-full flex items-center gap-2.5 pl-3 pr-2.5 py-2 text-xs transition-colors text-left rounded-r-lg"
+                          style={{
+                            color: "var(--th-text-3)",
+                            opacity: 0.6,
+                          }}
+                        >
+                          <span className="w-5 h-5 rounded-full text-[10px] flex items-center justify-center shrink-0 font-medium"
+                            style={{ background: "var(--th-accent-dim)", color: "var(--th-accent-text)" }}
+                          >{ch.id}</span>
+                          <span className="truncate">{ch.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
+      </nav>
+
+      {/* Bottom: 知识中心 | 插件市场 | 用户设置 */}
+      <div className="shrink-0 border-t" style={{ borderColor: "var(--th-border-subtle)" }}>
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-sm" style={{ color: "var(--th-text-2)" }}>
+          <Library size={16} style={{ color: "var(--th-text-3)" }} />
+          <span>知识中心</span>
+          <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded" style={{ background: "var(--th-hover)", color: "var(--th-text-4)" }}>即将推出</span>
+        </button>
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-sm" style={{ color: "var(--th-text-2)" }}>
+          <Package size={16} style={{ color: "var(--th-text-3)" }} />
+          <span>插件市场</span>
+          <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded" style={{ background: "var(--th-hover)", color: "var(--th-text-4)" }}>即将推出</span>
+        </button>
+        <button
+          onClick={() => { router.push("/settings"); onClose(); }}
+          className="w-full flex items-center gap-3 px-4 py-3 text-sm border-t"
+          style={{ borderColor: "var(--th-border-subtle)", color: "var(--th-text-2)" }}
+        >
+          <Settings size={16} style={{ color: "var(--th-text-3)" }} />
+          <span>用户设置</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function WorkspacePage() {
   const params = useParams();
   const projectId = params.projectId as string;
@@ -323,6 +498,14 @@ export default function WorkspacePage() {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [rightPanelWidth, setRightPanelWidth] = useState(260);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [draftStepCount, setDraftStepCount] = useState(0);
+
+  // 切换章节时重置写作步数
+  useEffect(() => {
+    setDraftStepCount(0);
+  }, [activeChapterId]);
 
   // ── 拖拽缩放逻辑 ──
   const resizeRef = useRef<{ side: "left" | "right"; startX: number; startW: number } | null>(null);
@@ -377,20 +560,55 @@ export default function WorkspacePage() {
   );
   const isProjectCompleted = project && project.chapters.length > 0 && project.chapters.every((ch) => ch.status === "completed");
 
+  const handleCopy = useCallback(() => {
+    const text = currentChapter?.content || "";
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [currentChapter?.content]);
+
   /** 基于业务状态计算状态描述 */
   const statusInfo = useMemo(() => {
+    const chapterLabel = currentChapter ? `第 ${currentChapter.id} 章 · ${currentChapter.title}` : `第 ? 章`;
+
     if (!project) return { icon: <BookOpen size={13} />, label: "加载中", color: "var(--th-text-4)" };
 
     if (isProjectCompleted) {
-      return { icon: <CheckCircle2 size={13} />, label: "已完结", color: "var(--th-accent-text)" };
+      return { icon: <CheckCircle2 size={13} />, label: chapterLabel, color: "var(--th-accent-text)" };
     }
 
     if (isEditable) {
-      return { icon: <Edit3 size={13} />, label: `写作中 · ${PHASE_LABELS[project.phase]}`, color: "var(--th-accent-text)" };
+      return { icon: <Edit3 size={13} />, label: chapterLabel, color: "var(--th-accent-text)" };
     }
 
-    return { icon: <Eye size={13} />, label: "回顾中", color: "var(--th-text-3)" };
+    return { icon: <Eye size={13} />, label: chapterLabel, color: "var(--th-text-3)" };
   }, [project, isProjectCompleted, isEditable, currentChapter]);
+
+  /** 章节导航：上/下一章 ID */
+  const chapterNav = useMemo(() => {
+    if (!project || activeChapterId === null) return { prev: null, next: null };
+    const chapters = project.chapters;
+    const idx = chapters.findIndex((c) => c.id === activeChapterId);
+    return {
+      prev: idx > 0 ? chapters[idx - 1].id : null,
+      next: idx < chapters.length - 1 ? chapters[idx + 1].id : null,
+    };
+  }, [project, activeChapterId]);
+
+  const navigateChapter = useCallback((chId: number) => {
+    setActiveChapter(chId);
+  }, [setActiveChapter]);
 
   /** 加载多书 Mock */
   useEffect(() => {
@@ -439,70 +657,93 @@ export default function WorkspacePage() {
       style={{ background: "var(--th-bg)", color: "var(--th-text)" }}
     >
       {/* ================================================================
-          Left Sidebar — collapsible
+          Desktop Sidebar — hidden below md, replaced by overlay
           ================================================================ */}
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((v) => !v)}
-        width={sidebarWidth}
-      />
+      <div className="hidden md:block">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((v) => !v)}
+          width={sidebarWidth}
+        />
+      </div>
 
-      {/* Left resize handle — only when expanded */}
+      {/* Left resize handle — desktop only */}
       {!sidebarCollapsed && (
-        <div
+        <div className="hidden md:block"
           onMouseDown={onResizeMouseDown("left")}
-          className="shrink-0 w-1.5 cursor-col-resize hover:opacity-100 opacity-0 transition-opacity relative group"
-          style={{ background: "var(--th-accent-dim)" }}
-        >
-          <div className="absolute inset-y-0 -left-1 -right-1" />
-        </div>
+          style={{
+            width: 6,
+            cursor: "col-resize",
+            background: "var(--th-accent-dim)",
+            flexShrink: 0,
+          }}
+        />
+      )}
+
+      {/* ================================================================
+          Mobile Left Panel — 80vw overlay from left
+          参考: Material Design (360dp/80%) · 微信 (80%) · ChatGPT (85%)
+          ================================================================ */}
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 md:hidden transition-opacity duration-250"
+            style={{ background: "var(--th-overlay)" }}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* 80vw slide-in from left */}
+          <div
+            className="fixed inset-y-0 left-0 z-50 overflow-y-auto md:hidden animate-slide-in-left"
+            style={{
+              width: "80vw",
+              background: "var(--th-card)",
+              boxShadow: "4px 0 24px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div className="flex items-center justify-between px-4 py-3.5 border-b" style={{ borderColor: "var(--th-border-subtle)" }}>
+              <span className="text-sm font-semibold" style={{ color: "var(--th-text)" }}>墨灵</span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: "var(--th-text-3)" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <MobileSidebarContent onClose={() => setMobileMenuOpen(false)} />
+          </div>
+        </>
       )}
 
       {/* ================================================================
           Main Stage
           ================================================================ */}
       <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-        {/* Top bar — status left + theme + right panel toggle */}
-        <div className="shrink-0 flex items-center gap-2 px-4 py-3">
-          {/* 状态条 — 左对齐 */}
-          <div className="flex items-center gap-2.5">
-            <span style={{ color: statusInfo.color }}>{statusInfo.icon}</span>
-            <span className="text-[11px] font-semibold" style={{ color: statusInfo.color }}>
+        {/* Top bar — hamburger (mobile) | status (desktop) | theme | right panel */}
+        <div className="shrink-0 flex items-center gap-2 px-3 md:px-4 py-2.5 md:py-3">
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden p-1.5 rounded-lg transition-colors"
+            style={{ color: "var(--th-text-3)" }}
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="菜单"
+          >
+            <Menu size={20} />
+          </button>
+
+          {/* Status — 全端可见 */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="shrink-0" style={{ color: statusInfo.color }}>{statusInfo.icon}</span>
+            <span className="text-[11px] font-semibold truncate" style={{ color: statusInfo.color }}>
               {statusInfo.label}
             </span>
           </div>
-          <div className="flex-1" />
-          {/* Feature navigation */}
-          <div className="flex items-center gap-1 mr-2">
-            <Link
-              href={`/workspace/${projectId}/health`}
-              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-              style={{ color: "var(--th-text-3)" }}
-              title="健康监控"
-            >
-              <Activity size={16} />
-            </Link>
-            <Link
-              href={`/workspace/${projectId}/phase4/tasks`}
-              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-              style={{ color: "var(--th-text-3)" }}
-              title="Phase 4 任务"
-            >
-              <GitBranch size={16} />
-            </Link>
-            <Link
-              href={`/vaults/${projectId}`}
-              className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-              style={{ color: "var(--th-text-3)" }}
-              title="四库系统"
-            >
-              <Library size={16} />
-            </Link>
-          </div>
           <ThemeSwitcher />
+          {/* Right panel toggle — mobile + desktop */}
           <button
-            onClick={() => setRightPanelOpen((v) => !v)}
             className="p-1.5 rounded-lg transition-colors hover:opacity-80"
+            onClick={() => setRightPanelOpen((v) => !v)}
             style={{ color: rightPanelOpen ? "var(--th-accent-text)" : "var(--th-text-3)" }}
             aria-label="切换右栏"
           >
@@ -513,32 +754,8 @@ export default function WorkspacePage() {
         {/* Center stage — chapter content */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Content area */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4">
             <div className="max-w-4xl mx-auto">
-              {/* Chapter title */}
-              <h2
-                className="text-base font-semibold mb-4"
-                style={{ color: "var(--th-text)" }}
-              >
-                {currentChapter ? `第 ${currentChapter.id} 章 — ${currentChapter.title}` : "选择章节"}
-                {(!isEditable || isProjectCompleted) && currentChapter && (
-                  <span
-                    className="ml-2 text-[10px] px-1.5 py-0.5 rounded align-middle"
-                    style={{ background: "var(--th-hover)", color: "var(--th-text-4)" }}
-                  >
-                    只读
-                  </span>
-                )}
-                {isProjectCompleted && (
-                  <span
-                    className="ml-2 text-[10px] px-1.5 py-0.5 rounded align-middle"
-                    style={{ background: "var(--th-accent-dim)", color: "var(--th-accent-text)" }}
-                  >
-                    已完结
-                  </span>
-                )}
-              </h2>
-
               {/* Chapter content */}
               <div
                 className="text-sm leading-relaxed whitespace-pre-wrap"
@@ -547,11 +764,11 @@ export default function WorkspacePage() {
                 {currentChapter?.content || "暂无内容"}
               </div>
 
-              {/* 完成本章 button — 仅对活跃连载项目的可编辑章节 */}
-              {isEditable && !isProjectCompleted && currentChapter && (
+              {/* 完成本章 button — 仅在完成 1 步以上写作后出现（最后一步写作） */}
+              {isEditable && !isProjectCompleted && draftStepCount >= 1 && (
                 <button
                   onClick={() => {
-                    if (!project) return;
+                    if (!project || !currentChapter) return;
                     completeChapter(project.id, currentChapter.id);
                   }}
                   className="mt-4 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors hover:opacity-80"
@@ -564,34 +781,54 @@ export default function WorkspacePage() {
           </div>
 
           {/* Options Panel — only for non-completed projects with editable chapter */}
-          {isEditable && !isProjectCompleted && <OptionsPanel project={project} />}
-        </div>
+          {isEditable && !isProjectCompleted && <OptionsPanel project={project} onDraftStep={() => setDraftStepCount(c => c + 1)} />}
 
-        {/* Bottom status bar */}
-        <div
-          className="shrink-0 flex items-center justify-between px-4 py-1.5 text-[10px] border-t"
-          style={{
-            borderColor: "var(--th-border-subtle)",
-            color: "var(--th-text-4)",
-          }}
-        >
-          <span>
-            {project.title} · {currentChapter ? `第 ${currentChapter.id} 章 / ${project.totalChapters} 章` : `共 ${project.totalChapters} 章`}
-            {currentChapter && (
-              <span className="ml-2" style={{ color: currentChapter.status === "completed" ? "var(--th-accent-text)" : "var(--th-text-4)" }}>
-                · {currentChapter.status === "completed" ? "已完成" : "草稿"}
-              </span>
-            )}
-          </span>
-          <span>{project.genre}</span>
+          {/* Mobile 章节导航条 — 仅已完结章节显示（参考番茄小说/起点读书） */}
+          {currentChapter?.status === "completed" && (
+            <div
+              className="shrink-0 md:hidden grid grid-cols-3 items-center px-3 py-3 border-t"
+              style={{ borderColor: "var(--th-border-subtle)", background: "var(--th-card)" }}
+            >
+              <button
+                onClick={() => chapterNav.prev !== null && navigateChapter(chapterNav.prev)}
+                disabled={chapterNav.prev === null}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 justify-self-start"
+                style={{ color: "var(--th-text-2)", background: "var(--th-hover)" }}
+              >
+                <ChevronLeft size={14} />
+                <span>上一章</span>
+              </button>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all justify-self-center"
+                style={{
+                  color: copied ? "#34d399" : "var(--th-accent-text)",
+                  background: copied ? "rgba(52,211,153,0.12)" : "var(--th-card)",
+                  border: copied ? "1.5px solid #34d399" : "1.5px solid var(--th-border)",
+                }}
+              >
+                {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                <span>{copied ? "已复制" : "一键复制"}</span>
+              </button>
+              <button
+                onClick={() => chapterNav.next !== null && navigateChapter(chapterNav.next)}
+                disabled={chapterNav.next === null}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 justify-self-end"
+                style={{ color: "var(--th-text-2)", background: "var(--th-hover)" }}
+              >
+                <span>下一章</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
       {/* ================================================================
-          Right Panel — Agent of Agents 调度中心
+          Right Panel — Agent of Agents 调度中心 (desktop only)
           ================================================================ */}
       {rightPanelOpen && (
-        <>
+        <div className="hidden md:flex">
           {/* Right resize handle */}
           <div
             onMouseDown={onResizeMouseDown("right")}
@@ -601,6 +838,42 @@ export default function WorkspacePage() {
             <div className="absolute inset-y-0 -left-1 -right-1" />
           </div>
           <AgentPanel onClose={() => setRightPanelOpen(false)} width={rightPanelWidth} />
+        </div>
+      )}
+
+      {/* ================================================================
+          Mobile Right Panel — 80vw overlay from right
+          参考: 微信读书书签 · iOS Sheets · Telegram 侧边
+          ================================================================ */}
+      {rightPanelOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 md:hidden transition-opacity duration-250"
+            style={{ background: "var(--th-overlay)" }}
+            onClick={() => setRightPanelOpen(false)}
+          />
+          {/* 80vw slide-in from right */}
+          <div
+            className="fixed inset-y-0 right-0 z-50 overflow-y-auto md:hidden animate-slide-in-right"
+            style={{
+              width: "80vw",
+              background: "var(--th-card)",
+              boxShadow: "-4px 0 24px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div className="flex items-center justify-between px-4 py-3.5 border-b" style={{ borderColor: "var(--th-border-subtle)" }}>
+              <span className="text-sm font-semibold" style={{ color: "var(--th-text)" }}>Agent 调度</span>
+              <button
+                onClick={() => setRightPanelOpen(false)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: "var(--th-text-3)" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <AgentPanel onClose={() => setRightPanelOpen(false)} width={0} />
+          </div>
         </>
       )}
     </div>

@@ -10,11 +10,10 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.dao import project_dao, vault_dao
+from app.dao import project_dao, vault_dao, health_alert_dao
 from app.errors import NotFoundError, ErrorCode, AppError
 from app.models.health_alert import HealthAlert
 from app.models.chapter import Chapter
@@ -349,14 +348,9 @@ class HealthService:
         active_only: bool = True,
     ) -> list[HealthAlert]:
         """Get health alerts for a project."""
-        stmt = select(HealthAlert).where(
-            HealthAlert.project_id == project_id
-        )
         if active_only:
-            stmt = stmt.where(HealthAlert.is_active == True)
-        stmt = stmt.order_by(HealthAlert.created_at.desc())
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
+            return await health_alert_dao.list_active_by_project(db, project_id)
+        return await health_alert_dao.list_by_project(db, project_id)
 
     async def _call_llm(self, prompt: str) -> str:
         """Call LLM with prompt and return response text."""

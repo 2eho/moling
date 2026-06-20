@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session as SyncSession
 
 from app.config import get_settings
 from app.dao import user_dao
@@ -141,12 +140,12 @@ async def logout(access_token: str, refresh_token: str) -> dict:
 # Sync versions (for Windows + aiosslite workaround)
 # ---------------------------------------------------------------------------
 
-def register_sync(db: SyncSession, req: RegisterReq) -> TokenResp:
+def register_sync(db, req: RegisterReq) -> TokenResp:
     """Register a new user and return tokens (sync version)."""
     return _get_auth_service().register_sync(db, req)
 
 
-def login_sync(db: SyncSession, req: LoginReq) -> TokenResp:
+def login_sync(db, req: LoginReq) -> TokenResp:
     """Login with email + password, return tokens (sync version)."""
     return _get_auth_service().login_sync(db, req)
 
@@ -195,14 +194,8 @@ class AuthService:
         }
 
     async def reset_password(self, db: AsyncSession, req: PasswordResetReq) -> dict:
-        """Reset password using token."""
-        # Find user by reset token
-        from app.models import User
-        from sqlalchemy import select
-        
-        stmt = select(User).where(User.reset_token == req.token)
-        result = await db.execute(stmt)
-        user = result.scalar_one_or_none()
+        """Reset password using token (via DAO)."""
+        user = await user_dao.get_by_reset_token(db, req.token)
         
         if user is None:
             raise AuthError(
@@ -274,8 +267,9 @@ class AuthService:
     # Sync versions (for Windows + aiosslite workaround)
     # ------------------------------------------------------------------
 
-    def register_sync(self, db: SyncSession, req: RegisterReq) -> TokenResp:
+    def register_sync(self, db, req: RegisterReq) -> TokenResp:
         """Sync version — use with get_sync_db()."""
+        from sqlalchemy.orm import Session as SyncSession  # noqa: F811 — Windows compatibility
         dao = user_dao
         # Check uniqueness (sync)
         existing_email = dao.get_by_email_sync(db, req.email)
@@ -317,8 +311,9 @@ class AuthService:
             user=UserResp.model_validate(user),
         )
 
-    def login_sync(self, db: SyncSession, req: LoginReq) -> TokenResp:
+    def login_sync(self, db, req: LoginReq) -> TokenResp:
         """Sync version — use with get_sync_db()."""
+        from sqlalchemy.orm import Session as SyncSession  # noqa: F811 — Windows compatibility
         dao = user_dao
         user = dao.get_by_email_sync(db, req.email)
         if user is None:

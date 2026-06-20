@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>墨灵 Vibe Writing · 移动端</title>
+<style>
+/* ============================================================
+   墨灵 Vibe Writing — 移动端预览
+   参考: WorkBuddy / DeepSeek / 豆包 / Trae Solo 移动端设计
+   核心理念: Bottom Tab Nav + Single Column + Touch-First
+   ============================================================ */
+
+:root {
+  --th-bg: #0d0f1a;
+  --th-card: #151829;
+  --th-card-hover: #1a1d33;
+  --th-input: #111327;
+  --th-overlay: rgba(0,0,0,0.55);
+  --th-hover: rgba(255,255,255,0.04);
+  --th-hover-strong: rgba(255,255,255,0.07);
+  --th-text: #e8e9f0;
+  --th-text-2: #9ca3c4;
+  --th-text-3: #6b7199;
+  --th-text-4: #3d4166;
+  --th-border: #2a2d45;
+  --th-border-subtle: #1e2138;
+  --th-accent: #6366f1;
+  --th-accent-text: #a5b4fc;
+  --th-accent-dim: rgba(99,102,241,0.12);
+  --th-accent-glow: rgba(99,102,241,0.25);
+  --th-opt-a: #6366f1;
+  --th-opt-a-text: #a5b4fc;
+  --th-opt-a-dim: rgba(99,102,241,0.15);
+  --th-opt-b: #34d399;
+  --th-opt-b-text: #6ee7b7;
+  --th-opt-b-dim: rgba(52,211,153,0.15);
+  --th-opt-c: #d4a843;
+  --th-opt-c-text: #e6c674;
+  --th-opt-c-dim: rgba(212,168,67,0.15);
+  --th-success: #34d399;
+  --th-warning: #fbbf24;
+  --th-danger: #ef4444;
+  --th-logo-from: #6366f1;
+  --th-logo-to: #06b6d4;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tab-height: 56px;
+  --header-height: 48px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--th-bg);
+  color: var(--th-text);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100dvh;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Phone Frame ── */
+.phone-frame {
+  width: 390px;
+  height: 844px;
+  margin: 20px auto;
+  border-radius: 40px;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px #1a1d33, 0 0 0 6px #111, 0 20px 60px rgba(0,0,0,0.5);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--th-bg);
+}
+
+/* Status Bar (fake iPhone notch area) */
+.status-bar {
+  height: 44px;
+  background: var(--th-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--th-text);
+  flex-shrink: 0;
+}
+
+/* ── Header ── */
+.app-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--th-border-subtle);
+  flex-shrink: 0;
+  background: var(--th-bg);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--th-logo-from), var(--th-logo-to));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: var(--th-hover);
+  color: var(--th-text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.header-btn:active {
+  background: var(--th-hover-strong);
+  color: var(--th-text-2);
+}
+
+/* ── Tab Content Area ── */
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ── Bottom Tab Bar ── */
+.tab-bar {
+  height: calc(var(--tab-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--th-border-subtle);
+  background: var(--th-card);
+  flex-shrink: 0;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: var(--tab-height);
+  border: none;
+  background: transparent;
+  color: var(--th-text-4);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 500;
+  transition: all 0.2s;
+  position: relative;
+}
+.tab-item.active {
+  color: var(--th-accent-text);
+}
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: var(--th-accent-text);
+  border-radius: 1px;
+}
+.tab-item svg {
+  width: 22px;
+  height: 22px;
+}
+.tab-item:active {
+  opacity: 0.7;
+}
+
+/* ============================================================
+   Tab 1: 项目列表 (Projects)
+   ============================================================ */
+.projects-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.projects-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--th-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.new-project-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px dashed var(--th-border);
+  background: transparent;
+  color: var(--th-accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+.new-project-btn:active {
+  background: var(--th-accent-dim);
+  border-color: var(--th-accent-text);
+}
+
+/* Project Card */
+.project-card {
+  margin: 0 12px 8px;
+  border-radius: 12px;
+  background: var(--th-card);
+  border: 1px solid var(--th-border-subtle);
+  overflow: hidden;
+  transition: all 0.25s;
+}
+.project-card.active {
+  border-color: var(--th-accent-text);
+  box-shadow: 0 0 0 1px var(--th-accent-dim);
+}
+
+.project-row {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.project-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--th-accent-dim);
+  color: var(--th-accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.project-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--th-text);
+  margin-bottom: 2px;
+}
+
+.project-meta {
+  font-size: 11px;
+  color: var(--th-text-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--th-accent-dim);
+  color: var(--th-accent-text);
+  font-weight: 500;
+}
+
+.badge-completed {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(52,211,153,0.12);
+  color: var(--th-success);
+  font-weight: 500;
+}
+
+.project-arrow {
+  color: var(--th-text-4);
+  font-size: 12px;
+  transition: transform 0.25s;
+}
+.project-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+/* Chapter List (collapsible) */
+.chapter-list {
+  border-top: 1px solid var(--th-border-subtle);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.chapter-list.expanded {
+  max-height: 500px;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 28px;
+  font-size: 12px;
+  color: var(--th-text-3);
+  cursor: pointer;
+  border-bottom: 1px solid var(--th-border-subtle);
+  transition: all 0.15s;
+}
+.chapter-item:last-child { border-bottom: none; }
+.chapter-item:active {
+  background: var(--th-hover);
+  color: var(--th-text);
+}
+
+.chapter-item.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.chapter-num {
+  font-size: 10px;
+  color: var(--th-text-4);
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.chapter-title {
+  flex: 1;
+  font-weight: 500;
+}
+
+.chapter-status {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.chapter-status.draft {
+  background: rgba(251,191,36,0.12);
+  color: var(--th-warning);
+}
+.chapter-status.completed {
+  background: rgba(52,211,153,0.12);
+  color: var(--th-success);
+}
+
+/* Feature placeholder items */
+.feature-section {
+  padding: 16px 16px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--th-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feature-item {
+  margin: 0 12px 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--th-card);
+  border: 1px solid var(--th-border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--th-text-3);
+  font-size: 13px;
+}
+.feature-item:active {
+  background: var(--th-card-hover);
+  color: var(--th-text-2);
+}
+.feature-item svg {
+  color: var(--th-text-4);
+}
+.feature-item .coming-soon {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--th-hover-strong);
+  color: var(--th-text-4);
+  margin-left: auto;
+}
+
+/* ============================================================
+   Tab 2: 写作 (Writing)
+   ============================================================ */
+.write-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Chapter header in writing tab */
+.chapter-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--th-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chapter-header-left h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--th-text);
+}
+
+.chapter-header-left p {
+  font-size: 10px;
+  color: var(--th-text-3);
+  margin-top: 1px;
+}
+
+/* Chapter content */
+.chapter-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--th-text-2);
+  white-space: pre-wrap;
+}
+
+/* Options strip (compact A/B/C at bottom of content area) */
+.options-strip {
+  border-top: 1px solid var(--th-border-subtle);
+  background: var(--th-card);
+  flex-shrink: 0;
+}
+
+.options-strip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+}
+
+.options-strip-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--th-text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.options-strip-title .spark {
+  color: var(--th-accent-text);
+  font-size: 14px;
+}
+
+.refresh-btn {
+  font-size: 10px;
+  color: var(--th-text-4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.refresh-btn:active { color: var(--th-text-3); }
+
+/* Option cards in strip */
+.option-cards {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+
+.option-card {
+  min-width: 260px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--th-border-subtle);
+  cursor: pointer;
+  transition: all 0.2s;
+  scroll-snap-align: start;
+  background: var(--th-input);
+}
+.option-card.selected {
+  border-color: var(--th-accent-text);
+  background: var(--th-accent-dim);
+}
+.option-card:active {
+  transform: scale(0.98);
+}
+
+.option-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.option-label {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.option-label.a { background: var(--th-opt-a); }
+.option-label.b { background: var(--th-opt-b); }
+.option-label.c { background: var(--th-opt-c); }
+
+.option-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--th-text);
+}
+
+.option-desc {
+  font-size: 11px;
+  color: var(--th-text-3);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.option-confidence {
+  font-size: 9px;
+  color: var(--th-accent-text);
+}
+
+/* D — Free input area */
+.free-input-area {
+  border-top: 1px solid var(--th-border-subtle);
+  padding: 10px 16px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.free-input {
+  flex: 1;
+  background: var(--th-input);
+  border: 1px solid var(--th-border-subtle);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--th-text);
+  resize: none;
+  height: 40px;
+  max-height: 80px;
+  outline: none;
+  font-family: inherit;
+}
+.free-input:focus {
+  border-color: var(--th-accent-text);
+}
+
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: var(--th-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.send-btn:active {
+  transform: scale(0.95);
+  background: var(--th-accent-text);
+}
+.send-btn:disabled {
+  opacity: 0.3;
+}
+
+/* Mode toggle — 选项 / 自定义 */
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--th-hover);
+}
+
+.mode-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--th-text-4);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mode-btn.active {
+  background: var(--th-accent-dim);
+  color: var(--th-accent-text);
+}
+.mode-btn:active {
+  opacity: 0.7;
+}
+
+/* ============================================================
+   Tab 3: Agent 面板
+   ============================================================ */
+.agent-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--th-border-subtle);
+}
+
+.agent-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--th-text);
+  margin-bottom: 4px;
+}
+
+.agent-subtitle {
+  font-size: 11px;
+  color: var(--th-text-3);
+}
+
+/* Coordinator card */
+.coordinator-card {
+  margin: 16px 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--th-accent-dim), transparent);
+  border: 1px solid var(--th-accent-dim);
+}
+
+.coordinator-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.coordinator-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--th-logo-from), var(--th-logo-to));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.coordinator-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--th-text);
+}
+
+.coordinator-status {
+  font-size: 10px;
+  color: var(--th-accent-text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--th-success);
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.coordinator-desc {
+  font-size: 12px;
+  color: var(--th-text-3);
+  line-height: 1.6;
+}
+
+/* Agent item cards */
+.agent-list {
+  padding: 0 12px;
+}
+
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: var(--th-card);
+  border: 1px solid var(--th-border-subtle);
+}
+
+.agent-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.agent-card-icon.plot { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+.agent-card-icon.character { background: rgba(236,72,153,0.15); color: #f472b6; }
+.agent-card-icon.dialogue { background: rgba(52,211,153,0.15); color: #6ee7b7; }
+.agent-card-icon.style { background: rgba(251,191,36,0.15); color: #fcd34d; }
+.agent-card-icon.world { background: rgba(6,182,212,0.15); color: #67e8f9; }
+
+.agent-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--th-text);
+}
+
+.agent-card-desc {
+  font-size: 10px;
+  color: var(--th-text-3);
+  margin-top: 1px;
+}
+
+.agent-card-stat {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--th-hover);
+  color: var(--th-text-4);
+}
+
+/* ============================================================
+   Transitions
+   ============================================================ */
+.tab-panel {
+  display: none;
+  height: 100%;
+  flex-direction: column;
+}
+.tab-panel.active {
+  display: flex;
+}
+
+/* Pull indicator (like DeepSeek) */
+.pull-indicator {
+  text-align: center;
+  padding: 12px;
+  font-size: 10px;
+  color: var(--th-text-4);
+}
+
+/* Overlay for bottom sheet */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--th-overlay);
+  z-index: 50;
+  display: none;
+  animation: fadeIn 0.2s;
+}
+.overlay.show {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--th-card);
+  border: 1px solid var(--th-border-subtle);
+  color: var(--th-text);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  z-index: 100;
+  animation: toastIn 0.3s, toastOut 0.3s 1.5s forwards;
+  pointer-events: none;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Responsive — hide phone frame on narrow screens, show full width */
+@media (max-width: 430px) {
+  .phone-frame {
+    width: 100%;
+    height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Scrollbar */
+.tab-content::-webkit-scrollbar,
+.chapter-content::-webkit-scrollbar { width: 3px; }
+.tab-content::-webkit-scrollbar-thumb,
+.chapter-content::-webkit-scrollbar-thumb { background: var(--th-scrollbar-thumb); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame" id="app">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>墨灵 Vibe Writing</span>
+    <span>📶 🔋</span>
+  </div>
+
+  <!-- App Header -->
+  <div class="app-header">
+    <div class="header-left">
+      <div class="logo-icon">靈</div>
+      <span class="header-title" id="headerTitle">项目</span>
+    </div>
+    <div class="header-right">
+      <button class="header-btn" id="themeBtn" title="切换主题">🎨</button>
+      <button class="header-btn" id="settingsBtn" title="设置">⚙</button>
+    </div>
+  </div>
+
+  <!-- ==============================
+       Tab 1: 项目列表
+       ============================== -->
+  <div class="tab-content">
+    <div class="tab-panel active" id="panel-projects">
+      <div class="projects-header">
+        <span class="projects-title">📚 我的小说</span>
+        <button class="new-project-btn" id="newProjectBtn" title="新建项目">+</button>
+      </div>
+
+      <!-- Project 1: 剑道巅峰 -->
+      <div class="project-card active" data-project="novel-001">
+        <div class="project-row" onclick="toggleProject(this)">
+          <div class="project-icon">⚔</div>
+          <div class="project-info">
+            <div class="project-name">剑道巅峰</div>
+            <div class="project-meta">
+              <span>第3章 / 共12章</span>
+              <span class="phase-badge">草稿</span>
+            </div>
+          </div>
+          <span class="project-arrow expanded" id="arrow-novel-001">▶</span>
+        </div>
+        <div class="chapter-list expanded" id="chapters-novel-001">
+          <div class="chapter-item" onclick="openChapter('novel-001', 3)" id="ch-novel-001-3">
+            <span class="chapter-num">第3章</span>
+            <span class="chapter-title">剑指苍穹</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-001', 2)" id="ch-novel-001-2">
+            <span class="chapter-num">第2章</span>
+            <span class="chapter-title">剑骨觉醒</span>
+            <span class="chapter-status completed">已完成</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-001', 1)" id="ch-novel-001-1">
+            <span class="chapter-num">第1章</span>
+            <span class="chapter-title">废材少年</span>
+            <span class="chapter-status completed">已完成</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 2: 都市修仙传 -->
+      <div class="project-card" data-project="novel-002">
+        <div class="project-row" onclick="toggleProject(this)">
+          <div class="project-icon">🏙</div>
+          <div class="project-info">
+            <div class="project-name">都市修仙传</div>
+            <div class="project-meta">
+              <span>第1章 / 共4章</span>
+              <span class="phase-badge">连载中</span>
+            </div>
+          </div>
+          <span class="project-arrow" id="arrow-novel-002">▶</span>
+        </div>
+        <div class="chapter-list" id="chapters-novel-002">
+          <div class="chapter-item" onclick="openChapter('novel-002', 4)" id="ch-novel-002-4">
+            <span class="chapter-num">第4章</span>
+            <span class="chapter-title">破境之战</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-002', 3)" id="ch-novel-002-3">
+            <span class="chapter-num">第3章</span>
+            <span class="chapter-title">初入宗门</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-002', 2)" id="ch-novel-002-2">
+            <span class="chapter-num">第2章</span>
+            <span class="chapter-title">都市暗流</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-002', 1)" id="ch-novel-002-1">
+            <span class="chapter-num">第1章</span>
+            <span class="chapter-title">灵根初醒</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 3: 末世重生 -->
+      <div class="project-card" data-project="novel-003">
+        <div class="project-row" onclick="toggleProject(this)">
+          <div class="project-icon">🌍</div>
+          <div class="project-info">
+            <div class="project-name">末世重生</div>
+            <div class="project-meta">
+              <span>第2章 / 共5章</span>
+              <span class="phase-badge">连载中</span>
+            </div>
+          </div>
+          <span class="project-arrow" id="arrow-novel-003">▶</span>
+        </div>
+        <div class="chapter-list" id="chapters-novel-003">
+          <div class="chapter-item" onclick="openChapter('novel-003', 5)" id="ch-novel-003-5">
+            <span class="chapter-num">第5章</span>
+            <span class="chapter-title">安全区</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-003', 4)" id="ch-novel-003-4">
+            <span class="chapter-num">第4章</span>
+            <span class="chapter-title">第一滴血</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-003', 3)" id="ch-novel-003-3">
+            <span class="chapter-num">第3章</span>
+            <span class="chapter-title">末日倒计时</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-003', 2)" id="ch-novel-003-2">
+            <span class="chapter-num">第2章</span>
+            <span class="chapter-title">前世记忆</span>
+            <span class="chapter-status draft">草稿</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-003', 1)" id="ch-novel-003-1">
+            <span class="chapter-num">第1章</span>
+            <span class="chapter-title">血月降临</span>
+            <span class="chapter-status completed">已完成</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 4: 星际流浪者 (已完结) -->
+      <div class="project-card" data-project="novel-004">
+        <div class="project-row" onclick="toggleProject(this)">
+          <div class="project-icon">🚀</div>
+          <div class="project-info">
+            <div class="project-name">星际流浪者</div>
+            <div class="project-meta">
+              <span>共3章</span>
+              <span class="badge-completed">已完结</span>
+            </div>
+          </div>
+          <span class="project-arrow" id="arrow-novel-004">▶</span>
+        </div>
+        <div class="chapter-list" id="chapters-novel-004">
+          <div class="chapter-item" onclick="openChapter('novel-004', 3)" id="ch-novel-004-3">
+            <span class="chapter-num">第3章</span>
+            <span class="chapter-title">新世界</span>
+            <span class="chapter-status completed">已完成</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-004', 2)" id="ch-novel-004-2">
+            <span class="chapter-num">第2章</span>
+            <span class="chapter-title">深空</span>
+            <span class="chapter-status completed">已完成</span>
+          </div>
+          <div class="chapter-item" onclick="openChapter('novel-004', 1)" id="ch-novel-004-1">
+            <span class="chapter-num">第1章</span>
+            <span class="chapter-title">启航</span>
+            <span class="chapter-status completed">已完成</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 知识中心 & 插件市场 占位 -->
+      <div class="feature-section">🧩 扩展</div>
+      <div class="feature-item" onclick="showToast('知识中心 — 即将上线')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
+        <span>知识中心</span>
+        <span class="coming-soon">即将上线</span>
+      </div>
+      <div class="feature-item" onclick="showToast('插件市场 — 即将上线')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        <span>插件市场</span>
+        <span class="coming-soon">即将上线</span>
+      </div>
+
+      <!-- 用户设置 -->
+      <div class="feature-section">👤 账户</div>
+      <div class="feature-item" onclick="showToast('用户设置 — 即将上线')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>用户设置</span>
+        <span class="coming-soon">即将上线</span>
+      </div>
+
+      <div style="height: 16px;"></div>
+    </div>
+
+    <!-- ==============================
+         Tab 2: 写作
+         ============================== -->
+    <div class="tab-panel" id="panel-writing">
+      <div class="write-container">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <h3 id="writeChapterTitle">第 3 章 — 剑指苍穹</h3>
+            <p id="writeProjectTitle">剑道巅峰 · 写作中</p>
+          </div>
+          <span class="phase-badge" id="writeStatus">草稿</span>
+        </div>
+
+        <div class="chapter-content" id="writeContent" style="flex:1;">
+宗门议事大殿中，掌门与诸位长老目光灼灼。
+
+"林风，你可知剑骨觉醒意味着什么？"掌门的声音带着一丝颤抖。
+
+九州千年以来，剑骨觉醒者不过三人。每一人，都曾改写了大陆的格局。
+
+林风抬头，目光平静却坚定："我只知道，我再也不做废材了。"
+
+大殿中一片寂静。曾经的嘲笑声早已消散，取而代之的是震惊与畏惧。
+
+掌门沉默良久，缓缓开口："剑骨觉醒，是福也是祸。从今日起，你将进入内门修行。但记住——力量越大，责任越大。"
+        </div>
+
+        <!-- Options Strip -->
+        <div class="options-strip" id="optionsStrip">
+          <div class="options-strip-header">
+            <span class="options-strip-title">
+              <span class="spark">✦</span>
+              下一步剧情 · AI 建议
+            </span>
+            <div class="mode-toggle">
+              <button class="mode-btn active" onclick="switchMode('options')" id="modeOptBtn">选项</button>
+              <button class="mode-btn" onclick="switchMode('custom')" id="modeCustBtn">自定义</button>
+            </div>
+          </div>
+
+          <!-- A/B/C Option Cards (horizontal scroll) -->
+          <div class="option-cards" id="optionCards">
+            <div class="option-card" data-opt="a" onclick="selectOption('a', this)">
+              <div class="option-label-row">
+                <span class="option-label a">A</span>
+                <span class="option-title">展开宗门试炼</span>
+              </div>
+              <div class="option-desc">林风迎来第一次宗门试炼，面对昔日嘲笑他的同门，用实力证明自己。</div>
+              <div class="option-confidence">置信度 87% · Plot Agent</div>
+            </div>
+            <div class="option-card" data-opt="b" onclick="selectOption('b', this)">
+              <div class="option-label-row">
+                <span class="option-label b">B</span>
+                <span class="option-title">神秘老者来访</span>
+              </div>
+              <div class="option-desc">剑骨觉醒震动隐居剑道宗师，夜访林风带来惊天秘密。</div>
+              <div class="option-confidence">置信度 82% · Character Agent</div>
+            </div>
+            <div class="option-card" data-opt="c" onclick="selectOption('c', this)">
+              <div class="option-label-row">
+                <span class="option-label c">C</span>
+                <span class="option-title">外门试剑大会</span>
+              </div>
+              <div class="option-desc">宗门试剑大会，林风代表外门出战内门天才，越级之战即将打响。</div>
+              <div class="option-confidence">置信度 75% · Plot Agent</div>
+            </div>
+          </div>
+
+          <!-- D — Free input (hidden by default) -->
+          <div id="customInputArea" style="display:none; padding: 0 16px 12px;">
+            <textarea
+              class="free-input"
+              id="customInput"
+              placeholder="写下你的想法，让 AI 帮你展开..."
+              style="width:100%; height:60px;"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Send bar -->
+        <div class="free-input-area" id="sendBar">
+          <textarea
+            class="free-input"
+            id="mainInput"
+            placeholder="输入你的写作意图..."
+            style="height:40px;"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" onclick="handleSend()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================
+         Tab 3: Agent 面板
+         ============================== -->
+    <div class="tab-panel" id="panel-agent">
+      <div class="agent-header">
+        <div class="agent-title">Agent 调度中心</div>
+        <div class="agent-subtitle">Agent of Agents — 5 Agent 协作写作</div>
+      </div>
+
+      <!-- Coordinator -->
+      <div class="coordinator-card">
+        <div class="coordinator-header">
+          <div class="coordinator-avatar">🧠</div>
+          <div>
+            <div class="coordinator-name">Coordinator · 总调度</div>
+            <div class="coordinator-status">
+              <span class="status-dot"></span>
+              运行中 · 等待指令
+            </div>
+          </div>
+        </div>
+        <div class="coordinator-desc">
+          协调 5 个专业 Agent 协作写作：理解你的写作意图，分配子 Agent 任务，生成优化选项。
+        </div>
+      </div>
+
+      <!-- Agent List -->
+      <div class="agent-list">
+        <div class="agent-card">
+          <div class="agent-card-icon plot">📖</div>
+          <div class="agent-card-info">
+            <div class="agent-card-name">Plot Agent · 剧情</div>
+            <div class="agent-card-desc">故事结构 · 冲突管理 · 情节节奏 · 伏笔回收</div>
+          </div>
+          <span class="agent-card-stat">活跃</span>
+        </div>
+
+        <div class="agent-card">
+          <div class="agent-card-icon character">👤</div>
+          <div class="agent-card-info">
+            <div class="agent-card-name">Character Agent · 人物</div>
+            <div class="agent-card-desc">人物档案 · 人物弧光 · 关系网络 · 成长轨迹</div>
+          </div>
+          <span class="agent-card-stat">活跃</span>
+        </div>
+
+        <div class="agent-card">
+          <div class="agent-card-icon dialogue">💬</div>
+          <div class="agent-card-info">
+            <div class="agent-card-name">Dialogue Agent · 对话</div>
+            <div class="agent-card-desc">对话生成 · 台词匹配 · 语气语调 · 潜台词</div>
+          </div>
+          <span class="agent-card-stat">待命中</span>
+        </div>
+
+        <div class="agent-card">
+          <div class="agent-card-icon style">🎨</div>
+          <div class="agent-card-info">
+            <div class="agent-card-name">Style Agent · 文风</div>
+            <div class="agent-card-desc">文风控制 · 修辞手法 · 叙事视角 · 语言质感</div>
+          </div>
+          <span class="agent-card-stat">活跃</span>
+        </div>
+
+        <div class="agent-card">
+          <div class="agent-card-icon world">🌐</div>
+          <div class="agent-card-info">
+            <div class="agent-card-name">World Agent · 世界观</div>
+            <div class="agent-card-desc">设定一致性 · 规则体系 · 环境氛围 · 力量逻辑</div>
+          </div>
+          <span class="agent-card-stat">活跃</span>
+        </div>
+      </div>
+
+      <div style="height: 16px;"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-item active" data-tab="projects" onclick="switchTab('projects')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>项目</span>
+    </button>
+    <button class="tab-item" data-tab="writing" onclick="switchTab('writing')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>写作</span>
+    </button>
+    <button class="tab-item" data-tab="agent" onclick="switchTab('agent')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5v10a5 5 0 0 0 10 0V7a5 5 0 0 0-5-5z"/><path d="M8 10h8M8 14h6"/></svg>
+      <span>Agent</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ── Tab switching ──
+function switchTab(tab) {
+  // Update tab bar
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-item[data-tab="${tab}"]`).classList.add('active');
+
+  // Update panels
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${tab}`).classList.add('active');
+
+  // Update header
+  const titles = { projects: '项目', writing: '写作', agent: 'Agent 调度' };
+  document.getElementById('headerTitle').textContent = titles[tab];
+
+  // Scroll writing tab to top when opened
+  if (tab === 'writing') {
+    const content = document.getElementById('writeContent');
+    if (content) content.scrollTop = 0;
+  }
+}
+
+// ── Project accordion ──
+let currentActiveProject = 'novel-001';
+
+function toggleProject(rowEl) {
+  const card = rowEl.parentElement;
+  const projectId = card.dataset.project;
+  const arrow = document.getElementById(`arrow-${projectId}`);
+  const chapterList = document.getElementById(`chapters-${projectId}`);
+  const isExpanded = chapterList.classList.contains('expanded');
+
+  if (isExpanded && projectId === currentActiveProject) {
+    // Collapse
+    arrow.classList.remove('expanded');
+    chapterList.classList.remove('expanded');
+    currentActiveProject = null;
+    card.classList.remove('active');
+    return;
+  }
+
+  // Collapse all others
+  document.querySelectorAll('.project-card.active').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.project-arrow.expanded').forEach(a => a.classList.remove('expanded'));
+  document.querySelectorAll('.chapter-list.expanded').forEach(l => l.classList.remove('expanded'));
+
+  // Expand this one
+  arrow.classList.add('expanded');
+  chapterList.classList.add('expanded');
+  card.classList.add('active');
+  currentActiveProject = projectId;
+
+  // Update non-active project chapters to disabled
+  updateChapterStates(projectId);
+}
+
+function updateChapterStates(activeProjectId) {
+  document.querySelectorAll('.chapter-item').forEach(item => {
+    const chProjectId = item.id.match(/ch-(.+)-(\d+)/)?.[1];
+    if (chProjectId && chProjectId !== activeProjectId) {
+      item.classList.add('disabled');
+    } else {
+      item.classList.remove('disabled');
+    }
+  });
+}
+
+// ── Open chapter for writing ──
+const chapterContents = {
+  'novel-001-1': { title: '废材少年', content: `林风站在宗门演武场上，周围的嘲笑声如潮水般涌来。
+
+"废材"——这是他十六年来听得最多的两个字。
+
+身怀绝世剑骨，却因经脉堵塞无法凝聚灵力。在九州大陆，不能修炼就等于废物。
+
+但他从未放弃。
+
+每个深夜，当师兄弟们沉睡时，他独自在后山挥剑三千次。汗水浸透布衣，剑柄磨破掌心，结痂再裂，裂了再结。
+
+"我不信命。"
+
+月光下，少年眼中燃着一团不灭的火。`, status: '已完成' },
+  'novel-001-2': { title: '剑骨觉醒', content: `剧痛自脊柱蔓延全身，林风咬紧牙关，鲜血从嘴角渗出。
+
+剑骨正在觉醒，那股沉寂了十六年的力量如洪荒猛兽般苏醒。
+
+骨骼寸寸爆响，经脉中仿佛有千万柄利剑在奔涌。痛，但畅快。
+
+"原来……这就是剑骨的力量。"
+
+一道通天剑意自他体内迸发，直冲云霄。整个宗门为之震动。`, status: '已完成' },
+  'novel-001-3': { title: '剑指苍穹', content: `宗门议事大殿中，掌门与诸位长老目光灼灼。
+
+"林风，你可知剑骨觉醒意味着什么？"掌门的声音带着一丝颤抖。
+
+九州千年以来，剑骨觉醒者不过三人。每一人，都曾改写了大陆的格局。
+
+林风抬头，目光平静却坚定："我只知道，我再也不做废材了。"
+
+大殿中一片寂静。曾经的嘲笑声早已消散，取而代之的是震惊与畏惧。
+
+掌门沉默良久，缓缓开口："剑骨觉醒，是福也是祸。从今日起，你将进入内门修行。但记住——力量越大，责任越大。"`, status: '草稿' },
+};
+
+function openChapter(projectId, chapterNum) {
+  const key = `${projectId}-${chapterNum}`;
+  const ch = chapterContents[key];
+  if (!ch) { showToast('章节内容暂未加载'); return; }
+
+  document.getElementById('writeChapterTitle').textContent = `第 ${chapterNum} 章 — ${ch.title}`;
+
+  // Project name mapping
+  const projectNames = {
+    'novel-001': '剑道巅峰',
+    'novel-002': '都市修仙传',
+    'novel-003': '末世重生',
+    'novel-004': '星际流浪者'
+  };
+  const isLast = (projectId === 'novel-001' && chapterNum === 3) ||
+                  (projectId === 'novel-002' && chapterNum === 4) ||
+                  (projectId === 'novel-003' && chapterNum === 5);
+  const isCompleted = projectId === 'novel-004';
+  const statusText = isCompleted ? '已完结 · 只读' : (isLast ? '写作中' : '回顾中');
+
+  document.getElementById('writeProjectTitle').textContent = `${projectNames[projectId] || projectId} · ${statusText}`;
+  document.getElementById('writeStatus').textContent = ch.status;
+  document.getElementById('writeContent').textContent = ch.content;
+
+  // Show/hide options based on editability
+  const canEdit = isLast && !isCompleted;
+  document.getElementById('optionsStrip').style.display = canEdit ? 'block' : 'none';
+  document.getElementById('sendBar').style.display = canEdit ? 'flex' : 'none';
+
+  // Switch to writing tab
+  switchTab('writing');
+}
+
+// ── Select option ──
+function selectOption(optId, el) {
+  document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('mainInput').placeholder = `已选择方案 ${optId.toUpperCase()}，点击发送确认...`;
+}
+
+// ── Mode switch (选项/自定义) ──
+function switchMode(mode) {
+  document.getElementById('modeOptBtn').classList.toggle('active', mode === 'options');
+  document.getElementById('modeCustBtn').classList.toggle('active', mode === 'custom');
+  document.getElementById('optionCards').style.display = mode === 'options' ? 'flex' : 'none';
+  document.getElementById('customInputArea').style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+// ── Send ──
+function handleSend() {
+  const input = document.getElementById('mainInput');
+  const customInput = document.getElementById('customInput');
+  const text = input.value.trim() || customInput.value.trim();
+
+  if (!text) {
+    showToast('请选择选项或输入你的想法');
+    return;
+  }
+
+  showToast('✨ 已提交，AI 正在生成...');
+  input.value = '';
+  customInput.value = '';
+
+  // Deselect option cards
+  document.querySelectorAll('.option-card.selected').forEach(c => c.classList.remove('selected'));
+  input.placeholder = '输入你的写作意图...';
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+// ── New project ──
+document.getElementById('newProjectBtn').addEventListener('click', () => {
+  showToast('新建项目 — 即将上线');
+});
+
+// ── Theme toggle (simplified) ──
+document.getElementById('themeBtn').addEventListener('click', () => {
+  showToast('主题切换 — 移动端精简为深色模式');
+});
+
+// ── Initialize chapter states ──
+updateChapterStates('novel-001');
+</script>
+
+</body>
+</html>

@@ -12,12 +12,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import List
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dao import vault_dao
-from app.models.dynamic_layer import DynamicLayer
-from app.models.secret import Secret
+from app.dao import vault_dao, card_dao, dynamic_layer_dao, secret_dao
+from app.models.card_pool import CardPool
 
 logger = logging.getLogger(__name__)
 
@@ -239,14 +237,7 @@ class ValidationService:
         Loads the most recent ``DynamicLayer`` for the project and checks
         that the ``summary`` field is non-empty and of reasonable length.
         """
-        stmt = (
-            select(DynamicLayer)
-            .where(DynamicLayer.project_id == project_id)
-            .order_by(DynamicLayer.id.desc())
-            .limit(1)
-        )
-        result = await db.execute(stmt)
-        latest = result.scalar_one_or_none()
+        latest = await dynamic_layer_dao.get_latest_by_project(db, str(project_id))
 
         if latest is None:
             return CheckResult(
@@ -294,14 +285,7 @@ class ValidationService:
         - No item appears in both lists simultaneously
         - No empty strings in either list
         """
-        stmt = (
-            select(DynamicLayer)
-            .where(DynamicLayer.project_id == project_id)
-            .order_by(DynamicLayer.id.desc())
-            .limit(1)
-        )
-        result = await db.execute(stmt)
-        latest = result.scalar_one_or_none()
+        latest = await dynamic_layer_dao.get_latest_by_project(db, str(project_id))
 
         if latest is None:
             return CheckResult(
@@ -478,11 +462,9 @@ class ValidationService:
                 detail="无选中卡片，跳过剧情推进检查",
             )
 
-        from app.models import CardPool
+        from app.dao import card_dao
 
-        stmt = select(CardPool).where(CardPool.id.in_(card_ids))
-        result = await db.execute(stmt)
-        cards = list(result.scalars().all())
+        cards = await card_dao.get_by_ids_any(db, card_ids)
 
         content_lower = content.lower()
         unaddressed = []
@@ -618,14 +600,7 @@ class ValidationService:
         - ``must_hold`` items should be present / reflected in content
         - ``must_not`` items should be absent from content
         """
-        stmt = (
-            select(DynamicLayer)
-            .where(DynamicLayer.project_id == project_id)
-            .order_by(DynamicLayer.id.desc())
-            .limit(1)
-        )
-        result = await db.execute(stmt)
-        latest = result.scalar_one_or_none()
+        latest = await dynamic_layer_dao.get_latest_by_project(db, str(project_id))
 
         if latest is None:
             return CheckResult(
@@ -679,14 +654,7 @@ class ValidationService:
         whether each hook appears to have been addressed or remains open
         in the generated content.
         """
-        stmt = (
-            select(DynamicLayer)
-            .where(DynamicLayer.project_id == project_id)
-            .order_by(DynamicLayer.id.desc())
-            .limit(1)
-        )
-        result = await db.execute(stmt)
-        latest = result.scalar_one_or_none()
+        latest = await dynamic_layer_dao.get_latest_by_project(db, str(project_id))
 
         if latest is None:
             return CheckResult(
@@ -738,9 +706,7 @@ class ValidationService:
         those mentions are consistent with each secret's ``secrecy_level``
         (hidden / partial / revealed).
         """
-        stmt = select(Secret).where(Secret.project_id == project_id)
-        result = await db.execute(stmt)
-        secrets = list(result.scalars().all())
+        secrets = await secret_dao.list_by_project(db, project_id)
 
         if not secrets:
             return CheckResult(

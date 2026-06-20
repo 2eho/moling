@@ -13,14 +13,12 @@ import json
 import logging
 from typing import Optional, Dict, List, Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.dao import project_dao, vault_dao
+from app.dao import project_dao, vault_dao, secret_dao
 from app.errors import NotFoundError, ErrorCode
 from app.models.secret import Secret
-from app.models.vault_character import VaultCharacter
 from app.schemas.secret import SecretResp, UpdateSecretReq, UpdateSecretsByCharacterReq
 from app.llm.client import llm_client
 
@@ -166,12 +164,7 @@ class SecretService:
             Updated SecretResp or None
         """
         # Get secret
-        stmt = select(Secret).where(
-            Secret.id == secret_id,
-            Secret.project_id == project_id,
-        )
-        result = await db.execute(stmt)
-        secret = result.scalar_one_or_none()
+        secret = await secret_dao.get_by_id(db, secret_id)
         
         if secret is None:
             return None
@@ -217,12 +210,7 @@ class SecretService:
             Updated SecretResp or None
         """
         # Get secret
-        stmt = select(Secret).where(
-            Secret.id == secret_id,
-            Secret.project_id == project_id,
-        )
-        result = await db.execute(stmt)
-        secret = result.scalar_one_or_none()
+        secret = await secret_dao.get_by_id(db, secret_id)
         
         if secret is None:
             return None
@@ -258,9 +246,7 @@ class SecretService:
             Debt calculation result
         """
         # Get all secrets for the project
-        stmt = select(Secret).where(Secret.project_id == project_id)
-        result = await db.execute(stmt)
-        secrets = result.scalars().all()
+        secrets = await secret_dao.list_by_project(db, project_id)
         
         if not secrets:
             return {
@@ -394,12 +380,7 @@ class SecretService:
         project_id: int,
     ) -> list[SecretResp]:
         """List all secrets for a project."""
-        result = await db.execute(
-            select(Secret)
-            .where(Secret.project_id == project_id)
-            .order_by(Secret.id)
-        )
-        secrets = result.scalars().all()
+        secrets = await secret_dao.list_by_project(db, project_id)
         return [SecretResp.model_validate(s) for s in secrets]
 
     async def get_secrets_by_character(
@@ -410,14 +391,8 @@ class SecretService:
     ) -> dict:
         """Get secrets known to and unknown by a specific character."""
         # First, get the character name by ID
-        result = await db.execute(
-            select(VaultCharacter).where(
-                VaultCharacter.id == character_id,
-                VaultCharacter.project_id == project_id,
-            )
-        )
-        character = result.scalar_one_or_none()
-        if character is None:
+        character = await vault_dao.get_character(db, character_id)
+        if character is None or character.project_id != project_id:
             return {
                 "character_id": character_id,
                 "character_name": None,
@@ -428,10 +403,7 @@ class SecretService:
         character_name = character.name
         
         # Then, get secrets by character name
-        result = await db.execute(
-            select(Secret).where(Secret.project_id == project_id)
-        )
-        all_secrets = result.scalars().all()
+        all_secrets = await secret_dao.list_by_project(db, project_id)
         
         known = []
         unknown = []
@@ -456,10 +428,7 @@ class SecretService:
     ) -> dict:
         """Get secrets known to and unknown by a specific character (query by name)."""
         # Get all secrets for the project
-        result = await db.execute(
-            select(Secret).where(Secret.project_id == project_id)
-        )
-        all_secrets = result.scalars().all()
+        all_secrets = await secret_dao.list_by_project(db, project_id)
         
         known = []
         unknown = []
@@ -483,9 +452,7 @@ class SecretService:
         data: UpdateSecretReq,
     ) -> Optional[SecretResp]:
         """Update a secret. Returns None if not found or project mismatch."""
-        stmt = select(Secret).where(Secret.id == secret_id)
-        result = await db.execute(stmt)
-        secret = result.scalar_one_or_none()
+        secret = await secret_dao.get_by_id(db, secret_id)
         if secret is None or secret.project_id != project_id:
             return None
         
@@ -507,14 +474,8 @@ class SecretService:
     ) -> dict:
         """Update secrets for a character."""
         # First, get the character name by ID
-        result = await db.execute(
-            select(VaultCharacter).where(
-                VaultCharacter.id == character_id,
-                VaultCharacter.project_id == str(project_id),
-            )
-        )
-        character = result.scalar_one_or_none()
-        if character is None:
+        character = await vault_dao.get_character(db, character_id)
+        if character is None or str(character.project_id) != str(project_id):
             return {
                 "character_id": character_id,
                 "character_name": None,
@@ -529,10 +490,7 @@ class SecretService:
         for item in data.secrets:
             if item.id:
                 # Update existing secret
-                result = await db.execute(
-                    select(Secret).where(Secret.id == item.id)
-                )
-                secret = result.scalar_one_or_none()
+                secret = await secret_dao.get_by_id(db, item.id)
                 if secret and secret.project_id == project_id:
                     if item.content:
                         secret.description = item.content
@@ -576,12 +534,8 @@ class SecretService:
             return []
 
         # 获取本章节所有未曝光秘密
-        stmt = select(Secret).where(
-            Secret.project_id == project_id,
-            Secret.secrecy_level.in_(["hidden", "partial"]),
-        )
-        result = await db.execute(stmt)
-        all_secrets = list(result.scalars().all())
+        secrets = await secret_dao.list_by_project(db, project_id)
+        all_secrets = [s for s in secrets if s.secrecy_level in ("hidden", "partial")]
 
         if not all_secrets:
             return []
@@ -692,12 +646,7 @@ class SecretService:
             return []
 
         # 获取所有未曝光但部分知晓的秘密（有人知道但未完全公开）
-        stmt = select(Secret).where(
-            Secret.project_id == project_id,
-            Secret.secrecy_level == "partial",
-        )
-        result = await db.execute(stmt)
-        partial_secrets = list(result.scalars().all())
+        partial_secrets = await secret_dao.list_by_secrecy_level(db, project_id, "partial")
 
         if not partial_secrets:
             return []

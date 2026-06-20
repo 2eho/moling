@@ -79,3 +79,38 @@ class ChapterDAO(BaseDAO[Chapter]):
         )
         result = await db.execute(stmt)
         return result.scalar_one()
+
+    async def get_content(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_number: int,
+    ) -> str | None:
+        """Get the raw content of a chapter by project_id and chapter_number."""
+        stmt = (
+            select(Chapter.content)
+            .where(
+                Chapter.project_id == project_id,
+                Chapter.chapter_number == chapter_number,
+            )
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        row = result.one_or_none()
+        return row[0] if row else None
+
+    async def count_by_project(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        *,
+        status: str | None = None,
+    ) -> int:
+        """Count chapters in a project, optionally filtered by status."""
+        stmt = select(func.count()).select_from(Chapter).where(
+            Chapter.project_id == project_id
+        )
+        if status is not None:
+            stmt = stmt.where(Chapter.status == status)
+        result = await db.execute(stmt)
+        return result.scalar_one()

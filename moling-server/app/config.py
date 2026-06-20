@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from functools import lru_cache
-
 from typing import List
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -90,18 +90,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    @field_validator("SECRET_KEY", mode="after")
-    @classmethod
-    def _warn_default_secret_key(cls, v: str) -> str:
-        if v == "dev-secret-key-change-in-production":
-            logger.warning(
-                "SECRET_KEY is still the default value! This is INSECURE for "
-                "any non-development environment. Set SECRET_KEY via environment "
-                "variable or .env file. Generate a strong key with: "
-                "openssl rand -hex 32"
-            )
-        return v
-
     @field_validator("LLM_API_KEY", mode="after")
     @classmethod
     def _warn_placeholder_api_key(cls, v: str) -> str:
@@ -129,11 +117,58 @@ class Settings(BaseSettings):
     def _warn_production_defaults(cls, v: str) -> str:
         if v == "production":
             # In production mode, verify that critical settings are not defaults.
-            # This validator runs after __init__ so we need to check via cls.
-            # We log a general reminder here; individual field validators above
-            # handle specific warnings.
+            # The individual field validators above log warnings for each
+            # insecure default.  Additionally, we verify SECRET_KEY explicitly
+            # here because Pydantic validators run in declaration order and we
+            # need access to the fully-constructed model.
             pass
         return v
+
+    @field_validator("SECRET_KEY", mode="after")
+    @classmethod
+    def _reject_production_default_secret(cls, v: str, info) -> str:
+        """Refuse to start in production with the dev default SECRET_KEY."""
+        if v == "dev-secret-key-change-in-production":
+            env = info.data.get("ENVIRONMENT", "")
+            if env == "production":
+                raise ValueError(
+                    "SECRET_KEY must be set via environment variable in production. "
+                    "Generate one with: openssl rand -hex 32"
+                )
+            logger.warning(
+                "SECRET_KEY is still the default value! This is INSECURE for "
+                "any non-development environment. Set SECRET_KEY via environment "
+                "variable or .env file. Generate a strong key with: "
+                "openssl rand -hex 32"
+            )
+        return v
+
+    @field_validator("LLM_PRO_KEYS", "LLM_FLASH_KEYS", mode="before")
+    @classmethod
+    def _parse_comma_separated_keys(cls, v: object) -> List[str]:
+        """Parse comma-separated or JSON-array env values into a list.
+
+        Environment variables for lists can be set as:
+          LLM_PRO_KEYS=sk-key1,sk-key2,sk-key3
+        or the Pydantic JSON array format.
+        """
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [item.strip() for item in v if item and item.strip()]
+        if isinstance(v, str):
+            stripped = v.strip()
+            if not stripped:
+                return []
+            # JSON array format: '["key1","key2"]'
+            if stripped.startswith("["):
+                import json
+                parsed = json.loads(stripped)
+                if isinstance(parsed, list):
+                    return [item.strip() for item in parsed if item and item.strip()]
+            # Comma-separated format
+            return [item.strip() for item in stripped.split(",") if item.strip()]
+        return []
 
 
 @lru_cache()
@@ -153,16 +188,24 @@ _OVERRIDES: dict[str, str | None] = {
     "llm_api_base": None,
     "llm_model": None,
 }
+_overrides_lock = asyncio.Lock()
 
 
-def set_override(key: str, value: str | None) -> None:
-    """Set a runtime override for a config value.
+async def set_override(key: str, value: str | None) -> None:
+    """Set a runtime override for a config value (async-safe).
 
     When set, this value takes precedence over the Settings object.
     Used by the admin panel to update config at runtime.
     """
-    _OVERRIDES[key] = value
+    async with _overrides_lock:
+        _OVERRIDES[key] = value
     # Bust the Settings cache so next get_effective() picks up the change
+    get_settings.cache_clear()
+
+
+def set_override_sync(key: str, value: str | None) -> None:
+    """Synchronous version of set_override for non-async contexts."""
+    _OVERRIDES[key] = value
     get_settings.cache_clear()
 
 

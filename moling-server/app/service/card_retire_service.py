@@ -14,9 +14,9 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dao import card_dao
 from app.models.card_pool import CardPool
 
 logger = logging.getLogger(__name__)
@@ -93,17 +93,7 @@ class CardRetireService:
         """
         try:
             # 1. 获取当前活跃卡牌
-            pid = str(project_id)
-            stmt = (
-                select(CardPool)
-                .where(
-                    CardPool.project_id == pid,
-                    CardPool.is_active == True,
-                    CardPool.status == "active",
-                )
-            )
-            result = await db.execute(stmt)
-            active_cards: list[CardPool] = list(result.scalars().all())
+            active_cards = await card_dao.list_active_by_project(db, project_id)
             active_count = len(active_cards)
 
             if active_count == 0:
@@ -158,15 +148,7 @@ class CardRetireService:
                 )
 
             # 6. 执行淘汰
-            stmt_update = (
-                select(CardPool)
-                .where(
-                    CardPool.project_id == pid,
-                    CardPool.id.in_(retire_ids),
-                )
-            )
-            result_update = await db.execute(stmt_update)
-            cards_to_retire = list(result_update.scalars().all())
+            cards_to_retire = await card_dao.get_by_ids(db, project_id, retire_ids)
 
             now = datetime.now(timezone.utc)
             for card in cards_to_retire:

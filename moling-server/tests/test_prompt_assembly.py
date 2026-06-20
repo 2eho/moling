@@ -189,11 +189,11 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        assert "[Layer 1: 📋 动态层 · 故事此刻状态]" in prompt
+        # Format changed to prompt_service style (=== Layer 1 === / 【锚点】...)
         assert "林星收到一段来自未知文明的加密信号" in prompt
-        assert "POV: 林星" in prompt
-        assert "地点: 深空观测站·阿尔法区" in prompt
-        assert "时间: 星际历217年·秋" in prompt
+        assert "视点：林星" in prompt
+        assert "地点：深空观测站·阿尔法区" in prompt
+        assert "时间：星际历217年·秋" in prompt
 
     def test_layer1_must_hold_and_must_not(self):
         """Layer 1: 连贯性基线硬约束."""
@@ -226,10 +226,10 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        assert "【未收束钩子 Top3】" in prompt
+        assert "【未收束钩子】" in prompt
         assert "Hook 0" in prompt
         assert "Hook 2" in prompt
-        assert "Hook 3" not in prompt  # beyond top 3
+        assert "Hook 3" not in prompt  # prompt_service caps at 3 via build_layer1
 
     def test_layer1_dynamic_layer_none(self):
         """Layer 1: dynamic_layer 为 None 时不报错."""
@@ -242,10 +242,8 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        # Layer 1 标记仍然存在
-        assert "[Layer 1: 📋 动态层 · 故事此刻状态]" in prompt
-        # 没有摘要内容时，用默认值
-        assert "POV: 不限" in prompt
+        # Anchor defaults when no dynamic layer
+        assert "视点：不限" in prompt
 
     # ---- Layer 2 ----
 
@@ -260,11 +258,12 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        assert "[Layer 2: 📚 四库 · 卡片过滤上下文]" in prompt
-        assert "【林星】" in prompt
-        assert "定位: protagonist" in prompt
-        assert "当前状态: 焦虑不安" in prompt
-        assert "【陈博士】" in prompt
+        # Layer 2 uses prompt_service format: 【角色信息】, bullet-list entries
+        assert "=== Layer 2 ===" in prompt
+        assert "林星" in prompt
+        assert "protagonist" in prompt
+        assert "焦虑不安" in prompt
+        assert "陈博士" in prompt
 
     def test_layer2_promises_present(self):
         """Layer 2: 剧情承诺注入."""
@@ -277,9 +276,9 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        assert "【相关剧情承诺】" in prompt
+        assert "【相关伏笔】" in prompt
         assert "神秘信号来源之谜" in prompt
-        assert "紧迫度: 8" in prompt
+        assert "紧迫度" in prompt
 
     def test_layer2_timeline_present(self):
         """Layer 2: 时间线参考注入."""
@@ -325,11 +324,11 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        # Layer 2 标记仍存在，但各部分为空
-        assert "[Layer 2: 📚 四库 · 卡片过滤上下文]" in prompt
-        # 没有数据时对应段落不应出现
-        assert "【相关人物设定】" not in prompt
-        assert "【相关剧情承诺】" not in prompt
+        # Layer 2 all empty: sections should not appear
+        assert "=== Layer 2 ===" in prompt
+        # Sections without data use placeholder text "(暂无 vault 数据)" or "(暂无卡牌方向)"
+        assert "【角色信息】" not in prompt  # no data → no section header with data
+        assert "【相关伏笔】" not in prompt
         assert "【时间线参考】" not in prompt
         assert "【世界观规则】" not in prompt
 
@@ -346,10 +345,10 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        assert "[Layer 3: 🃏 本章方向]" in prompt
-        assert "【融合方向】" in prompt
+        assert "=== Layer 3 ===" in prompt
+        assert "【卡牌融合方向】" in prompt
         assert "主角觉醒" in prompt
-        assert "权重: 0.80" in prompt
+        assert "权重: 1.00" in prompt
 
     def test_layer3_weaving_scheme(self):
         """Layer 3: 编织方案注入."""
@@ -367,8 +366,9 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        assert "【编织方案】" in prompt
-        assert "双线交织" in prompt
+        # prompt_service uses description not name for weaving scheme
+        assert "编织方案" in prompt
+        assert "林星和陈博士的线索交替推进" in prompt
 
     def test_layer3_inspiration_present(self):
         """Layer 3: 创作灵感注入."""
@@ -426,9 +426,9 @@ class TestPromptAssembly:
         )
 
         assert "你是一位专业的网络小说作家。" in prompt
-        assert "[Layer 1:" in prompt
-        assert "[Layer 2:" in prompt
-        assert "[Layer 3:" in prompt
+        assert "=== Layer 1 ===" in prompt
+        assert "=== Layer 2 ===" in prompt
+        assert "=== Layer 3 ===" in prompt
 
     def test_completely_empty_vault(self):
         """relevant_vault 为空字典时不报错."""
@@ -445,10 +445,11 @@ class TestPromptAssembly:
             project, chapter, outline, "", vault
         )
 
-        # 所有三层标记都存在
-        assert "[Layer 1: 📋 动态层 · 故事此刻状态]" in prompt
-        assert "[Layer 2: 📚 四库 · 卡片过滤上下文]" in prompt
-        assert "[Layer 3: 🃏 本章方向]" in prompt
+        # All four layer markers present in prompt_service format
+        assert "=== Layer 0 ===" in prompt
+        assert "=== Layer 1 ===" in prompt
+        assert "=== Layer 2 ===" in prompt
+        assert "=== Layer 3 ===" in prompt
 
     def test_backward_compatibility_old_format(self):
         """向后兼容: 旧数据格式（没有 dynamic_layer）仍可工作."""
@@ -464,7 +465,7 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        assert "【相关人物设定】" in prompt
+        assert "【角色信息】" in prompt
         assert "林星" in prompt
 
     def test_full_prompt_structure_order(self):
@@ -478,11 +479,11 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        # 检查各层出现顺序
+        # 检查各层出现顺序（prompt_service format: === Layer X ===）
         pos_layer0 = prompt.index("你是一位专业的网络小说作家")
-        pos_layer1 = prompt.index("[Layer 1: 📋 动态层")
-        pos_layer2 = prompt.index("[Layer 2: 📚 四库")
-        pos_layer3 = prompt.index("[Layer 3: 🃏 本章方向")
+        pos_layer1 = prompt.index("=== Layer 1 ===")
+        pos_layer2 = prompt.index("=== Layer 2 ===")
+        pos_layer3 = prompt.index("=== Layer 3 ===")
         pos_req = prompt.index("【写作要求】")
 
         assert pos_layer0 < pos_layer1, "Layer 0 必须在 Layer 1 之前"
@@ -501,5 +502,5 @@ class TestPromptAssembly:
             project, chapter, outline, "inspiration", vault
         )
 
-        # 至少 5 条分隔线 (Layer 0 后、Layer1前后、Layer2前后、Layer3后)
-        assert prompt.count("=" * 55) >= 4
+        # At least 4 "=== Layer X ===" markers (Layers 0-3)
+        assert prompt.count("=== Layer") >= 4

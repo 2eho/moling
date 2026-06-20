@@ -38,7 +38,7 @@ if platform.system() == "Windows":
         import sqlalchemy.ext.asyncio.base as _async_base
         _async_base._greenlet_spawn = _asyncio_greenlet_spawn
     except Exception:
-        pass
+        logger.debug("greenlet patch not needed on this platform", exc_info=True)
 
     print("[OK] Applied Windows greenlet patch (thread pool fallback)")
 
@@ -62,7 +62,7 @@ if platform.system() == "Windows":
                 setattr(_obj, '_get_exec_once_mutex', staticmethod(_patched_get_exec_once_mutex))
                 _patched_classes += 1
             except Exception:
-                pass
+                logger.debug("Could not patch %s._get_exec_once_mutex (may be frozen)", type(_obj).__name__)
 
     # 同时修补所有已有实例（如果有）
     # 遍历 sqlalchemy.event.registry 中的实例...
@@ -149,12 +149,12 @@ elif _sync_url.startswith("sqlite"):
     _sync_url = _sync_url.replace("sqlite+aiosqlite://", "sqlite://")
 
 _sync_engine = create_engine(_sync_url, echo=False)
-_sync_session_factory = sessionmaker(bind=_sync_engine, expire_on_commit=False)
+sync_session_factory = sessionmaker(bind=_sync_engine, expire_on_commit=False)
 
 
 def get_sync_db() -> Generator["Session", None, None]:
     """提供同步数据库会话（用于 Windows 上避开 async + greenlet 问题）。"""
-    with _sync_session_factory() as session:
+    with sync_session_factory() as session:
         try:
             yield session
             session.commit()
@@ -244,7 +244,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     Windows: 使用同步 session + 线程池包装，避开 aiosqlite greenlet 问题。
     """
     if platform.system() == "Windows" and _is_sqlite:
-        with _sync_session_factory() as session:
+        with sync_session_factory() as session:
             wrapped = _SyncAsyncSessionWrapper(session)
             try:
                 yield wrapped  # type: ignore[misc]

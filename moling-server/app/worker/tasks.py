@@ -51,6 +51,12 @@ _session_factory = _create_session_factory()
 # ---------------------------------------------------------------------------
 
 
+async def _run_pipeline(service: GenerationService, generation_task_id: str) -> dict:
+    """Run the generation pipeline with a proper database session."""
+    async with _session_factory() as db:
+        return await service.execute_generation_pipeline(db, generation_task_id)
+
+
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=30)
 def run_generation_task(self, generation_task_id: str) -> dict:
     """Execute an AI generation task in the background.
@@ -66,12 +72,9 @@ def run_generation_task(self, generation_task_id: str) -> dict:
         # Create a new service instance for this task
         service = GenerationService()
 
-        # Execute the generation (service handles db session internally)
+        # Execute the generation pipeline with a proper db session
         import asyncio
-        _ = asyncio.run(service.execute_generation(
-            None,  # db session created inside service
-            generation_task_id,
-        ))
+        _ = asyncio.run(_run_pipeline(service, generation_task_id))
 
         return {"status": "done", "task_id": generation_task_id}
 

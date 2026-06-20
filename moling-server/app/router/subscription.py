@@ -1,5 +1,5 @@
 """
-澧ㄧ伒 (Moling) 鈥?Subscription (璁㈤槄) Router.
+墨灵 (Moling) — Subscription (订阅) Router.
 
 Endpoints for subscription plans and checkout (basic stub).
 """
@@ -7,13 +7,15 @@ Endpoints for subscription plans and checkout (basic stub).
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_current_user, get_db
-from app.models.subscription import Plan, UserSubscription
+from app.dao.subscription_dao import plan_dao, user_subscription_dao
+from app.errors import NotFoundError, ConflictError
+from app.models.subscription import UserSubscription
 from app.schemas.subscription import PlanResp, CreateSubscriptionReq, SubscriptionResp
 
 router = APIRouter()
@@ -25,10 +27,7 @@ async def list_plans(
     db: AsyncSession = Depends(get_db),
 ) -> list[PlanResp]:
     """List all active subscription plans."""
-    result = await db.execute(
-        select(Plan).where(Plan.is_active == True).order_by(Plan.price)
-    )
-    plans = result.scalars().all()
+    plans = await plan_dao.get_active_plans(db)
     return [PlanResp.model_validate(p) for p in plans]
 
 
@@ -39,17 +38,11 @@ async def create_checkout(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """创建支付结算会话，返回合理的占位数据。"""
-    # 查询方案信息
-    result = await db.execute(
-        select(Plan).where(Plan.id == plan_id)
-    )
-    plan = result.scalar_one_or_none()
+    plan = await plan_dao.get(db, plan_id)
 
     if not plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
+        raise NotFoundError(detail="Plan not found")
 
-    # 生成占位 checkout 数据
-    import uuid
     checkout_id = str(uuid.uuid4())
 
     return {
@@ -74,28 +67,19 @@ async def create_subscription(
     db: AsyncSession = Depends(get_db),
 ) -> SubscriptionResp:
     """Create a new subscription for the current user."""
+    user_id = str(current_user["id"])
+
     # Check if user already has an active subscription
-    result = await db.execute(
-        select(UserSubscription).where(
-            UserSubscription.user_id == str(current_user.id),
-            UserSubscription.status.in_(["active", "trialing"]),
-        )
-    )
-    existing = result.scalar_one_or_none()
+    existing = await user_subscription_dao.get_by_user(db, user_id)
     if existing:
-        raise ValueError("User already has an active subscription")
+        raise ConflictError(detail="User already has an active subscription")
 
     # Get plan
-    result = await db.execute(
-        select(Plan).where(Plan.id == req.plan_id)
-    )
-    plan = result.scalar_one_or_none()
+    plan = await plan_dao.get(db, req.plan_id)
     if not plan:
-        raise ValueError("Plan not found")
+        raise NotFoundError(detail="Plan not found")
 
-    # Create subscription
-    from datetime import datetime, timezone, timedelta
-    
+    # Calculate end date
     now = datetime.now(timezone.utc)
     if plan.interval == "month":
         end_date = now + timedelta(days=30)
@@ -105,12 +89,12 @@ async def create_subscription(
         end_date = now + timedelta(days=30)
 
     subscription = UserSubscription(
-        user_id=str(current_user.id),
+        user_id=user_id,
         plan_id=str(req.plan_id),
         status="active",
         start_date=now,
         end_date=end_date,
-        auto_renew=req.auto_renew if hasattr(req, 'auto_renew') else True,
+        auto_renew=req.auto_renew if hasattr(req, "auto_renew") else True,
     )
 
     db.add(subscription)
@@ -126,13 +110,8 @@ async def get_current_subscription(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Get current user's active subscription."""
-    result = await db.execute(
-        select(UserSubscription).where(
-            UserSubscription.user_id == str(current_user.id),
-            UserSubscription.status.in_(["active", "trialing"]),
-        ).order_by(UserSubscription.created_at.desc())
-    )
-    subscription = result.scalar_one_or_none()
+    user_id = str(current_user["id"])
+    subscription = await user_subscription_dao.get_by_user(db, user_id)
 
     if not subscription:
         return {
@@ -154,22 +133,13 @@ async def get_payment_history(
     db: AsyncSession = Depends(get_db),
 ):
     """获取用户支付历史记录。"""
-    # 查询数据库中的订阅记录作为支付历史
-    result = await db.execute(
-        select(UserSubscription)
-        .where(UserSubscription.user_id == str(current_user.id))
-        .order_by(UserSubscription.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
-    subscriptions = result.scalars().all()
+    user_id = str(current_user["id"])
+    skip = (page - 1) * page_size
 
-    # 获取总数
-    count_result = await db.execute(
-        select(func.count()).select_from(UserSubscription)
-        .where(UserSubscription.user_id == str(current_user.id))
+    subscriptions = await user_subscription_dao.list_by_user(
+        db, user_id, skip=skip, limit=page_size
     )
-    total = count_result.scalar() or 0
+    total = await user_subscription_dao.count(db, filters={"user_id": user_id})
 
     items = []
     for sub in subscriptions:
@@ -177,11 +147,11 @@ async def get_payment_history(
             "id": sub.id,
             "plan_id": sub.plan_id,
             "status": sub.status,
-            "amount": 0.0,  # 金额暂不追踪，后续对接支付网关
+            "amount": 0.0,
             "currency": "CNY",
             "start_date": sub.start_date.isoformat() if sub.start_date else None,
             "end_date": sub.end_date.isoformat() if sub.end_date else None,
-            "auto_renew": sub.auto_renew if hasattr(sub, 'auto_renew') else True,
+            "auto_renew": sub.auto_renew if hasattr(sub, "auto_renew") else True,
             "created_at": sub.created_at.isoformat() if sub.created_at else None,
         })
 

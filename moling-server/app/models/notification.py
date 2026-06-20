@@ -46,12 +46,12 @@ class Notification(Base, TimestampMixin):
         default=False,
         comment="是否已读",
     )
-    project_id: Mapped[Optional[int]] = mapped_column(
-        Integer,
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
         ForeignKey("projects.id", ondelete="SET NULL"),
         nullable=True,
         default=None,
-        comment="关联项目 ID（可选）",
+        comment="关联项目 ID（可选，UUID）",
     )
 
     def __repr__(self) -> str:

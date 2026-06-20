@@ -90,6 +90,8 @@ class GenerationService:
                 "card_ids": req.card_ids,
                 "weights": req.weights,
                 "mode": req.mode,
+                "word_count": req.word_count,
+                "creativity": req.creativity,
             },
             progress_percent=0,
             progress_stage="initializing",
@@ -204,7 +206,8 @@ class GenerationService:
             # ===== Step 6: Outline Template Filling =====
             logger.info(f"Task {task_id}: Step 6 - Outline template filling")
             outline = await algorithm_service.step6_outline_template_filling(
-                project, chapter, cards, weight_map, relevant_vault
+                project, chapter, cards, weight_map, relevant_vault,
+                word_count=task.input_params.get("word_count", 2000),
             )
             task.progress_percent = 35
             await db.commit()
@@ -293,10 +296,9 @@ class GenerationService:
             task.progress_percent = 80
             await db.commit()
 
-            # If coherence check fails, we may need to regenerate or adjust
+            # If coherence check fails, attempt adjustment before falling back
             if not coherence_result["passed"]:
                 logger.warning(f"Task {task_id}: Coherence check failed, adjusting...")
-                # TODO: Implement adjustment logic or regenerate
                 generated_content = await self._adjust_content(
                     generated_content, coherence_result["issues"]
                 )

@@ -294,6 +294,98 @@ class VaultDAO:
         result = await db.execute(stmt)
         return result.scalar_one()
 
+    # ---- Batch by IDs ----
+
+    async def get_characters_by_ids(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        character_ids: list[int],
+    ) -> list[VaultCharacter]:
+        """Fetch characters by their IDs within a project."""
+        if not character_ids:
+            return []
+        stmt = (
+            select(VaultCharacter)
+            .where(
+                VaultCharacter.project_id == project_id,
+                VaultCharacter.id.in_(character_ids),
+            )
+            .order_by(VaultCharacter.id.asc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_plot_promises_by_ids(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        promise_ids: list[int],
+    ) -> list[VaultPlotPromise]:
+        """Fetch plot promises by their IDs within a project."""
+        if not promise_ids:
+            return []
+        stmt = (
+            select(VaultPlotPromise)
+            .where(
+                VaultPlotPromise.project_id == project_id,
+                VaultPlotPromise.id.in_(promise_ids),
+            )
+            .order_by(VaultPlotPromise.id.asc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_world_entries_by_ids(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        entry_ids: list[int],
+    ) -> list[VaultWorld]:
+        """Fetch world entries by their IDs within a project."""
+        if not entry_ids:
+            return []
+        stmt = (
+            select(VaultWorld)
+            .where(
+                VaultWorld.project_id == project_id,
+                VaultWorld.id.in_(entry_ids),
+            )
+            .order_by(VaultWorld.id.asc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    # ---- Lookup by name/term ----
+
+    async def get_character_by_name(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        name: str,
+    ) -> VaultCharacter | None:
+        """Find a character by name within a project."""
+        stmt = select(VaultCharacter).where(
+            VaultCharacter.project_id == project_id,
+            VaultCharacter.name == name,
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_world_entry_by_term(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        term: str,
+    ) -> VaultWorld | None:
+        """Find a world entry by term within a project."""
+        stmt = select(VaultWorld).where(
+            VaultWorld.project_id == project_id,
+            VaultWorld.term == term,
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def count_timeline_events(
         self,
         db: AsyncSession,
@@ -335,3 +427,73 @@ class VaultDAO:
         )
         result = await db.execute(stmt)
         return result.scalar_one()
+
+    async def count_characters_by_status(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        status: str,
+    ) -> int:
+        """Count vault characters filtered by status."""
+        stmt = (
+            select(func.count())
+            .select_from(VaultCharacter)
+            .where(
+                VaultCharacter.project_id == project_id,
+                VaultCharacter.status == status,
+            )
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    async def count_plot_promises_by_status(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        status: str,
+    ) -> int:
+        """Count plot promises filtered by status."""
+        stmt = (
+            select(func.count())
+            .select_from(VaultPlotPromise)
+            .where(
+                VaultPlotPromise.project_id == project_id,
+                VaultPlotPromise.status == status,
+            )
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    # ---- Complex finders ----
+
+    async def find_promise_by_description(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        description_fragment: str,
+    ) -> VaultPlotPromise | None:
+        """Find a plot promise by partial description match (first 80 chars)."""
+        stmt = select(VaultPlotPromise).where(
+            VaultPlotPromise.project_id == project_id,
+            VaultPlotPromise.description.contains(description_fragment),
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def find_promise_by_type_and_char(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        promise_type: str,
+        char_name: str,
+        statuses: list[str],
+    ) -> VaultPlotPromise | None:
+        """Find a plot promise by type + related character + status filter."""
+        stmt = select(VaultPlotPromise).where(
+            VaultPlotPromise.project_id == project_id,
+            VaultPlotPromise.type == promise_type,
+            VaultPlotPromise.related_characters.contains(char_name),
+            VaultPlotPromise.status.in_(statuses),
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()

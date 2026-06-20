@@ -5,13 +5,12 @@ Business logic for project CRUD + chapter count enrichment.
 
 from typing import Optional
 
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.dao import project_dao
+from app.dao import project_dao, chapter_dao, vault_dao
 from app.errors import NotFoundError, ErrorCode, PermissionError
-from app.models import Project, Chapter
+from app.models import Project
 from app.schemas.project import CreateProjectReq, UpdateProjectReq, ProjectResp, ProjectStatsResp
 
 settings = get_settings()
@@ -61,35 +60,21 @@ class ProjectService:
         page_size: int = 20,
         status: Optional[str] = None,
     ) -> dict:
-        """List projects with pagination."""
-        # Build query
-        stmt = select(Project).where(Project.user_id == user_id)
-        
+        """List projects with pagination (via DAO)."""
+        filters: dict = {"user_id": user_id}
         if status:
-            stmt = stmt.where(Project.status == status)
-        
-        # Count total
-        count_stmt = select(func.count()).select_from(Project).where(Project.user_id == user_id)
-        if status:
-            count_stmt = count_stmt.where(Project.status == status)
-        
-        total_result = await db.execute(count_stmt)
-        total = total_result.scalar_one()
-        
-        # Get paginated results
-        stmt = stmt.order_by(Project.updated_at.desc())
-        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
-        
-        result = await db.execute(stmt)
-        projects = list(result.scalars().all())
+            filters["status"] = status
+
+        total = await project_dao.count(db, filters=filters)
+        projects = await project_dao.get_multi(
+            db, filters=filters,
+            skip=(page - 1) * page_size, limit=page_size,
+            order_by="updated_at", descending=True,
+        )
         
         # Enrich with chapter count
         for project in projects:
-            chapters_stmt = select(func.count()).select_from(Chapter).where(
-                Chapter.project_id == project.id
-            )
-            chapters_result = await db.execute(chapters_stmt)
-            project.chapter_count = chapters_result.scalar_one()
+            project.chapter_count = await chapter_dao.count_by_project(db, int(project.id))
         
         return {
             "items": [ProjectResp.model_validate(p) for p in projects],
@@ -121,11 +106,7 @@ class ProjectService:
             )
         
         # Enrich with chapter count
-        chapters_stmt = select(func.count()).select_from(Chapter).where(
-            Chapter.project_id == project.id
-        )
-        chapters_result = await db.execute(chapters_stmt)
-        project.chapter_count = chapters_result.scalar_one()
+        project.chapter_count = await chapter_dao.count_by_project(db, int(project.id))
         
         return ProjectResp.model_validate(project)
 
@@ -215,32 +196,11 @@ class ProjectService:
                 detail="Not authorized to access this project",
             )
 
-        from sqlalchemy import select, func
-        from app.models.chapter import Chapter
-        from app.models.vault_character import VaultCharacter
-        from app.models.vault_plot_promise import VaultPlotPromise
-
         suggestions = []
 
         # Suggestion type 1: Chapter completion status
-        stmt = (
-            select(func.count())
-            .select_from(Chapter)
-            .where(
-                Chapter.project_id == project_id,
-                Chapter.status == "completed",
-            )
-        )
-        result = await db.execute(stmt)
-        completed_count = result.scalar() or 0
-
-        stmt = (
-            select(func.count())
-            .select_from(Chapter)
-            .where(Chapter.project_id == project_id)
-        )
-        result = await db.execute(stmt)
-        total_chapters = result.scalar() or 0
+        completed_count = await chapter_dao.count_by_project(db, int(project_id), status="completed")
+        total_chapters = await chapter_dao.count_by_project(db, int(project_id))
 
         if total_chapters > 0:
             completion_rate = (completed_count / total_chapters) * 100
@@ -253,12 +213,9 @@ class ProjectService:
                 })
 
         # Suggestion type 2: Character participation
-        stmt = select(func.count()).select_from(VaultCharacter).where(
-            VaultCharacter.project_id == project_id,
-            VaultCharacter.status == "active",
+        active_characters = await vault_dao.count_characters_by_status(
+            db, int(project_id), "active"
         )
-        result = await db.execute(stmt)
-        active_characters = result.scalar() or 0
 
         if active_characters > 5 and total_chapters > 0:
             suggestions.append({
@@ -269,12 +226,9 @@ class ProjectService:
             })
 
         # Suggestion type 3: Plot promise recycling
-        stmt = select(func.count()).select_from(VaultPlotPromise).where(
-            VaultPlotPromise.project_id == project_id,
-            VaultPlotPromise.status == "dormant",
+        dormant_promises = await vault_dao.count_plot_promises_by_status(
+            db, int(project_id), "dormant"
         )
-        result = await db.execute(stmt)
-        dormant_promises = result.scalar() or 0
 
         if dormant_promises > 3:
             suggestions.append({

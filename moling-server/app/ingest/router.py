@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, Query, UploadFile, File
+
+from app.errors import ValidationError, AppError, ErrorCode
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
@@ -52,7 +54,7 @@ async def submit_import(
 
     # 如果没有 text，尝试从 file 读取
     if not text and not file:
-        raise HTTPException(status_code=400, detail="请提供 text 参数或上传文件")
+        raise ValidationError(detail="请提供 text 参数或上传文件")
     
     # 如果从文件上传，读取文件内容
     if file:
@@ -60,10 +62,7 @@ async def submit_import(
         filename = file.filename or ""
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if ext not in ("txt", "md"):
-            raise HTTPException(
-                status_code=400,
-                detail=f"不支持的文件类型 .{ext}，仅支持 .txt 和 .md 文件",
-            )
+            raise ValidationError(detail=f"不支持的文件类型 .{ext}，仅支持 .txt 和 .md 文件")
 
         # 根据扩展名设置 source_type
         if ext == "md":
@@ -76,12 +75,9 @@ async def submit_import(
             content = await file.read()
             text = content.decode("utf-8")
         except UnicodeDecodeError:
-            raise HTTPException(
-                status_code=400,
-                detail="文件编码错误，请确保文件为 UTF-8 编码",
-            )
+            raise ValidationError(detail="文件编码错误，请确保文件为 UTF-8 编码")
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"读取文件失败: {str(e)}")
+            raise AppError(ErrorCode.INVALID_REQUEST, detail=f"读取文件失败: {str(e)}")
         finally:
             await file.close()
     
@@ -107,7 +103,7 @@ async def submit_import(
     )
     
     # 保存章节数据到 job（需要实现）
-    # TODO: 将 chapters_data 保存到 job 中
+    # 保存章节数据到 job（P1: 需实现持久化）
     
     return {
         "success": True,

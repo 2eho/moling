@@ -49,6 +49,9 @@ class ErrorCode(int, Enum):
     GENERATION_TASK_NOT_FOUND = 40407
     GENERATION_IN_PROGRESS = 40903
 
+    # ---- Permission (403xx) ----
+    FORBIDDEN = 40301  # Alias: general forbidden, same value as AUTH_INSUFFICIENT_PERMISSIONS
+
     # ---- General (4xx/5xx) ----
     INVALID_REQUEST = 40001
     VALIDATION_ERROR = 42201
@@ -66,6 +69,7 @@ _ERROR_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.AUTH_TOKEN_EXPIRED: "登录已过期，请重新登录",
     ErrorCode.AUTH_INVALID_TOKEN: "无效的认证令牌",
     ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS: "权限不足",
+    ErrorCode.FORBIDDEN: "权限不足",
     ErrorCode.USER_NOT_FOUND: "用户不存在",
     ErrorCode.USER_EMAIL_EXISTS: "该邮箱已被注册",
     ErrorCode.USER_USERNAME_EXISTS: "该用户名已被使用",
@@ -91,6 +95,7 @@ _ERROR_TO_STATUS: dict[ErrorCode, int] = {
     ErrorCode.AUTH_TOKEN_EXPIRED: status.HTTP_401_UNAUTHORIZED,
     ErrorCode.AUTH_INVALID_TOKEN: status.HTTP_401_UNAUTHORIZED,
     ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS: status.HTTP_403_FORBIDDEN,
+    ErrorCode.FORBIDDEN: status.HTTP_403_FORBIDDEN,
     ErrorCode.USER_NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.USER_EMAIL_EXISTS: status.HTTP_409_CONFLICT,
     ErrorCode.USER_USERNAME_EXISTS: status.HTTP_409_CONFLICT,
@@ -205,5 +210,4 @@ class ConflictError(AppError):
 # ---------------------------------------------------------------------------
 
 # Backward compat aliases
-ForbiddenError = PermissionError   # correct spelling
-ForbiddenError = PermissionError   # common misspelling used in services
+ForbiddenError = PermissionError  # common misspelling alias used in services

@@ -16,9 +16,9 @@ from __future__ import annotations
 import logging
 from typing import Any, List, Optional, Set
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dao import vault_dao
 from app.dao.vault_dao import VaultDAO
 from app.errors import AppError
 from app.models.card_pool import CardPool
@@ -55,6 +55,80 @@ class VaultFilterService:
     # ================================================================
     # 公开入口
     # ================================================================
+
+    async def filter_all(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        chapter_number: Optional[int] = None,
+        max_characters: int = 10,
+        max_timeline: int = 5,
+        max_world: int = 10,
+    ) -> dict[str, Any]:
+        """No-card fallback: fetch Top-N vault entries with compression.
+
+        Used when no cards are selected (e.g., Vibe Writing free-input mode).
+        Applies the same hierarchical compression as filter_by_cards.
+
+        Args:
+            db: SQLAlchemy async session.
+            project_id: 项目 ID.
+            chapter_number: 当前章节号，决定压缩层级.
+            max_characters: 最多取多少人物.
+            max_timeline: 时间线最近 N 条.
+            max_world: 最多取多少世界观规则.
+
+        Returns:
+            dict 同 filter_by_cards 格式。
+        """
+        logger.info(
+            "VaultFilterService.filter_all: project_id=%s, chapter=%s",
+            project_id, chapter_number,
+        )
+
+        # Fetch all items (no card ID filter)
+        characters = list(await self._dao.get_characters(db, project_id))[
+            :max_characters
+        ]
+        timeline = list(await self._dao.get_timeline(db, project_id))[-max_timeline:]
+        promises = [
+            p for p in (await self._dao.get_plot_promises(db, project_id))
+            if p.status in ("dormant", "active")
+        ]
+        world = list(await self._dao.get_world_entries(db, project_id))[
+            :max_world
+        ]
+
+        # Apply identical compression pipeline
+        compression_level = self._determine_compression_level(chapter_number)
+        compressed_characters = self._compress_characters(
+            characters, compression_level
+        )
+        token_estimate = self._estimate_tokens(
+            compressed_characters, timeline, promises, world
+        )
+
+        result: dict[str, Any] = {
+            "characters": compressed_characters,
+            "timeline": [self._serialize_timeline_event(e) for e in timeline],
+            "plot_promises": [self._serialize_promise(p) for p in promises],
+            "world": [self._serialize_world_entry(w) for w in world],
+            "compression_level": compression_level,
+            "token_estimate": token_estimate,
+        }
+
+        logger.info(
+            "VaultFilterService.filter_all result: chars=%d, timeline=%d, "
+            "promises=%d, world=%d, level=%d, tokens=%d",
+            len(result["characters"]),
+            len(result["timeline"]),
+            len(result["plot_promises"]),
+            len(result["world"]),
+            result["compression_level"],
+            result["token_estimate"],
+        )
+
+        return result
 
     async def filter_by_cards(
         self,
@@ -214,16 +288,9 @@ class VaultFilterService:
         if not character_ids:
             return []
 
-        stmt = (
-            select(VaultCharacter)
-            .where(
-                VaultCharacter.project_id == project_id,
-                VaultCharacter.id.in_(character_ids),
-            )
-            .order_by(VaultCharacter.id.asc())
+        return await vault_dao.get_characters_by_ids(
+            db, project_id, [int(cid) for cid in character_ids]
         )
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
 
     async def _fetch_filtered_timeline(
         self,
@@ -294,16 +361,9 @@ class VaultFilterService:
         if not promise_ids:
             return []
 
-        stmt = (
-            select(VaultPlotPromise)
-            .where(
-                VaultPlotPromise.project_id == project_id,
-                VaultPlotPromise.id.in_(promise_ids),
-            )
-            .order_by(VaultPlotPromise.id.asc())
+        return await vault_dao.get_plot_promises_by_ids(
+            db, project_id, [int(pid) for pid in promise_ids]
         )
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
 
     async def _fetch_filtered_world(
         self,
@@ -315,16 +375,9 @@ class VaultFilterService:
         if not world_rule_ids:
             return []
 
-        stmt = (
-            select(VaultWorld)
-            .where(
-                VaultWorld.project_id == project_id,
-                VaultWorld.id.in_(world_rule_ids),
-            )
-            .order_by(VaultWorld.id.asc())
+        return await vault_dao.get_world_entries_by_ids(
+            db, project_id, [int(wid) for wid in world_rule_ids]
         )
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
 
     # ================================================================
     # Step 3: 层级压缩

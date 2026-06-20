@@ -86,46 +86,14 @@ class AlgorithmService:
                 chapter_number=chapter_number,
             )
 
-        # Fallback: simple Top-N when no cards provided
-        relevant: Dict[str, Any] = {
-            "characters": [],
-            "timeline": [],
-            "plot_promises": [],
-            "world": [],
-            "compression_level": 1,
-            "token_estimate": 0,
-        }
-
-        characters = await vault_dao.get_characters(db, project_id)
-        relevant["characters"] = [
-            {"id": c.id, "name": c.name, "role": c.role, "status": c.status,
-             "current_state": c.current_state, "description": c.description}
-            for c in characters[:10]
-        ]
-
-        timeline = await vault_dao.get_timeline(db, project_id)
-        relevant["timeline"] = [
-            {"id": e.id, "event": e.event, "description": e.description,
-             "chapter_number": e.chapter_number, "importance": e.importance}
-            for e in (timeline[-5:] if timeline else [])
-        ]
-
-        promises = await vault_dao.get_plot_promises(db, project_id)
-        relevant["plot_promises"] = [
-            {"id": p.id, "description": p.description, "type": p.type,
-             "hook": p.hook, "status": p.status, "urgency": p.urgency}
-            for p in promises if p.status in ("dormant", "active")
-        ]
-
-        world = await vault_dao.get_world_entries(db, project_id)
-        relevant["world"] = [
-            {"id": w.id, "name": w.name, "description": w.description,
-             "category": w.category, "rule": w.rule, "constraint": w.constraint}
-            for w in world[:10]
-        ]
-        relevant["token_estimate"] = len(characters) * 50 + len(timeline) * 30 + len(promises) * 40 + len(world) * 50
-
-        return relevant
+        # Fallback: use VaultFilterService.filter_all when no cards provided
+        # (applies identical hierarchical compression as the normal path)
+        from app.service.vault_filter import vault_filter_service
+        return await vault_filter_service.filter_all(
+            db=db,
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
 
     # ----- Step 3: Conflict Detection (§3.3) -----------------------------------
 
@@ -214,11 +182,13 @@ class AlgorithmService:
         cards: List[CardPool],
         weight_map: Dict[int, float],
         relevant_vault: Dict[str, Any],
+        word_count: int = 2000,
     ) -> Dict[str, Any]:
         """Fill the outline template with generation parameters.
 
-        Works with both dict-based vault data (new VaultFilterService) and
-        model-based vault data (legacy format) via safe attribute access.
+        Args:
+            word_count: Target word count from the generation request
+                (default 2000, range 500–5000).
         """
         def safe_get(items: list, attr: str, default: str = "") -> Any:
             """Get attribute from model or dict items."""
@@ -270,7 +240,7 @@ class AlgorithmService:
             "recent_events": recent_events,
             "active_promises": active_promises,
             "generation_requirements": {
-                "word_count": 2000,  # TODO: Make configurable
+                "word_count": word_count,
                 "style": project.style or "叙事风格",
                 "tone": "consistent with project",
             },

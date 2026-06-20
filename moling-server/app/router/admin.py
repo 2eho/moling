@@ -10,19 +10,21 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any, Optional
+from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import set_override, get_effective_llm_config
+from app.dao import (
+    user_dao,
+    project_dao,
+    chapter_dao,
+    generation_dao,
+    system_config_dao,
+)
 from app.dependencies import get_current_user, get_db
-from app.models.system_config import SystemConfig
-from app.models.user import User
-from app.models.project import Project
 from app.schemas.admin import LLMConfigReq, LLMConfigResp, AdminStatsResp, UserManageResp, ProjectManageResp
 
 router = APIRouter(tags=["admin"])
@@ -40,34 +42,26 @@ def _mask_key(key: str) -> str:
 
 
 async def _load_config_from_db(db: AsyncSession) -> dict[str, str]:
-    """Load LLM config from system_config table."""
-    result = await db.execute(
-        select(SystemConfig).where(
-            SystemConfig.key.in_(["llm_api_key", "llm_api_base", "llm_model"])
-        )
+    """Load LLM config from system_config table via DAO."""
+    configs = await system_config_dao.get_by_keys(
+        db, ["llm_api_key", "llm_api_base", "llm_model"]
     )
-    rows = result.scalars().all()
-    return {row.key: row.value for row in rows}
+    return {key: row.value for key, row in configs.items()}
 
 
 async def _save_config_to_db(
     db: AsyncSession, api_key: str, api_base: str, model: str
 ) -> None:
-    """Save LLM config to system_config table."""
-    configs = {
-        "llm_api_key": api_key,
-        "llm_api_base": api_base,
-        "llm_model": model,
-    }
-    for key, value in configs.items():
-        result = await db.execute(
-            select(SystemConfig).where(SystemConfig.key == key)
-        )
-        existing = result.scalar_one_or_none()
-        if existing:
-            existing.value = value
-        else:
-            db.add(SystemConfig(key=key, value=value, description=f"LLM 配置: {key}"))
+    """Save LLM config to system_config table via DAO."""
+    await system_config_dao.upsert_batch(
+        db,
+        {
+            "llm_api_key": api_key,
+            "llm_api_base": api_base,
+            "llm_model": model,
+        },
+        description="LLM 配置",
+    )
     await db.commit()
 
 
@@ -108,9 +102,9 @@ async def save_llm_config(
     await _save_config_to_db(db, req.api_key, req.api_base, req.model)
 
     # Update in-memory overrides (takes effect immediately)
-    set_override("llm_api_key", req.api_key)
-    set_override("llm_api_base", req.api_base)
-    set_override("llm_model", req.model)
+    await set_override("llm_api_key", req.api_key)
+    await set_override("llm_api_base", req.api_base)
+    await set_override("llm_model", req.model)
 
     return LLMConfigResp(
         api_base=req.api_base,
@@ -165,27 +159,10 @@ async def get_admin_stats(
     db: AsyncSession = Depends(get_db),
 ):
     """Get admin statistics (user count, project count, etc.)."""
-    # Count users
-    stmt = select(func.count()).select_from(User)
-    result = await db.execute(stmt)
-    user_count = result.scalar() or 0
-
-    # Count projects
-    stmt = select(func.count()).select_from(Project)
-    result = await db.execute(stmt)
-    project_count = result.scalar() or 0
-
-    # Count chapters
-    from app.models.chapter import Chapter
-    stmt = select(func.count()).select_from(Chapter)
-    result = await db.execute(stmt)
-    chapter_count = result.scalar() or 0
-
-    # Count generation tasks
-    from app.models.generation_task import GenerationTask
-    stmt = select(func.count()).select_from(GenerationTask)
-    result = await db.execute(stmt)
-    task_count = result.scalar() or 0
+    user_count = await user_dao.count(db)
+    project_count = await project_dao.count(db)
+    chapter_count = await chapter_dao.count(db)
+    task_count = await generation_dao.count(db)
 
     return AdminStatsResp(
         user_count=user_count,
@@ -204,22 +181,13 @@ async def get_users(
     db: AsyncSession = Depends(get_db),
 ):
     """Get user list (admin only)."""
-    # Build query
-    stmt = select(User)
-    if status:
-        stmt = stmt.where(User.status == status)
+    filters = {"status": status} if status else None
+    skip = (page - 1) * page_size
 
-    # Count total
-    count_stmt = select(func.count()).select_from(User)
-    if status:
-        count_stmt = count_stmt.where(User.status == status)
-    total_result = await db.execute(count_stmt)
-    total = total_result.scalar() or 0
-
-    # Paginate
-    stmt = stmt.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
-    result = await db.execute(stmt)
-    users = list(result.scalars().all())
+    total = await user_dao.count(db, filters=filters)
+    users = await user_dao.get_multi(
+        db, skip=skip, limit=page_size, filters=filters, order_by="created_at"
+    )
 
     return {
         "items": [UserManageResp.model_validate(u) for u in users],
@@ -239,22 +207,13 @@ async def get_projects(
     db: AsyncSession = Depends(get_db),
 ):
     """Get project list (admin only)."""
-    # Build query
-    stmt = select(Project)
-    if status:
-        stmt = stmt.where(Project.status == status)
+    filters = {"status": status} if status else None
+    skip = (page - 1) * page_size
 
-    # Count total
-    count_stmt = select(func.count()).select_from(Project)
-    if status:
-        count_stmt = count_stmt.where(Project.status == status)
-    total_result = await db.execute(count_stmt)
-    total = total_result.scalar() or 0
-
-    # Paginate
-    stmt = stmt.order_by(Project.updated_at.desc()).offset((page - 1) * page_size).limit(page_size)
-    result = await db.execute(stmt)
-    projects = list(result.scalars().all())
+    total = await project_dao.count(db, filters=filters)
+    projects = await project_dao.get_multi(
+        db, skip=skip, limit=page_size, filters=filters, order_by="updated_at"
+    )
 
     return {
         "items": [ProjectManageResp.model_validate(p) for p in projects],

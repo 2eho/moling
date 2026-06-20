@@ -614,7 +614,6 @@ class VaultService:
         Returns:
             dict with update results (counts of created/updated entries)
         """
-        from sqlalchemy import select
         from sqlalchemy.ext.asyncio import (
             AsyncSession,
             async_sessionmaker,
@@ -714,12 +713,9 @@ class VaultService:
 
             # 更新角色
             for char_name in entities["characters"]:
-                stmt = select(VaultCharacter).where(
-                    VaultCharacter.project_id == project_id,
-                    VaultCharacter.name == char_name,
+                existing = await vault_dao.get_character_by_name(
+                    db, project_id, char_name
                 )
-                result = await db.execute(stmt)
-                existing = result.scalar_one_or_none()
 
                 if existing:
                     existing.chapter_count = (existing.chapter_count or 0) + 1
@@ -738,12 +734,9 @@ class VaultService:
 
             # 更新地点（作为世界观元素存储）
             for loc_name in entities["locations"]:
-                stmt = select(VaultWorld).where(
-                    VaultWorld.project_id == project_id,
-                    VaultWorld.term == loc_name,
+                existing = await vault_dao.get_world_entry_by_term(
+                    db, project_id, loc_name
                 )
-                result = await db.execute(stmt)
-                existing = result.scalar_one_or_none()
 
                 if existing:
                     updated_count += 1
@@ -760,12 +753,9 @@ class VaultService:
 
             # 更新物品（作为世界观元素存储）
             for item_name in entities["items"]:
-                stmt = select(VaultWorld).where(
-                    VaultWorld.project_id == project_id,
-                    VaultWorld.term == item_name,
+                existing = await vault_dao.get_world_entry_by_term(
+                    db, project_id, item_name
                 )
-                result = await db.execute(stmt)
-                existing = result.scalar_one_or_none()
 
                 if existing:
                     updated_count += 1
@@ -824,45 +814,17 @@ class VaultService:
                 detail="Not authorized to access this project",
             )
 
-        from sqlalchemy import select, func
+        # Count and get from vault DAO
+        character_count = await vault_dao.count_characters(db, project_id)
+        timeline_count = await vault_dao.count_timeline_events(db, project_id)
+        promise_count = await vault_dao.count_plot_promises(db, project_id)
+        world_count = await vault_dao.count_world_entries(db, project_id)
 
-        # Count characters
-        stmt = select(func.count()).select_from(VaultCharacter).where(
-            VaultCharacter.project_id == project_id
-        )
-        result = await db.execute(stmt)
-        character_count = result.scalar() or 0
-
-        # Count timeline events
-        stmt = select(func.count()).select_from(VaultTimeline).where(
-            VaultTimeline.project_id == project_id
-        )
-        result = await db.execute(stmt)
-        timeline_count = result.scalar() or 0
-
-        # Count plot promises
-        stmt = select(func.count()).select_from(VaultPlotPromise).where(
-            VaultPlotPromise.project_id == project_id
-        )
-        result = await db.execute(stmt)
-        promise_count = result.scalar() or 0
-
-        # Count world entries
-        stmt = select(func.count()).select_from(VaultWorld).where(
-            VaultWorld.project_id == project_id
-        )
-        result = await db.execute(stmt)
-        world_count = result.scalar() or 0
-
-        # Get recent characters
-        stmt = (
-            select(VaultCharacter)
-            .where(VaultCharacter.project_id == project_id)
-            .order_by(VaultCharacter.updated_at.desc())
-            .limit(5)
-        )
-        result = await db.execute(stmt)
-        recent_characters = list(result.scalars().all())
+        # Get recent characters (take last 5 from full list)
+        all_characters = await vault_dao.get_characters(db, project_id)
+        recent_characters = sorted(
+            all_characters, key=lambda c: c.updated_at or c.created_at, reverse=True
+        )[:5]
 
         return {
             "success": True,

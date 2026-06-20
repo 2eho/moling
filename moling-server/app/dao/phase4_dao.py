@@ -59,6 +59,33 @@ class Phase4DAO(BaseDAO[Phase4Task]):
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def list_by_status(
+        self,
+        db: AsyncSession,
+        status: str,
+        *,
+        skip: int = 0,
+        limit: int = 20,
+    ) -> list[Phase4Task]:
+        """Get tasks by status with pagination, newest first."""
+        stmt = (
+            select(Phase4Task)
+            .where(Phase4Task.status == status)
+            .order_by(Phase4Task.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count_by_status(
+        self,
+        db: AsyncSession,
+        status: str,
+    ) -> int:
+        """Count tasks matching a given status."""
+        return await self.count(db, filters={"status": status})
+
 
 # Singleton instance
 phase4_dao = Phase4DAO()

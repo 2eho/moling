@@ -15,12 +15,35 @@ Output contract (for frontend consumption via TaskStatusResp.output_data.coheren
       "score": float,
       "checks": [
         { "check_name": "character_consistency", "display_name": "角色行为一致性", "passed": bool, "score": float, "issues": [str] },
-        { "check_name": "timeline_continuity",    "display_name": "时间线连续性",   "passed": bool, "score": float, "issues": [str] },
-        { "check_name": "plot_promise_status",    "display_name": "伏笔状态",       "passed": bool, "score": float, "issues": [str] }
+        { "check_name": "timeline_continuity",   "display_name": "时间线连续性",   "passed": bool, "score": float, "issues": [str] },
+        { "check_name": "plot_promise_status",   "display_name": "伏笔状态",       "passed": bool, "score": float, "issues": [str] }
       ],
       "cross_cutting_issues": [str]
     },
-    ...
+    {
+      "group_name": "writing_quality",
+      "display_name": "写作质量",
+      "passed": bool,
+      "score": float,
+      "checks": [
+        { "check_name": "world_rule_consistency", "display_name": "世界观规则一致性", "passed": bool, "score": float, "issues": [str] },
+        { "check_name": "writing_style_consistency", "display_name": "文风一致性", "passed": bool, "score": float, "issues": [str] },
+        { "check_name": "narrative_pacing",      "display_name": "叙事节奏",       "passed": bool, "score": float, "issues": [str] },
+        { "check_name": "baseline_compliance",   "display_name": "连贯性基线校验",  "passed": bool, "score": float, "issues": [str] }
+      ],
+      "cross_cutting_issues": [str]
+    },
+    {
+      "group_name": "continuity",
+      "display_name": "连续性",
+      "passed": bool,
+      "score": float,
+      "checks": [
+        { "check_name": "chapter_transition", "display_name": "章节衔接", "passed": bool, "score": float, "issues": [str] },
+        { "check_name": "secret_debt",        "display_name": "秘密债务",  "passed": bool, "score": float, "issues": [str] }
+      ],
+      "cross_cutting_issues": [str]
+    }
   ]
 }
 """
@@ -142,7 +165,7 @@ GROUP_DEFINITIONS: list[dict[str, str]] = [
     {
         "group_name": "writing_quality",
         "display_name": "写作质量",
-        "checks": ["world_rule_consistency", "writing_style_consistency", "narrative_pacing"],
+        "checks": ["world_rule_consistency", "writing_style_consistency", "narrative_pacing", "baseline_compliance"],
     },
     {
         "group_name": "continuity",

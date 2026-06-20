@@ -13,13 +13,12 @@ import logging
 import re
 from typing import Dict, List, Any, Optional
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.dao import project_dao, chapter_dao, vault_dao
+from app.dao import project_dao, chapter_dao, vault_dao, secret_dao, dynamic_layer_dao
 from app.errors import NotFoundError, ErrorCode, AppError
-from app.models import Project, Chapter, Secret, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
+from app.models import Project, Chapter, Secret
 from app.llm.client import llm_client
 from app.schemas.coherence import (
     CoherenceCheckItem,
@@ -70,21 +69,11 @@ class CoherenceService:
             # Get previous chapter (if any)
             previous_chapter = None
             if chapter_id:
-                stmt = (
-                    select(Chapter)
-                    .where(
-                        Chapter.project_id == project_id,
-                        Chapter.chapter_number < (
-                            select(Chapter.chapter_number)
-                            .where(Chapter.id == chapter_id)
-                            .scalar_subquery()
-                        ),
+                current_chapter = await chapter_dao.get(db, chapter_id)
+                if current_chapter and current_chapter.chapter_number > 1:
+                    previous_chapter = await chapter_dao.get_by_number(
+                        db, project_id, current_chapter.chapter_number - 1
                     )
-                    .order_by(Chapter.chapter_number.desc())
-                    .limit(1)
-                )
-                result = await db.execute(stmt)
-                previous_chapter = result.scalar_one_or_none()
             
             # ===== Check 1: Character Behavior Consistency =====
             logger.info(f"Pre-validation: Check 1 - Character consistency for project {project_id}")
@@ -164,8 +153,13 @@ class CoherenceService:
         
         Groups the 8 individual checks into 3 merged LLM calls:
           Group A: Narrative Consistency (character + timeline + plot promise)
-          Group B: Writing Quality (world rule + style + pacing)
+          Group B: Writing Quality (world rule + style + pacing + baseline)
           Group C: Continuity (chapter transition + secret debt)
+        
+        All 3 groups share an identical prompt prefix built by
+        _build_coherence_context, enabling DeepSeek transparent prefix
+        caching: the shared prefix is billed only once after the first
+        group completes.
         
         Returns a dict matching CoherenceValidationResult schema for backward
         compatibility with the pipeline's _step10_coherence_validation.
@@ -174,6 +168,7 @@ class CoherenceService:
             Dict with keys: passed, overall_score, version, groups
         """
         result = CoherenceValidationResult()
+        result.version = "v2-grouped"
         
         try:
             # Get project and chapter
@@ -194,34 +189,33 @@ class CoherenceService:
             # Get previous chapter
             previous_chapter = None
             if chapter.chapter_number > 1:
-                stmt = (
-                    select(Chapter)
-                    .where(
-                        Chapter.project_id == project_id,
-                        Chapter.chapter_number == chapter.chapter_number - 1,
-                    )
+                previous_chapter = await chapter_dao.get_by_number(
+                    db, project_id, chapter.chapter_number - 1
                 )
-                result_obj = await db.execute(stmt)
-                previous_chapter = result_obj.scalar_one_or_none()
             
-            # ===== Group A: Narrative Consistency (character + timeline + plot promise) =====
+            # Build shared context ONCE — all 3 groups reuse this
+            ctx = await self._build_coherence_context(
+                db, project, chapter, generated_content
+            )
+            
+            # ===== Group A: Narrative Consistency =====
             logger.info(f"Post-validation: Group A - Narrative consistency for chapter {chapter_id}")
             group_a = await self._check_group_narrative_consistency(
-                db, project, chapter, generated_content
+                ctx, project, chapter
             )
             result.groups.append(group_a)
             
-            # ===== Group B: Writing Quality (world rule + style + pacing) =====
+            # ===== Group B: Writing Quality + Baseline Compliance =====
             logger.info(f"Post-validation: Group B - Writing quality for chapter {chapter_id}")
             group_b = await self._check_group_writing_quality(
-                db, project, chapter, previous_chapter, generated_content
+                ctx, project, chapter, previous_chapter
             )
             result.groups.append(group_b)
             
-            # ===== Group C: Continuity (chapter transition + secret debt) =====
+            # ===== Group C: Continuity =====
             logger.info(f"Post-validation: Group C - Continuity for chapter {chapter_id}")
             group_c = await self._check_group_continuity(
-                db, project, chapter, previous_chapter, generated_content
+                db, ctx, project, chapter, previous_chapter, generated_content
             )
             result.groups.append(group_c)
             
@@ -247,14 +241,105 @@ class CoherenceService:
 
     # ===== Grouped Check Implementations (v2 merged) =====
 
-    async def _check_group_narrative_consistency(
+    async def _build_coherence_context(
         self,
         db: AsyncSession,
         project: Project,
         chapter: Chapter,
         generated_content: str,
+    ) -> Dict[str, str]:
+        """Build shared context dict used as the common prefix for all 3 groups.
+
+        DeepSeek transparent prefix caching: all 3 groups share this exact
+        prefix text, so Groups B and C automatically benefit from cache hits
+        once the public prefix is detected and persisted by the API layer.
+
+        Returns a dict with pre-formatted string sections:
+          - shared_prefix: the complete prefix text (identical across groups)
+          - character_list, timeline_summary, promise_summary, world_summary,
+            baseline_text: individual sections for flexible re-assembly
+        """
+        # Character list
+        characters = await vault_dao.get_characters(db, project.id)
+        character_list = ", ".join([c.name for c in characters[:10]]) if characters else "暂无角色"
+
+        # Timeline events (last 10)
+        vault_events = await vault_dao.get_timeline(db, project.id)
+        timeline_summary = "\n".join([
+            f"- 第{e.chapter_number}章: {e.event}"
+            for e in vault_events[-10:]
+        ]) if vault_events else "暂无"
+
+        # Active plot promises (top 8)
+        promises = await vault_dao.get_plot_promises(db, project.id)
+        active_promises = [p for p in promises if p.status in ["dormant", "active"]]
+        promise_summary = "\n".join([
+            f"- [{p.type}] {p.description[:100] or '无描述'} (状态: {p.status}, 紧迫度: {p.urgency})"
+            for p in active_promises[:8]
+        ]) if active_promises else "无活跃伏笔"
+
+        # World rules
+        world_entries = await vault_dao.get_world_entries(db, project.id)
+        world_summary = "\n".join([
+            f"- [{e.category}] {e.name}: {e.description[:150] or '无描述'}"
+            + (f" (约束: {e.constraint[:100]})" if e.constraint else "")
+            for e in world_entries[:8]
+        ]) if world_entries else "无世界观设定"
+
+        # Dynamic layer baseline (must_hold / must_not) — §5.2 item ⑤
+        latest_dl = await dynamic_layer_dao.get_latest_by_project(db, str(project.id))
+
+        must_hold_list = (latest_dl.must_hold or []) if latest_dl else []
+        must_not_list = (latest_dl.must_not or []) if latest_dl else []
+
+        baseline_text = ""
+        if must_hold_list or must_not_list:
+            must_hold_str = "\n".join(f"  - {item}" for item in must_hold_list) if must_hold_list else "无"
+            must_not_str = "\n".join(f"  - {item}" for item in must_not_list) if must_not_list else "无"
+            baseline_text = (
+                f"【连贯性基线】\n"
+                f"必须保持(must_hold):\n{must_hold_str}\n"
+                f"必须避免(must_not):\n{must_not_str}\n"
+            )
+
+        # Assemble the shared prefix — IDENTICAL for all 3 groups
+        content_len = len(generated_content)
+        shared_prefix = (
+            f"项目：{project.title}\n"
+            f"当前章节：第{chapter.chapter_number}章《{chapter.title}》\n"
+            f"章节长度：{content_len} 字\n\n"
+            f"【本章全文】\n"
+            f"{generated_content[:4000]}\n\n"
+            f"【全量剧本数据】\n"
+            f"角色列表：{character_list}\n\n"
+            f"时间线事件：\n{timeline_summary}\n\n"
+            f"活跃伏笔：\n{promise_summary}\n\n"
+            f"世界观设定：\n{world_summary}\n\n"
+            f"{baseline_text}"
+        )
+
+        return {
+            "shared_prefix": shared_prefix,
+            "character_list": character_list,
+            "timeline_summary": timeline_summary,
+            "promise_summary": promise_summary,
+            "world_summary": world_summary,
+            "baseline_text": baseline_text,
+            "must_hold": must_hold_list,
+            "must_not": must_not_list,
+        }
+
+    async def _check_group_narrative_consistency(
+        self,
+        ctx: Dict[str, str],
+        project: Project,
+        chapter: Chapter,
     ) -> CoherenceGroupCheck:
         """Group A: Narrative Consistency - merged check for Character + Timeline + Plot Promise.
+
+        Uses the shared context from _build_coherence_context and appends
+        only the Group-A-specific check instructions, enabling DeepSeek
+        prefix caching across groups.
 
         Cross-referencing benefit: character location vs timeline events,
         plot promise implications for character behavior.
@@ -264,43 +349,24 @@ class CoherenceService:
             display_name="叙事一致性",
         )
 
-        # Gather context data
         try:
-            character_list = await self._get_character_list(db, project.id)
+            prompt = f"""{ctx["shared_prefix"]}
+【检查项目 — 叙事一致性】
+请对本章内容执行以下 3 项检查：
 
-            # Timeline events (last 10)
-            vault_events = await vault_dao.get_timeline(db, project.id)
-            timeline_summary = "\n".join([
-                f"- 第{e.chapter_number}章: {e.event}"
-                for e in vault_events[-10:]
-            ]) if vault_events else "暂无"
+检查 1 — 角色行为一致性
+角色列表：{ctx["character_list"]}
+检查角色行为是否符合其性格设定和当前状态。
 
-            # Active plot promises (top 8)
-            promises = await vault_dao.get_plot_promises(db, project.id)
-            active_promises = [p for p in promises if p.status in ["dormant", "active"]]
-            promise_summary = "\n".join([
-                f"- [{p.type}] {p.description[:100] or '无描述'} (状态: {p.status}, 紧迫度: {p.urgency})"
-                for p in active_promises[:8]
-            ]) if active_promises else "无活跃伏笔"
-
-            prompt = f"""请对以下小说章节内容执行 3 项连贯性检查，并以 JSON 格式返回结果。
-
-项目：{project.title}
-当前章节：第{chapter.chapter_number}章《{chapter.title}》
-
-【检查 1 — 角色行为一致性】
-角色列表：{character_list}
-
-【检查 2 — 时间线连续性】
+检查 2 — 时间线连续性
 现有时间线事件：
-{timeline_summary}
+{ctx["timeline_summary"]}
+检查事件顺序是否合理，是否存在时间逻辑矛盾。
 
-【检查 3 — 伏笔状态】
+检查 3 — 伏笔状态
 活跃伏笔列表：
-{promise_summary}
-
-【章节内容】
-{generated_content[:4000]}
+{ctx["promise_summary"]}
+检查本章是否推进了活跃伏笔，或产生了新伏笔。
 
 请逐项检查，并返回如下 JSON 格式（只返回 JSON，不要其他内容）：
 {{
@@ -353,63 +419,64 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Group A (narrative consistency) failed: {e}", exc_info=True)
             group.checks = [
-                CoherenceCheckItem(check_name="character_consistency", display_name="角色行为一致性", passed=True, score=0.8, issues=[]),
-                CoherenceCheckItem(check_name="timeline_continuity", display_name="时间线连续性", passed=True, score=0.8, issues=[]),
-                CoherenceCheckItem(check_name="plot_promise_status", display_name="伏笔状态", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="character_consistency", display_name="角色行为一致性", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
+                CoherenceCheckItem(check_name="timeline_continuity", display_name="时间线连续性", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
+                CoherenceCheckItem(check_name="plot_promise_status", display_name="伏笔状态", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
             ]
-            group.passed = True
-            group.score = 0.8
+            group.passed = False
+            group.score = 0.0
 
         return group
 
     async def _check_group_writing_quality(
         self,
-        db: AsyncSession,
+        ctx: Dict[str, str],
         project: Project,
         chapter: Chapter,
         previous_chapter: Optional[Chapter],
-        generated_content: str,
     ) -> CoherenceGroupCheck:
-        """Group B: Writing Quality - merged check for World Rule + Style + Pacing."""
+        """Group B: Writing Quality + Baseline Compliance (§5.2 item ⑤).
+
+        Merged check for World Rule + Style + Pacing + must_hold/must_not.
+        Uses shared context from _build_coherence_context.
+        """
         group = CoherenceGroupCheck(
             group_name="writing_quality",
             display_name="写作质量",
         )
 
         try:
-            # World rules
-            world_entries = await vault_dao.get_world_entries(db, project.id)
-            world_summary = "\n".join([
-                f"- [{e.category}] {e.name}: {e.description[:150] or '无描述'}"
-                + (f" (约束: {e.constraint[:100]})" if e.constraint else "")
-                for e in world_entries
-            ]) if world_entries else "无世界观设定"
-
             # Previous chapter style reference
             prev_style_ref = ""
             if previous_chapter and previous_chapter.content:
                 prev_style_ref = previous_chapter.content[:1500]
 
-            content_len = len(generated_content)
+            # Build baseline section and instructions
+            if ctx.get("baseline_text"):
+                baseline_section = ctx["baseline_text"]
+                baseline_instruction = """【检查 4 — 连贯性基线校验】
+检查本章内容是否违反了 must_hold（必须保持）和 must_not（必须避免）的硬约束。如有违反，需定位到具体段落并引用被违反的基线条目。如无基线约束，此项直接通过。"""
+            else:
+                baseline_section = "【连贯性基线】\n无基线约束设定（此项直接通过）\n"
+                baseline_instruction = ""
 
-            prompt = f"""请对以下小说章节内容执行 3 项写作质量检查，并以 JSON 格式返回结果。
+            prompt = f"""请对以下小说章节内容执行写作质量检查，并以 JSON 格式返回结果。
 
-项目：{project.title}
-当前章节：第{chapter.chapter_number}章《{chapter.title}》
-章节长度：{content_len} 字
+{ctx["shared_prefix"]}
 
 【检查 1 — 世界观规则一致性】
 世界观设定条目：
-{world_summary}
+{ctx["world_summary"]}
+检查内容是否与世界观设定一致，有无违规描述。
 
 【检查 2 — 文风一致性】
-前序章节内容（前1500字）：
+前序章节内容（前1500字，无前序章节则检查文风内部一致性）：
 {prev_style_ref or "（无前序章节）"}
 
 【检查 3 — 叙事节奏合理性】
 
-【章节内容】
-{generated_content[:4000]}
+{baseline_section}
+{baseline_instruction}
 
 请逐项检查，并返回如下 JSON 格式（只返回 JSON，不要其他内容）：
 {{
@@ -434,9 +501,16 @@ class CoherenceService:
       "passed": true/false,
       "score": 0.0-1.0,
       "issues": ["具体问题描述"]或[]
+    }},
+    {{
+      "check_name": "baseline_compliance",
+      "display_name": "连贯性基线校验",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["违反的基线条目及定位段落"]或[]
     }}
   ],
-  "cross_cutting_issues": ["跨维度发现（如世界规则导致的节奏问题）"]或[]
+  "cross_cutting_issues": ["跨维度发现（如基线约束与世界观规则的联动问题）"]或[]
 }}
 """
             response = await self._call_llm(prompt, max_tokens=3072)
@@ -461,24 +535,29 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Group B (writing quality) failed: {e}", exc_info=True)
             group.checks = [
-                CoherenceCheckItem(check_name="world_rule_consistency", display_name="世界观规则一致性", passed=True, score=0.8, issues=[]),
-                CoherenceCheckItem(check_name="writing_style_consistency", display_name="文风一致性", passed=True, score=0.8, issues=[]),
-                CoherenceCheckItem(check_name="narrative_pacing", display_name="叙事节奏", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="world_rule_consistency", display_name="世界观规则一致性", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
+                CoherenceCheckItem(check_name="writing_style_consistency", display_name="文风一致性", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
+                CoherenceCheckItem(check_name="narrative_pacing", display_name="叙事节奏", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
+                CoherenceCheckItem(check_name="baseline_compliance", display_name="连贯性基线校验", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
             ]
-            group.passed = True
-            group.score = 0.8
+            group.passed = False
+            group.score = 0.0
 
         return group
 
     async def _check_group_continuity(
         self,
         db: AsyncSession,
+        ctx: Dict[str, str],
         project: Project,
         chapter: Chapter,
         previous_chapter: Optional[Chapter],
         generated_content: str,
     ) -> CoherenceGroupCheck:
         """Group C: Continuity - merged check for Chapter Transition + Secret Debt.
+
+        Uses the shared context for the prefix, then appends the
+        dynamic secret debt data (rule-based calculation per §5.2 item ⑦).
 
         Rule-based secret debt calculation is done before the LLM call;
         the LLM handles secret leakage detection and chapter transition quality.
@@ -497,9 +576,7 @@ class CoherenceService:
             new_start = generated_content[:1000]
 
             # --- Secret debt calculation (rule-based, §2.8.2 + §5.2) ---
-            stmt = select(Secret).where(Secret.project_id == project.id)
-            db_result = await db.execute(stmt)
-            secrets: list[Secret] = list(db_result.scalars().all())
+            secrets = await secret_dao.list_by_project(db, project.id)
 
             secret_debt_issues: list[str] = []
             secrets_for_llm: list[Secret] = []
@@ -534,11 +611,8 @@ class CoherenceService:
                 )
             secret_summary = "\n".join(secret_lines) if secret_lines else "无未公开秘密"
 
-            prompt = f"""请对以下小说章节内容执行 2 项连续性检查，并以 JSON 格式返回结果。
-
-项目：{project.title}
-当前章节：第{chapter.chapter_number}章《{chapter.title}》
-
+            # Dynamic section for Group C — appended AFTER shared prefix
+            dynamic_section = f"""
 【检查 1 — 章节衔接自然性】
 前序章节结尾（末尾1000字）：
 {prev_end or "（无前序章节，此项直接通过）"}
@@ -550,13 +624,13 @@ class CoherenceService:
 项目秘密列表（未公开）：
 {secret_summary}
 
-【章节内容】（全文用于秘密检测）：
-{generated_content[:3000]}
-
 请逐项检查：
 - 章节衔接：两章之间的衔接是否自然流畅？场景/视角切换是否合理？
 - 秘密债务：是否有角色说出了TA不该知道的秘密？或做出了对已知秘密的矛盾反应？
+"""
 
+            prompt = f"""{ctx["shared_prefix"]}
+{dynamic_section}
 返回如下 JSON 格式（只返回 JSON，不要其他内容，不要 markdown 代码块）：
 {{
   "checks": [
@@ -604,11 +678,11 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Group C (continuity) failed: {e}", exc_info=True)
             group.checks = [
-                CoherenceCheckItem(check_name="chapter_transition", display_name="章节衔接", passed=True, score=0.8, issues=[]),
-                CoherenceCheckItem(check_name="secret_debt", display_name="秘密债务", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="chapter_transition", display_name="章节衔接", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
+                CoherenceCheckItem(check_name="secret_debt", display_name="秘密债务", passed=False, score=0.0, issues=["LLM 调用失败，无法完成检查。请重试或手动审核。"]),
             ]
-            group.passed = True
-            group.score = 0.8
+            group.passed = False
+            group.score = 0.0
 
         return group
 
@@ -651,8 +725,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Character consistency pre-check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -693,8 +768,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Character consistency check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -739,7 +815,7 @@ class CoherenceService:
             }
         except Exception as e:
             logger.error(f"Timeline continuity check failed: {e}")
-            return {"passed": True, "score": 0.8, "details": f"检查失败: {str(e)}"}
+            return {"passed": False, "score": 0.3, "details": f"LLM调用失败: {str(e)}", "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"]}
 
     async def _check_timeline_continuity_post(
         self,
@@ -785,8 +861,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Timeline continuity post-check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -835,8 +912,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Plot promise status check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -889,8 +967,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Plot promise post-check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -941,8 +1020,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"World rule consistency check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -992,8 +1072,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"World rule consistency post-check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -1034,8 +1115,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Writing style consistency check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -1082,8 +1164,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Writing style consistency post-check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -1129,8 +1212,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Narrative pacing check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -1172,8 +1256,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Narrative pacing post-check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -1219,8 +1304,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Chapter transition check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -1268,8 +1354,9 @@ class CoherenceService:
         except Exception as e:
             logger.error(f"Chapter transition post-check failed: {e}")
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": f"检查失败: {str(e)}",
             }
 
@@ -1298,9 +1385,7 @@ class CoherenceService:
         """
         try:
             # ---- 1. 从 DB 加载项目所有 Secret ----
-            stmt = select(Secret).where(Secret.project_id == project.id)
-            db_result = await db.execute(stmt)
-            secrets: list[Secret] = list(db_result.scalars().all())
+            secrets = await secret_dao.list_by_project(db, project.id)
 
             if not secrets:
                 logger.info("Secret debt check: no secrets found for project %s", project.id)
@@ -1394,8 +1479,9 @@ class CoherenceService:
         except Exception as e:
             logger.error("Secret debt check failed: %s", e, exc_info=True)
             return {
-                "passed": True,
-                "score": 0.8,
+                "passed": False,
+                "score": 0.3,
+                "issues": ["LLM调用失败，无法完成检查。请重试或手动审核。"],
                 "details": [{"error": f"秘密债务检查失败: {str(e)}"}],
             }
 

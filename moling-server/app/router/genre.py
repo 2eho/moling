@@ -11,10 +11,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.dependencies import get_current_user, get_db
+from app.errors import NotFoundError, ValidationError
 from app.genre.cold_start_loader import ColdStartLoader, DataRetirementManager, KNOWN_GENRES
 from app.schemas.auth import UserResp
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,10 +106,18 @@ async def trigger_prefill(
     """
     B1-B5 完整冷启动流程。
 
-    1. 验证用户对项目的所有权（TODO: 增加项目权限检查）
+    1. 验证用户对项目的所有权
     2. 执行 B1-B5 冷启动
     3. 返回预填数据供前端展示
     """
+    from app.dao import project_dao
+    from app.errors import PermissionError
+
+    project = await project_dao.get(db, str(req.project_id))
+    if project is None:
+        raise NotFoundError(detail=f"Project {req.project_id} not found")
+    if project.user_id != str(current_user.id):
+        raise PermissionError(detail="无权访问该项目")
     try:
         loader = ColdStartLoader()
 
@@ -163,8 +172,9 @@ async def trigger_prefill(
     except HTTPException:
         raise
     except Exception as e:
+        from app.errors import AppError, ErrorCode
         logger.error("冷启动失败: project_id=%d, genre=%s, error=%s", req.project_id, req.genre, e)
-        raise HTTPException(status_code=500, detail=f"冷启动失败: {str(e)}")
+        raise AppError(ErrorCode.INTERNAL_ERROR, detail=f"冷启动失败: {str(e)}")
 
 
 @router.get("/prefill/{project_id}", response_model=PrefillSessionResponse)
@@ -178,10 +188,7 @@ async def get_prefill(
         loader = ColdStartLoader()
         session = await loader.get_prefill_session(db, project_id)
         if session is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project {project_id} 没有预填数据",
-            )
+            raise NotFoundError(detail=f"Project {project_id} 没有预填数据")
 
         return PrefillSessionResponse(
             session_id=session["id"],
@@ -198,8 +205,9 @@ async def get_prefill(
     except HTTPException:
         raise
     except Exception as e:
+        from app.errors import AppError, ErrorCode
         logger.error("获取预填数据失败: project_id=%d, error=%s", project_id, e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
 
 @router.post("/prefill/{project_id}/confirm", response_model=ConfirmResponse)
@@ -218,9 +226,10 @@ async def confirm_prefill(
         result = await loader.confirm_prefill(db, project_id, modifications=mods)
         return ConfirmResponse(**result)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise ValidationError(detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
+        from app.errors import AppError, ErrorCode
         logger.error("确认预填失败: project_id=%d, error=%s", project_id, e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))

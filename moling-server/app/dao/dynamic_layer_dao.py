@@ -47,15 +47,29 @@ class DynamicLayerDAO(BaseDAO[DynamicLayer]):
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_latest_by_project(
+        self,
+        db: AsyncSession,
+        project_id: str,
+    ) -> DynamicLayer | None:
+        """Get the single most recent dynamic layer for a project."""
+        layers = await self.get_recent_by_project(db, project_id, limit=1)
+        return layers[0] if layers else None
+
     async def get_health_check_history(
         self,
         db: AsyncSession,
         project_id: int,
         limit: int = 20,
+        *,
+        start_chapter: int | None = None,
+        end_chapter: int | None = None,
     ) -> list[dict]:
         """Get health check history with chapter numbers for a project.
 
         Returns list of dicts with keys: health_check, chapter_number, checked_at
+
+        Optionally filter by chapter_number range: start_chapter <= n < end_chapter.
         """
         from app.models.chapter import Chapter
 
@@ -67,9 +81,15 @@ class DynamicLayerDAO(BaseDAO[DynamicLayer]):
             )
             .join(Chapter, DynamicLayer.chapter_id == Chapter.id)
             .where(DynamicLayer.project_id == project_id)
+            .where(DynamicLayer.health_check.isnot(None))
             .order_by(DynamicLayer.created_at.desc())
             .limit(limit)
         )
+        if start_chapter is not None:
+            stmt = stmt.where(Chapter.chapter_number >= start_chapter)
+        if end_chapter is not None:
+            stmt = stmt.where(Chapter.chapter_number < end_chapter)
+
         result = await db.execute(stmt)
         rows = result.all()
         return [

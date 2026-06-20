@@ -134,6 +134,40 @@ class CardDAO(BaseDAO[CardPool]):
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_by_ids(
+        self,
+        db: AsyncSession,
+        project_id: int,
+        card_ids: list[int],
+    ) -> list[CardPool]:
+        """Fetch cards by their IDs within a project (async)."""
+        if not card_ids:
+            return []
+        stmt = (
+            select(CardPool)
+            .where(
+                CardPool.project_id == project_id,
+                CardPool.id.in_(card_ids),
+            )
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_by_ids_any(
+        self,
+        db: AsyncSession,
+        card_ids: list[int],
+    ) -> list[CardPool]:
+        """Fetch cards by their IDs across all projects."""
+        if not card_ids:
+            return []
+        stmt = (
+            select(CardPool)
+            .where(CardPool.id.in_(card_ids))
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
     # ---- Synchronous methods for Celery workers ----
 
     def list_active_by_project_sync(

@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="moling">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>墨灵 · Vibe Writing — 移动端预览</title>
+<style>
+/* ============================================================
+   墨灵 Vibe Writing — 移动端适配预览
+   参考: WorkBuddy Mini / DeepSeek / 豆包 / Trae Solo
+   交互模型: Single Column + Bottom Sheet + Drawer Navigation
+   ============================================================ */
+
+/* ---- CSS Variables (Moling Default) ---- */
+:root, [data-theme="moling"] {
+  --th-bg: #0d0f1a;
+  --th-card: #151829;
+  --th-card-hover: #1a1d33;
+  --th-input: #111327;
+  --th-overlay: rgba(0,0,0,0.5);
+  --th-hover: rgba(255,255,255,0.04);
+  --th-hover-strong: rgba(255,255,255,0.07);
+  --th-text: #e8e9f0;
+  --th-text-2: #9ca3c4;
+  --th-text-3: #6b7199;
+  --th-text-4: #3d4166;
+  --th-border: #2a2d45;
+  --th-border-subtle: #1e2138;
+  --th-accent: #6366f1;
+  --th-accent-hover: #7577f5;
+  --th-accent-text: #a5b4fc;
+  --th-accent-dim: rgba(99,102,241,0.12);
+  --th-accent-glow: rgba(99,102,241,0.25);
+  --th-opt-a: #6366f1;
+  --th-opt-a-text: #a5b4fc;
+  --th-opt-a-dim: rgba(99,102,241,0.15);
+  --th-opt-a-border: rgba(99,102,241,0.3);
+  --th-opt-b: #34d399;
+  --th-opt-b-text: #6ee7b7;
+  --th-opt-b-dim: rgba(52,211,153,0.15);
+  --th-opt-b-border: rgba(52,211,153,0.3);
+  --th-opt-c: #d4a843;
+  --th-opt-c-text: #e6c674;
+  --th-opt-c-dim: rgba(212,168,67,0.15);
+  --th-opt-c-border: rgba(212,168,67,0.3);
+  --th-success: #34d399;
+  --th-warning: #fbbf24;
+  --th-danger: #ef4444;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0a0b14;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; padding: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Phone Frame ---- */
+.phone-frame {
+  width: 390px; height: 844px;
+  background: var(--th-bg); color: var(--th-text);
+  border-radius: 40px; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 0 0 3px #1a1d33, 0 0 0 6px #111, 0 20px 60px rgba(0,0,0,0.6);
+  position: relative;
+}
+
+/* ---- Top Bar ---- */
+.top-bar {
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 12px 16px; padding-top: 16px;
+  gap: 10px;
+  border-bottom: 1px solid var(--th-border-subtle);
+}
+
+.menu-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; border: none; background: var(--th-hover);
+  color: var(--th-text-2); cursor: pointer; flex-shrink: 0;
+}
+
+.project-title {
+  flex: 1; min-width: 0;
+  font-size: 15px; font-weight: 600;
+  color: var(--th-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.top-actions {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+
+.top-btn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; border: none; background: transparent;
+  color: var(--th-text-3); cursor: pointer;
+}
+
+.top-btn.active { color: var(--th-accent-text); background: var(--th-accent-dim); }
+
+/* ---- Agent Indicator ---- */
+.agent-indicator {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 16px; overflow-x: auto;
+  border-bottom: 1px solid var(--th-border-subtle);
+  -ms-overflow-style: none; scrollbar-width: none;
+}
+.agent-indicator::-webkit-scrollbar { display: none; }
+
+.agent-dot {
+  display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  font-size: 10px; color: var(--th-text-4);
+}
+.agent-dot::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--th-text-4);
+}
+.agent-dot.active { color: var(--th-accent-text); }
+.agent-dot.active::before { background: var(--th-success); animation: agent-pulse 1.6s ease-in-out infinite; }
+.agent-dot.standby { color: var(--th-text-3); }
+.agent-dot.standby::before { background: var(--th-warning); }
+
+@keyframes agent-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ---- Content Area ---- */
+.content-area {
+  flex: 1; overflow-y: auto;
+  padding: 16px 16px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chapter-header {
+  margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 24px; border-radius: 12px;
+  background: var(--th-card); border: 1.5px solid var(--th-border);
+  color: var(--th-accent-text); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+  font-family: inherit;
+}
+.copy-btn:hover { background: var(--th-accent-dim); border-color: var(--th-accent); }
+.copy-btn.copied { background: rgba(52,211,153,0.12); border-color: #34d399; color: #34d399; }
+.chapter-title {
+  font-size: 16px; font-weight: 700; color: var(--th-text);
+  margin-bottom: 4px;
+}
+.chapter-meta {
+  font-size: 11px; color: var(--th-text-4);
+  display: flex; gap: 10px;
+}
+
+.chapter-body {
+  font-size: 14px; line-height: 1.85; color: var(--th-text-2);
+  white-space: pre-wrap; margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+
+.complete-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 10px;
+  background: var(--th-accent-dim); color: var(--th-accent-text);
+  border: none; font-size: 12px; font-weight: 500; cursor: pointer;
+  margin-bottom: 20px;
+}
+
+/* ---- Options Panel (sticky bottom area) ---- */
+.options-area {
+  flex-shrink: 0;
+  border-top: 1px solid var(--th-border-subtle);
+  background: var(--th-bg);
+}
+
+.option-tabs {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px 0;
+}
+
+.option-tab-group {
+  display: flex; gap: 4px;
+}
+
+.option-tab {
+  padding: 5px 10px; border-radius: 7px;
+  font-size: 11px; font-weight: 500;
+  border: none; cursor: pointer;
+  background: transparent; color: var(--th-text-4);
+}
+.option-tab.active {
+  background: var(--th-accent-dim); color: var(--th-accent-text);
+}
+
+.regenerate-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; border-radius: 6px;
+  background: transparent; border: none;
+  font-size: 10px; color: var(--th-text-4); cursor: pointer;
+}
+
+.option-cards {
+  padding: 8px 16px; display: flex; flex-direction: column; gap: 6px;
+  max-height: 220px; overflow-y: auto;
+}
+
+.option-card {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1.5px solid var(--th-border-subtle);
+  background: var(--th-card); cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.option-card.selected-a { border-color: var(--th-opt-a-border); background: var(--th-opt-a-dim); }
+.option-card.selected-b { border-color: var(--th-opt-b-border); background: var(--th-opt-b-dim); }
+.option-card.selected-c { border-color: var(--th-opt-c-border); background: var(--th-opt-c-dim); }
+
+.opt-label {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+  background: var(--th-hover); color: var(--th-text-3);
+}
+.option-card.selected-a .opt-label { background: var(--th-opt-a); color: #fff; }
+.option-card.selected-b .opt-label { background: var(--th-opt-b); color: #111; }
+.option-card.selected-c .opt-label { background: var(--th-opt-c); color: #111; }
+
+.opt-content { flex: 1; min-width: 0; }
+.opt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.opt-name { font-size: 12px; font-weight: 600; color: var(--th-text); }
+.opt-confidence { font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+.conf-high { background: rgba(52,211,153,0.15); color: #34d399; }
+.conf-mid { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.conf-low { background: rgba(239,68,68,0.15); color: #ef4444; }
+.opt-desc { font-size: 11px; color: var(--th-text-3); line-height: 1.4; }
+
+/* Custom input mode */
+.custom-input-area {
+  padding: 8px 16px 10px;
+  display: none;
+}
+.custom-input-area.visible { display: block; }
+
+.custom-textarea {
+  width: 100%; height: 72px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--th-card); border: 1.5px solid var(--th-border-subtle);
+  color: var(--th-text-2); font-size: 12px; resize: none;
+  font-family: inherit; line-height: 1.5;
+  outline: none;
+}
+.custom-textarea:focus { border-color: var(--th-accent); }
+.custom-textarea::placeholder { color: var(--th-text-4); }
+
+/* Confirm / Submit button */
+.action-btn-row {
+  padding: 8px 16px 12px;
+}
+.action-btn {
+  width: 100%; padding: 10px;
+  border-radius: 10px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.action-btn.primary {
+  background: var(--th-accent-text); color: #fff;
+}
+.action-btn.disabled {
+  background: var(--th-hover); color: var(--th-text-4);
+  cursor: not-allowed;
+}
+
+/* ---- Bottom Bar ---- */
+.bottom-bar {
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 6px 16px; border-top: 1px solid var(--th-border-subtle);
+  font-size: 10px; color: var(--th-text-4);
+  justify-content: space-between;
+}
+
+/* ---- Bottom Nav ---- */
+.bottom-nav {
+  flex-shrink: 0;
+  display: flex;
+  border-top: 1px solid var(--th-border-subtle);
+  background: var(--th-card);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 8px 4px 12px; gap: 3px;
+  border: none; background: transparent;
+  color: var(--th-text-4); cursor: pointer;
+  font-size: 10px; font-family: inherit;
+}
+.nav-item.active { color: var(--th-accent-text); }
+.nav-item svg { width: 20px; height: 20px; }
+
+/* ---- Drawer Overlay ---- */
+.drawer-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 10; display: none;
+  opacity: 0; transition: opacity .25s;
+}
+.drawer-overlay.open { display: block; opacity: 1; }
+
+/* ---- Left Drawer ---- */
+.left-drawer {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 300px; background: var(--th-card);
+  z-index: 20; transform: translateX(-100%);
+  transition: transform .25s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--th-border);
+}
+.left-drawer.open { transform: translateX(0); }
+
+.drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px; padding-top: 20px;
+}
+.drawer-title { font-size: 16px; font-weight: 700; color: var(--th-text); }
+.drawer-close {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: none; background: var(--th-hover);
+  color: var(--th-text-3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+.drawer-body { flex: 1; overflow-y: auto; }
+
+/* Project list in drawer */
+.drawer-projects { padding: 0 16px 12px; }
+.drawer-section-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  color: var(--th-text-4); padding: 10px 0 6px; letter-spacing: 0.08em;
+}
+.project-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  background: transparent; cursor: pointer; margin-bottom: 2px;
+  border: none; color: inherit; width: 100%; text-align: left;
+  font: inherit; font-size: 13px;
+}
+.project-item:hover { background: var(--th-hover); }
+.project-item.active { background: var(--th-accent-dim); color: var(--th-accent-text); }
+.project-item.active .pj-icon { background: var(--th-accent-dim); }
+.pj-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--th-hover); color: var(--th-text-3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+}
+.pj-info { flex: 1; min-width: 0; }
+.pj-name { font-weight: 600; font-size: 13px; }
+.pj-genre { font-size: 10px; color: var(--th-text-4); margin-top: 1px; }
+.pj-badge {
+  font-size: 9px; padding: 2px 6px; border-radius: 4px;
+  background: var(--th-hover); color: var(--th-text-4);
+  flex-shrink: 0;
+}
+.pj-badge.done { background: var(--th-accent-dim); color: var(--th-accent-text); }
+
+/* Expanded project: chapter list */
+.chapter-list { padding-left: 42px; padding-bottom: 4px; }
+.chapter-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 7px;
+  font-size: 11px; color: var(--th-text-3); cursor: pointer;
+  border: none; background: transparent; width: 100%; text-align: left;
+  font: inherit;
+}
+.chapter-item:hover { color: var(--th-text-2); }
+.chapter-item.current { background: var(--th-accent-dim); color: var(--th-accent-text); font-weight: 600; }
+.ch-num { font-size: 10px; color: var(--th-text-4); min-width: 28px; }
+.ch-status {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  margin-left: auto; flex-shrink: 0;
+}
+.ch-status.done { background: rgba(52,211,153,0.12); color: #34d399; }
+.ch-status.draft { background: rgba(251,191,36,0.12); color: #fbbf24; }
+
+.drawer-footer {
+  padding: 12px 16px; border-top: 1px solid var(--th-border-subtle);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.drawer-footer-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  background: transparent; border: none;
+  color: var(--th-text-3); cursor: pointer;
+  font: inherit; font-size: 12px; text-align: left; width: 100%;
+}
+.drawer-footer-item:hover { background: var(--th-hover); color: var(--th-text-2); }
+
+/* ---- Agent Drawer (bottom sheet style) ---- */
+.agent-drawer {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  max-height: 55%; background: var(--th-card);
+  border-radius: 20px 20px 0 0; z-index: 20;
+  transform: translateY(100%);
+  transition: transform .25s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+}
+.agent-drawer.open { transform: translateY(0); }
+
+.agent-drawer-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--th-border); margin: 10px auto 6px;
+}
+.agent-drawer-title {
+  padding: 4px 20px 12px; font-size: 14px; font-weight: 700;
+  color: var(--th-text); display: flex; align-items: center; gap: 8px;
+}
+.agent-list { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+.agent-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; border-radius: 10px;
+  background: var(--th-bg); margin-bottom: 8px;
+  border: 1px solid var(--th-border-subtle);
+}
+.agent-card-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.agent-card-dot.active { background: var(--th-success); animation: agent-pulse 1.6s ease-in-out infinite; }
+.agent-card-dot.standby { background: var(--th-warning); }
+.agent-card-info { flex: 1; }
+.agent-card-name { font-size: 12px; font-weight: 600; color: var(--th-text); }
+.agent-card-desc { font-size: 10px; color: var(--th-text-4); margin-top: 2px; }
+.agent-card-toggle {
+  width: 36px; height: 20px; border-radius: 10px; border: none;
+  background: var(--th-border); cursor: pointer; position: relative;
+}
+.agent-card-toggle.on { background: var(--th-accent); }
+.agent-card-toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform .2s;
+}
+.agent-card-toggle.on::after { transform: translateX(16px); }
+
+/* ---- Desktop annotation ---- */
+.desktop-note {
+  position: absolute; left: -200px; top: 40px;
+  width: 180px; font-size: 11px; color: #6b7199; line-height: 1.6;
+  text-align: right;
+}
+.desktop-note h4 { font-size: 12px; color: #a5b4fc; margin-bottom: 6px; }
+.desktop-note ul { list-style: none; }
+.desktop-note li::before { content: '· '; color: #6366f1; }
+</style>
+</head>
+<body>
+
+<!-- Desktop-side annotation -->
+<div class="desktop-note">
+  <h4>移动端适配预览</h4>
+  <ul>
+    <li>参考 DeepSeek / 豆包 / WorkBuddy Mini</li>
+    <li>单列布局 · 无三栏</li>
+    <li>左侧抽屉 = 项目导航</li>
+    <li>底部抽屉 = Agent 面板</li>
+    <li>底部固定 = 选项面板</li>
+    <li>底部导航 = 全局切换</li>
+  </ul>
+</div>
+
+<div class="phone-frame" id="app">
+  <!-- ═══════════ Top Bar ═══════════ -->
+  <div class="top-bar">
+    <button class="menu-btn" onclick="toggleDrawer()" aria-label="菜单">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+    </button>
+    <span class="project-title" id="topProjectName">剑道巅峰</span>
+    <div class="top-actions">
+      <button class="top-btn" onclick="toggleAgentDrawer()" title="Agent 调度" id="agentBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════ Agent Indicator Row ═══════════ -->
+  <div class="agent-indicator">
+    <span class="agent-dot active">Plot</span>
+    <span class="agent-dot active">Char</span>
+    <span class="agent-dot standby">Dialog</span>
+    <span class="agent-dot active">Style</span>
+    <span class="agent-dot active">World</span>
+  </div>
+
+  <!-- ═══════════ Content ═══════════ -->
+  <div class="content-area" id="contentArea">
+    <div class="chapter-header">
+      <button class="copy-btn" onclick="copyChapter()" id="copyBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        一键复制
+      </button>
+    </div>
+
+    <div class="chapter-body">宗门议事大殿中，掌门与诸位长老目光灼灼。
+
+"林风，你可知剑骨觉醒意味着什么？"掌门的声音带着一丝颤抖。
+
+九州千年以来，剑骨觉醒者不过三人。每一人，都曾改写了大陆的格局。
+
+林风抬头，目光平静却坚定："我只知道，我再也不做废材了。"
+
+大殿中一片寂静。
+
+掌门缓缓起身，手中拂尘轻挥，一道灵光没入林风眉心。"此乃《九霄剑诀》总纲。你且参悟三日，三日后——"
+
+"三日太久。"林风打断道，"一日足矣。"
+
+满座皆惊。
+
+从未有人敢在议事大殿如此狂言。几位长老面露不悦，唯有掌门眼中闪过一丝深意。
+
+"好。"掌门抚须而笑，"那就一日。若你做不到——"
+
+"做得到。"林风转身，背影如剑，"因为我等这一天，已经等了十六年。"</div>
+
+    <button class="complete-btn" onclick="this.textContent='✅ 已标记完成'; this.style.opacity='0.6';">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+      完成本章，标为只读
+    </button>
+  </div>
+
+  <!-- ═══════════ Options Panel ═══════════ -->
+  <div class="options-area">
+    <div class="option-tabs">
+      <div class="option-tab-group">
+        <button class="option-tab active" id="tabOptions" onclick="switchMode('options')">选项</button>
+        <button class="option-tab" id="tabCustom" onclick="switchMode('custom')">自定义</button>
+      </div>
+      <button class="regenerate-btn" onclick="alert('模拟：重新生成选项...')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        重新生成
+      </button>
+    </div>
+
+    <!-- Options mode -->
+    <div id="optionsMode">
+      <div class="option-cards">
+        <div class="option-card selected-a" onclick="selectOption('a')" id="optCardA">
+          <div class="opt-label">A</div>
+          <div class="opt-content">
+            <div class="opt-head">
+              <span class="opt-name">展开宗门试炼</span>
+              <span class="opt-confidence conf-high">87%</span>
+            </div>
+            <div class="opt-desc">林风在剑骨觉醒后迎来第一次宗门试炼，面对昔日嘲笑他的同门，用实力证明自己。</div>
+          </div>
+        </div>
+        <div class="option-card" onclick="selectOption('b')" id="optCardB">
+          <div class="opt-label">B</div>
+          <div class="opt-content">
+            <div class="opt-head">
+              <span class="opt-name">神秘老者来访</span>
+              <span class="opt-confidence conf-high">82%</span>
+            </div>
+            <div class="opt-desc">剑骨觉醒震动了一位隐居多年的剑道宗师，他夜访林风，带来了一个关于剑骨的惊天秘密。</div>
+          </div>
+        </div>
+        <div class="option-card" onclick="selectOption('c')" id="optCardC">
+          <div class="opt-label">C</div>
+          <div class="opt-content">
+            <div class="opt-head">
+              <span class="opt-name">外门试剑大会</span>
+              <span class="opt-confidence conf-mid">75%</span>
+            </div>
+            <div class="opt-desc">宗门举办外门试剑大会，林风代表外门出战内门天才，一场越级之战即将打响。</div>
+          </div>
+        </div>
+      </div>
+      <div class="action-btn-row">
+        <button class="action-btn primary" id="confirmBtn" onclick="confirmOption()">确认选择 A</button>
+      </div>
+    </div>
+
+    <!-- Custom input mode -->
+    <div class="custom-input-area" id="customMode">
+      <textarea class="custom-textarea" placeholder="写下你的想法，或选择上方「选项」让 AI 提供建议..."></textarea>
+      <div class="action-btn-row">
+        <button class="action-btn primary">提交</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Bottom Status Bar ═══════════ -->
+  <div class="bottom-bar">
+    <span>剑道巅峰 · 第3章 / 12章 · 玄幻修仙</span>
+    <span>草稿</span>
+  </div>
+
+  <!-- ═══════════ Bottom Navigation ═══════════ -->
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="switchNav('workspace')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <span>写作</span>
+    </button>
+    <button class="nav-item" onclick="switchNav('projects')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>项目</span>
+    </button>
+    <button class="nav-item" onclick="switchNav('progress')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+      <span>进度</span>
+    </button>
+    <button class="nav-item" onclick="switchNav('agents')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Agent</span>
+    </button>
+  </div>
+
+  <!-- ═══════════ Overlay ═══════════ -->
+  <div class="drawer-overlay" id="overlay" onclick="closeAllDrawers()"></div>
+
+  <!-- ═══════════ Left Drawer — Project Navigation ═══════════ -->
+  <div class="left-drawer" id="leftDrawer">
+    <div class="drawer-header">
+      <span class="drawer-title">📖 我的小说</span>
+      <button class="drawer-close" onclick="closeAllDrawers()">✕</button>
+    </div>
+    <div class="drawer-body">
+      <!-- New project button -->
+      <div style="padding: 0 16px 10px;">
+        <button style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed var(--th-border);background:transparent;color:var(--th-text-3);cursor:pointer;font:inherit;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="alert('跳转: /projects/new')">
+          <span style="font-size:16px;">+</span> 新建项目 / 小说
+        </button>
+      </div>
+
+      <!-- Serializing -->
+      <div class="drawer-projects">
+        <div class="drawer-section-label">📝 连载中</div>
+
+        <!-- Active + expanded: 剑道巅峰 -->
+        <div class="project-item active" onclick="alert('当前活跃项目')">
+          <div class="pj-icon">⚔️</div>
+          <div class="pj-info"><div class="pj-name">剑道巅峰</div><div class="pj-genre">玄幻修仙 · 3/12章</div></div>
+        </div>
+        <div class="chapter-list">
+          <button class="chapter-item current" onclick="alert('当前: 第3章')"><span class="ch-num">第 3 章</span> 剑指苍穹 <span class="ch-status draft">草稿</span></button>
+          <button class="chapter-item" onclick="alert('跳至: 第2章')"><span class="ch-num">第 2 章</span> 剑骨觉醒 <span class="ch-status done">已完成</span></button>
+          <button class="chapter-item" onclick="alert('跳至: 第1章')"><span class="ch-num">第 1 章</span> 废材少年 <span class="ch-status done">已完成</span></button>
+        </div>
+
+        <!-- Collapsed: 都市修仙传 -->
+        <div class="project-item" onclick="alert('切换至: 都市修仙传')">
+          <div class="pj-icon">🏙️</div>
+          <div class="pj-info"><div class="pj-name">都市修仙传</div><div class="pj-genre">都市异能 · 1/24章</div></div>
+        </div>
+
+        <!-- Collapsed: 末世重生 -->
+        <div class="project-item" onclick="alert('切换至: 末世重生')">
+          <div class="pj-icon">☢️</div>
+          <div class="pj-info"><div class="pj-name">末世重生</div><div class="pj-genre">末世科幻 · 2/18章</div></div>
+        </div>
+      </div>
+
+      <!-- Completed -->
+      <div class="drawer-projects">
+        <div class="drawer-section-label">✅ 已完结</div>
+        <div class="project-item" onclick="alert('已完结只读: 星际流浪者')">
+          <div class="pj-icon">🚀</div>
+          <div class="pj-info"><div class="pj-name">星际流浪者</div><div class="pj-genre">科幻 · 3/3章</div></div>
+          <div class="pj-badge done">完结</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer footer: 知识中心 / 插件市场 / 设置 -->
+    <div class="drawer-footer">
+      <button class="drawer-footer-item" onclick="alert('知识中心 — 待实现')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>知识中心</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--th-text-4);">占位</span>
+      </button>
+      <button class="drawer-footer-item" onclick="alert('插件市场 — 待实现')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span>插件市场</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--th-text-4);">占位</span>
+      </button>
+      <button class="drawer-footer-item" onclick="alert('跳转: /settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>用户设置</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════ Agent Bottom Sheet ═══════════ -->
+  <div class="agent-drawer" id="agentDrawer">
+    <div class="agent-drawer-handle"></div>
+    <div class="agent-drawer-title">🤖 Agent 调度中心 <span style="font-size:10px;color:var(--th-success);margin-left:auto;">4/5 活跃</span></div>
+    <div class="agent-list">
+      <div class="agent-card">
+        <div class="agent-card-dot active"></div>
+        <div class="agent-card-info">
+          <div class="agent-card-name">Plot Agent · 剧情</div>
+          <div class="agent-card-desc">故事结构 · 冲突管理 · 情节节奏 · 伏笔回收</div>
+        </div>
+        <div class="agent-card-toggle on"></div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-card-dot active"></div>
+        <div class="agent-card-info">
+          <div class="agent-card-name">Character Agent · 人物</div>
+          <div class="agent-card-desc">人物档案 · 人物弧光 · 关系网络 · 成长轨迹</div>
+        </div>
+        <div class="agent-card-toggle on"></div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-card-dot standby"></div>
+        <div class="agent-card-info">
+          <div class="agent-card-name">Dialogue Agent · 对话</div>
+          <div class="agent-card-desc">对话生成 · 台词匹配 · 语气语调 · 潜台词</div>
+        </div>
+        <div class="agent-card-toggle"></div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-card-dot active"></div>
+        <div class="agent-card-info">
+          <div class="agent-card-name">Style Agent · 风格</div>
+          <div class="agent-card-desc">文风控制 · 修辞手法 · 叙事视角 · 语言质感</div>
+        </div>
+        <div class="agent-card-toggle on"></div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-card-dot active"></div>
+        <div class="agent-card-info">
+          <div class="agent-card-name">World Agent · 世界观</div>
+          <div class="agent-card-desc">世界观规则 · 设定细节 · 环境氛围 · 力量体系</div>
+        </div>
+        <div class="agent-card-toggle on"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedOption = 'a';
+
+function copyChapter() {
+  const body = document.querySelector('.chapter-body').innerText;
+  // 去掉首尾空白
+  const text = body.trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg> 已复制！';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> 一键复制';
+    }, 2000);
+  }).catch(() => {
+    // Fallback for unsecured context
+    const text = document.querySelector('.chapter-body').innerText.trim();
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('copyBtn');
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg> 已复制！';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> 一键复制';
+    }, 2000);
+  });
+}
+
+function toggleDrawer() {
+  const drawer = document.getElementById('leftDrawer');
+  const overlay = document.getElementById('overlay');
+  drawer.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+function toggleAgentDrawer() {
+  const drawer = document.getElementById('agentDrawer');
+  const overlay = document.getElementById('overlay');
+  drawer.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+function closeAllDrawers() {
+  document.getElementById('leftDrawer').classList.remove('open');
+  document.getElementById('agentDrawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function switchMode(mode) {
+  document.getElementById('tabOptions').classList.toggle('active', mode === 'options');
+  document.getElementById('tabCustom').classList.toggle('active', mode === 'custom');
+  document.getElementById('optionsMode').style.display = mode === 'options' ? 'block' : 'none';
+  document.getElementById('customMode').classList.toggle('visible', mode === 'custom');
+}
+
+function selectOption(opt) {
+  selectedOption = opt;
+  const cards = { a: 'optCardA', b: 'optCardB', c: 'optCardC' };
+  Object.entries(cards).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    el.className = 'option-card' + (key === opt ? ` selected-${key}` : '');
+  });
+  document.getElementById('confirmBtn').textContent = '确认选择 ' + opt.toUpperCase();
+}
+
+function confirmOption() {
+  const btn = document.getElementById('confirmBtn');
+  btn.textContent = '⏳ 生成中...';
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  setTimeout(() => {
+    btn.textContent = '✅ 已应用！继续推进';
+    btn.style.opacity = '1';
+    setTimeout(() => { btn.textContent = '确认选择 ' + selectedOption.toUpperCase(); btn.disabled = false; }, 2000);
+  }, 1500);
+}
+
+function switchNav(tab) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const items = document.querySelectorAll('.nav-item');
+  const map = { workspace: 0, projects: 1, progress: 2, agents: 3 };
+  items[map[tab]].classList.add('active');
+  if (tab === 'agents') toggleAgentDrawer();
+  if (tab === 'projects') toggleDrawer();
+}
+</script>
+
+</body>
+</html>

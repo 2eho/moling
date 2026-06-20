@@ -90,20 +90,23 @@ class SchedulerState:
 class Phase4Scheduler:
     """Phase 4 调度器 — 管理收纳任务的执行、竞态防护与内容安全验证.
 
-    模拟 Redis 存储: ``_nonce_set``, ``_lock_store``, ``_task_store``.
-    生产环境迁移至真实 Redis 时搜索标记 ``# TODO: 迁移到 Redis``.
+    存储后端通过 Phase4Store 抽象，Redis 可用时自动使用，否则回退内存。
     """
 
     def __init__(self) -> None:
-        # 内存版 "Redis" 存储
-        self._nonce_set: Set[str] = set()          # TODO: 迁移到 Redis SISMEMBER
-        self._nonce_cache: OrderedDict[str, bool] = OrderedDict()  # LRU 缓存 (最多 1000 条)
-        self._lock_store: Dict[str, Any] = {}       # TODO: 迁移到 Redis HSETNX
-        self._task_store: Dict[str, Dict[str, Any]] = {}  # TODO: 迁移到 Redis HASH
-        self._current_lock_owner: Dict[str, str] = {}  # 当前锁持有者 (scheduler_id)
+        from app.service.phase4_store import Phase4Store
+
+        self._store = Phase4Store()
+        self._store_initialized = False
 
         self._state_lock = asyncio.Lock()
         self._state = SchedulerState()
+
+    async def init_store(self, redis) -> None:
+        """Initialise the storage backend; pass *redis* client or None."""
+        await self._store.init(redis)
+        self._store_initialized = True
+        logger.info("Phase4Scheduler store initialised (backend=%s)", self._store.backend_type)
 
     # ======================================================================
     # §12.2 主入口
@@ -364,7 +367,7 @@ class Phase4Scheduler:
     async def _acquire_lock(self, key: str) -> bool:
         """获取写入锁 (内存版本, 使用时间戳标记).
 
-        TODO: 迁移到 Redis HSETNX + EXPIRE
+        Redis 就绪后切换为 ``await self._store.acquire_lock(key, owner_id, ttl)``.
 
         Args:
             key: 锁键名
@@ -409,8 +412,9 @@ class Phase4Scheduler:
         - 每 SCHEDULER_LOCK_INTERVAL 秒重试
         - 最多 SCHEDULER_LOCK_RETRY_MAX 次
 
-        TODO: 迁移到 Redis SET NX EX:
-            redis.set(f"phase4:lock:{project_id}", value, nx=True, ex=SCHEDULER_LOCK_TTL)
+        Redis 就绪后切换为::
+
+            await self._store.acquire_lock(f"phase4:lock:{project_id}", value, ttl=SCHEDULER_LOCK_TTL)
         """
         lock_key = f"phase4:lock:{project_id}"
         scheduler_id = f"sched_{id(self)}_{time.monotonic():.6f}"
@@ -906,7 +910,7 @@ class Phase4Scheduler:
         """RapidFuzz 模糊匹配.
 
         使用简单子串包含 + 字符重叠比来模拟 RapidFuzz 的 token_sort_ratio.
-        TODO: 迁移至 ``from rapidfuzz import fuzz``
+        性能优化: 安装 rapidfuzz 后替换为 ``from rapidfuzz import fuzz``.
 
         Args:
             source: 需要匹配的源文本
@@ -952,12 +956,10 @@ class Phase4Scheduler:
         - 输出: "pass" | "fail"
 
         当前使用关键词覆盖率 + 上下文邻近度模拟 LLM 判断。
-        TODO: 接入真实 LLM 客户端:
+        LLM 接入代码（就绪时激活）::
+
             from app.llm.client import llm_client
-            messages = [
-                {"role": "system", "content": "你是一个内容安全审查员。"},
-                {"role": "user", "content": prompt},
-            ]
+            messages = [...]
             response = await llm_client.chat(messages=messages, model=LLM_JUDGE_MODEL)
             return response["choices"][0]["message"]["content"].strip().lower()
 

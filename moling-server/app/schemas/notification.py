@@ -11,15 +11,15 @@ from pydantic import BaseModel, Field, model_validator
 class NotificationResp(BaseModel):
     """Notification detail response."""
 
-    id: int
-    user_id: int
-    type: str
-    title: str
-    content: Optional[str] = None
+    id: int = Field(..., description="通知 ID")
+    user_id: str = Field(..., description="用户 ID (UUID)")
+    type: str = Field(..., description="通知类型")
+    title: str = Field(..., description="通知标题")
+    content: Optional[str] = Field(default=None, description="通知正文")
     message: Optional[str] = Field(default=None, description="通知消息内容（兼容前端 message 字段）")
-    is_read: bool
-    project_id: Optional[int] = None
-    created_at: datetime
+    is_read: bool = Field(default=False, description="是否已读")
+    project_id: Optional[str] = Field(default=None, description="关联项目 ID (UUID)")
+    created_at: datetime = Field(..., description="创建时间")
 
     model_config = {"from_attributes": True}
 

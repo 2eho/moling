@@ -36,7 +36,7 @@ class RefreshReq(BaseModel):
 class UserResp(BaseModel):
     """User response (public-facing, no password hash)."""
 
-    id: str | int = Field(..., description="用户 ID (UUID 或整数)")
+    id: str = Field(..., description="用户 ID (UUID)")
     email: str = Field(..., description="邮箱")
     nickname: str = Field(..., validation_alias="username", description="用户昵称")
     avatar_url: Optional[str] = Field(default=None, description="头像 URL")

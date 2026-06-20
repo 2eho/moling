@@ -12,10 +12,9 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.config import get_settings
-from app.dao import chapter_dao, project_dao, vault_dao, card_dao, phase4_dao
+from app.dao import chapter_dao, project_dao, vault_dao, card_dao, phase4_dao, dynamic_layer_dao
 from app.service.card_retire_service import card_retire_service
 from app.service.merge_service import (
     ConfidenceLevel,
@@ -326,12 +325,9 @@ class Phase4Service:
                 grouped[etype] = sorted(items, key=lambda x: x["confidence"], reverse=True)
 
             # 6. 更新 Phase4Task 记录（标记分析完成）
-            stmt = select(Phase4Task).where(
-                Phase4Task.project_id == str(project_id),
-                Phase4Task.status == "pending",
+            pending_tasks = await phase4_dao.get_by_project(
+                db, str(project_id), status="pending"
             )
-            result = await db.execute(stmt)
-            pending_tasks = list(result.scalars().all())
             for task in pending_tasks:
                 task.status = "analyzed"
             await db.commit()
@@ -375,7 +371,7 @@ class Phase4Service:
         task = await phase4_dao.get(db, task_id)
         if task is None:
             raise NotFoundError(
-                error_code=ErrorCode.TASK_NOT_FOUND,
+                error_code=ErrorCode.GENERATION_TASK_NOT_FOUND,
                 detail="Task not found",
             )
 
@@ -551,12 +547,7 @@ class Phase4Service:
     ) -> None:
         """更新动态层（DynamicLayer）。"""
         # 获取或创建动态层
-        stmt = select(DynamicLayer).where(
-            DynamicLayer.project_id == project_id,
-            DynamicLayer.chapter_id == chapter_id,
-        )
-        result = await db.execute(stmt)
-        dynamic_layer = result.scalar_one_or_none()
+        dynamic_layer = await dynamic_layer_dao.get_by_chapter(db, chapter_id)
         
         if dynamic_layer is None:
             dynamic_layer = DynamicLayer(
@@ -659,12 +650,9 @@ class Phase4Service:
     ) -> None:
         """更新或创建角色。"""
         # 查找是否已存在同名角色
-        stmt = select(VaultCharacter).where(
-            VaultCharacter.project_id == project_id,
-            VaultCharacter.name == char_data["name"],
+        character = await vault_dao.get_character_by_name(
+            db, project_id, char_data["name"]
         )
-        result = await db.execute(stmt)
-        character = result.scalar_one_or_none()
         
         if character is None:
             # 创建新角色
@@ -728,24 +716,17 @@ class Phase4Service:
         related_chars = promise_data.get("related_characters", [])
 
         # 策略 1: 精确描述匹配（前80字符）
-        stmt = select(VaultPlotPromise).where(
-            VaultPlotPromise.project_id == project_id,
-            VaultPlotPromise.description.contains(description[:80]),
+        promise = await vault_dao.find_promise_by_description(
+            db, project_id, description[:80]
         )
-        result = await db.execute(stmt)
-        promise = result.scalar_one_or_none()
 
         # 策略 2: 类型 + 角色关联匹配（精确匹配未命中时）
         if promise is None and related_chars:
             for char_name in related_chars:
-                stmt = select(VaultPlotPromise).where(
-                    VaultPlotPromise.project_id == project_id,
-                    VaultPlotPromise.type == promise_type,
-                    VaultPlotPromise.related_characters.contains(char_name),
-                    VaultPlotPromise.status.in_(["dormant", "active", "advancing"]),
+                promise = await vault_dao.find_promise_by_type_and_char(
+                    db, project_id, promise_type, char_name,
+                    ["dormant", "active", "advancing"],
                 )
-                result = await db.execute(stmt)
-                promise = result.scalar_one_or_none()
                 if promise:
                     break
         
@@ -779,12 +760,9 @@ class Phase4Service:
     ) -> None:
         """更新或创建世界观元素。"""
         # 查找是否已存在同名术语
-        stmt = select(VaultWorld).where(
-            VaultWorld.project_id == project_id,
-            VaultWorld.term == world_data["term"],
+        world = await vault_dao.get_world_entry_by_term(
+            db, project_id, world_data["term"]
         )
-        result = await db.execute(stmt)
-        world = result.scalar_one_or_none()
         
         if world is None:
             # 创建新世界观元素
@@ -822,12 +800,7 @@ class Phase4Service:
             used_card_ids = chapter.used_card_ids
             # 增加已使用卡牌的 weight（增加抽中概率）
             for cid in used_card_ids:
-                stmt = select(CardPool).where(
-                    CardPool.project_id == project_id,
-                    CardPool.id == cid,
-                )
-                result = await db.execute(stmt)
-                card = result.scalar_one_or_none()
+                card = await card_dao.get(db, cid)
                 if card:
                     card.draw_count = (card.draw_count or 0) - 1  # 减少 draw_count 提高权重
         
@@ -882,7 +855,7 @@ class Phase4Service:
         task = await phase4_dao.get(db, task_id)
         if task is None:
             raise NotFoundError(
-                error_code=ErrorCode.TASK_NOT_FOUND,
+                error_code=ErrorCode.GENERATION_TASK_NOT_FOUND,
                 detail="Task not found",
             )
         
@@ -1059,7 +1032,7 @@ class Phase4Service:
         task = await phase4_dao.get(db, task_id)
         if task is None:
             raise NotFoundError(
-                error_code=ErrorCode.TASK_NOT_FOUND,
+                error_code=ErrorCode.GENERATION_TASK_NOT_FOUND,
                 detail="Task not found",
             )
 

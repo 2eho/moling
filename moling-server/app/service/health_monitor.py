@@ -14,11 +14,8 @@ from __future__ import annotations
 import logging
 from typing import Any, List, Optional, Set, Tuple
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.chapter import Chapter
-from app.models.dynamic_layer import DynamicLayer
 from app.models.vault_plot_promise import VaultPlotPromise
 
 logger = logging.getLogger(__name__)
@@ -391,7 +388,7 @@ async def _get_plot_promises(
 
 async def _get_chapter_content(
     db: AsyncSession,
-    project_id: str,
+    project_id: str | int,
     chapter_number: int,
 ) -> Optional[str]:
     """获取指定章节的正文内容。
@@ -404,17 +401,9 @@ async def _get_chapter_content(
     Returns:
         章节正文，如果不存在返回 None.
     """
-    stmt = (
-        select(Chapter.content)
-        .where(
-            Chapter.project_id == project_id,
-            Chapter.chapter_number == chapter_number,
-        )
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    row = result.one_or_none()
-    return row[0] if row else None
+    from app.dao import chapter_dao
+
+    return await chapter_dao.get_content(db, int(project_id), chapter_number)
 
 
 async def _get_previous_health_checks(
@@ -439,27 +428,20 @@ async def _get_previous_health_checks(
 
     start_chapter = max(1, current_chapter - ANTI_FATIGUE_WINDOW)
 
-    stmt = (
-        select(
-            DynamicLayer.health_check,
-            Chapter.chapter_number,
-        )
-        .join(Chapter, DynamicLayer.chapter_id == Chapter.id)
-        .where(
-            Chapter.project_id == project_id,
-            Chapter.chapter_number >= start_chapter,
-            Chapter.chapter_number < current_chapter,
-            DynamicLayer.health_check.isnot(None),
-        )
-        .order_by(Chapter.chapter_number.desc())
+    from app.dao import dynamic_layer_dao
+
+    rows = await dynamic_layer_dao.get_health_check_history(
+        db,
+        project_id=int(project_id),
+        limit=ANTI_FATIGUE_WINDOW * 5,
+        start_chapter=start_chapter,
+        end_chapter=current_chapter,
     )
-    result = await db.execute(stmt)
-    rows = result.all()
 
     previous: dict[int, list[dict[str, Any]]] = {}
     for row in rows:
-        hc = row[0]  # health_check
-        ch = row[1]   # chapter_number
+        hc = row["health_check"]
+        ch = row["chapter_number"]
         if hc and isinstance(hc, dict) and hc.get("alerts"):
             previous[ch] = hc["alerts"]
 

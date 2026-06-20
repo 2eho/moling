@@ -12,13 +12,12 @@ Endpoints:
 
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dao import generation_dao
 from app.dependencies import get_db, get_current_user
 from app.generation.jobs_store import JobStatus, task_to_dict
-from app.models.generation_task import GenerationTask
 from app.schemas.generation import GenerateReq
 from app.service import generation_service
 
@@ -81,17 +80,17 @@ async def get_generation_job(
     Returns:
         任务详细信息，包括 status, progress, result, error 等字段。
     """
-    # 从数据库查询 GenerationTask 记录
-    stmt = select(GenerationTask).where(GenerationTask.id == job_id)
-    result = await db.execute(stmt)
-    task = result.scalar_one_or_none()
+    # 通过 DAO 查询 GenerationTask 记录
+    from app.errors import NotFoundError, PermissionError as AppPermissionError
+    
+    task = await generation_dao.get_by_id(db, job_id)
     
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise NotFoundError(detail="任务不存在")
     
     # 检查权限（只能查看自己的任务）
     if task.user_id != current_user["id"]:
-        raise HTTPException(status_code=403, detail="无权访问")
+        raise AppPermissionError(detail="无权访问")
     
     # 转换为前端期望的 dict 格式
     job_dict = task_to_dict(task)
@@ -113,14 +112,8 @@ async def cancel_generation_job(
     try:
         await generation_service.cancel_task(db, current_user["id"], job_id)
     except Exception as e:
-        # 将 service 层的业务异常转换为 HTTP 异常
-        from app.errors import NotFoundError, PermissionError as AppPermissionError
-        if isinstance(e, NotFoundError):
-            raise HTTPException(status_code=404, detail="任务不存在")
-        if isinstance(e, AppPermissionError):
-            detail = str(e.detail) if hasattr(e, 'detail') and e.detail else "无权操作"
-            raise HTTPException(status_code=403, detail=detail)
-        raise HTTPException(status_code=400, detail=str(e))
+        # Service 层异常直接透传
+        raise
     
     return {"code": 0, "message": "success", "data": {"status": "cancelled"}}
 

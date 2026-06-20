@@ -23,12 +23,12 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_effective_llm_config
 from app.llm.client import llm_client
-from app.models import CardPool, DynamicLayer, Secret, VaultCharacter
+from app.models import CardPool
+from app.dao import dynamic_layer_dao, secret_dao, vault_dao
 
 logger = logging.getLogger(__name__)
 
@@ -344,12 +344,8 @@ class ConflictDetectionService:
         chapter_id: str,
     ) -> Optional[DynamicLayer]:
         """Fetch the dynamic layer for the given project+chapter."""
-        stmt = select(DynamicLayer).where(
-            DynamicLayer.project_id == project_id,
-            DynamicLayer.chapter_id == chapter_id,
-        )
-        result = await db.execute(stmt)
-        layer = result.scalar_one_or_none()
+        from app.models.dynamic_layer import DynamicLayer
+        layer = await dynamic_layer_dao.get_by_chapter(db, chapter_id)
         if layer is None:
             logger.debug(
                 "No dynamic layer found for project=%s chapter=%s",
@@ -661,9 +657,7 @@ class ConflictDetectionService:
             return []
 
         # ── Load all secrets for the project ────────────────────────
-        stmt = select(Secret).where(Secret.project_id == project_id)
-        result = await db.execute(stmt)
-        secrets: List[Secret] = list(result.scalars().all())
+        secrets = await secret_dao.list_by_project(db, int(project_id))
 
         if not secrets:
             return []
@@ -740,16 +734,10 @@ class ConflictDetectionService:
             return []
 
         # ── Load vault characters for the project ───────────────────
-        stmt = select(VaultCharacter).where(
-            VaultCharacter.project_id == project_id,
-        )
-        result = await db.execute(stmt)
-        vault_chars: List[VaultCharacter] = list(result.scalars().all())
+        vault_chars = await vault_dao.get_characters(db, int(project_id))
 
         # Build a name → VaultCharacter dict
-        char_map: Dict[str, VaultCharacter] = {
-            vc.name: vc for vc in vault_chars
-        }
+        char_map = {vc.name: vc for vc in vault_chars}
 
         conflicts: List[Dict[str, Any]] = []
 

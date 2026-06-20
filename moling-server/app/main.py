@@ -66,26 +66,21 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"[WARN] Redis unavailable (ignored): {e}")
 
     # --- 从数据库加载 LLM 配置（覆盖内存）---
-    # Windows 上暂时跳过（避免 greenlet 问题）
     if platform.system() != "Windows":
         try:
-            from sqlalchemy import select
             from app.config import set_override
-            from app.models.system_config import SystemConfig
-            
-            # 使用异步 session 查询 system_config 表
+            from app.dao.system_config_dao import SystemConfigDAO
+
+            config_dao = SystemConfigDAO()
             from app.dependencies import async_session_factory
             async with async_session_factory() as session:
-                result = await session.execute(
-                    select(SystemConfig).where(
-                        SystemConfig.key.in_(["llm_api_key", "llm_api_base", "llm_model"])
-                    )
+                configs = await config_dao.get_by_keys(
+                    session, ["llm_api_key", "llm_api_base", "llm_model"]
                 )
-                rows = result.scalars().all()
-                config_dict = {row.key: row.value for row in rows}
-                
+                config_dict = {key: row.value for key, row in configs.items()}
+
                 if config_dict.get("llm_api_key"):
-                    set_override("llm_api_key", config_dict["llm_api_key"])
+                    await set_override("llm_api_key", config_dict["llm_api_key"])
                     print(f"[OK] LLM config loaded from DB (model: {config_dict.get('llm_model', 'N/A')})")
                 else:
                     print("[INFO] No LLM config in DB, using .env defaults")
@@ -135,14 +130,12 @@ from app.middleware import (
 )
 from app.config import get_settings
 from app import __version__
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.middleware import SlowAPIMiddleware
 
 settings = get_settings()
 
-# 初始化 slowapi limiter（用于端点级速率限制）
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+# 使用共享 limiter 实例（避免循环导入）
+from app.limiter import limiter
 app.state.limiter = limiter
 
 # 1. Request ID — 为每个请求注入唯一标识（必须在最外层）
@@ -246,7 +239,8 @@ def _write_error_log(request: Request, exc: Exception) -> None:
                 backup_path.unlink()
             log_path.rename(backup_path)
     except Exception:
-        pass
+        import sys
+        print("[WARN] Error log rotation failed", file=sys.stderr)
 
     # ---- 构建增强日志内容 ----
     lines = []
@@ -296,7 +290,7 @@ def _write_error_log(request: Request, exc: Exception) -> None:
         if request.client:
             lines.append(f"  Client IP: {request.client.host}")
     except Exception:
-        pass
+        lines.append("  Client IP: <unavailable>")
 
     # 请求头（只记录关键头，不含敏感信息）
     try:
@@ -308,7 +302,7 @@ def _write_error_log(request: Request, exc: Exception) -> None:
         if safe_headers:
             lines.append(f"  Headers: {safe_headers}")
     except Exception:
-        pass
+        lines.append("  Headers: <unavailable>")
 
     # Traceback
     lines.append(traceback.format_exc())
@@ -318,7 +312,8 @@ def _write_error_log(request: Request, exc: Exception) -> None:
         with open(log_path, "a", encoding="utf-8") as f:
             f.write("\n".join(lines))
     except Exception:
-        pass
+        import sys
+        print("".join(lines), file=sys.stderr)
 
 
 @app.exception_handler(Exception)

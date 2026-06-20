@@ -46,8 +46,8 @@ async def get_current_chapter(
     """Get the current (first) chapter in a project."""
     chapters = await chapter_service.list_chapters(db, current_user.id, project_id)
     if not chapters:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="No chapters found")
+        from app.errors import NotFoundError
+        raise NotFoundError(detail="No chapters found")
     return chapters[0]
 
 

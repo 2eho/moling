@@ -38,6 +38,16 @@ class UserDAO(BaseDAO[User]):
         result = await db.execute(stmt)  # type: ignore[union-attr]
         return result.scalar_one_or_none()
 
+    async def get_by_reset_token(
+        self,
+        db: SyncSession,  # type: ignore[override]
+        token: str,
+    ) -> Optional[User]:
+        """Find a user by their password reset token."""
+        stmt = select(User).where(User.reset_token == token)
+        result = await db.execute(stmt)  # type: ignore[union-attr]
+        return result.scalar_one_or_none()
+
     # ------------------------------------------------------------------
     # Sync versions (for Windows + aiosslite workaround)
     # ------------------------------------------------------------------

@@ -113,6 +113,6 @@ async def get_draw_history_detail(
         db, current_user.id, project_id, draw_id
     )
     if result is None:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="抽卡记录不存在")
+        from app.errors import NotFoundError
+        raise NotFoundError(detail="抽卡记录不存在")
     return result

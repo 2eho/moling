@@ -3,7 +3,7 @@
 实现用户注册、登录、刷新令牌、获取当前用户、登出等端点。
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
@@ -21,8 +21,8 @@ settings = get_settings()
 # Bearer token 提取器
 _security = HTTPBearer()
 
-# 导入 slowapi limiter
-from app.main import limiter
+# 导入 slowapi limiter（共享实例，位于 app/limiter.py 避免循环导入）
+from app.limiter import limiter
 
 
 @router.post("/register", response_model=TokenResp, status_code=201)
@@ -33,16 +33,7 @@ async def register(
     db: SyncSession = Depends(get_sync_db),
 ) -> TokenResp:
     """注册新用户并返回令牌。"""
-    try:
-        result = auth_service.register_sync(db, req)
-        return result
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        
-        if hasattr(e, 'status_code'):
-            raise HTTPException(status_code=e.status_code, detail=str(e.detail))
-        raise HTTPException(status_code=400, detail=str(e))
+    return auth_service.register_sync(db, req)
 
 
 @router.post("/login", response_model=TokenResp)
@@ -53,15 +44,7 @@ async def login(
     db: SyncSession = Depends(get_sync_db),
 ) -> TokenResp:
     """使用邮箱和密码登录并返回令牌。"""
-    try:
-        result = auth_service.login_sync(db, req)
-        return result
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        if hasattr(e, 'status_code'):
-            raise HTTPException(status_code=e.status_code, detail=str(e.detail))
-        raise HTTPException(status_code=400, detail=str(e))
+    return auth_service.login_sync(db, req)
 
 
 @router.post("/refresh", response_model=TokenResp)
@@ -70,13 +53,7 @@ async def refresh(
     db: AsyncSession = Depends(get_db),
 ) -> TokenResp:
     """使用刷新令牌获取新的访问令牌。"""
-    try:
-        result = await auth_service.refresh_tokens(db, req.refresh_token)
-        return result
-    except Exception as e:
-        if hasattr(e, 'status_code'):
-            raise HTTPException(status_code=e.status_code, detail=str(e.detail))
-        raise HTTPException(status_code=401, detail="无效的刷新令牌")
+    return await auth_service.refresh_tokens(db, req.refresh_token)
 
 
 @router.get("/me", response_model=UserResp)
@@ -95,13 +72,7 @@ async def password_reset_request(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """请求密码重置（发送重置邮件）。"""
-    try:
-        result = await auth_service.request_password_reset(db, req)
-        return result
-    except Exception as e:
-        if hasattr(e, 'status_code'):
-            raise HTTPException(status_code=e.status_code, detail=str(e.detail))
-        raise HTTPException(status_code=500, detail="密码重置请求失败")
+    return await auth_service.request_password_reset(db, req)
 
 
 @router.post("/password-reset", status_code=200)
@@ -110,13 +81,7 @@ async def password_reset(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """使用令牌重置密码。"""
-    try:
-        result = await auth_service.reset_password(db, req)
-        return result
-    except Exception as e:
-        if hasattr(e, 'status_code'):
-            raise HTTPException(status_code=e.status_code, detail=str(e.detail))
-        raise HTTPException(status_code=500, detail="密码重置失败")
+    return await auth_service.reset_password(db, req)
 
 
 @router.put("/me", response_model=UserResp)
@@ -134,10 +99,4 @@ async def logout(
     req: LogoutReq,
 ) -> dict:
     """登出用户（将 token 加入黑名单）。"""
-    try:
-        result = await auth_service.logout(req.access_token, req.refresh_token)
-        return result
-    except Exception as e:
-        if hasattr(e, 'status_code'):
-            raise HTTPException(status_code=e.status_code, detail=str(e.detail))
-        raise HTTPException(status_code=500, detail="登出失败")
+    return await auth_service.logout(req.access_token, req.refresh_token)

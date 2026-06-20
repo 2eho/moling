@@ -7,7 +7,6 @@ import logging
 from typing import Optional
 from datetime import datetime, timezone
 
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import chapter_dao, project_dao
@@ -43,10 +42,7 @@ class ChapterService:
             )
         
         # 自动计算章节序号：取最大 chapter_number + 1
-        max_num_result = await db.execute(
-            select(func.max(Chapter.chapter_number)).where(Chapter.project_id == project_id)
-        )
-        max_num = max_num_result.scalar() or 0
+        max_num = await chapter_dao.get_max_chapter_number(db, project_id)
         chapter_number = max_num + 1
         
         # Create chapter
