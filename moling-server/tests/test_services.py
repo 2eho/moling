@@ -39,7 +39,7 @@ class TestAuthService:
         from app.service import auth_service
 
         req = RegisterReq(
-            email="test@moling.com",
+            email="testuser@example.com",
             nickname="另一个用户",
             password="password123",
         )
@@ -65,10 +65,10 @@ class TestAuthService:
         from app.schemas.auth import LoginReq
         from app.service import auth_service
 
-        req = LoginReq(email="test@moling.com", password="password123")
+        req = LoginReq(email="testuser@example.com", password="TestPassword123!")
         result = await auth_service.login(test_db, req)
 
-        assert result.user.email == "test@moling.com"
+        assert result.user.email == "testuser@example.com"
         assert result.access_token is not None
 
     async def test_login_wrong_password(self, test_db, test_user):
@@ -77,7 +77,7 @@ class TestAuthService:
         from app.schemas.auth import LoginReq
         from app.service import auth_service
 
-        req = LoginReq(email="test@moling.com", password="wrongpassword")
+        req = LoginReq(email="testuser@example.com", password="wrongpassword")
         with pytest.raises(AuthError):
             await auth_service.login(test_db, req)
 

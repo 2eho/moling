@@ -116,6 +116,7 @@ if not IS_WINDOWS:
             await test_db.rollback()  # 清理失败的事务
             req = LoginReq(email=email, password=password)
             result = await auth_service.login(test_db, req)
+            await test_db.commit()  # 关闭 login 的隐式事务
             return result
 
     @pytest.fixture()
