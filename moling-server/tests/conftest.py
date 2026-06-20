@@ -98,26 +98,27 @@ if not IS_WINDOWS:
         return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
     @pytest_asyncio.fixture()
-    async def test_user(test_db):
-        """创建测试用户并返回用户信息。"""
+    async def test_user(test_engine):
+        """创建测试用户并返回用户信息（独立 session 避免连接池污染）。"""
         from app.service import auth_service
         from app.schemas.auth import RegisterReq, LoginReq
         
         email = "testuser@example.com"
         password = "TestPassword123!"
         
-        try:
-            # 尝试注册
-            req = RegisterReq(email=email, nickname="测试用户", password=password)
-            result = await auth_service.register(test_db, req)
-            return result
-        except Exception:
-            # 用户已存在，登录获取 token
-            await test_db.rollback()  # 清理失败的事务
-            req = LoginReq(email=email, password=password)
-            result = await auth_service.login(test_db, req)
-            await test_db.commit()  # 关闭 login 的隐式事务
-            return result
+        session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
+        async with session_factory() as session:
+            try:
+                req = RegisterReq(email=email, nickname="测试用户", password=password)
+                result = await auth_service.register(session, req)
+                await session.commit()
+                return result
+            except Exception:
+                await session.rollback()
+                req = LoginReq(email=email, password=password)
+                result = await auth_service.login(session, req)
+                await session.commit()
+                return result
 
     @pytest.fixture()
     def auth_headers(test_user):
