@@ -171,10 +171,12 @@ class Settings(BaseSettings):
 
     @field_validator("SECRET_KEY", mode="after")
     @classmethod
-    def _reject_production_default_secret(cls, v: str, info) -> str:
+    def _reject_production_default_secret(cls, v: str) -> str:
         """Refuse to start in production with the dev default SECRET_KEY."""
         if v == "dev-secret-key-change-in-production":
-            env = info.data.get("ENVIRONMENT", "")
+            # H5 fix: 直接读环境变量，避免对字段声明顺序的依赖
+            import os
+            env = os.environ.get("ENVIRONMENT", "")
             if env == "production":
                 raise ValueError(
                     "SECRET_KEY must be set via environment variable in production. "

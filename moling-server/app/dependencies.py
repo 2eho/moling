@@ -129,6 +129,8 @@ else:
         echo=False,
         pool_size=5,
         max_overflow=10,
+        pool_recycle=1800,   # H6: 30分钟回收连接，避免 PostgreSQL 超时断开
+        pool_pre_ping=True,  # H6: 使用前验证连接存活
     )
 
 async_session_factory = async_sessionmaker(
