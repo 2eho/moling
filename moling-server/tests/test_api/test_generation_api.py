@@ -56,7 +56,7 @@ class TestGenerationStart:
         )
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     async def test_start_generation_invalid_project(self, async_client: AsyncClient, 
                                                     auth_headers):
@@ -100,7 +100,7 @@ class TestGenerationStatus:
         )
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 class TestGenerationCancel:
@@ -126,4 +126,4 @@ class TestGenerationCancel:
         )
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401

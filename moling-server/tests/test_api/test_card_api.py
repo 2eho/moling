@@ -41,7 +41,7 @@ class TestCardList:
         )
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 class TestCardDraw:

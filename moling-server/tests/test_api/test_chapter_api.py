@@ -56,7 +56,7 @@ class TestChapterCreate:
         )
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     async def test_create_chapter_invalid_project(self, async_client: AsyncClient, 
                                                 auth_headers):

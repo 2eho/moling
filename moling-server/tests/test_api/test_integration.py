@@ -17,7 +17,7 @@ class TestAuthFlow:
         # 1. 注册
         register_payload = {
             "email": "flowtest@example.com",
-            "username": "流程测试用户",
+            "nickname": "流程测试用户",
             "password": "TestPassword123!"
         }
         register_resp = await async_client.post(
@@ -25,7 +25,9 @@ class TestAuthFlow:
             json=register_payload
         )
         assert register_resp.status_code == 201
-        register_data = register_resp.json()
+        body = register_resp.json()
+        assert body["code"] == 0
+        register_data = body["data"]
         assert "access_token" in register_data
         assert "refresh_token" in register_data
         access_token = register_data["access_token"]
@@ -38,7 +40,7 @@ class TestAuthFlow:
             headers=auth_headers
         )
         assert me_resp.status_code == 200
-        me_data = me_resp.json()
+        me_data = me_resp.json()["data"]
         assert me_data["email"] == "flowtest@example.com"
 
         # 3. 刷新 Token
@@ -48,7 +50,7 @@ class TestAuthFlow:
             json=refresh_payload
         )
         assert refresh_resp.status_code == 200
-        refresh_data = refresh_resp.json()
+        refresh_data = refresh_resp.json()["data"]
         assert "access_token" in refresh_data
         new_access_token = refresh_data["access_token"]
         assert new_access_token != access_token  # 新 token 应该不同
@@ -81,7 +83,7 @@ class TestProjectWorkflow:
             headers=auth_headers
         )
         assert create_resp.status_code == 201
-        project_data = create_resp.json()
+        project_data = create_resp.json()["data"]
         project_id = project_data["id"]
         assert project_data["title"] == "工作流测试项目"
 
@@ -91,7 +93,7 @@ class TestProjectWorkflow:
             headers=auth_headers
         )
         assert list_resp.status_code == 200
-        list_data = list_resp.json()
+        list_data = list_resp.json()["data"]
         project_ids = [p["id"] for p in list_data["items"]]
         assert project_id in project_ids
 
@@ -101,7 +103,7 @@ class TestProjectWorkflow:
             headers=auth_headers
         )
         assert detail_resp.status_code == 200
-        detail_data = detail_resp.json()
+        detail_data = detail_resp.json()["data"]
         assert detail_data["id"] == project_id
 
         # 4. 更新项目
@@ -115,7 +117,7 @@ class TestProjectWorkflow:
             headers=auth_headers
         )
         assert update_resp.status_code == 200
-        update_data = update_resp.json()
+        update_data = update_resp.json()["data"]
         assert update_data["title"] == "更新后的项目标题"
         assert update_data["genre"] == "武侠"
 
@@ -156,7 +158,7 @@ class TestChapterWorkflow:
             params=params
         )
         assert create_resp.status_code == 201
-        chapter_data = create_resp.json()
+        chapter_data = create_resp.json()["data"]
         chapter_id = chapter_data["id"]
 
         # 2. 列出章节
@@ -166,7 +168,7 @@ class TestChapterWorkflow:
             params=params
         )
         assert list_resp.status_code == 200
-        list_data = list_resp.json()
+        list_data = list_resp.json()["data"]
         assert any(c["id"] == chapter_id for c in list_data)
 
         # 3. 获取章节详情
@@ -229,7 +231,7 @@ class TestVaultWorkflow:
             params=params
         )
         assert create_resp.status_code == 201
-        character_data = create_resp.json()
+        character_data = create_resp.json()["data"]
         character_id = character_data["id"]
 
         # 2. 列出人物
@@ -239,7 +241,7 @@ class TestVaultWorkflow:
             params=params
         )
         assert list_resp.status_code == 200
-        list_data = list_resp.json()
+        list_data = list_resp.json()["data"]
         assert any(c["id"] == character_id for c in list_data)
 
         # 3. 更新人物

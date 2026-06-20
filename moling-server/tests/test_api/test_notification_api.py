@@ -47,7 +47,7 @@ class TestNotificationList:
         resp = await async_client.get(API_PREFIX)
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 class TestNotificationUnreadCount:
@@ -89,7 +89,7 @@ class TestNotificationMarkRead:
         resp = await async_client.post(f"{API_PREFIX}/1/read")
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 class TestNotificationMarkAllRead:
@@ -129,4 +129,4 @@ class TestNotificationDelete:
         resp = await async_client.delete(f"{API_PREFIX}/1")
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401

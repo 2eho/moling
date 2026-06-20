@@ -31,7 +31,7 @@ class TestSettingGet:
         resp = await async_client.get(API_PREFIX)
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 class TestSettingUpdate:
@@ -70,7 +70,7 @@ class TestSettingUpdate:
         )
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 class TestSettingChangePassword:
@@ -110,7 +110,7 @@ class TestSettingChangePassword:
         )
 
         # Assert
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 class TestSettingProfile:
