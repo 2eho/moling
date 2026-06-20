@@ -57,6 +57,22 @@ CONFIDENCE_MEDIUM_THRESHOLD = 0.5 # 0.5-0.8 后台标记需审核
 CONFIDENCE_LOW_THRESHOLD = 0.3    # 0.3-0.5 弹窗确认
 
 
+def _get_last_advance_chapter(promise) -> int:
+    """P6-4 fix: 获取承诺最后推进章节号。
+    
+    优先用 advancement_log 最后一条记录的 chapter，
+    兜底用 planted_chapter。
+    """
+    log = promise.advancement_log or []
+    if isinstance(log, list) and log:
+        last_entry = log[-1]
+        if isinstance(last_entry, dict):
+            ch = last_entry.get("chapter", 0)
+            if ch:
+                return ch
+    return promise.planted_chapter or 0
+
+
 # ---------------------------------------------------------------------------
 # P1-4: 置信度降级策略
 # ---------------------------------------------------------------------------
@@ -754,8 +770,9 @@ class MergeService:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
 
-                # 检查 stale
-                if chapter_number - (target.planted_chapter or 0) > STALE_CHAPTER_THRESHOLD:
+                # P6-4 fix: 检查 stale — 优先用 advancement_log
+                last_advance = _get_last_advance_chapter(target)
+                if chapter_number - last_advance > STALE_CHAPTER_THRESHOLD:
                     result.warnings.append(
                         f"剧情承诺 '{title}' 已超过 {STALE_CHAPTER_THRESHOLD} 章未兑现，标记为 stale"
                     )
@@ -858,14 +875,14 @@ class MergeService:
                 ))
                 result.updated += 1
 
-        # 整体 stale 检查（仅对 unresolved 的承诺）
+        # P6-4 fix: 整体 stale 检查 — 优先用 advancement_log
         for promise in existing:
             if promise.status in ("active", "advancing"):
-                planted = promise.planted_chapter or 0
-                if planted > 0 and chapter_number - planted > STALE_CHAPTER_THRESHOLD:
+                last_advance = _get_last_advance_chapter(promise)
+                if last_advance > 0 and chapter_number - last_advance > STALE_CHAPTER_THRESHOLD:
                     result.warnings.append(
                         f"剧情承诺 '{promise.title}' "
-                        f"(planted_chapter={planted}) 已超 {STALE_CHAPTER_THRESHOLD} 章未兑现"
+                        f"(last_advance_chapter={last_advance}) 已超 {STALE_CHAPTER_THRESHOLD} 章未兑现"
                     )
 
         self._evaluate_merge_confidence(result)

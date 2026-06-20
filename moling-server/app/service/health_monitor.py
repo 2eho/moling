@@ -207,17 +207,17 @@ def _check_r2(
     if len(log) < R2_MIN_REPEATED:
         return None
 
-    # 提取所有记录的 event_type，跳过缺失 event_type 的记录
+    # 提取所有记录的 event 字段，跳过缺失的记录
     event_types: Set[str] = set()
     for entry in log:
         if not isinstance(entry, dict):
             continue
-        et = entry.get("event_type")
+        # P9-2 fix: advancement_log 使用 "event" 字段而非 "event_type"
+        et = entry.get("event")
         if et:
             event_types.add(et)
 
-    # 只有一条记录有 event_type 但总记录 >= R2_MIN_REPEATED 还不够，
-    # 需要所有 >= R2_MIN_REPEATED 条记录都有相同的 event_type
+    # 所有 >= R2_MIN_REPEATED 条记录都有相同的 event 类型
     if len(event_types) == 1:
         repeated_type = event_types.pop()
         return {

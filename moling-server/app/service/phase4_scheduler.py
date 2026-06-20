@@ -79,7 +79,7 @@ class SchedulerState:
     executed_nonces: Set[str] = field(default_factory=set)
     vault_version: VaultVersion = field(default_factory=VaultVersion)
     fallback_queue: List[Dict[str, Any]] = field(default_factory=list)
-    consecutive_failures: int = 0
+    consecutive_failures: Dict[str, int] = field(default_factory=dict)  # P5-3 fix: 按项目区分
 
 
 # ---------------------------------------------------------------------------
@@ -259,7 +259,7 @@ class Phase4Scheduler:
 
             self._update_vault_version(project_id, chapter_id, nonce)
             async with self._state_lock:
-                self._state.consecutive_failures = 0
+                self._state.consecutive_failures.pop(str(project_id), None)
 
             logger.info(
                 "Phase 4 收纳完成 (task_id=%s, nonce=%s)", task.id, nonce,
@@ -549,8 +549,11 @@ class Phase4Scheduler:
         - 连续 5 次 → 强制暂停
         """
         async with self._state_lock:
-            self._state.consecutive_failures += 1
-            failures = self._state.consecutive_failures
+            # P5-3 fix: 按项目区分失败计数
+            project_key = str(project_id)
+            current = self._state.consecutive_failures.get(project_key, 0)
+            self._state.consecutive_failures[project_key] = current + 1
+            failures = self._state.consecutive_failures[project_key]
 
         error_msg = str(exc)
         logger.error(

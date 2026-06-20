@@ -38,7 +38,7 @@ if platform.system() == "Windows":
         import sqlalchemy.ext.asyncio.base as _async_base
         _async_base._greenlet_spawn = _asyncio_greenlet_spawn
     except Exception:
-        logger.debug("greenlet patch not needed on this platform", exc_info=True)
+        pass  # greenlet patch not supported on this platform
 
     print("[OK] Applied Windows greenlet patch (thread pool fallback)")
 
@@ -62,7 +62,7 @@ if platform.system() == "Windows":
                 setattr(_obj, '_get_exec_once_mutex', staticmethod(_patched_get_exec_once_mutex))
                 _patched_classes += 1
             except Exception:
-                logger.debug("Could not patch %s._get_exec_once_mutex (may be frozen)", type(_obj).__name__)
+                pass  # 类已冻结，跳过
 
     # 同时修补所有已有实例（如果有）
     # 遍历 sqlalchemy.event.registry 中的实例...

@@ -49,11 +49,12 @@ def _create_access_token(user_id: int) -> tuple[str, str, int]:
     """
     import uuid
     
-    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
     jti = str(uuid.uuid4())
     to_encode = {"sub": str(user_id), "type": "access", "exp": expire, "jti": jti}
     token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return token, jti, 15 * 60
+    return token, jti, minutes * 60
 
 
 def _create_refresh_token(user_id: int) -> tuple[str, str, int]:
@@ -64,11 +65,12 @@ def _create_refresh_token(user_id: int) -> tuple[str, str, int]:
     """
     import uuid
     
-    expire = datetime.now(timezone.utc) + timedelta(days=30)
+    days = settings.REFRESH_TOKEN_EXPIRE_DAYS
+    expire = datetime.now(timezone.utc) + timedelta(days=days)
     jti = str(uuid.uuid4())
     to_encode = {"sub": str(user_id), "type": "refresh", "exp": expire, "jti": jti}
     token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return token, jti, 30 * 24 * 60 * 60
+    return token, jti, days * 24 * 60 * 60
 
 
 # ---------------------------------------------------------------------------

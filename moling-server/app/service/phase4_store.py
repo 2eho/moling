@@ -104,8 +104,19 @@ class _RedisStore:
         val = await self._redis.get(lock_key)
         return val.decode("utf-8") if val else None
 
-    async def release_lock(self, lock_key: str) -> None:
+    async def release_lock(self, lock_key: str, owner_id: str) -> bool:
+        """安全释放分布式锁（P2-2 fix: 验证 owner）.
+        
+        仅当 lock_key 的值与 owner_id 匹配时才删除。
+        返回 True 表示成功释放，False 表示当前不是锁持有者。
+        """
+        current = await self._redis.get(lock_key)
+        if current is None:
+            return True  # 锁已释放
+        if current.decode("utf-8") if isinstance(current, bytes) else current != owner_id:
+            return False  # 不是当前 owner，拒绝释放
         await self._redis.delete(lock_key)
+        return True
 
     async def hset_task(self, task_id: str, data: Dict[str, Any]) -> None:
         import json
@@ -177,8 +188,9 @@ class Phase4Store:
     async def get_lock_owner(self, resource: str) -> Optional[str]:
         return await self._backend.get_lock_owner(f"phase4:lock:{resource}")
 
-    async def release_lock(self, resource: str) -> None:
-        await self._backend.release_lock(f"phase4:lock:{resource}")
+    async def release_lock(self, resource: str, owner_id: str) -> bool:
+        """安全释放分布式锁，验证 owner 后释放（P2-2 fix）。"""
+        return await self._backend.release_lock(f"phase4:lock:{resource}", owner_id)
 
     # -- task ------------------------------------------------------------------
 

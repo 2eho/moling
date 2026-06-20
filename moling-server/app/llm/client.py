@@ -576,7 +576,13 @@ class LLMClient:
 
             try:
                 if stream:
-                    return await self._chat_stream(payload, api_key)
+                    response = await self._chat_stream(payload, api_key)
+                    # L1 fix: 流式路径也需要记录 Token 用量 + 上报成功
+                    self.key_pool.report_success(api_key)
+                    actual_tokens = response.get("usage", {}).get("completion_tokens", 0)
+                    self.rate_limiter.record_request(api_key, actual_tokens)
+                    await self.budget_manager.record_usage(actual_tokens)
+                    return response
                 else:
                     response = await self._chat_non_stream(payload, api_key)
                     # Record success

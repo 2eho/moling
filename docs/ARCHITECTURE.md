@@ -1,6 +1,6 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.6.0  
+> **文档版本**: 1.7.0  
 > **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
@@ -633,12 +633,12 @@ db.commit() → 全部成功
 
 #### Critical (P0 — 必须修复)
 
-| ID | 问题 | 影响 | 位置 |
-|----|------|------|------|
-| P2-2 | Redis 释放锁无 owner 验证：`release_lock()` 用 `DELETE` 直接删 key，未通过 Lua 脚本检查 owner | 锁过期后被其他 Worker 持有，当前 Worker 可能删除他人持有的锁 | `phase4_store.py:107-108` |
-| P9-2 | R2 健康规则依赖的 `event_type` 字段不存在：`advancement_log` 条目只存储 `chapter/event/timestamp`，无 `event_type` | R2 告警（连续 4+ 次同类型重复推进）**永不被触发** | `health_monitor.py` + `plot_promise.py` 模型 |
-| P5-3 | 连续失败计数器 `self._state.consecutive_failures` 全局共享（非 per-project） | 项目 A 的失败会导致项目 B 收到错误级别的告警 | `phase4_scheduler.py` |
-| P6-4 | `merge_plot_promises` 的 stale 检查仅看 `planted_chapter`，忽略 `advancement_log` 中的推进记录 | 已在第 25 章推进的承诺在第 30 章被误标 stale | `merge_service.py:772-788` |
+| ID | 问题 | 影响 | 位置 | 状态 |
+|----|------|------|------|:--:|
+| P2-2 | Redis 释放锁无 owner 验证 | 可能误删其他 Worker 持有的锁 | `phase4_store.py:107-108` | ✅ |
+| P9-2 | R2 健康规则 `event_type` → `event` 字段名错误 | R2 告警永不被触发 | `health_monitor.py` | ✅ |
+| P5-3 | `consecutive_failures` 全局共享受影响跨项目告警 | 项目 A 失败导致项目 B 收到错误告警 | `phase4_scheduler.py` | ✅ |
+| P6-4 | stale 检查只看 `planted_chapter` 忽略 `advancement_log` | 已推进承诺被误标 stale | `merge_service.py:758,864` | ✅ |
 
 #### High (P1 — 强烈建议)
 
@@ -672,7 +672,7 @@ P11-1 → P11-2 (导入引擎) → P1-3 (双状态) → P7-2 (两套提取)
 
 | ID | 问题 | 位置 | 影响 |
 |----|------|------|------|
-| C1 | greenlet 补丁块中引用未定义的 `logger` — Windows 启动时 NameError | `dependencies.py:41,65` | Windows 应用完全不可用 |
+| C1 | greenlet 补丁块中引用未定义的 `logger` — Windows 启动时 NameError | `dependencies.py:41,65` | Windows 应用完全不可用 | ✅ |
 | C2 | 审计日志无条件 `await request.body()` — 全量缓冲至内存 | `audit_log.py:67-70` | OOM 攻击向量 |
 | C3 | ResponseFormat 全量缓冲响应体 — 流式 SSE/文件下载不可用 | `response_format.py:46-61` | 文件下载 OOM，SSE 完全不可用 |
 | C4 | 纯内存限流 — 多 Worker 独立计数 | `rate_limit.py:38-39` | 限流形同虚设（实际=配置×worker数） |
@@ -703,10 +703,10 @@ H1 (敏感数据) → H5 (弱密钥) → H6 (连接池) → H2-H4 (运维化)
 
 #### P0 (立即修复)
 
-| ID | 问题 | 位置 | 影响 |
-|----|------|------|------|
-| S1 | Access Token 硬编码 `timedelta(minutes=15)` 忽视 `ACCESS_TOKEN_EXPIRE_MINUTES` 配置 | `auth_service.py:52` | 配置修改不生效，Token 过期时间不可控 |
-| S2 | Refresh Token 硬编码 `timedelta(days=30)` 忽视 `REFRESH_TOKEN_EXPIRE_DAYS=7` 配置 | `auth_service.py:67` | 实际有效期是配置的 4 倍，扩大泄露窗口 |
+| ID | 问题 | 位置 | 影响 | 状态 |
+|----|------|------|------|:--:|
+| S1 | Access Token 硬编码 `timedelta(minutes=15)` 忽视 `ACCESS_TOKEN_EXPIRE_MINUTES` 配置 | `auth_service.py:52` | 配置修改不生效，Token 过期时间不可控 | ✅ |
+| S2 | Refresh Token 硬编码 `timedelta(days=30)` 忽视 `REFRESH_TOKEN_EXPIRE_DAYS=7` 配置 | `auth_service.py:67` | 实际有效期是配置的 4 倍，扩大泄露窗口 | ✅ |
 | S3 | 密码策略不足：无账户锁定、无复杂度要求（允许 `12345678`）、无密码历史、无强度检查 | `auth_service.py` | 暴力破解风险 + 弱密码风险 |
 
 #### P1 (尽快修复)
@@ -722,6 +722,20 @@ H1 (敏感数据) → H5 (弱密钥) → H6 (连接池) → H2-H4 (运维化)
 ```
 S1/S2 (Token 过期) → S3 (密码策略) → S4 (黑名单降级) → S5 (RBAC) → S6 (jose→PyJWT)
 ```
+
+### LLM 集成已知技术债（扫描 v4，2026-06-21）
+
+> **扫描范围**: `app/llm/` 6 文件（client.py/key_manager.py/context_budget.py/prompts.py） | **发现**: 2 CRITICAL, 2 HIGH, 4 MEDIUM  
+> **报告完整版**: `docs/reports/scan-v4-llm.md`
+
+| ID | 严重度 | 问题 | 位置 | 影响 | 状态 |
+|----|:--:|------|------|------|:--:|
+| L1 | CRITICAL | Token 预算绕过：`_chat_stream` 流式请求不调用 `budget_manager.record_usage()` | `client.py:579` | 流式请求 Token 完全不记入预算 | ✅ |
+| L2 | CRITICAL | `ContextBudget` 完整实现但 LLMClient 从未调用 | `context_budget.py` | Prompt 可能超过模型上下文窗口 | |
+| L3 | HIGH | KeyManager `_recover_key` 后 backoff_level 不重置 | `key_manager.py` | 已恢复 Key 下次瞬时错误直接进 300s 冷却 | ✅ |
+| L4 | HIGH | `get_effective_llm_config()` 硬编码 default，永远不读 `LLM_MODEL` | `config.py:263` | 配置修改不生效 | ✅ |
+
+**修复优先级**: `L1 (Token 漏记) → L4 (配置失效) → L2 (ContextBudget 集成) → L3 (backoff 重置)`
 
 ---
 
@@ -1165,6 +1179,7 @@ docker exec moling-db pg_dump -U moling moling > backup_$(date +%Y%m%d).sql
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.7.0 | 2026-06-21 | 🛠 架构加固 Batch 5 — 扫描 v4 CRITICAL+AHIGH 修复闭环：Phase 4 (P2-2锁安全/P9-2健康字段/P5-3项目隔离/P6-4 stale检查) + Core (C1 Windows崩溃) + Auth (S1/S2 Token过期) + LLM (L1流式预算/L3 key退避/L4 LLM_MODEL配置) | Moling Team |
 | 1.6.2 | 2026-06-21 | 文档债：新增认证安全扫描 v4 发现 — 3 P0 + 3 P1 安全技术债入档（S1-S6 Token过期/密码/RBAC/黑名单降级/jose迁移） | Moling Team |
 | 1.6.1 | 2026-06-21 | 文档债：新增 Core/Middleware 深度扫描 v4 发现 — 4 Critical + 6 High 已知技术债入档（C1-C4 Windows/限流/审计/OOM） | Moling Team |
 | 1.6.0 | 2026-06-21 | 文档债：回填 Phase 4 深度扫描 v4 发现（71.5/100 B级）—— 4 Critical + 4 High 已知技术债入档，含修复优先级路线图 | Moling Team |

@@ -254,7 +254,7 @@ class KeyManager:
         """恢复 Key 为健康状态."""
         health.is_healthy = True
         health.cooling_until = None
-        # 保持 backoff_level 不变，下次错误会从当前级别继续退避
+        health.backoff_level = 0  # 恢复时重置退避级别，避免瞬时错误触发长冷却
         logger.info("Key %s 已恢复健康", _mask_key(health.key))
 
 

@@ -260,5 +260,5 @@ def get_effective_llm_config() -> dict[str, str]:
     return {
         "api_key": _OVERRIDES.get("llm_api_key") or s.LLM_API_KEY,
         "api_base": _OVERRIDES.get("llm_api_base") or s.LLM_API_BASE,
-        "model": _OVERRIDES.get("llm_model") or "deepseek-chat",
+        "model": _OVERRIDES.get("llm_model") or s.LLM_MODEL,
     }
