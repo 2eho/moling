@@ -142,7 +142,7 @@ class TestChapterWorkflow:
     async def test_complete_chapter_workflow(self, async_client: AsyncClient, 
                                             auth_headers, test_project):
         """完整章节工作流应全部成功。"""
-        project_id = test_project["id"]
+        project_id = test_project.id
 
         # 1. 创建章节
         create_payload = {
@@ -215,7 +215,7 @@ class TestVaultWorkflow:
     async def test_complete_vault_character_workflow(self, async_client: AsyncClient, 
                                                      auth_headers, test_project):
         """完整人物库工作流应全部成功。"""
-        project_id = test_project["id"]
+        project_id = test_project.id
 
         # 1. 创建人物
         create_payload = {

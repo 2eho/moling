@@ -39,7 +39,7 @@ class TestAuthRegister:
         """重复注册相同邮箱应返回 400。"""
         # Arrange
         payload = {
-            "email": test_user["user"]["email"],
+            "email": test_user.user.email,
             "nickname": "重复用户",
             "password": "Password123!"
         }
@@ -88,7 +88,7 @@ class TestAuthLogin:
         """登录成功应返回 200 及 TokenResp。"""
         # Arrange
         payload = {
-            "email": test_user["user"]["email"],
+            "email": test_user.user.email,
             "password": "TestPassword123!"
         }
 
@@ -103,13 +103,13 @@ class TestAuthLogin:
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
-        assert data["user"]["email"] == test_user["user"]["email"]
+        assert data["user"]["email"] == test_user.user.email
 
     async def test_login_wrong_password(self, async_client: AsyncClient, test_user):
         """错误密码应返回 401。"""
         # Arrange
         payload = {
-            "email": test_user["user"]["email"],
+            "email": test_user.user.email,
             "password": "WrongPassword123!"
         }
 
@@ -154,7 +154,7 @@ class TestAuthRefresh:
     async def test_refresh_success(self, async_client: AsyncClient, test_user):
         """使用有效刷新令牌应返回新 TokenResp。"""
         # Arrange
-        payload = {"refresh_token": test_user["refresh_token"]}
+        payload = {"refresh_token": test_user.refresh_token}
 
         # Act
         resp = await async_client.post(f"{API_PREFIX}/refresh", json=payload)
@@ -167,7 +167,7 @@ class TestAuthRefresh:
         assert "access_token" in data
         assert "refresh_token" in data
         # 新 access_token 应该不同
-        assert data["access_token"] != test_user["access_token"]
+        assert data["access_token"] != test_user.access_token
 
     async def test_refresh_invalid_token(self, async_client: AsyncClient):
         """无效刷新令牌应返回 401。"""
@@ -205,8 +205,8 @@ class TestAuthGetMe:
         body = resp.json()
         assert body["code"] == 0
         data = body["data"]
-        assert data["email"] == test_user["user"]["email"]
-        assert data["nickname"] == test_user["user"]["username"]
+        assert data["email"] == test_user.user.email
+        assert data["nickname"] == test_user.user.nickname
         assert "id" in data
 
     async def test_get_me_no_token(self, async_client: AsyncClient):

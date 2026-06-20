@@ -15,7 +15,7 @@ class TestVaultCharacter:
                                           auth_headers, test_project):
         """获取人物列表成功应返回 200 及人物数组。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -39,7 +39,7 @@ class TestVaultCharacter:
             "traits": ["勇敢", "正直"],
             "relationships": {}
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -62,7 +62,7 @@ class TestVaultCharacter:
             "name": "要更新的角色",
             "description": "描述"
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
         
         create_resp = await async_client.post(
             f"{API_PREFIX}/characters", 
@@ -100,7 +100,7 @@ class TestVaultCharacter:
             "name": "要删除的角色",
             "description": "描述"
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
         
         create_resp = await async_client.post(
             f"{API_PREFIX}/characters", 
@@ -129,7 +129,7 @@ class TestVaultTimeline:
                                         auth_headers, test_project):
         """获取时间线事件列表成功应返回 200 及事件数组。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -152,7 +152,7 @@ class TestVaultTimeline:
             "description": "这是一个测试事件。",
             "order": 1
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -175,7 +175,7 @@ class TestVaultPlotPromise:
                                               auth_headers, test_project):
         """获取剧情承诺列表成功应返回 200 及承诺数组。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -197,7 +197,7 @@ class TestVaultPlotPromise:
             "promise_text": "测试承诺",
             "status": "pending"
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -220,7 +220,7 @@ class TestVaultWorld:
                                              auth_headers, test_project):
         """获取世界观条目列表成功应返回 200 及条目数组。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -243,7 +243,7 @@ class TestVaultWorld:
             "description": "这是一个测试世界观条目。",
             "category": "魔法体系"
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(

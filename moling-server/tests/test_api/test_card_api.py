@@ -15,7 +15,7 @@ class TestCardList:
                                      auth_headers, test_project):
         """获取卡牌列表成功应返回 200 及 CardPoolListResp。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -32,7 +32,7 @@ class TestCardList:
     async def test_list_cards_no_auth(self, async_client: AsyncClient, test_project):
         """未认证请求应返回 403。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -56,7 +56,7 @@ class TestCardDraw:
             "card_type": "character",
             "count": 1
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -81,7 +81,7 @@ class TestCardDraw:
             "card_type": "character",
             "count": 1
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -108,7 +108,7 @@ class TestCardCreate:
             "description": "这是一个测试角色。",
             "rarity": "common"
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -133,7 +133,7 @@ class TestCardCreate:
             "name": "测试",
             "description": "描述"
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -160,7 +160,7 @@ class TestCardRetire:
             "description": "描述",
             "rarity": "common"
         }
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
         
         create_resp = await async_client.post(
             API_PREFIX, 
@@ -185,7 +185,7 @@ class TestCardRetire:
                                          auth_headers, test_project):
         """退役不存在的卡牌应返回 404。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
@@ -205,7 +205,7 @@ class TestCardDrawHistory:
                                            auth_headers, test_project):
         """获取抽卡历史成功应返回 200 及历史列表。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(

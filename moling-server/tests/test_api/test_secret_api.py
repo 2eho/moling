@@ -15,7 +15,7 @@ class TestSecretList:
                                        auth_headers, test_project):
         """获取秘密列表成功应返回 200 及秘密数组。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -45,7 +45,7 @@ class TestSecretList:
                                         test_project):
         """未认证请求应返回 403。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.get(
@@ -64,7 +64,7 @@ class TestSecretGetByCharacter:
                                                     auth_headers, test_project):
         """获取角色秘密成功应返回 200 及字典。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
         character_name = "测试角色"
 
         # Act
@@ -85,7 +85,7 @@ class TestSecretGetByCharacter:
                                                        auth_headers, test_project):
         """获取不存在角色的秘密应返回 200 或 404。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
         character_name = "不存在的角色"
 
         # Act
@@ -106,7 +106,7 @@ class TestSecretUpdate:
                                           auth_headers, test_project):
         """更新不存在的秘密应返回 404。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
         payload = {"known_by": ["角色1"]}
 
         # Act
@@ -124,7 +124,7 @@ class TestSecretUpdate:
                                          test_project):
         """未认证请求应返回 403。"""
         # Arrange
-        params = {"project_id": test_project["id"]}
+        params = {"project_id": test_project.id}
         payload = {"known_by": ["角色1"]}
 
         # Act
