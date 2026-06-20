@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Callable, Optional
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.errors import ErrorCode
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -33,6 +36,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.period = period
         self.by_ip = by_ip
         self._visitors: dict[str, list[float]] = {}
+        self._last_cleanup: float = time.time()
+        self._cleanup_interval: int = 300  # 每 5 分钟清理一次过期记录
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # 获取访问者标识
@@ -41,7 +46,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # 检查速率限制
         if not self._is_allowed(identifier):
             return Response(
-                content='{"code": 429, "message": "请求过于频繁，请稍后再试", "data": null}',
+                content=json.dumps({
+                    "code": ErrorCode.RATE_LIMIT_EXCEEDED.value,
+                    "message": ErrorCode.RATE_LIMIT_EXCEEDED.message,
+                    "data": None,
+                }),
                 status_code=429,
                 media_type="application/json",
             )
@@ -69,7 +78,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """检查是否允许请求."""
         now = time.time()
 
-        # 清理过期记录
+        # 定时清理：清除超过 period * 2 未活跃的访问者记录，防止内存泄漏
+        self._cleanup_stale_visitors(now)
+
+        # 清理当前访问者的过期记录
         if identifier in self._visitors:
             self._visitors[identifier] = [
                 t for t in self._visitors[identifier] if now - t < self.period
@@ -80,6 +92,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return True
 
         return len(self._visitors[identifier]) < self.calls
+
+    def _cleanup_stale_visitors(self, now: float) -> None:
+        """清理超过 period * 2 未活跃的访问者记录，防止 _visitors dict 无限增长."""
+        if now - self._last_cleanup < self._cleanup_interval:
+            return
+        self._last_cleanup = now
+
+        threshold = self.period * 2
+        stale = [
+            ident
+            for ident, timestamps in self._visitors.items()
+            if not timestamps or now - max(timestamps) > threshold
+        ]
+        for ident in stale:
+            del self._visitors[ident]
 
     def _record_request(self, identifier: str) -> None:
         """记录请求时间戳."""

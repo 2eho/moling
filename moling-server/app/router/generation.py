@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.generation import TaskStatusResp
+from app.schemas.common import PaginatedResp
 from app.service import generation_service
 
 router = APIRouter(tags=["generation"])
@@ -35,15 +36,20 @@ async def cancel_task(
     return {"status": "cancelled", "task_id": task_id}
 
 
-@router.get("/history", response_model=list[dict])
+@router.get("/history", response_model=PaginatedResp[dict])
 async def get_generation_history(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
-) -> list[dict]:
+) -> PaginatedResp[dict]:
     """Get generation task history."""
     history = await generation_service.get_history(
         db, current_user.id, page, page_size
     )
-    return history
+    return PaginatedResp[dict](
+        items=history["items"],
+        total=history["total"],
+        page=history["page"],
+        page_size=history["page_size"],
+    )

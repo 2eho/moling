@@ -3,11 +3,43 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 from typing import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
+LOG_DIR = Path("logs")
+LOG_DIR.mkdir(exist_ok=True)
+
+_audit_logger: logging.Logger | None = None
+
+
+def _get_audit_logger() -> logging.Logger:
+    """获取或初始化审计日志 Logger（按天轮转）."""
+    global _audit_logger
+    if _audit_logger is not None:
+        return _audit_logger
+
+    logger = logging.getLogger("moling.audit")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    handler = TimedRotatingFileHandler(
+        filename=str(LOG_DIR / "audit.log"),
+        when="midnight",
+        interval=1,
+        backupCount=30,
+        encoding="utf-8",
+    )
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(handler)
+
+    _audit_logger = logger
+    return logger
 
 
 class AuditLogMiddleware(BaseHTTPMiddleware):
@@ -124,14 +156,10 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             return None
 
     def _write_audit_log(self, audit_entry: dict) -> None:
-        """写入审计日志."""
-        # 这里简单打印，生产环境应:
-        # 1. 写入数据库 audit_logs 表
-        # 2. 发送到日志系统（如 ELK）
-        # 3. 发送到消息队列进行异步处理
-
+        """写入审计日志（按天轮转，结构化 JSON 格式）."""
         # 敏感信息过滤（避免记录密码等）
         if "password" in str(audit_entry.get("query", "")).lower():
             audit_entry["query"] = "[FILTERED]"
 
-        print(f"[AUDIT] {json.dumps(audit_entry, ensure_ascii=False)}")
+        logger = _get_audit_logger()
+        logger.info(json.dumps(audit_entry, ensure_ascii=False))

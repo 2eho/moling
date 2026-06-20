@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.card import DrawCardReq, CardResp, DrawCardResp, CardPoolListResp
+from app.schemas.common import PaginatedResp
 from app.service import card_service
 
 router = APIRouter(tags=["cards"])
@@ -73,20 +74,24 @@ async def get_card_pool(
     return await card_service.list_cards(db, current_user.id, project_id)
 
 
-@router.get("/cards/history", response_model=list)
+@router.get("/cards/history", response_model=PaginatedResp[dict])
 async def get_draw_history(
     project_id: int,
     chapter_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> list:
+) -> PaginatedResp[dict]:
     """Get draw history for a project."""
-    return await card_service.get_draw_history(
+    items = await card_service.get_draw_history(
         db, current_user.id, project_id, chapter_id
+    )
+    total = len(items)
+    return PaginatedResp[dict](
+        items=items, total=total, page=1, page_size=max(total, 1)
     )
 
 
-@router.get("/cards/draw-history", response_model=list)
+@router.get("/cards/draw-history", response_model=PaginatedResp[dict])
 async def list_draw_history(
     project_id: int,
     page: int = Query(1, ge=1, description="页码"),
@@ -94,10 +99,19 @@ async def list_draw_history(
     chapter_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> list:
+) -> PaginatedResp[dict]:
     """获取项目的抽卡历史记录（分页）。"""
-    return await card_service.get_draw_history(
+    all_items = await card_service.get_draw_history(
         db, current_user.id, project_id, chapter_id
+    )
+    total = len(all_items)
+    start = (page - 1) * page_size
+    end = start + page_size
+    return PaginatedResp[dict](
+        items=all_items[start:end],
+        total=total,
+        page=page,
+        page_size=page_size,
     )
 
 

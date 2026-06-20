@@ -9,11 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user
 from app.service.notification_service import notification_service
 from app.schemas.notification import NotificationResp
+from app.schemas.common import PaginatedResp
 
 router = APIRouter()
 
 
-@router.get("", response_model=dict)
+@router.get("", response_model=PaginatedResp[NotificationResp])
 async def list_notifications(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
@@ -21,7 +22,7 @@ async def list_notifications(
     unread_only: bool = Query(None, description="仅未读（前端兼容参数）"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
-) -> dict:
+) -> PaginatedResp[NotificationResp]:
     """获取当前用户的通知列表。"""
     # 兼容前端 unread_only 参数
     if unread_only is not None:
@@ -33,7 +34,12 @@ async def list_notifications(
         page_size=page_size,
         is_read=is_read,
     )
-    return result
+    return PaginatedResp[NotificationResp](
+        items=result["items"],
+        total=result["total"],
+        page=result["page"],
+        page_size=result["page_size"],
+    )
 
 
 @router.get("/unread-count", response_model=dict)
