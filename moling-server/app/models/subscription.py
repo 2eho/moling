@@ -37,7 +37,7 @@ class Plan(BaseModel):
     features: Mapped[dict] = mapped_column(
         JSON,
         nullable=False,
-        default=dict,
+        default=lambda: {},
         comment="套餐功能列表",
     )
     is_active: Mapped[bool] = mapped_column(

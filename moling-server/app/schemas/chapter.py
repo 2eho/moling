@@ -38,3 +38,22 @@ class ChapterResp(BaseModel):
     updated_at: datetime = Field(..., description="更新时间")
 
     model_config = {"from_attributes": True}
+
+
+class ChapterConfirmReq(BaseModel):
+    """Request body for chapter confirmation."""
+
+    comment: Optional[str] = Field(default=None, max_length=500, description="确认备注")
+
+
+class ChapterReviseReq(BaseModel):
+    """Request body for chapter revision/rejection."""
+
+    reason: Optional[str] = Field(default=None, max_length=500, description="修订原因")
+
+
+class AgentInstructionReq(BaseModel):
+    """Request body for AI agent instruction during chapter generation."""
+
+    type: str = Field(..., min_length=1, max_length=50, description="指令类型")
+    content: str = Field(..., min_length=1, description="指令内容")

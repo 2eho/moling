@@ -9,7 +9,16 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
-from app.schemas.vault import CharacterResp, TimelineResp, PlotPromiseResp, WorldResp
+from app.schemas.vault import (
+    CharacterResp,
+    CharacterCreate,
+    TimelineResp,
+    TimelineCreate,
+    PlotPromiseResp,
+    PlotPromiseCreate,
+    WorldResp,
+    WorldCreate,
+)
 from app.service import vault_service
 
 router = APIRouter(tags=["vault"])
@@ -42,12 +51,14 @@ async def get_character(
 @router.post("/characters", response_model=CharacterResp, status_code=201)
 async def create_character(
     project_id: int,
-    character_data: dict = ...,
+    character_data: CharacterCreate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> CharacterResp:
     """Create a new character in the vault."""
-    return await vault_service.create_character(db, current_user.id, project_id, character_data)
+    return await vault_service.create_character(
+        db, current_user.id, project_id, character_data.model_dump(exclude_unset=True)
+    )
 
 
 @router.put("/characters/{character_id}", response_model=CharacterResp)
@@ -102,12 +113,14 @@ async def get_timeline_event(
 @router.post("/timeline", response_model=TimelineResp, status_code=201)
 async def create_timeline_event(
     project_id: int,
-    event_data: dict = ...,
+    event_data: TimelineCreate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> TimelineResp:
     """Create a new timeline event in the vault."""
-    return await vault_service.create_timeline_event(db, current_user.id, project_id, event_data)
+    return await vault_service.create_timeline_event(
+        db, current_user.id, project_id, event_data.model_dump(exclude_unset=True)
+    )
 
 
 @router.put("/timeline/{event_id}", response_model=TimelineResp)
@@ -162,12 +175,14 @@ async def get_plot_promise(
 @router.post("/plot-promises", response_model=PlotPromiseResp, status_code=201)
 async def create_plot_promise(
     project_id: int,
-    promise_data: dict = ...,
+    promise_data: PlotPromiseCreate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> PlotPromiseResp:
     """Create a new plot promise in the vault."""
-    return await vault_service.create_plot_promise(db, current_user.id, project_id, promise_data)
+    return await vault_service.create_plot_promise(
+        db, current_user.id, project_id, promise_data.model_dump(exclude_unset=True)
+    )
 
 
 @router.put("/plot-promises/{promise_id}", response_model=PlotPromiseResp)
@@ -222,12 +237,14 @@ async def get_world_entry(
 @router.post("/world", response_model=WorldResp, status_code=201)
 async def create_world_entry(
     project_id: int,
-    entry_data: dict = ...,
+    entry_data: WorldCreate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> WorldResp:
     """Create a new world-building entry in the vault."""
-    return await vault_service.create_world_entry(db, current_user.id, project_id, entry_data)
+    return await vault_service.create_world_entry(
+        db, current_user.id, project_id, entry_data.model_dump(exclude_unset=True)
+    )
 
 
 @router.put("/world/{entry_id}", response_model=WorldResp)

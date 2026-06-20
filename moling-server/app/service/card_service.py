@@ -9,7 +9,8 @@ import random
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import card_dao, project_dao
-from app.errors import NotFoundError, ErrorCode, PermissionError
+from app.errors import NotFoundError, ErrorCode
+from app.utils.security import verify_project_ownership
 from app.models import CardPool
 from app.schemas.card import DrawCardReq, CardResp, DrawCardResp, CardPoolListResp
 
@@ -44,17 +45,7 @@ class CardService:
     ) -> CardPoolListResp:
         """List all cards in a project's card pool."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get all active cards via DAO
         cards = await card_dao.list_active_by_project(db, project_id)
@@ -124,17 +115,7 @@ class CardService:
             max_retries: Maximum number of redraws per round (defaults to MAX_DRAW_RETRIES)
         """
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get active cards
         active_cards = await card_dao.get_active_cards(db, project_id, count=100)
@@ -254,35 +235,22 @@ class CardService:
     ) -> CardResp:
         """Create a custom card in the pool."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
-        # Create card
-        card = CardPool(
-            project_id=project_id,
-            name=card_data.get("name", "New Card"),
-            description=card_data.get("description", ""),
-            rarity=card_data.get("rarity", "common"),
-            direction_type=card_data.get("direction_type", "interesting"),
-            direction_text=card_data.get("direction_text", ""),
-            type="user_created",
-            is_active=True,
-            status="active",
-            draw_count=0,
-        )
-        
-        db.add(card)
+        # Create card via DAO
+        card = await card_dao.create(db, {
+            "project_id": project_id,
+            "name": card_data.get("name", "New Card"),
+            "description": card_data.get("description", ""),
+            "rarity": card_data.get("rarity", "common"),
+            "direction_type": card_data.get("direction_type", "interesting"),
+            "direction_text": card_data.get("direction_text", ""),
+            "type": "user_created",
+            "is_active": True,
+            "status": "active",
+            "draw_count": 0,
+        })
         await db.commit()
-        await db.refresh(card)
         
         return CardResp.model_validate(card)
 
@@ -295,17 +263,7 @@ class CardService:
     ) -> None:
         """Retire a card (set is_active=False)."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get card
         card = await card_dao.get(db, card_id)
@@ -330,17 +288,7 @@ class CardService:
     ) -> list[dict]:
         """Get draw history for a project."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         records = await card_dao.get_draw_history(db, project_id, chapter_id)
 
@@ -395,17 +343,7 @@ class CardService:
             Dict with cards list and remaining redraws
         """
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get active cards
         active_cards = await card_dao.get_active_cards(db, project_id, count=100)

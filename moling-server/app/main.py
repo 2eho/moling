@@ -56,6 +56,27 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
             print(f"[ERROR] Database initialization failed: {e}")
             raise
 
+    # --- 僵尸任务清理（P1：启动时重置 "running" 任务为 "failed"）---
+    # 服务重启后，之前正在运行的任务不再有活跃 worker 处理，
+    # 将状态重置为 "failed" 避免前端看到永久 "running" 的僵尸任务。
+    if platform.system() != "Windows":
+        try:
+            from app.models import GenerationTask
+            from sqlalchemy import select
+            async with async_session_factory() as session:
+                stmt = select(GenerationTask).where(GenerationTask.status == "running")
+                result = await session.execute(stmt)
+                zombies = result.scalars().all()
+                if zombies:
+                    for z in zombies:
+                        z.status = "failed"
+                        if not z.error_message:
+                            z.error_message = "Server restarted; task was not completed"
+                    await session.commit()
+                    print(f"[OK] Cleaned up {len(zombies)} zombie generation task(s)")
+        except Exception as e:
+            print(f"[WARN] Zombie task cleanup failed (ignored): {e}")
+
     # --- Redis 连接（失败时优雅降级）---
     try:
         redis_conn = await get_redis()

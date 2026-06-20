@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 import httpx
@@ -27,6 +28,7 @@ from app.dao import (
 from app.dependencies import get_current_user, get_db
 from app.schemas.admin import LLMConfigReq, LLMConfigResp, AdminStatsResp, UserManageResp, ProjectManageResp
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["admin"])
 
 
@@ -240,11 +242,34 @@ async def update_user(
 async def get_llm_usage(
     current_user=Depends(get_current_user),
 ):
-    """获取 LLM 用量统计。"""
-    return {
-        "total_tokens": 0,
-        "total_cost": 0,
-        "by_provider": {},
-        "by_model": {},
-        "daily_usage": [],
-    }
+    """获取 LLM 用量统计 — 从 TokenBudgetManager 和 KeyManager 查询实时数据。"""
+    try:
+        from app.llm.client import llm_client
+        from app.llm.key_manager import key_manager
+
+        # Token 用量（来自 TokenBudgetManager）
+        budget_status = llm_client.budget_manager.get_budget_status()
+
+        # 密钥池健康状态（来自 KeyManager）
+        pool_pro = await key_manager.get_pool_status("pro")
+
+        return {
+            "status": "ok",
+            "budget": {
+                "daily": budget_status["daily"],
+                "monthly": budget_status["monthly"],
+            },
+            "key_pool": {
+                "pool": pool_pro["pool"],
+                "total_keys": pool_pro["total"],
+                "healthy": pool_pro["healthy"],
+            },
+            "note": "用量数据来自内存中的 TokenBudgetManager。服务重启后数据归零。",
+        }
+    except Exception as e:
+        logger.error(f"Failed to query LLM usage: {e}", exc_info=True)
+        return {
+            "status": "NOT_IMPLEMENTED",
+            "error": str(e),
+            "note": "LLM 用量统计功能不可用。请检查 LLM 客户端配置和服务状态。",
+        }

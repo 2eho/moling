@@ -22,6 +22,7 @@ from app.service.merge_service import (
     should_auto_apply,
 )
 from app.errors import ErrorCode, NotFoundError, ValidationError, AppError
+from app.utils.security import verify_project_ownership
 from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool
 from app.models.phase4_task import Phase4Task
 from app.llm.client import llm_client
@@ -117,17 +118,7 @@ class Phase4Service:
             收纳任务信息
         """
         # 1. 验证项目存在且属于用户
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise AppError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # 2. 验证章节存在且属于项目
         chapter = await chapter_dao.get(db, chapter_id)
@@ -655,18 +646,20 @@ class Phase4Service:
         )
         
         if character is None:
-            # 创建新角色
-            character = VaultCharacter(
-                project_id=project_id,
-                name=char_data["name"],
-                role=char_data.get("role", "neutral"),
-                description=char_data.get("description", ""),
-                traits=char_data.get("traits", []),
-                emotion=char_data.get("emotion", ""),
-                relationships=char_data.get("relationships", {}),
-                chapter_count=1,
+            # 创建新角色 via DAO
+            character = await vault_dao.create_character(
+                db,
+                {
+                    "project_id": project_id,
+                    "name": char_data["name"],
+                    "role": char_data.get("role", "neutral"),
+                    "description": char_data.get("description", ""),
+                    "traits": char_data.get("traits", []),
+                    "emotion": char_data.get("emotion", ""),
+                    "relationships": char_data.get("relationships", {}),
+                    "chapter_count": 1,
+                },
             )
-            db.add(character)
         else:
             # 更新现有角色
             if "description" in char_data:

@@ -57,7 +57,7 @@ class GenerationTask(Base, TimestampMixin):
     input_params: Mapped[dict] = mapped_column(
         JSON,
         nullable=False,
-        default=dict,
+        default=lambda: {},
         comment="输入参数 (JSON)",
     )
     output_data: Mapped[Optional[dict]] = mapped_column(

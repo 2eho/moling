@@ -62,18 +62,29 @@ def run_generation_task(self, generation_task_id: str) -> dict:
     """Execute an AI generation task in the background.
 
     This function:
-    1. Creates a database session
-    2. Calls the GenerationService to execute the generation
-    3. Handles exceptions and retries
+    1. Checks idempotency — skips if task is already ``done`` in DB
+    2. Creates a database session
+    3. Calls the GenerationService to execute the generation
+    4. Handles exceptions and retries
     """
     logger.info("Starting generation task %s", generation_task_id)
+
+    # ── P1 加固：幂等性检查 ──
+    # 防止 visibility_timeout 超时重投递 → 同一任务被多个 worker 重复执行
+    import asyncio
+    from uuid import UUID
+
+    task_uuid = UUID(generation_task_id)
+    status = asyncio.run(_get_task_status(task_uuid))
+    if status == "done":
+        logger.info("Task %s already done, skipping (idempotent)", generation_task_id)
+        return {"status": "already_done", "task_id": generation_task_id}
 
     try:
         # Create a new service instance for this task
         service = GenerationService()
 
         # Execute the generation pipeline with a proper db session
-        import asyncio
         _ = asyncio.run(_run_pipeline(service, generation_task_id))
 
         return {"status": "done", "task_id": generation_task_id}
@@ -81,9 +92,16 @@ def run_generation_task(self, generation_task_id: str) -> dict:
     except Exception as exc:
         logger.exception("Generation task %s failed", generation_task_id)
         # Mark task as failed
-        import asyncio
         asyncio.run(_mark_failed(generation_task_id, str(exc)))
         raise self.retry(exc=exc) from exc
+
+
+async def _get_task_status(task_uuid):
+    """Query the DB for a generation task's current status (for idempotency)."""
+    from app.dao import generation_dao
+    async with _session_factory() as db:
+        task = await generation_dao.get(db, task_uuid)
+        return task.status if task else None
 
 
 async def _mark_failed(task_id: str, error_message: str) -> None:

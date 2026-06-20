@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import chapter_dao, project_dao
-from app.errors import NotFoundError, ErrorCode, PermissionError
+from app.errors import NotFoundError, ErrorCode
+from app.utils.security import verify_project_ownership
 from app.models import Chapter
 from app.schemas.chapter import CreateChapterReq, UpdateChapterReq, ChapterResp
 
@@ -29,17 +30,7 @@ class ChapterService:
     ) -> ChapterResp:
         """Create a new chapter."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # 自动计算章节序号：取最大 chapter_number + 1
         max_num = await chapter_dao.get_max_chapter_number(db, project_id)
@@ -70,17 +61,7 @@ class ChapterService:
     ) -> list[ChapterResp]:
         """List chapters in a project."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         chapters = await chapter_dao.get_by_project(db, project_id)
         return [ChapterResp.model_validate(c) for c in chapters]
@@ -94,17 +75,7 @@ class ChapterService:
     ) -> ChapterResp:
         """Get single chapter."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get chapter
         chapter = await chapter_dao.get(db, chapter_id)
@@ -126,17 +97,7 @@ class ChapterService:
     ) -> ChapterResp:
         """Update chapter."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get chapter
         chapter = await chapter_dao.get(db, chapter_id)
@@ -170,17 +131,7 @@ class ChapterService:
     ) -> None:
         """Delete chapter."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get chapter
         chapter = await chapter_dao.get(db, chapter_id)
@@ -206,17 +157,7 @@ class ChapterService:
     ) -> list[ChapterResp]:
         """Reorder chapters by providing new chapter numbers."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get all chapters
         chapters = await chapter_dao.get_by_project(db, project_id)
@@ -251,17 +192,7 @@ class ChapterService:
         processing to update the four databases (四库) and dynamic layer.
         """
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get chapter
         chapter = await chapter_dao.get(db, chapter_id)
@@ -339,17 +270,7 @@ class ChapterService:
         Phase 4 processing is NOT triggered.
         """
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Get chapter
         chapter = await chapter_dao.get(db, chapter_id)
@@ -378,17 +299,7 @@ class ChapterService:
     ) -> dict:
         """Get AI-powered suggestions for a chapter."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get chapter
         chapter = await chapter_dao.get(db, chapter_id)
@@ -455,17 +366,7 @@ class ChapterService:
         This is used to intervene during the generation process.
         """
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if str(project.user_id) != str(user_id):
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get chapter
         chapter = await chapter_dao.get(db, chapter_id)

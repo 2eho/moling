@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.dao import project_dao, chapter_dao, vault_dao
-from app.errors import NotFoundError, ErrorCode, PermissionError
+from app.errors import NotFoundError, ErrorCode
+from app.utils.security import verify_project_ownership
 from app.models import Project
 from app.schemas.project import CreateProjectReq, UpdateProjectReq, ProjectResp, ProjectStatsResp
 
@@ -91,19 +92,7 @@ class ProjectService:
         project_id: int,
     ) -> ProjectResp:
         """Get single project with ownership check."""
-        project = await project_dao.get(db, project_id)
-        
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Enrich with chapter count
         project.chapter_count = await chapter_dao.count_by_project(db, int(project.id))
@@ -118,19 +107,7 @@ class ProjectService:
         req: UpdateProjectReq,
     ) -> ProjectResp:
         """Update project with ownership check."""
-        project = await project_dao.get(db, project_id)
-        
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to update this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         # Update fields
         update_data = req.model_dump(exclude_unset=True)
@@ -150,19 +127,7 @@ class ProjectService:
         project_id: int,
     ) -> None:
         """Delete project with ownership check."""
-        project = await project_dao.get(db, project_id)
-        
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to delete this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
         
         await db.delete(project)
         await db.commit()
@@ -184,17 +149,7 @@ class ProjectService:
     ) -> dict:
         """Get AI-powered writing suggestions for a project."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         suggestions = []
 

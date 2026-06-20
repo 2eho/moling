@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_current_user, get_db
 from app.schemas.secret import SecretResp, UpdateSecretReq, UpdateSecretsByCharacterReq
 from app.service.secret_service import secret_service
+from app.dao import project_dao
+from app.errors import NotFoundError, ForbiddenError
 
 router = APIRouter()
 
@@ -23,6 +25,12 @@ async def list_secrets(
     db: AsyncSession = Depends(get_db),
 ) -> list[SecretResp]:
     """List all secrets for a project."""
+    # Verify project ownership
+    project = await project_dao.get(db, project_id)
+    if project is None:
+        raise NotFoundError(detail="Project not found")
+    if str(project.user_id) != str(current_user.id):
+        raise ForbiddenError(detail="Not authorized to access this project")
     return await secret_service.list_secrets(db, project_id)
 
 
@@ -34,6 +42,12 @@ async def get_secrets_by_character(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Get secrets known to and unknown by a character (query by name)."""
+    # Verify project ownership
+    project = await project_dao.get(db, project_id)
+    if project is None:
+        raise NotFoundError(detail="Project not found")
+    if str(project.user_id) != str(current_user.id):
+        raise ForbiddenError(detail="Not authorized to access this project")
     return await secret_service.get_secrets_by_character_name(
         db, project_id, character_name
     )

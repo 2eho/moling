@@ -28,13 +28,13 @@ class Secret(BaseModel):
     known_by: Mapped[list] = mapped_column(
         JSON,
         nullable=False,
-        default=list,
+        default=lambda: [],
         comment="已知晓该秘密的角色名列表",
     )
     unknown_to: Mapped[list] = mapped_column(
         JSON,
         nullable=False,
-        default=list,
+        default=lambda: [],
         comment="不知晓该秘密的角色名列表",
     )
     secrecy_level: Mapped[str] = mapped_column(

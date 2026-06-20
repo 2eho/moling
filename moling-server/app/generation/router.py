@@ -1,7 +1,7 @@
-"""异步 AI 生成路由 - 将生成任务改为后台执行。
+"""异步 AI 生成路由 - Celery worker 后台执行。
 
 所有任务持久化统一通过 generation_service 完成，
-不再依赖内存 dict。
+不再依赖 FastAPI BackgroundTasks（服务重启后任务丢失）。
 
 Endpoints:
 - POST /api/v1/generate/chapters/{chapter_id}/generate - 创建异步生成任务
@@ -10,13 +10,11 @@ Endpoints:
 - GET  /api/v1/generate/history - 获取生成历史
 """
 
-import uuid
-
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dao import generation_dao
 from app.dependencies import get_db, get_current_user
+from app.dao import generation_dao
 from app.generation.jobs_store import JobStatus, task_to_dict
 from app.schemas.generation import GenerateReq
 from app.service import generation_service
@@ -29,14 +27,13 @@ async def generate_chapter_async(
     chapter_id: int,
     project_id: int,
     req: GenerateReq,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """创建异步 AI 生成任务（新接口）。
+    """创建异步 AI 生成任务（Celery llm 队列执行）。
     
     立即返回 job_id，前端需要轮询 /jobs/{job_id} 获取结果。
-    实际的 DB 持久化在后台任务中通过 generation_service 完成。
+    start_generation 内部创建 DB 记录并通过 Celery delay() 分发给 worker。
     
     Args:
         chapter_id: 章节 ID（路径参数）
@@ -46,24 +43,19 @@ async def generate_chapter_async(
     Returns:
         {code: 0, data: {job_id: str, status: "pending"}}
     """
-    # 预分配任务 ID，立即返回，不做任何 DB 写入
-    job_id = f"gen_{uuid.uuid4().hex[:12]}"
-    
-    # 添加后台任务（注意：后台任务中需要创建新的数据库 session）
-    background_tasks.add_task(
-        _run_generation_task,
-        job_id=job_id,
-        chapter_id=chapter_id,
-        project_id=project_id,
-        req=req,
+    result = await generation_service.start_generation(
+        db=db,
         user_id=current_user["id"],
+        project_id=project_id,
+        chapter_id=chapter_id,
+        req=req,
     )
     
     return {
         "code": 0,
         "message": "生成任务已创建",
         "data": {
-            "job_id": job_id,
+            "job_id": result.task_id,
             "status": "pending",
         }
     }
@@ -131,43 +123,3 @@ async def get_generation_history(
         db, current_user["id"], page, page_size
     )
     return {"code": 0, "message": "success", "data": {"history": history, "total": len(history), "page": page, "page_size": page_size}}
-
-
-async def _run_generation_task(
-    job_id: str,
-    chapter_id: int,
-    project_id: int,
-    req: GenerateReq,
-    user_id: int,
-):
-    """后台执行 AI 生成任务。
-    
-    注意：这里需要创建新的数据库 session，因为 FastAPI 的 Depends(get_db)
-    会在请求结束后关闭 session。
-    
-    DB 持久化统一通过 generation_service.start_generation 完成，
-    不再手动调用 update_job。
-    """
-    from app.dependencies import async_session_factory
-    
-    # 创建新的数据库 session
-    async with async_session_factory() as db:
-        try:
-            # 直接调用 service 层，传入预分配的 task_id
-            # service 内部会创建 GenerationTask 记录并执行完整 pipeline
-            await generation_service.start_generation(
-                db,
-                user_id=user_id,
-                project_id=project_id,
-                chapter_id=chapter_id,
-                req=req,
-                task_id=job_id,
-            )
-        except Exception as e:
-            import traceback
-            error_detail = traceback.format_exc()
-            print(f"[ERROR] Generation task {job_id} failed: {error_detail}")
-            
-            # pipeline 执行失败时，execute_generation_pipeline 已设置
-            # task.status = "failed" + task.error_message 并 commit
-            # 此处只需捕获异常并记录日志

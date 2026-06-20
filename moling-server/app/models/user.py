@@ -52,7 +52,7 @@ class User(BaseModel):
 
     settings: Mapped[Optional[dict]] = mapped_column(
         JSON,
-        default=dict,
+        default=lambda: {},
         nullable=True,
         comment="用户设置 (JSONB)",
     )

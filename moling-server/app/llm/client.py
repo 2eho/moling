@@ -407,6 +407,7 @@ class LLMClient:
         model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        api_key: Optional[str] = None,
     ) -> AsyncGenerator[str, None]:
         """Stream a chat completion, yielding content deltas."""
         config = self._get_config()
@@ -420,8 +421,8 @@ class LLMClient:
             "stream": True,
         }
 
-        # Use first available key
-        api_key = self.key_pool.get_key()
+        # Use provided key or pick from pool
+        api_key = api_key or self.key_pool.get_key()
         if not api_key:
             raise AppError(
                 ErrorCode.INTERNAL_ERROR,

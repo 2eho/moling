@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.dao import project_dao, chapter_dao, card_dao, generation_dao, dynamic_layer_dao
-from app.errors import NotFoundError, ErrorCode, PermissionError, AppError
+from app.errors import NotFoundError, ErrorCode, AppError
+from app.utils.security import verify_project_ownership
 from app.models import GenerationTask, Chapter, Project, CardPool
 from app.schemas.generation import GenerateReq, GenerationResp, TaskStatusResp
 from app.service.algorithm_service import algorithm_service
@@ -50,17 +51,7 @@ class GenerationService:
                       当 router 已在请求中预创建 job_id 时使用。
         """
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise PermissionError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Verify chapter exists if chapter_id provided
         chapter = None
@@ -142,246 +133,244 @@ class GenerationService:
         task.progress_stage = "weight_allocation"
         await db.commit()
 
-        try:
-            # Get project and chapter
-            project = await project_dao.get(db, task.project_id)
-            chapter = None
-            if task.chapter_id:
-                chapter = await chapter_dao.get(db, task.chapter_id)
-
-            # Get selected cards
-            card_ids = task.input_params.get("card_ids", [])
-            weights = task.input_params.get("weights", [])
-            cards = []
-            for card_id in card_ids:
-                card = await card_dao.get(db, card_id)
-                if card:
-                    cards.append(card)
-
-            # ===== Step 1: Weight Allocation =====
-            logger.info(f"Task {task_id}: Step 1 - Weight allocation")
-            weight_map = await algorithm_service.step1_weight_allocation(cards, weights)
-            task.progress_percent = 10
-            await db.commit()
-
-            # ===== Step 2: Vault Filtering (§3.4 - ID-based with compression) =====
-            logger.info(f"Task {task_id}: Step 2 - Vault filtering")
-            relevant_vault = await algorithm_service.step2_vault_filter(
-                db=db,
-                project_id=project.id,
-                chapter_id=chapter.id if chapter else None,
-                cards=cards if cards else None,
-                chapter_number=chapter.chapter_number if chapter else None,
-            )
-            task.progress_percent = 15
-            await db.commit()
-
-            # ===== Step 3: Dynamic Layer Conflict Detection (§3.3) =====
-            logger.info(f"Task {task_id}: Step 3 - Conflict detection")
-            conflicts = await algorithm_service.step3_conflict_detection(
-                db=db,
-                project_id=project.id,
-                chapter_id=chapter.id if chapter else None,
-                weight_map=weight_map,
-                cards=cards if cards else None,
-            )
-            task.progress_percent = 20
-            await db.commit()
-
-            # ===== Step 4: Direction Conflict Scoring =====
-            logger.info(f"Task {task_id}: Step 4 - Direction conflict scoring")
-            direction_conflicts = await algorithm_service.step4_direction_conflict_scoring(cards, weight_map)
-            task.progress_percent = 25
-            await db.commit()
-
-            # ===== Step 5: Weaving Scheme Matching =====
-            logger.info(f"Task {task_id}: Step 5 - Weaving scheme matching")
-            weaving_scheme = await algorithm_service.step5_weaving_scheme_matching(
-                cards, req_mode=task.input_params.get("mode", "single"),
-                weight_map=weight_map,
-            )
-            task.progress_percent = 30
-            await db.commit()
-
-            # ===== Step 6: Outline Template Filling =====
-            logger.info(f"Task {task_id}: Step 6 - Outline template filling")
-            outline = await algorithm_service.step6_outline_template_filling(
-                project, chapter, cards, weight_map, relevant_vault,
-                word_count=task.input_params.get("word_count", 2000),
-            )
-            task.progress_percent = 35
-            await db.commit()
-
-            # ===== Step 7: Narrative Element Extraction =====
-            logger.info(f"Task {task_id}: Step 7 - Narrative element extraction")
-            # Extract relevant vault data for prompt building
-            # Supports both dict-based (VaultFilterService) and model-based (legacy) formats
-            vault_chars = relevant_vault.get("characters", [])
-            vault_promises = relevant_vault.get("plot_promises", [])
-            vault_timeline = relevant_vault.get("timeline", [])
-
-            def _safe_name(item):
-                return item["name"] if isinstance(item, dict) else getattr(item, "name", "")
-            def _safe_desc(item):
-                return item.get("description", "") if isinstance(item, dict) else getattr(item, "description", "")
-            def _safe_event(item):
-                return item.get("event", "") if isinstance(item, dict) else getattr(item, "event", "")
-
-            narrative_elements = {
-                "active_characters": [_safe_name(c) for c in vault_chars[:5]],
-                "pending_promises": [_safe_desc(p) for p in vault_promises[:3] if _safe_desc(p)],
-                "recent_timeline": [_safe_event(e) for e in vault_timeline[-3:]] if vault_timeline else [],
-            }
-            task.progress_percent = 40
-            await db.commit()
-
-            # ===== Step 8: Brainstorming Divergence (Medium Model) =====
-            logger.info(f"Task {task_id}: Step 8 - Brainstorming divergence")
-            inspiration = await self._step8_brainstorming_divergence(
-                project, chapter, cards, outline
-            )
-            task.progress_percent = 50
-            await db.commit()
-
-            # ===== Step 8.5: Pre-generation Coherence Validation (§5.1) =====
-            # Algorithm doc §5.1: 生成前校验—检测卡片选择 + vault 状态的
-            # 潜在冲突，通过率 < 40% 阻止生成，< 70% 仅告警。
-            logger.info(f"Task {task_id}: Step 8.5 - Pre-generation validation")
+        async with db.begin_nested() as savepoint:
             try:
-                from app.service.coherence_service import coherence_service
-                generation_params = {
-                    "card_ids": card_ids,
-                    "weights": weights,
-                    "mode": task.input_params.get("mode", "single"),
-                    "chapter_id": chapter.id if chapter else None,
-                    "chapter_number": chapter.chapter_number if chapter else None,
-                }
-                pre_check = await coherence_service.validate_pre_generation(
-                    db, project.id, chapter.id if chapter else None, generation_params
-                )
-                pre_score = pre_check.get("overall_score", 1.0)
-                logger.info(f"Task {task_id}: Pre-check score={pre_score:.2f}")
-
-                if pre_score < 0.4:
-                    task.status = "failed"
-                    task.error_message = (
-                        f"生成前连贯性检查未通过 (score={pre_score:.2f})。"
-                        f"建议减少卡牌数量或更换卡牌组合。"
-                    )
-                    task.progress_percent = 55
-                    await db.commit()
-                    return {"error": task.error_message, "pre_check": pre_check}
-
-                if pre_score < 0.7:
-                    logger.warning(
-                        f"Task {task_id}: Pre-check score {pre_score:.2f} < 0.7, "
-                        f"proceeding with caution"
-                    )
-            except Exception as e:
-                logger.error(f"Task {task_id}: Pre-check failed (non-blocking): {e}")
-
-            # ===== Step 9: Body Text Writing (Large Model) =====
-            logger.info(f"Task {task_id}: Step 9 - Body text writing")
-            generated_content = await self._step9_body_text_writing(
-                project, chapter, outline, inspiration, relevant_vault, weight_map
-            )
-            task.progress_percent = 70
-            await db.commit()
-
-            # ===== Step 10: Coherence Validation =====
-            logger.info(f"Task {task_id}: Step 10 - Coherence validation")
-            coherence_result = await self._step10_coherence_validation(
-                db, project, chapter, generated_content
-            )
-            task.progress_percent = 80
-            await db.commit()
-
-            # If coherence check fails, attempt adjustment before falling back
-            if not coherence_result["passed"]:
-                logger.warning(f"Task {task_id}: Coherence check failed, adjusting...")
-                generated_content = await self._adjust_content(
-                    generated_content, coherence_result["issues"]
-                )
-
-            # ===== Step 11: Dynamic Layer Update =====
-            logger.info(f"Task {task_id}: Step 11 - Dynamic layer update")
-            await self._step11_dynamic_layer_update(
-                db, project.id, chapter.id if chapter else None, generated_content
-            )
-            task.progress_percent = 90
-            await db.commit()
-
-            # ===== Step 12: Precedent Summary Update =====
-            logger.info(f"Task {task_id}: Step 12 - Precedent summary update")
-            await self._step12_precedent_summary_update(
-                db, project.id, chapter.id if chapter else None, generated_content
-            )
-            task.progress_percent = 95
-            await db.commit()
-
-            # Update chapter with generated content
-            if chapter:
-                chapter.content = generated_content
-                chapter.status = "completed"
-                chapter.word_count = len(generated_content)
-
-            # ===== Post-Pipeline: Health Monitor (§5.3) =====
-            # 子情节健康监控 R1/R2/R3 — 纯算法，零 LLM 成本
-            logger.info(f"Task {task_id}: Running health monitor")
-            try:
-                from app.service.health_monitor import health_monitor_service
-                health_result = await health_monitor_service.check_health(
-                    db,
+                # Get project and chapter
+                project = await project_dao.get(db, task.project_id)
+                chapter = None
+                if task.chapter_id:
+                    chapter = await chapter_dao.get(db, task.chapter_id)
+    
+                # Get selected cards
+                card_ids = task.input_params.get("card_ids", [])
+                weights = task.input_params.get("weights", [])
+                cards = await card_dao.get_by_ids_any(db, card_ids)
+    
+                # ===== Step 1: Weight Allocation =====
+                logger.info(f"Task {task_id}: Step 1 - Weight allocation")
+                weight_map = await algorithm_service.step1_weight_allocation(cards, weights)
+                task.progress_percent = 10
+                await db.flush()
+    
+                # ===== Step 2: Vault Filtering (§3.4 - ID-based with compression) =====
+                logger.info(f"Task {task_id}: Step 2 - Vault filtering")
+                relevant_vault = await algorithm_service.step2_vault_filter(
+                    db=db,
                     project_id=project.id,
-                    current_chapter=chapter.chapter_number if chapter else 1,
+                    chapter_id=chapter.id if chapter else None,
+                    cards=cards if cards else None,
+                    chapter_number=chapter.chapter_number if chapter else None,
                 )
-                if health_result.get("alerts"):
-                    logger.warning(
-                        f"Task {task_id}: Health alerts — {len(health_result['alerts'])} issues"
-                    )
-            except Exception as e:
-                logger.error(f"Task {task_id}: Health monitor failed (non-blocking): {e}")
+                task.progress_percent = 15
+                await db.flush()
+    
+                # ===== Step 3: Dynamic Layer Conflict Detection (§3.3) =====
+                logger.info(f"Task {task_id}: Step 3 - Conflict detection")
+                conflicts = await algorithm_service.step3_conflict_detection(
+                    db=db,
+                    project_id=project.id,
+                    chapter_id=chapter.id if chapter else None,
+                    weight_map=weight_map,
+                    cards=cards if cards else None,
+                )
+                task.progress_percent = 20
+                await db.flush()
+    
+                # ===== Step 4: Direction Conflict Scoring =====
+                logger.info(f"Task {task_id}: Step 4 - Direction conflict scoring")
+                direction_conflicts = await algorithm_service.step4_direction_conflict_scoring(cards, weight_map)
+                task.progress_percent = 25
+                await db.flush()
+    
+                # ===== Step 5: Weaving Scheme Matching =====
+                logger.info(f"Task {task_id}: Step 5 - Weaving scheme matching")
+                weaving_scheme = await algorithm_service.step5_weaving_scheme_matching(
+                    cards, req_mode=task.input_params.get("mode", "single"),
+                    weight_map=weight_map,
+                )
+                task.progress_percent = 30
+                await db.flush()
+    
+                # ===== Step 6: Outline Template Filling =====
+                logger.info(f"Task {task_id}: Step 6 - Outline template filling")
+                outline = await algorithm_service.step6_outline_template_filling(
+                    project, chapter, cards, weight_map, relevant_vault,
+                    word_count=task.input_params.get("word_count", 2000),
+                )
+                task.progress_percent = 35
+                await db.flush()
+    
+                # ===== Step 7: Narrative Element Extraction =====
+                logger.info(f"Task {task_id}: Step 7 - Narrative element extraction")
+                # Extract relevant vault data for prompt building
+                # Supports both dict-based (VaultFilterService) and model-based (legacy) formats
+                vault_chars = relevant_vault.get("characters", [])
+                vault_promises = relevant_vault.get("plot_promises", [])
+                vault_timeline = relevant_vault.get("timeline", [])
+    
+                def _safe_name(item):
+                    return item["name"] if isinstance(item, dict) else getattr(item, "name", "")
+                def _safe_desc(item):
+                    return item.get("description", "") if isinstance(item, dict) else getattr(item, "description", "")
+                def _safe_event(item):
+                    return item.get("event", "") if isinstance(item, dict) else getattr(item, "event", "")
+    
+                narrative_elements = {
+                    "active_characters": [_safe_name(c) for c in vault_chars[:5]],
+                    "pending_promises": [_safe_desc(p) for p in vault_promises[:3] if _safe_desc(p)],
+                    "recent_timeline": [_safe_event(e) for e in vault_timeline[-3:]] if vault_timeline else [],
+                }
+                task.progress_percent = 40
+                await db.flush()
+    
+                # ===== Step 8: Brainstorming Divergence (Medium Model) =====
+                logger.info(f"Task {task_id}: Step 8 - Brainstorming divergence")
+                inspiration = await self._step8_brainstorming_divergence(
+                    project, chapter, cards, outline
+                )
+                task.progress_percent = 50
+                await db.flush()
 
-            # ===== Post-Pipeline: Phase 4 Scheduling (§11) =====
-            # Phase 4 自动编排 — 异步调度，不阻塞主流程
-            logger.info(f"Task {task_id}: Scheduling Phase 4")
-            try:
-                from app.service.phase4_scheduler import phase4_scheduler
-                import asyncio
-                card_ids_for_phase4 = task.input_params.get("card_ids", [])
-                asyncio.create_task(
-                    phase4_scheduler.schedule_phase4(
+                # ===== Step 8.5: Pre-generation Coherence Validation (§5.1) =====
+                # Algorithm doc §5.1: 生成前校验—检测卡片选择 + vault 状态的
+                # 潜在冲突，通过率 < 40% 阻止生成，< 70% 仅告警。
+                logger.info(f"Task {task_id}: Step 8.5 - Pre-generation validation")
+                try:
+                    from app.service.coherence_service import coherence_service
+                    generation_params = {
+                        "card_ids": card_ids,
+                        "weights": weights,
+                        "mode": task.input_params.get("mode", "single"),
+                        "chapter_id": chapter.id if chapter else None,
+                        "chapter_number": chapter.chapter_number if chapter else None,
+                    }
+                    pre_check = await coherence_service.validate_pre_generation(
+                        db, project.id, chapter.id if chapter else None, generation_params
+                    )
+                    pre_score = pre_check.get("overall_score", 1.0)
+                    logger.info(f"Task {task_id}: Pre-check score={pre_score:.2f}")
+
+                    if pre_score < 0.4:
+                        task.status = "failed"
+                        task.error_message = (
+                            f"生成前连贯性检查未通过 (score={pre_score:.2f})。"
+                            f"建议减少卡牌数量或更换卡牌组合。"
+                        )
+                        task.progress_percent = 55
+                        await db.flush()
+                        return {"error": task.error_message, "pre_check": pre_check}
+
+                    if pre_score < 0.7:
+                        logger.warning(
+                            f"Task {task_id}: Pre-check score {pre_score:.2f} < 0.7, "
+                            f"proceeding with caution"
+                        )
+                except Exception as e:
+                    logger.error(f"Task {task_id}: Pre-check failed (non-blocking): {e}")
+
+                # ===== Step 9: Body Text Writing (Large Model) =====
+                logger.info(f"Task {task_id}: Step 9 - Body text writing")
+                generated_content = await self._step9_body_text_writing(
+                    project, chapter, outline, inspiration, relevant_vault, weight_map
+                )
+                task.progress_percent = 70
+                await db.flush()
+    
+                # ===== Step 10: Coherence Validation =====
+                logger.info(f"Task {task_id}: Step 10 - Coherence validation")
+                coherence_result = await self._step10_coherence_validation(
+                    db, project, chapter, generated_content
+                )
+                task.progress_percent = 80
+                await db.flush()
+    
+                # If coherence check fails, attempt adjustment before falling back
+                if not coherence_result["passed"]:
+                    logger.warning(f"Task {task_id}: Coherence check failed, adjusting...")
+                    generated_content = await self._adjust_content(
+                        generated_content, coherence_result["issues"]
+                    )
+    
+                # ===== Step 11: Dynamic Layer Update =====
+                logger.info(f"Task {task_id}: Step 11 - Dynamic layer update")
+                await self._step11_dynamic_layer_update(
+                    db, project.id, chapter.id if chapter else None, generated_content
+                )
+                task.progress_percent = 90
+                await db.flush()
+    
+                # ===== Step 12: Precedent Summary Update =====
+                logger.info(f"Task {task_id}: Step 12 - Precedent summary update")
+                await self._step12_precedent_summary_update(
+                    db, project.id, chapter.id if chapter else None, generated_content
+                )
+                task.progress_percent = 95
+                await db.flush()
+    
+                # Update chapter with generated content
+                if chapter:
+                    chapter.content = generated_content
+                    chapter.status = "completed"
+                    chapter.word_count = len(generated_content)
+    
+                # ===== Post-Pipeline: Health Monitor (§5.3) =====
+                # 子情节健康监控 R1/R2/R3 — 纯算法，零 LLM 成本
+                logger.info(f"Task {task_id}: Running health monitor")
+                try:
+                    from app.service.health_monitor import health_monitor_service
+                    health_result = await health_monitor_service.check_health(
                         db,
                         project_id=project.id,
-                        chapter_id=chapter.id if chapter else 0,
-                        chapter_text=generated_content,
-                        card_ids=card_ids_for_phase4 if card_ids_for_phase4 else None,
+                        current_chapter=chapter.chapter_number if chapter else 1,
                     )
-                )
+                    if health_result.get("alerts"):
+                        logger.warning(
+                            f"Task {task_id}: Health alerts — {len(health_result['alerts'])} issues"
+                        )
+                except Exception as e:
+                    logger.error(f"Task {task_id}: Health monitor failed (non-blocking): {e}")
+    
+                # ===== Post-Pipeline: Phase 4 Scheduling (§11) =====
+                # Phase 4 自动编排 — 异步调度，不阻塞主流程
+                logger.info(f"Task {task_id}: Scheduling Phase 4")
+                try:
+                    from app.service.phase4_scheduler import phase4_scheduler
+                    import asyncio
+                    card_ids_for_phase4 = task.input_params.get("card_ids", [])
+                    asyncio.create_task(
+                        phase4_scheduler.schedule_phase4(
+                            db,
+                            project_id=project.id,
+                            chapter_id=chapter.id if chapter else 0,
+                            chapter_text=generated_content,
+                            card_ids=card_ids_for_phase4 if card_ids_for_phase4 else None,
+                        )
+                    )
+                except Exception as e:
+                    logger.error(f"Task {task_id}: Phase 4 scheduling failed (non-blocking): {e}")
+    
+                # Update task status
+                task.status = "done"
+                task.progress_percent = 100
+                task.progress_stage = "completed"
+                task.output_data = {
+                    "content": generated_content,
+                    "word_count": len(generated_content),
+                    "coherence_check": coherence_result,
+                    "direction_conflicts": direction_conflicts,
+                }
+                await db.flush()
+    
+                logger.info(f"Task {task_id}: Generation pipeline completed successfully")
+                return task.output_data
+    
             except Exception as e:
-                logger.error(f"Task {task_id}: Phase 4 scheduling failed (non-blocking): {e}")
-
-            # Update task status
-            task.status = "done"
-            task.progress_percent = 100
-            task.progress_stage = "completed"
-            task.output_data = {
-                "content": generated_content,
-                "word_count": len(generated_content),
-                "coherence_check": coherence_result,
-                "direction_conflicts": direction_conflicts,
-            }
-            await db.commit()
-
-            logger.info(f"Task {task_id}: Generation pipeline completed successfully")
-            return task.output_data
-
-        except Exception as e:
-            logger.error(f"Task {task_id}: Generation pipeline failed: {e}", exc_info=True)
-            task.status = "failed"
-            task.error_message = str(e)
-            await db.commit()
-            raise
+                await savepoint.rollback()
+                logger.error(f"Task {task_id}: Generation pipeline failed: {e}", exc_info=True)
+                task.status = "failed"
+                task.error_message = str(e)
+                await db.commit()
+                raise
 
     # ===== Pipeline Step Implementations =====
 
@@ -517,7 +506,6 @@ class GenerationService:
         generated_content: str,
     ) -> None:
         """Step 11: Update dynamic layer with new information from generated content."""
-        from app.models.dynamic_layer import DynamicLayer
         from datetime import datetime, timezone
 
         # Build the dynamic layer from generated content
@@ -546,14 +534,13 @@ class GenerationService:
             logger.warning(f"Failed to generate summary via LLM: {e}")
             summary = generated_content[:200]
 
-        # Create or update dynamic layer entry
-        dynamic_layer = DynamicLayer(
-            project_id=project_id,
-            chapter_id=chapter_id,
-            summary=summary,
-            created_at=datetime.now(timezone.utc),
-        )
-        db.add(dynamic_layer)
+        # Create or update dynamic layer entry via DAO
+        dynamic_layer = await dynamic_layer_dao.create(db, {
+            "project_id": project_id,
+            "chapter_id": chapter_id,
+            "summary": summary,
+            "created_at": datetime.now(timezone.utc),
+        })
         logger.info(f"Dynamic layer updated for project {project_id}, chapter {chapter_id}")
 
     async def _step12_precedent_summary_update(

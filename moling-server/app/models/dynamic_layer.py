@@ -55,27 +55,27 @@ class DynamicLayer(BaseModel):
     must_hold: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="必须保持的约束列表",
     )
     must_not: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="必须避免的约束列表",
     )
     # 未收束钩子
     unresolved_hooks: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="未解决的悬念列表",
     )
     # 最近3章变更
     recent_changes: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="最近3章的变更日志",
     )
     # 秘密矩阵 (信息不对称)

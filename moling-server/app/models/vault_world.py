@@ -38,7 +38,7 @@ class VaultWorld(BaseModel):
     related_entities: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="相关实体列表",
     )
     source_chapter: Mapped[Optional[int]] = mapped_column(
@@ -55,7 +55,7 @@ class VaultWorld(BaseModel):
     reference_chapters: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="引用章节号列表",
     )
 

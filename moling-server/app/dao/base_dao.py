@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel
@@ -53,9 +54,19 @@ class BaseDAO(Generic[ModelT]):
         self,
         db: AsyncSession,
         id: Any,
+        *,
+        include_deleted: bool = False,
     ) -> Optional[ModelT]:
-        """Retrieve a single record by primary key."""
+        """Retrieve a single record by primary key.
+
+        By default excludes soft-deleted records when the model supports it.
+        Pass ``include_deleted=True`` to bypass this filter (e.g. for restore).
+        """
         stmt = select(self.model_class).where(self.model_class.id == id)
+
+        if not include_deleted and hasattr(self.model_class, 'is_deleted'):
+            stmt = stmt.where(self.model_class.is_deleted == False)
+
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -78,9 +89,17 @@ class BaseDAO(Generic[ModelT]):
         filters: Optional[dict[str, Any]] = None,
         order_by: Optional[str] = None,
         descending: bool = True,
+        include_deleted: bool = False,
     ) -> list[ModelT]:
-        """Retrieve a paginated list of records with optional filters."""
+        """Retrieve a paginated list of records with optional filters.
+
+        By default excludes soft-deleted records when the model supports it.
+        """
         stmt = select(self.model_class)
+
+        if not include_deleted and hasattr(self.model_class, 'is_deleted'):
+            stmt = stmt.where(self.model_class.is_deleted == False)
+
         stmt = self._apply_filters(stmt, filters)
 
         if order_by:
@@ -137,12 +156,31 @@ class BaseDAO(Generic[ModelT]):
         self,
         db: AsyncSession,
         id: Any,
+        *,
+        soft: bool = True,
     ) -> Optional[ModelT]:
-        """Delete a record by primary key and return it (or None if not found)."""
-        db_obj = await self.get(db, id)
-        if db_obj:
+        """Delete a record.
+
+        When the model has ``is_deleted`` attribute and ``soft=True`` (default),
+        performs a soft delete by setting ``is_deleted=True`` and
+        ``deleted_at=now()``.
+
+        Set ``soft=False`` to perform a physical/hard delete regardless of
+        soft-delete support.
+        """
+        db_obj = await self.get(db, id, include_deleted=True)
+        if db_obj is None:
+            return None
+
+        if soft and hasattr(db_obj, 'is_deleted'):
+            db_obj.is_deleted = True
+            db_obj.deleted_at = datetime.now(timezone.utc)
+            await db.flush()
+            await db.refresh(db_obj)
+        else:
             await db.delete(db_obj)
             await db.flush()
+
         return db_obj
 
     async def count(
@@ -155,3 +193,26 @@ class BaseDAO(Generic[ModelT]):
         stmt = self._apply_filters(stmt, filters)
         result = await db.execute(stmt)
         return result.scalar_one()
+
+    async def restore(
+        self,
+        db: AsyncSession,
+        id: Any,
+    ) -> Optional[ModelT]:
+        """Restore a soft-deleted record.
+
+        Clears ``is_deleted`` and ``deleted_at``.  Returns ``None`` if the
+        record does not exist or the model does not support soft-delete.
+        """
+        db_obj = await self.get(db, id, include_deleted=True)
+        if db_obj is None or not hasattr(db_obj, 'is_deleted'):
+            return None
+
+        if not db_obj.is_deleted:
+            return db_obj  # Already active — no-op
+
+        db_obj.is_deleted = False
+        db_obj.deleted_at = None
+        await db.flush()
+        await db.refresh(db_obj)
+        return db_obj

@@ -48,6 +48,9 @@ class Phase3Committer:
         - keep_existing: 跳过冲突项，保留现有数据
         - merge: 合并新旧数据
         - replace: 用新数据替换
+
+        使用 SQLAlchemy savepoint 保护每个子步骤，
+        异常时执行显式 rollback 确保已 flush 的数据被回滚。
         """
         imported_counts = {
             "imported_characters": 0,
@@ -58,47 +61,80 @@ class Phase3Committer:
             "status": "completed",
             "message": "导入完成",
         }
+        failed_steps: dict[str, str] = {}
 
         try:
-            # 1. 写入角色库
-            char_count = await self._commit_characters(
-                phase1_result.get("characters", []),
-                conflicts,
-            )
-            imported_counts["imported_characters"] = char_count
+            # 1. 写入角色库（savepoint 保护）
+            try:
+                async with self.db.begin_nested() as sp_char:
+                    char_count = await self._commit_characters(
+                        phase1_result.get("characters", []),
+                        conflicts,
+                    )
+                    imported_counts["imported_characters"] = char_count
+            except Exception as e:
+                logger.warning("角色库写入失败，已回滚: %s", e)
+                failed_steps["characters"] = str(e)
 
-            # 2. 写入时间线
-            timeline_count = await self._commit_timeline(
-                phase1_result.get("timeline_events", []),
-                conflicts,
-            )
-            imported_counts["imported_timeline_events"] = timeline_count
+            # 2. 写入时间线（savepoint 保护）
+            try:
+                async with self.db.begin_nested() as sp_timeline:
+                    timeline_count = await self._commit_timeline(
+                        phase1_result.get("timeline_events", []),
+                        conflicts,
+                    )
+                    imported_counts["imported_timeline_events"] = timeline_count
+            except Exception as e:
+                logger.warning("时间线写入失败，已回滚: %s", e)
+                failed_steps["timeline"] = str(e)
 
-            # 3. 写入剧情承诺
-            promise_count = await self._commit_promises(
-                phase1_result.get("promises", []),
-                conflicts,
-            )
-            imported_counts["imported_promises"] = promise_count
+            # 3. 写入剧情承诺（savepoint 保护）
+            try:
+                async with self.db.begin_nested() as sp_promise:
+                    promise_count = await self._commit_promises(
+                        phase1_result.get("promises", []),
+                        conflicts,
+                    )
+                    imported_counts["imported_promises"] = promise_count
+            except Exception as e:
+                logger.warning("剧情承诺写入失败，已回滚: %s", e)
+                failed_steps["promises"] = str(e)
 
-            # 4. 写入世界观
-            world_count = await self._commit_world(
-                phase1_result.get("world_items", []),
-                conflicts,
-            )
-            imported_counts["imported_world_items"] = world_count
+            # 4. 写入世界观（savepoint 保护）
+            try:
+                async with self.db.begin_nested() as sp_world:
+                    world_count = await self._commit_world(
+                        phase1_result.get("world_items", []),
+                        conflicts,
+                    )
+                    imported_counts["imported_world_items"] = world_count
+            except Exception as e:
+                logger.warning("世界观写入失败，已回滚: %s", e)
+                failed_steps["world"] = str(e)
 
-            # 5. 生成初始卡牌池
-            card_count = await self._generate_card_pool(phase1_result)
-            imported_counts["card_pool_generated"] = card_count
+            # 5. 生成初始卡牌池（savepoint 保护）
+            try:
+                async with self.db.begin_nested() as sp_card:
+                    card_count = await self._generate_card_pool(phase1_result)
+                    imported_counts["card_pool_generated"] = card_count
+            except Exception as e:
+                logger.warning("卡牌池生成失败，已回滚: %s", e)
+                failed_steps["card_pool"] = str(e)
 
         except Exception as e:
-            logger.exception("Phase 3 事务提交失败")
+            logger.exception("Phase 3 事务提交失败，执行全局回滚")
+            await self.db.rollback()
             return {
                 **imported_counts,
                 "status": "failed",
                 "message": f"导入失败: {str(e)}",
+                "failed_steps": failed_steps,
             }
+
+        if failed_steps:
+            imported_counts["status"] = "partial"
+            imported_counts["message"] = "部分导入成功"
+            imported_counts["failed_steps"] = failed_steps
 
         return imported_counts
 

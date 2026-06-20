@@ -54,7 +54,7 @@ class CardPool(BaseModel):
     tags: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="标签数组",
     )
     is_active: Mapped[bool] = mapped_column(
@@ -103,13 +103,13 @@ class CardPool(BaseModel):
     characters: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="关联角色列表 [{id, name, state_requirement}]",
     )
     plot_promises: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="关联剧情承诺列表 [{id, title, advance_type}]",
     )
     timeline_point: Mapped[Optional[str]] = mapped_column(
@@ -120,7 +120,7 @@ class CardPool(BaseModel):
     world_rules: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="关联世界观规则列表 [{id, rule, constraint}]",
     )
     current_story_state: Mapped[Optional[str]] = mapped_column(
@@ -131,7 +131,7 @@ class CardPool(BaseModel):
     unresolved_hooks: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="未收束钩子列表",
     )
     dynamic_conflict_score: Mapped[Optional[float]] = mapped_column(

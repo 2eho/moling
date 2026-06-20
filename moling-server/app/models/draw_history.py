@@ -36,19 +36,19 @@ class DrawHistory(BaseModel):
     cards_drawn: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="抽取的卡片快照列表",
     )
     card_ids: Mapped[list] = mapped_column(
         JSON,
         nullable=False,
-        default=list,
+        default=lambda: [],
         comment="抽取的卡片 ID 列表",
     )
     weights: Mapped[list] = mapped_column(
         JSON,
         nullable=False,
-        default=list,
+        default=lambda: [],
         comment="各卡片的权重",
     )
     mode: Mapped[str] = mapped_column(

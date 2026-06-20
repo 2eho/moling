@@ -63,7 +63,7 @@ class Chapter(BaseModel):
     used_card_ids: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="使用的卡片 ID 列表",
     )
     generation_mode: Mapped[Optional[str]] = mapped_column(

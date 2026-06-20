@@ -271,11 +271,11 @@ class ContextBudget:
             # 压缩人物条目
             truncated = ContextBudget._truncate_characters(truncated, current_chars_per_char)
             # 压缩剧情承诺条目数
-            truncated = ContextBudget._truncate_section(truncated, "【相关剧情承诺】", current_max_promises)
+            truncated = ContextBudget._truncate_section(truncated, "【伏笔层】", current_max_promises)
             # 压缩时间线条目数
-            truncated = ContextBudget._truncate_section(truncated, "【时间线参考】", current_max_timeline)
+            truncated = ContextBudget._truncate_section(truncated, "【时间线层】", current_max_timeline)
             # 压缩世界观条目数
-            truncated = ContextBudget._truncate_section(truncated, "【世界观规则】", current_max_world)
+            truncated = ContextBudget._truncate_section(truncated, "【世界观层】", current_max_world)
 
             new = ContextBudget.check(truncated, model, max_output_tokens)
             if new.within_budget:
@@ -350,8 +350,10 @@ class ContextBudget:
 
         # 找到 section 内容
         section_start = idx
-        # 找到下一个 section 的开始
-        next_section = prompt.find("\n【", section_start + len(section_header))
+        # 找到下一个顶级 section 的开始（用双换行跳过子标题如【活跃伏笔】）
+        next_section = prompt.find("\n\n【", section_start + len(section_header))
+        if next_section == -1:
+            next_section = prompt.find("\n\n#", section_start + len(section_header))
         if next_section == -1:
             next_section = prompt.find("\n=", section_start + len(section_header))
         if next_section == -1:

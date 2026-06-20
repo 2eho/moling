@@ -6,8 +6,9 @@ Business logic for the Four Databases (四库): Characters, Timeline, Plot Promi
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import vault_dao, project_dao, chapter_dao
-from app.errors import NotFoundError, ErrorCode, ForbiddenError
-from app.models import VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
+from app.errors import NotFoundError, ErrorCode
+from app.utils.security import verify_project_ownership
+from app.models import VaultTimeline, VaultPlotPromise
 from app.schemas.vault import CharacterResp, TimelineResp, PlotPromiseResp, WorldResp
 
 
@@ -24,17 +25,7 @@ class VaultService:
     ) -> list[CharacterResp]:
         """List all characters in a project's vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         characters = await vault_dao.get_characters(db, project_id)
         return [CharacterResp.model_validate(c) for c in characters]
@@ -48,17 +39,7 @@ class VaultService:
     ) -> CharacterResp:
         """Create a new character in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Create character
         character_data["project_id"] = project_id
@@ -78,17 +59,7 @@ class VaultService:
     ) -> CharacterResp:
         """Update a character in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get character
         character = await vault_dao.get_character(db, character_id)
@@ -114,17 +85,7 @@ class VaultService:
     ) -> None:
         """Delete a character from the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Delete character
         await vault_dao.delete_character(db, character_id)
@@ -139,17 +100,7 @@ class VaultService:
     ) -> CharacterResp:
         """Get a single character by ID."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get character
         character = await vault_dao.get_character(db, character_id)
@@ -171,17 +122,7 @@ class VaultService:
     ) -> list[TimelineResp]:
         """List all timeline events in a project's vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         events = await vault_dao.get_timeline(db, project_id)
         return [TimelineResp.model_validate(e) for e in events]
@@ -195,17 +136,7 @@ class VaultService:
     ) -> TimelineResp:
         """Create a new timeline event in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Create event
         event_data["project_id"] = project_id
@@ -224,17 +155,7 @@ class VaultService:
     ) -> TimelineResp:
         """Get a single timeline event by ID."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get event
         event = await vault_dao.get_timeline_event(db, event_id)
@@ -256,17 +177,7 @@ class VaultService:
     ) -> TimelineResp:
         """Update a timeline event in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get event
         event = await vault_dao.get_timeline_event(db, event_id)
@@ -292,17 +203,7 @@ class VaultService:
     ) -> None:
         """Delete a timeline event from the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Delete event
         await vault_dao.delete_timeline_event(db, event_id)
@@ -318,17 +219,7 @@ class VaultService:
     ) -> list[PlotPromiseResp]:
         """List all plot promises in a project's vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         promises = await vault_dao.get_plot_promises(db, project_id)
         return [PlotPromiseResp.model_validate(p) for p in promises]
@@ -342,17 +233,7 @@ class VaultService:
     ) -> PlotPromiseResp:
         """Create a new plot promise in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Create promise
         promise_data["project_id"] = project_id
@@ -371,17 +252,7 @@ class VaultService:
     ) -> PlotPromiseResp:
         """Get a single plot promise by ID."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get promise
         promise = await vault_dao.get_plot_promise(db, promise_id)
@@ -403,17 +274,7 @@ class VaultService:
     ) -> PlotPromiseResp:
         """Update a plot promise in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get promise
         promise = await vault_dao.get_plot_promise(db, promise_id)
@@ -439,17 +300,7 @@ class VaultService:
     ) -> None:
         """Delete a plot promise from the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Delete promise
         await vault_dao.delete_plot_promise(db, promise_id)
@@ -465,17 +316,7 @@ class VaultService:
     ) -> list[WorldResp]:
         """List all world-building entries in a project's vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         entries = await vault_dao.get_world_entries(db, project_id)
         return [WorldResp.model_validate(e) for e in entries]
@@ -489,17 +330,7 @@ class VaultService:
     ) -> WorldResp:
         """Create a new world-building entry in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Create entry
         entry_data["project_id"] = project_id
@@ -518,17 +349,7 @@ class VaultService:
     ) -> WorldResp:
         """Get a single world-building entry by ID."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get entry
         entry = await vault_dao.get_world_entry(db, entry_id)
@@ -550,17 +371,7 @@ class VaultService:
     ) -> WorldResp:
         """Update a world-building entry in the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Get entry
         entry = await vault_dao.get_world_entry(db, entry_id)
@@ -586,17 +397,7 @@ class VaultService:
     ) -> None:
         """Delete a world-building entry from the vault."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Delete entry
         await vault_dao.delete_world_entry(db, entry_id)
@@ -721,15 +522,17 @@ class VaultService:
                     existing.chapter_count = (existing.chapter_count or 0) + 1
                     updated_count += 1
                 else:
-                    new_char = VaultCharacter(
-                        project_id=project_id,
-                        name=char_name,
-                        role="neutral",
-                        description=f"从第 {chapter.chapter_number} 章自动提取",
-                        traits=[],
-                        chapter_count=1,
+                    new_char = await vault_dao.create_character(
+                        db,
+                        {
+                            "project_id": project_id,
+                            "name": char_name,
+                            "role": "neutral",
+                            "description": f"从第 {chapter.chapter_number} 章自动提取",
+                            "traits": [],
+                            "chapter_count": 1,
+                        },
                     )
-                    db.add(new_char)
                     created_count += 1
 
             # 更新地点（作为世界观元素存储）
@@ -741,14 +544,16 @@ class VaultService:
                 if existing:
                     updated_count += 1
                 else:
-                    new_world = VaultWorld(
-                        project_id=project_id,
-                        term=loc_name,
-                        description=f"从第 {chapter.chapter_number} 章自动提取的地点",
-                        category="location",
-                        reference_chapters=[],
+                    new_world = await vault_dao.create_world_entry(
+                        db,
+                        {
+                            "project_id": project_id,
+                            "term": loc_name,
+                            "description": f"从第 {chapter.chapter_number} 章自动提取的地点",
+                            "category": "location",
+                            "reference_chapters": [],
+                        },
                     )
-                    db.add(new_world)
                     created_count += 1
 
             # 更新物品（作为世界观元素存储）
@@ -760,14 +565,16 @@ class VaultService:
                 if existing:
                     updated_count += 1
                 else:
-                    new_item = VaultWorld(
-                        project_id=project_id,
-                        term=item_name,
-                        description=f"从第 {chapter.chapter_number} 章自动提取的物品",
-                        category="item",
-                        reference_chapters=[],
+                    new_item = await vault_dao.create_world_entry(
+                        db,
+                        {
+                            "project_id": project_id,
+                            "term": item_name,
+                            "description": f"从第 {chapter.chapter_number} 章自动提取的物品",
+                            "category": "item",
+                            "reference_chapters": [],
+                        },
                     )
-                    db.add(new_item)
                     created_count += 1
 
             await db.commit()
@@ -802,17 +609,7 @@ class VaultService:
     ) -> dict:
         """Get four databases summary (characters, timeline, plot promises, world)."""
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise ForbiddenError(
-                error_code=ErrorCode.FORBIDDEN,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         # Count and get from vault DAO
         character_count = await vault_dao.count_characters(db, project_id)

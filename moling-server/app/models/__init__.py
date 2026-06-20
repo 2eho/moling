@@ -20,6 +20,7 @@ from app.models.health_alert import HealthAlert
 from app.models.system_config import SystemConfig
 from app.models.secret import Secret
 from app.models.notification import Notification
+from app.models.template import Template
 from app.models.subscription import Plan, UserSubscription
 from app.models.phase4_task import Phase4Task
 
@@ -43,6 +44,7 @@ __all__ = [
     "SystemConfig",
     "Secret",
     "Notification",
+    "Template",
     "Plan",
     "UserSubscription",
     "Phase4Task",

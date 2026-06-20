@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.dao import project_dao, vault_dao, health_alert_dao
 from app.errors import NotFoundError, ErrorCode, AppError
+from app.utils.security import verify_project_ownership
 from app.models.health_alert import HealthAlert
 from app.models.chapter import Chapter
 from app.models.project import Project
@@ -48,17 +49,7 @@ class HealthService:
             Health check results with alerts
         """
         # Verify project exists and belongs to user
-        project = await project_dao.get(db, project_id)
-        if project is None:
-            raise NotFoundError(
-                error_code=ErrorCode.PROJECT_NOT_FOUND,
-                detail="Project not found",
-            )
-        if project.user_id != user_id:
-            raise AppError(
-                error_code=ErrorCode.PROJECT_ACCESS_DENIED,
-                detail="Not authorized to access this project",
-            )
+        project = await verify_project_ownership(db, project_id, user_id)
 
         result = {
             "project_id": project_id,

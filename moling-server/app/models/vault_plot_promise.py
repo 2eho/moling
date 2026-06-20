@@ -61,7 +61,7 @@ class VaultPlotPromise(BaseModel):
     related_characters: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="相关角色名列表",
     )
     planted_chapter: Mapped[Optional[int]] = mapped_column(
@@ -72,7 +72,7 @@ class VaultPlotPromise(BaseModel):
     advancement_log: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="推进日志 (事件列表, 含 event_type)",
     )
 

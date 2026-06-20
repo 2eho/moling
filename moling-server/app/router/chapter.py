@@ -9,7 +9,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
-from app.schemas.chapter import CreateChapterReq, ChapterResp, UpdateChapterReq
+from app.schemas.chapter import (
+    CreateChapterReq, ChapterResp, UpdateChapterReq,
+    ChapterConfirmReq, ChapterReviseReq, AgentInstructionReq,
+)
 from app.schemas.generation import GenerateReq
 from app.service import chapter_service, generation_service, card_service
 
@@ -100,13 +103,13 @@ async def reorder_chapters(
 async def confirm_chapter(
     project_id: int,
     chapter_id: int = ...,
-    confirm_data: Optional[dict] = None,
+    req: Optional[ChapterConfirmReq] = None,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> ChapterResp:
     """Confirm a chapter and trigger Phase 4 processing."""
     return await chapter_service.confirm_chapter(
-        db, current_user.id, project_id, chapter_id, confirm_data
+        db, current_user.id, project_id, chapter_id, req.model_dump() if req else None
     )
 
 
@@ -114,13 +117,13 @@ async def confirm_chapter(
 async def revise_chapter(
     project_id: int,
     chapter_id: int = ...,
-    revise_data: Optional[dict] = None,
+    req: Optional[ChapterReviseReq] = None,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> ChapterResp:
     """Mark a chapter for revision (reject/revise)."""
     return await chapter_service.revise_chapter(
-        db, current_user.id, project_id, chapter_id, revise_data
+        db, current_user.id, project_id, chapter_id, req.model_dump() if req else None
     )
 
 
@@ -142,13 +145,13 @@ async def get_chapter_suggestions(
 async def send_agent_instruction(
     project_id: int,
     chapter_id: int = ...,
-    instruction: dict = ...,
+    req: AgentInstructionReq = ...,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
     """向 AI 发送指令（用于章节生成过程中的干预）。"""
     result = await chapter_service.send_agent_instruction(
-        db, current_user.id, project_id, chapter_id, instruction
+        db, current_user.id, project_id, chapter_id, req.model_dump()
     )
     return result
 

@@ -8,11 +8,12 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
-from app.errors import NotFoundError
+from app.errors import NotFoundError, ForbiddenError
 from app.service.phase4_service import phase4_service
 from app.schemas.phase4 import Phase4SuggestionResp, ApplyPhase4Req, Phase4TaskResp
 from app.models.phase4_task import Phase4State
 from app.dao.phase4_dao import phase4_dao
+from app.dao import project_dao
 
 router = APIRouter()
 
@@ -135,6 +136,13 @@ async def approve_review(
     if not task:
         raise NotFoundError(detail=f"Review task {review_id} not found")
 
+    # Verify project ownership
+    project = await project_dao.get(db, int(task.project_id))
+    if project is None:
+        raise NotFoundError(detail="Project not found")
+    if str(project.user_id) != str(current_user.id):
+        raise ForbiddenError(detail="Not authorized to approve this review")
+
     task.status = "approved"
     task.state = Phase4State.DONE.value
     await db.commit()
@@ -159,6 +167,13 @@ async def reject_review(
 
     if not task:
         raise NotFoundError(detail=f"Review task {review_id} not found")
+
+    # Verify project ownership
+    project = await project_dao.get(db, int(task.project_id))
+    if project is None:
+        raise NotFoundError(detail="Project not found")
+    if str(project.user_id) != str(current_user.id):
+        raise ForbiddenError(detail="Not authorized to reject this review")
 
     task.status = "rejected"
     task.state = Phase4State.FAILED.value

@@ -5,7 +5,13 @@ from app.dao.user_dao import UserDAO
 from app.dao.secret_dao import SecretDAO
 from app.dao.project_dao import ProjectDAO
 from app.dao.chapter_dao import ChapterDAO
-from app.dao.vault_dao import VaultDAO
+from app.dao.vault_dao import (
+    VaultDAO,
+    VaultCharacterDAO,
+    VaultTimelineDAO,
+    VaultPlotPromiseDAO,
+    VaultWorldDAO,
+)
 from app.dao.card_dao import CardDAO
 from app.dao.generation_dao import GenerationDAO
 from app.dao.notification_dao import NotificationDAO
@@ -37,6 +43,10 @@ __all__ = [
     "ProjectDAO",
     "ChapterDAO",
     "VaultDAO",
+    "VaultCharacterDAO",
+    "VaultTimelineDAO",
+    "VaultPlotPromiseDAO",
+    "VaultWorldDAO",
     "CardDAO",
     "GenerationDAO",
     "NotificationDAO",

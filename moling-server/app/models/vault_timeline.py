@@ -33,7 +33,7 @@ class VaultTimeline(BaseModel):
     precedes: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="前驱事件 ID 列表",
     )
     confidence: Mapped[Optional[float]] = mapped_column(
@@ -81,7 +81,7 @@ class VaultTimeline(BaseModel):
     characters_involved: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="涉及角色名列表",
     )
 

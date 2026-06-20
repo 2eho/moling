@@ -59,7 +59,7 @@ class VaultCharacter(BaseModel):
     knowledge: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="知识/能力列表",
     )
     confidence: Mapped[Optional[float]] = mapped_column(
@@ -70,7 +70,7 @@ class VaultCharacter(BaseModel):
     chapter_hist: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="章节历史 (出场章节列表)",
     )
     current_state: Mapped[Optional[str]] = mapped_column(
@@ -92,7 +92,7 @@ class VaultCharacter(BaseModel):
     traits: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="性格特征数组",
     )
     description: Mapped[Optional[str]] = mapped_column(
@@ -108,7 +108,7 @@ class VaultCharacter(BaseModel):
     relationships: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
-        default=list,
+        default=lambda: [],
         comment="人际关系 (JSON 数组)",
     )
     state_machine: Mapped[Optional[dict]] = mapped_column(
