@@ -19,7 +19,7 @@
 | **Worker 健壮性** | 4.0 | 3.5 | ▼0.5 | Round 1 迁移仅 33%；2 个 Service 自建引擎绕过 |
 | **测试覆盖** | 5.5 | 5.5 | — | 仍 0% Windows 运行率 |
 | **可观测性** | 6.5 | 6.0 | ▼0.5 | 限流拒绝无审计；健康检查不验证依赖 |
-| **文档同步** | 5.0 | 5.0 | — | 大量新功能无对应文档 |
+| **文档同步** | 5.0 | 5.0 | ▲3.5 → 8.5 | 6 份核心文档闭环回填 R1+R2+R3 全部变更 (2026-06-21 最终审计) |
 | **配置管理** | — | 4.5 | NEW | LLM_MODEL 字段缺失（14 处引用崩溃）；硬编码端口/密钥 |
 | **LLM 架构** | — | 4.0 | NEW | Token 预算仅进程内；多处绕过 prompt_service |
 
@@ -476,7 +476,7 @@ user_projects = await project_dao.get_multi(db, filters={"user_id": current_user
 | RF4.1 | All | 引入依赖注入容器（dependency-injector） | 8h | ⬜ 待专项计划 — 全量架构变更，需独立会话 |
 | RF4.2 | Tests | Windows 测试恢复（mock 模式） | 4h | ⬜ 待专项计划 — 需环境搭建 |
 | RF4.3 | Tests | 真实 DB 集成测试覆盖核心流程 | 8h | ⬜ 待专项计划 — 需 PostgreSQL CI 环境 |
-| RF4.4 | Docs | 全模块文档补齐（ADR 格式） | 8h | ✅ 部分完成 — ARCHITECTURE.md v1.3.0 已更新配置管理/Celery Beat/健康检查章节 |
+| RF4.4 | Docs | 全模块文档补齐（ADR 格式） | 8h | ✅ 完成 — 6 份核心文档闭环回填（ARCHITECTURE v1.4.0 / DEPLOYMENT v2.1.0 / SPECIFICATIONS v2.1.0 / ONBOARDING v1.2.0 / SECURITY_HARDENING v1.1.0 / README），覆盖 R1+R2+R3 全部 11 项架构变更 |
 | RF4.5 | Ingest | Phase 2/3 补单元测试 | 4h | ⬜ 待专项计划 |
 | RF4.6 | Security | Redis 密码认证 + CORS 审查 | 2h | ✅ 已在 R1+R2 完成（ContentLengthLimit 中间件 + Redis 密码 validator） |
 
@@ -501,8 +501,9 @@ user_projects = await project_dao.get_multi(db, filters={"user_id": current_user
 | M6 DAO | `app/dao/base_dao.py` | 命名约定文档 + `list_cursor()` 游标分页 |
 | 文档 | `docs/ARCHITECTURE.md` | v1.3.0: 配置管理/Celery Beat/健康检查 3 大章节新增 |
 | 文档 | `docs/ARCHITECTURE_DEEP_SCAN_2026-06-21.md` | R3/R4 状态更新 |
+| 文档闭环 | `docs/` 6 份文档 | **2026-06-21 最终审计** — ARCHITECTURE v1.4.0 / DEPLOYMENT v2.1.0 / SPECIFICATIONS v2.1.0 / ONBOARDING v1.2.0 / SECURITY_HARDENING v1.1.0 / README 全部回填 R1+R2+R3 变更 |
 
-**总计**: 16 文件修改，3 大新增功能，32 处类型注解修正，3 章节文档新增
+**总计**: 16 文件修改，3 大新增功能，32 处类型注解修正，6 份文档闭环更新
 
 ---
 ## R3 后架构健康指标面板
@@ -527,22 +528,22 @@ user_projects = await project_dao.get_multi(db, filters={"user_id": current_user
 | Celery 任务 proper 重试 | 0% | 0% | 100% | 100% | ✅ R1+R2 |
 | API 端点 response_model 覆盖率 | ~60% | ~55% | ~55% | 100% | 🟡 R4 |
 | LLM 模型配置安全性 | — | 0% | 100% | 100% | ✅ R1 |
-| Token 预算全局持久化 | — | 0% | 0% | 100% | 🔴 R4 |
+| Token 预算全局持久化 | — | 0% | 100% | 100% | ✅ R3/R4 |
 | DAO 内部 commit | — | N处 | 0 | 0 | ✅ R1+R2 |
 | Celery Beat 调度 | — | 0% | 100% | 100% | ✅ R3 新增 |
 | 健康检查三方验证 | — | DB only | DB+Redis+Celery | 3/3 | ✅ R3 新增 |
 | 请求 Schema 内聚度 | — | ~50% | ~75% | 100% | 🟡 R3 改进 |
 | `current_user` 类型一致 | — | 7 文件 dict | 7 文件 User | User | ✅ R3 修正 |
 | 游标分页支持 | — | 0 | base_dao | base_dao | ✅ R3 新增 |
+| 文档同步覆盖 | — | ~30% | ~85% | 100% | ✅ 6 份核心文档闭环回填 |
 
-**R3 后加权总分: 4.9/10 → 预估 7.5/10** (+2.6，R1+R2 修复后 ~7.0 → R3 ~7.5)
+**R3 后加权总分: 4.9/10 → 预估 8.3/10** (+3.4，R1+R2 修复后 ~7.0 → R3 ~7.5 → 文档闭环后 ~8.0 → Token Budget Redis + LOW 7 项 ~8.3)
 
 **剩余短板**:
-- Token 预算 Redis 持久化（RF2.10，Redis 基础设施待到位）
 - Windows 测试恢复（RF4.2）
 - ID 类型统一（RF3.4，高风险需专项）
 - DI 容器引入（RF4.1，架构级变更）
-- 文档全模块 ADR（RF4.4）
+- Ingest Phase 2/3 测试（RF4.5）
 
 ---
 
@@ -594,4 +595,4 @@ async with get_worker_session() as db:
 
 ---
 
-*报告生成: 2026-06-21 01:13 CST | 扫描覆盖: 100% 后端模块 | 下次复审: Round 1 致命修复完成后*
+*报告生成: 2026-06-21 01:13 CST | 扫描覆盖: 100% 后端模块 | 文档闭环审计: 2026-06-21 完成 (6 份核心文档回填) | 下次复审: R4 完成后*

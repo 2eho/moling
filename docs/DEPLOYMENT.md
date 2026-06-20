@@ -1,6 +1,6 @@
 # 墨灵 (Moling) 部署指南
 
-> **版本**: 2.0.0 | **最后更新**: 2026-06-18 | **维护者**: Moling Team
+> **版本**: 2.1.0 | **最后更新**: 2026-06-21 | **维护者**: Moling Team
 
 ---
 
@@ -92,6 +92,17 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 验证：访问 http://localhost:8000/docs
 
+**启动 Celery Worker 和 Beat**（生产必需，开发可选）：
+```bash
+# Worker（消费异步任务）
+celery -A app.worker.celery_app worker -Q default,llm --loglevel=info
+
+# Beat（定时调度器，另一个终端）
+celery -A app.worker.celery_app beat --loglevel=info
+```
+
+验证健康检查：`GET http://localhost:8000/api/v1/health`，应返回 `{"status":"ok","database":"ok","redis":"ok","celery":"ok"}`
+
 ### 3.2 前端启动
 
 ```bash
@@ -106,10 +117,41 @@ npm run dev
 
 **后端** (`moling-server/.env`)：
 ```bash
-DATABASE_URL=sqlite+aiosqlite:///./moling.db  # 开发用 SQLite
-SECRET_KEY=your-secret-key-here                # openssl rand -hex 32 生成
+# --- 数据库 (生产用 PostgreSQL, 开发可用 SQLite) ---
+DATABASE_URL=sqlite+aiosqlite:///./moling.db     # 开发用 SQLite
+# DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/moling  # 生产用 PostgreSQL
+
+# --- 安全 ---
+SECRET_KEY=your-secret-key-here                    # openssl rand -hex 32 生成
+# REDIS_PASSWORD=your-redis-password               # 生产环境必须设置；开发可选
+
+# --- 环境 ---
 ENVIRONMENT=development
+APP_VERSION=0.1.0
+
+# --- CORS ---
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# --- LLM 配置 ---
+LLM_MODEL=deepseek-chat                            # 默认模型
+LLM_API_KEY=sk-your-api-key                        # API Key（通过后台 LlmConfigTab 也可配置）
+# LLM_PRO_KEYS=sk-key1,sk-key2,sk-key3             # Pro Pool（逗号分隔或 JSON 数组）
+# LLM_FLASH_KEYS=sk-fast1,sk-fast2                 # Flash Pool 快速模型
+
+# --- LLM Provider ---
+LLM_PROVIDER=deepseek                              # deepseek / openai / custom
+LLM_BASE_URL=https://api.deepseek.com/v1
+
+# --- Redis / Celery ---
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/1
+CELERY_RESULT_BACKEND=redis://localhost:6379/2
+
+# --- 安全限制 ---
+MAX_BODY_SIZE=10485760                             # 10MB 请求体限制
+
+# --- Sentry（可选） ---
+# SENTRY_DSN=https://xxx@sentry.io/xxx
 ```
 
 **前端** (`moling-web/.env.local`)：
@@ -139,10 +181,11 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 | 服务 | 容器名 | 镜像 | 端口 | 说明 |
 |------|--------|------|------|------|
 | `frontend` | `moling-frontend` | 本地构建 (moling-web) | 80 / 443 | Nginx 静态文件 + 反向代理 |
-| `app` | `moling-api` | 本地构建 (moling-server) | 8000 (expose) | 仅内网可达 |
-| `worker` | `moling-worker` | 本地构建 (moling-server) | — | Celery 异步任务 |
+| `app` | `moling-api` | 本地构建 (moling-server) | 8000 (expose) | FastAPI 应用，仅内网可达 |
+| `worker` | `moling-worker` | 本地构建 (moling-server) | — | Celery Worker（消费 default+llm 队列） |
+| `beat` | `moling-beat` | 本地构建 (moling-server) | — | Celery Beat（4 个周期性任务调度） |
 | `db` | `moling-db` | `pgvector/pgvector:pg17` | 5432 (内网) | PostgreSQL 17 + pgvector |
-| `redis` | `moling-redis` | `redis:7-alpine` | 6379 (内网) | 带密码持久化 |
+| `redis` | `moling-redis` | `redis:7-alpine` | 6379 (内网) | 带密码持久化（--requirepass） |
 | `prometheus` | `moling-prometheus` | `prom/prometheus:latest` | 9090 | 指标收集 |
 | `grafana` | `moling-grafana` | `grafana/grafana:latest` | 3001 | 可视化仪表板 |
 

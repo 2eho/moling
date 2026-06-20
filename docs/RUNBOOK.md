@@ -813,9 +813,12 @@ docker ps | grep moling-redis
 # 查看 Redis 日志
 docker logs moling-redis --tail 100
 
-# 检查 Redis 是否运行
+# 检查 Redis 是否运行（无密码）
 docker exec -it moling-redis redis-cli ping
 # 预期输出：PONG
+
+# 如果设置了密码（生产环境）
+docker exec -it moling-redis redis-cli -a "${REDIS_PASSWORD}" ping
 ```
 
 #### 步骤 2：检查 Redis 配置
@@ -1193,8 +1196,11 @@ docker exec -it moling-db psql -U moling moling < backup.sql
 ### Redis 常用命令
 
 ```bash
-# 进入 Redis CLI
+# 进入 Redis CLI（无密码）
 docker exec -it moling-redis redis-cli
+
+# 如果有密码
+docker exec -it moling-redis redis-cli -a "${REDIS_PASSWORD}"
 
 # 查看所有键
 KEYS *
@@ -1212,12 +1218,30 @@ FLUSHALL
 INFO
 ```
 
+### 健康检查命令
+
+```bash
+# 整体健康检查（DB + Redis + Celery）
+curl http://localhost:8000/api/v1/health
+
+# 成功响应: {"status":"ok","database":"ok","redis":"ok","celery":"ok"}
+# 降级响应: {"status":"degraded","message":"redis, celery unreachable","database":"ok","redis":"unreachable","celery":"unreachable"}
+
+# 仅检查数据库
+curl http://localhost:8000/api/v1/health/database
+
+# 查看 Celery Worker 状态
+celery -A app.worker.celery_app inspect ping
+celery -A app.worker.celery_app inspect active
+celery -A app.worker.celery_app inspect reserved
+```
+
 ---
 
 ## 文档维护
 
-- **版本**: 1.0.0
-- **最后更新**: 2026-06-16
+- **版本**: 1.1.0
+- **最后更新**: 2026-06-21
 - **维护者**: Moling Team
 - **更新频率**: 每次发生故障处理后，更新本文档
 

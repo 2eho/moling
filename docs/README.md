@@ -1,6 +1,6 @@
 # 墨灵 (Moling) 文档索引
 
-> **最后更新**: 2026-06-18
+> **最后更新**: 2026-06-21
 
 ---
 
@@ -8,19 +8,29 @@
 
 | 文档 | 说明 | 适用人群 |
 |:-----|:-----|:---------|
-| `ARCHITECTURE.md` | 系统架构（部署拓扑、数据流、技术栈、安全架构） | 全体开发者 |
+| `ARCHITECTURE.md` | 系统架构（部署拓扑、数据流、技术栈、安全架构、DAO规范、Worker链路） | 全体开发者 |
 | `DEPLOYMENT.md` | 部署指南（Docker/Nginx/云服务器/故障排查） | 运维/部署 |
-| `SPECIFICATIONS.md` | P0/P1/卡牌算法规格（质量门禁、测试要求） | 后端开发者 |
+| `SPECIFICATIONS.md` | P0/P1/卡牌算法 + 架构加固规格（质量门禁、测试要求） | 后端开发者 |
 | `RUNBOOK.md` | 运维手册（7 种故障的 SOP 处理流程） | 运维/值班 |
 | `ONBOARDING.md` | 新开发者上手指南（环境搭建、代码规范） | 新加入开发者 |
-| `SECURITY_HARDENING.md` | 安全加固（Rate Limiting/JWT黑名单/HTTPS/CSP/SQL注入） | 安全/运维 |
+| `SECURITY_HARDENING.md` | 安全加固（Rate Limiting/JWT黑名单/HTTPS/CSP/SQL注入/Content-Length/RefreshToken） | 安全/运维 |
 | `GIT_WORKFLOW_GUIDE.md` | Git 工作流指南（Trunk-Based、PR流程、提交规范） | 全体开发者 |
+
+## 🏗️ 设计与规格文档
+
+| 文档 | 位置 | 说明 |
+|:-----|:-----|:-----|
+| `design-decisions.md` | `docs/` | 前端视觉设计决策（ADR 格式，8 主题系统） |
+| `前端重建方案.md` | `docs/` | 前端重建技术方案（v1.0，Next.js 15 架构） |
+| `CI_CD_SETUP.md` | `docs/` | GitHub Actions CI/CD 配置指南 |
+| `OPENAPI_MANAGEMENT.md` | 项目根目录 | OpenAPI 规范三层自动更新管理方案 |
 
 ## 🎨 根目录设计文档
 
 | 文档 | 位置 | 说明 |
 |:-----|:-----|:-----|
-| `DESIGN.md` | 项目根目录 | 设计系统 v3.1（暗色主题、色阶、排版、组件样式） |
+| `DESIGN.md` | 项目根目录 | 设计系统（暗色主题、色阶、排版、组件样式） |
+| `VIBE_WRITING_DESIGN.md` | 项目根目录 | Vibe Writing 产品设计（Agent of Agents、交互模型） |
 | `fe-specs.md` | 项目根目录 | 前端 Phase 4 & 健康监控生产级规格 |
 
 ## 📊 辅助文档
@@ -32,6 +42,13 @@
 | `PERFORMANCE_TESTING_REPORT.md` | 性能测试完成报告 |
 | `DISASTER_RECOVERY_LOG.md` | 灾备演练记录（数据库停止模拟） |
 | `BACKUP_STRATEGY.md` | 数据库备份与灾备策略 |
+
+## 🔍 架构审计报告
+
+| 文档 | 日期 | 说明 |
+|:-----|:-----|:-----|
+| `ARCHITECTURE_DEEP_SCAN_2026-06-21.md` | 2026-06-21 | 架构深度扫描 v3 — 7 层全量审计（168 问题，加权 4.9/10） |
+| `ARCHITECTURE_SCAN_2026-06-20.md` | 2026-06-20 | 架构扫描 v2 — 分层审计 + 修复路线图 |
 | `OPENAPI_MANAGEMENT.md` | OpenAPI 规范三层自动更新管理方案 |
 
 ## 🗄️ moling-server 内部文档
@@ -63,13 +80,16 @@
 
 ## 交叉验证说明
 
-核心 7 份文档之间互为补充，无重复内容：
+核心文档之间互为补充，无重复内容：
 
 | 文档 | 与谁交叉验证 | 验证内容 |
 |:-----|:------------|:---------|
 | `ARCHITECTURE.md` | `DEPLOYMENT.md` | 部署架构一致性（端口、容器名、网络拓扑） |
 | `ARCHITECTURE.md` | `SPECIFICATIONS.md` | 模块划分与功能规格一致性 |
+| `ARCHITECTURE.md` | `ARCHITECTURE_DEEP_SCAN_2026-06-21.md` | 扫描发现的修复状态追踪 |
 | `DEPLOYMENT.md` | `RUNBOOK.md` | 故障恢复路径与部署配置一致 |
 | `DEPLOYMENT.md` | `SECURITY_HARDENING.md` | 安全配置在部署中正确应用 |
+| `DEPLOYMENT.md` | `CI_CD_SETUP.md` | CI/CD 部署流水线与 Docker Compose 一致性 |
 | `SPECIFICATIONS.md` | `fe-specs.md` | 前后端功能边界一致 |
 | `GIT_WORKFLOW_GUIDE.md` | `ONBOARDING.md` | 开发流程在入职指南中体现 |
+| `VIBE_WRITING_DESIGN.md` | `DESIGN.md` | 交互设计与视觉设计一致性 |

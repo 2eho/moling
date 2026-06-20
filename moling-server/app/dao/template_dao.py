@@ -12,7 +12,7 @@ from app.models.template import Template
 class TemplateDAO(BaseDAO[Template]):
     """Data access object for Template model."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(Template)
 
     async def get_by_genre(

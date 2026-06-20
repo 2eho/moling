@@ -12,7 +12,7 @@ from app.models.notification import Notification
 class NotificationDAO(BaseDAO[Notification]):
     """Data access object for Notification model."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(Notification)
 
     async def get_by_user(

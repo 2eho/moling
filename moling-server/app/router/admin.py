@@ -259,8 +259,8 @@ async def get_llm_usage(
         from app.llm.client import llm_client
         from app.llm.key_manager import key_manager
 
-        # Token 用量（来自 TokenBudgetManager）
-        budget_status = llm_client.budget_manager.get_budget_status()
+        # Token 用量（来自 TokenBudgetManager — Redis 持久化）
+        budget_status = await llm_client.budget_manager.get_budget_status()
 
         # 密钥池健康状态（来自 KeyManager）
         pool_pro = await key_manager.get_pool_status("pro")
@@ -276,7 +276,7 @@ async def get_llm_usage(
                 "total_keys": pool_pro["total"],
                 "healthy": pool_pro["healthy"],
             },
-            "note": "用量数据来自内存中的 TokenBudgetManager。服务重启后数据归零。",
+            "note": "用量数据来自 Redis 持久化的 TokenBudgetManager。多 worker 共享，服务重启不丢数据。",
         }
     except Exception as e:
         logger.error(f"Failed to query LLM usage: {e}", exc_info=True)

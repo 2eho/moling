@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     KEY_BACKOFF_MAX: int = 300  # 最大冷却秒数
     KEY_RECOVERY_CHECK_INTERVAL: int = 60  # 恢复检查间隔（秒）
 
+    # ---- Token Budget ----
+    TOKEN_BUDGET_LIMIT: int = 1_000_000  # 默认 100 万 token/天 (HH10: Redis 持久化)
+
     # ---- Rate Limiting ----
     RATE_LIMIT_CALLS: int = 1000  # 每个周期允许的请求数（开发环境设为 1000）
     RATE_LIMIT_PERIOD: int = 60  # 周期（秒）

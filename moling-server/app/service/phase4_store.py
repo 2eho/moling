@@ -102,7 +102,7 @@ class _RedisStore:
 
     async def get_lock_owner(self, lock_key: str) -> Optional[str]:
         val = await self._redis.get(lock_key)
-        return val.decode() if val else None
+        return val.decode("utf-8") if val else None
 
     async def release_lock(self, lock_key: str) -> None:
         await self._redis.delete(lock_key)
@@ -119,7 +119,7 @@ class _RedisStore:
         import json
         val = await self._redis.get(f"{self._TASK_PREFIX}:{task_id}")
         if val:
-            return json.loads(val.decode() if isinstance(val, bytes) else val)
+            return json.loads(val.decode("utf-8") if isinstance(val, bytes) else val)
         return None
 
 

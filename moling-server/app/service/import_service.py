@@ -356,6 +356,13 @@ class ImportService:
 
         await db.commit()
 
+        # 清理临时上传文件
+        try:
+            os.remove(file_path)
+            logger.debug("清理临时文件: %s", file_path)
+        except OSError as e:
+            logger.warning("清理临时文件失败 (ignored): %s — %s", file_path, e)
+
         logger.info("导入完成：project=%s 章节=%d 总字数=%d", project_id, len(raw_chapters), total_words)
 
         return {

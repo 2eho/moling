@@ -6,6 +6,7 @@ from typing import Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session as SyncSession
 
 from app.dao.base_dao import BaseDAO
 from app.models.card_pool import CardPool
@@ -179,12 +180,10 @@ class CardDAO(BaseDAO[CardPool]):
 
     def list_active_by_project_sync(
         self,
-        db,  # sync Session
+        db: SyncSession,
         project_id: int,
     ) -> list[CardPool]:
         """Synchronous: list all active cards for a project."""
-        from sqlalchemy.orm import Session as SyncSession
-
         stmt = (
             select(CardPool)
             .where(
@@ -199,7 +198,7 @@ class CardDAO(BaseDAO[CardPool]):
 
     def get_active_cards_sync(
         self,
-        db,  # sync Session
+        db: SyncSession,
         project_id: int,
         count: int = 20,
     ) -> list[CardPool]:
@@ -225,7 +224,7 @@ class CardDAO(BaseDAO[CardPool]):
 
     def list_by_project_sync(
         self,
-        db,  # sync Session
+        db: SyncSession,
         project_id: int,
     ) -> list[CardPool]:
         """Synchronous: list all cards for a project."""
@@ -242,7 +241,7 @@ class CardDAO(BaseDAO[CardPool]):
 
     def get_by_ids_sync(
         self,
-        db,  # sync Session
+        db: SyncSession,
         project_id: int,
         card_ids: list[int],
     ) -> list[CardPool]:
@@ -260,7 +259,7 @@ class CardDAO(BaseDAO[CardPool]):
 
     def batch_update_is_active_sync(
         self,
-        db,  # sync Session
+        db: SyncSession,
         project_id: int,
         card_ids: list[int],
         is_active: bool,

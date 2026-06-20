@@ -1,6 +1,6 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.3.0  
+> **文档版本**: 1.4.0  
 > **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
@@ -402,6 +402,35 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 # LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 ```
 
+### Token 预算管理 (RF2.10)
+
+> **状态**: ✅ 已实现 — 2026-06-21  
+> **文件**: `app/llm/client.py` (TokenBudgetManager), `app/config.py` (TOKEN_BUDGET_LIMIT)
+
+**功能**: 基于 Redis 持久化的 Token 用量追踪与预算控制，多 Worker 进程间共享预算状态。
+
+| 特性 | 说明 |
+|------|------|
+| **持久化** | Redis Sorted Set (`moling:token_budget:*`) 按日分区 |
+| **预算上限** | `TOKEN_BUDGET_LIMIT` 环境变量配置（默认 1,000,000 tokens/天） |
+| **多用户** | 按 `user_id` 维度独立追踪 |
+| **超限处理** | `_check_budget()` 前置检查，超限立即拒绝并返回 429 |
+| **异步接口** | `track_usage()` / `check_budget()` / `get_budget_status()` 均为 `async` |
+| **进程重启** | Redis 持久化确保数据不丢失 |
+
+**Redis Key 格式**:
+```
+moling:token_budget:{user_id} → Sorted Set
+  score: Unix timestamp
+  member: {timestamp_ms}:{tokens}
+```
+
+**配置**:
+```bash
+# .env
+TOKEN_BUDGET_LIMIT=1000000    # 默认 100 万 tokens/天
+```
+
 ### Sentry (错误追踪)
 
 | 项目 | 说明 |
@@ -675,6 +704,104 @@ celery -A app.worker.celery_app worker -B -Q default,llm --loglevel=info
 
 返回状态：`ok`（全部通过）或 `degraded`（任一失败）。`degraded` 时 `message` 字段列出失败的依赖。
 
+### 子情节健康监控服务
+
+> **新增于 2026-06-21 R1+R2 架构加固**
+
+`app/service/health_monitor.py` 对活跃项目的剧情承诺（plot promises）执行三级预警检测，**纯算法/SQL 实现，零 LLM 成本**：
+
+| 级别 | 触发条件 | 严重程度 | 行为 |
+|:----:|----------|:--------:|------|
+| **R1 (黄)** | 连续 8 章无对应 promise 推进 | 🟡 低 | 生成 HealthAlert，通知用户关注 |
+| **R2 (橙)** | 连续 4+ 次同类型 promise 重复推进 | 🟠 中 | 生成 HealthAlert + 建议 plot 结构调整 |
+| **R3 (红)** | 连续 10 章静默（promise 完全无提及） | 🔴 高 | 先检查最新章节关键词提及 → 若提及则**降级为 R1**；若无提及则生成严重告警 |
+
+**防疲劳过滤**: 同一 `(promise_id, rule)` 组合在 3 章内最多触发 1 次，防止重复扰民。
+
+**章级增量算法**: 每次检测只对比当前章节与历史推进记录，不重新分析全部历史章节——时间复杂度 O(1) 而非 O(n)。
+
+### AppError 错误处理体系
+
+> **新增于 2026-06-21 R1+R2 架构加固**
+
+统一错误处理取代散落的 `HTTPException` 直接抛出：
+
+| 层 | 组件 | 说明 |
+|:--:|------|------|
+| **枚举** | `ErrorCode` (IntEnum) | 数字编码 = `HTTP状态码 × 100 + 序号`（如 `40101`, `50001`），机器可读 |
+| **消息** | `_ERROR_MESSAGES` 字典 | 每个 ErrorCode 对应中文可读消息 |
+| **映射** | `_ERROR_TO_STATUS` 字典 | ErrorCode → HTTP 状态码自动映射 |
+| **基类** | `AppError(HTTPException)` | 统一基类，接收 `ErrorCode` + 可选 `detail` 覆盖消息 |
+| **子类** | `NotFoundError`, `AuthError`, `PermissionError`, `ValidationError`, `RateLimitError`, `ConflictError`, `VaultNotFoundError` | 语义化子类，方便 try/except 精确捕获 |
+
+**调用契约**:
+```python
+# 旧: raise HTTPException(status_code=404, detail="项目不存在")
+# 新: raise NotFoundError(ErrorCode.PROJECT_NOT_FOUND)
+# 需要附加信息时:
+raise NotFoundError(ErrorCode.PROJECT_NOT_FOUND, detail=f"项目 {project_id} 已被删除")
+```
+
+**全局异常处理器** (`app/main.py`): 捕获所有 `AppError` 子类，统一格式化为 `{"code": 40101, "message": "...", "data": null}` 响应，并自动调用 `_write_error_log()` 记录结构化日志。
+
+### Content-Length 请求体限制
+
+> **新增于 2026-06-21 R1+R2 架构加固**
+
+`app/middleware/content_length_limit.py` 在 ASGI 层前置拦截超大请求体，**在读取 body 之前**就根据 `Content-Length` 头拒绝，防止内存攻击：
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `DEFAULT_MAX_SIZE` | 10MB (`10 * 1024 * 1024`) | 默认最大请求体大小 |
+| `excluded_paths` | `("/api/v1/import/upload",)` | 排除路径（如文件上传需要更大尺寸） |
+
+413 响应格式: `{"code": 41301, "message": "请求体过大", "data": null, "meta": {"max_size": 10485760, "request_id": "..."}}`
+
+### Worker 可靠性链路
+
+> **新增于 2026-06-21 R1+R2 架构加固**
+
+Celery Worker 配置 (`app/worker/celery_app.py`) 经过 7 项生产级加固：
+
+| 加固项 | 配置 | 作用 |
+|--------|------|------|
+| **超时控制** | `task_time_limit=600` (硬), `task_soft_time_limit=540` (软) | 防止任务永久挂起；软超时可捕获 `SoftTimeLimitExceeded` 做清理 |
+| **延迟确认** | `task_acks_late=True` | 任务完成后才确认，worker 崩溃不丢任务 |
+| **预取控制** | `worker_prefetch_multiplier=1` | 每次只取 1 个任务，防止长任务堆积 |
+| **队列分离** | `llm` (长任务) vs `default` (短任务) | 通过 `task_routes` 路由，LLM 任务不阻塞常规任务 |
+| **故障恢复** | `task_reject_on_worker_lost=True` + `visibility_timeout=3600` | 1 小时未确认则重新入队 |
+| **内存泄漏防护** | `worker_max_tasks_per_child=50` | 每 50 个任务重启子进程，释放积累内存 |
+| **序列化安全** | `task_serializer='json'` | 使用 JSON 而非 pickle，防止反序列化攻击 |
+
+**Worker DB 会话管理模式** (`app/worker/db.py`):
+- **统一入口**: 所有 6 个 Worker 通过 `get_worker_session()` 获取 DB 会话，禁止各自创建引擎
+- **惰性创建**: 引擎在首次请求时才创建 (`_ensure_engine()`)，`pool_size=2` + `pool_pre_ping=True`
+- **优雅释放**: 通过 Celery `worker_shutdown` 信号触发 `dispose_worker_engine()` 释放连接池
+
+**三层异常处理** (以 `phase4_task.py` 为例，6 个 Worker 统一模式):
+```
+SoftTimeLimitExceeded → 重新投递 (raise)
+    ↓
+可重试异常 (SQLAlchemyError, ConnectionError, TimeoutError) → autoretry_for 自动重试
+    ↓
+通用 Exception → 记录日志，标记任务 FAILED
+```
+
+### Windows 平台适配
+
+> **新增于 2026-06-21 R1+R2 架构加固**
+
+`app/dependencies.py` 包含完整的 Windows 平台兼容层，解决 SQLAlchemy async + aiosqlite + greenlet 在 Windows 上的兼容问题：
+
+| 适配项 | 实现 | 原理 |
+|--------|------|------|
+| **greenlet 猴子补丁** | 在 SQLAlchemy 导入前替换 `greenlet_spawn` → `ThreadPoolExecutor` | Windows 缺少原生 greenlet 支持 |
+| **同步包装器** | `_SyncAsyncSessionWrapper` | 将同步 Session 包装为可 await 的异步接口 |
+| **事件系统补丁** | 替换 `_get_exec_once_mutex` (返回 None) → `contextlib.nullcontext()` | SQLAlchemy 事件系统在 Windows 上的已知 bug |
+| **双轨会话** | `get_db` (异步，Linux) + `get_sync_db` (同步，auth 场景) | auth 依赖完全避开 greenlet 问题 |
+
+> **注意**: 这些适配仅影响 Windows 开发环境，Linux 生产环境走原生 async Session，无性能损失。
+
 ### 认证和授权
 
 ```mermaid
@@ -715,6 +842,47 @@ sequenceDiagram
 | **SQL 注入防护** | 使用 SQLAlchemy ORM（自动转义） | `SQLAlchemy` |
 | **XSS 防护** | React 自动转义 + CSP 头 | Next.js |
 | **Sentry 监控** | 实时错误监控和告警 | `Sentry SDK` |
+| **请求体限制** | ASGI 层 Content-Length 前置拦截（10MB） | `app/middleware/content_length_limit.py` |
+| **请求体验证** | Pydantic + AppError 统一错误格式 | `app/errors.py`, `app/schemas/` |
+
+### Refresh Token 轮换
+
+> **新增于 2026-06-21 R1 架构加固**
+
+登录接口返回 `access_token` + `refresh_token`，`POST /api/v1/auth/refresh` 端点实现轮换逻辑：
+- 验证 refresh token → 签发新 access token + 新 refresh token
+- 旧 refresh token 加入 Redis 黑名单（TTL = 原过期时间）
+- 防止 refresh token 泄露后的长期滥用
+
+---
+
+## DAO 层设计规范
+
+> **新增于 2026-06-21 R1+R2+R3 架构加固**
+
+`app/dao/base_dao.py` 定义了所有 DAO 子类的统一行为规范：
+
+| 规范 | 实现 | 目的 |
+|------|------|------|
+| **泛型基类** | `BaseDAO[ModelT]` | 所有 13 个 DAO 子类继承，类型安全 |
+| **limit 钳制** | `DEFAULT_MAX_LIMIT = 500` / `_CURSOR_MAX_LIMIT = 200` | 防止 `?limit=999999` 拖垮数据库 |
+| **软删除约定** | `include_deleted=False` 默认过滤，6 个 DAO 24 处 `is_deleted=False` | 数据可恢复，符合数据保护要求 |
+| **游标分页** | `list_cursor(cursor, cursor_field, limit)` 返回 `(items, next_cursor)` | 替代 offset/limit，避免翻页数据重复/遗漏 |
+| **统一异常处理** | 每个方法 `try/except SQLAlchemyError → AppError(ErrorCode.INTERNAL_ERROR)` | 异常类型统一，调用方可精确捕获 |
+| **事务契约** | DAO 只执行 `flush()` + `refresh()`，**禁止内部 `commit()`** | 事务边界由 Service/Router 层控制 |
+
+**方法契约清单** (13 个 DAO 统一实现):
+
+| 方法 | 返回类型 | 说明 |
+|------|---------|------|
+| `create(data)` | `ModelT` | 创建并 flush+refresh |
+| `get_by_id(id)` | `ModelT \| None` | 主键查询，默认排除软删除 |
+| `get_multi(filters, limit, offset)` | `list[ModelT]` | 批量查询，limit 钳制 ≤500 |
+| `update(id, data)` | `ModelT` | 部分更新，flush+refresh |
+| `delete(id, soft=True)` | `ModelT` | 软删除（设置 is_deleted=True）或物理删除 |
+| `restore(id)` | `ModelT` | 恢复软删除记录 |
+| `count(filters)` | `int` | 计数，默认排除软删除 |
+| `list_cursor(cursor, cursor_field, limit)` | `tuple[list, cursor]` | 游标分页查询 |
 
 ---
 
@@ -785,6 +953,7 @@ sequenceDiagram
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.4.0 | 2026-06-21 | 文档闭环回填：新增 AppError 错误处理体系、子情节健康监控服务、Worker 可靠性链路（7 项 Celery 加固 + DB 会话管理 + 三层异常处理）、Windows 平台适配层（greenlet 补丁 + 双轨会话）、DAO 层设计规范（limit 钳制 / 软删除 / 游标分页 / 事务契约）、Content-Length 中间件、Refresh Token 轮换 | Moling Team |
 | 1.3.0 | 2026-06-21 | R3 架构加固：新增配置管理章节（26 项环境变量）、Celery Beat 定时调度（4 个周期性任务）、健康检查增强（DB+Redis+Celery 三方验证）、DAO 层命名规范 + 游标分页 | Moling Team |
 | 1.2.0 | 2026-06-18 | 修正 Docker Compose 两套编排说明、端口映射表（Nginx 80/443、Grafana 3001:3000）、新增 Phase 4 核心架构章节 | Moling Team |
 | 1.0.0 | 2026-06-16 | 初始版本 | Moling Team |

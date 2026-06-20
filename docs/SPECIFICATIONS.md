@@ -1,7 +1,7 @@
 # 墨灵 (Moling) 规格文档
 
-> **版本**: 2.0.0 | **最后更新**: 2026-06-18
-> 本文档整合了 P0/P1 规格、P0 剩余架构项及卡牌组合算法规格。
+> **版本**: 2.1.0 | **最后更新**: 2026-06-21
+> 本文档整合了 P0/P1 规格、P0 剩余架构项、卡牌组合算法规格及架构加固实现规格。
 
 ---
 
@@ -10,7 +10,8 @@
 1. [P0 规格](#1-p0-规格)
 2. [P1 规格](#2-p1-规格)
 3. [卡牌组合算法](#3-卡牌组合算法)
-4. [质量门禁](#4-质量门禁)
+4. [架构加固规格](#4-架构加固规格)
+5. [质量门禁](#5-质量门禁)
 
 ---
 
@@ -163,7 +164,193 @@ Step 1: 抽卡 → Step 2: 四库过滤 → Step 3: 冲突检测 → Step 4: 方
 
 ---
 
-## 4. 质量门禁
+## 4. 架构加固规格
+
+> **新增于 2026-06-21 R1+R2+R3 架构深度扫描修复**
+
+### 4.1 AppError 统一错误体系
+
+**目标**: 替代散落的 `HTTPException` 直接抛出，建立机器可读、人类可理解、调用方可捕获的三层错误体系。
+
+**实现位置**: `app/errors.py`
+
+| 组件 | 说明 |
+|------|------|
+| `ErrorCode` (IntEnum) | 数字编码 = `HTTP状态码 × 100 + 序号`，如 `40101` (未认证), `50001` (内部错误) |
+| `_ERROR_MESSAGES` | 每个 ErrorCode 对应中文可读消息 |
+| `_ERROR_TO_STATUS` | ErrorCode → HTTP 状态码自动映射 |
+| `AppError(HTTPException)` | 统一基类，接收 `ErrorCode` + 可选 `detail` |
+| 子异常类 | `NotFoundError`, `AuthError`, `PermissionError`, `ValidationError`, `RateLimitError`, `ConflictError`, `VaultNotFoundError` |
+
+**异常处理器**: `app/main.py` 全局注册 `@app.exception_handler(AppError)`，自动格式化 JSON 响应并写入错误日志。
+
+**验收标准**:
+- 所有 Service/Worker 层使用 AppError 子类抛出异常
+- 全局异常处理器覆盖所有 AppError 子类
+- 错误日志自动记录 `_write_error_log()`（含 request_id, timestamp）
+
+### 4.2 Worker 数据库会话管理
+
+**目标**: 消除 Worker 各自创建引擎的模式，统一为 `get_worker_session()` 单一路径。
+
+**实现位置**: `app/worker/db.py`
+
+| 组件 | 说明 |
+|------|------|
+| `get_worker_session()` | 惰性引擎创建 (`_ensure_engine()`)，pool_size=2, pool_pre_ping=True |
+| `dispose_worker_engine()` | 通过 Celery `worker_shutdown` 信号触发释放 |
+| `WorkerSession` | 异步上下文管理器，自动 commit / rollback / close |
+
+**约束**: 全部 6 个 Worker 模块 (`phase4_task`, `import_task`, `book_analysis_task`, `card_retire_task`, `vault_reanalyze_task`, `tasks`) 已统一使用 `get_worker_session()`。
+
+### 4.3 Worker 三层异常处理
+
+**目标**: 区分可恢复错误和不可恢复错误，避免任务静默失败。
+
+**模式** (以 `phase4_task.py` 为例):
+
+```
+SoftTimeLimitExceeded → 捕获后 raise 重新投递（不走 autoretry）
+    ↓
+可重试异常元组 _RETRYABLE = (SQLAlchemyError, ConnectionError, TimeoutError)
+    → Celery autoretry_for 自动重试（max_retries=1, delay=300/600s）
+    ↓
+通用 Exception → 记录结构化日志，标记任务 FAILED
+```
+
+**验收标准**:
+- 6 个 Worker 全部使用三层异常处理
+- `SoftTimeLimitExceeded` 在所有 Worker 中被捕获
+- `_RETRYABLE` 元组覆盖所有可恢复的临时故障
+
+### 4.4 Celery Beat 定时调度
+
+**目标**: 4 个周期性任务免外部 cron 自动执行。
+
+**实现位置**: `app/worker/celery_app.py` → `beat_schedule`
+
+| 任务 | 调度周期 | 用途 |
+|------|---------|------|
+| `phase4-auto-advance` | 每小时 | 扫描自动审核项目，触发 Phase 4 |
+| `vault-periodic-reanalyze` | 每 6 小时 | 对近期活跃项目触发 Vault 重分析 |
+| `card-retire-check` | 每天 | 检查卡片池新鲜度，标记过期卡片 |
+| `health-auto-notify` | 每 30 分钟 | 活跃项目健康检查，生成 HealthAlert |
+
+**启动命令**:
+```bash
+celery -A app.worker.celery_app worker -Q default,llm --loglevel=info  # Worker
+celery -A app.worker.celery_app beat --loglevel=info                    # Beat 调度器
+```
+
+### 4.5 健康检查端点
+
+**目标**: `GET /api/v1/health` 验证 DB + Redis + Celery 三方连通性。
+
+| 检查项 | 方法 | 超时 | 失败行为 |
+|--------|------|------|----------|
+| Database | `SELECT 1` | 继承 session 超时 | status="degraded" |
+| Redis | `PING` | 3s | status="degraded" |
+| Celery | `control.ping()` | 3s | status="degraded" |
+
+### 4.6 子情节健康监控
+
+**目标**: 对活跃项目的剧情承诺执行三级预警检测，零 LLM 成本。
+
+**实现位置**: `app/service/health_monitor.py`
+
+| 级别 | 触发条件 | 行为 |
+|:----:|----------|------|
+| R1 (黄) | 连续 8 章无对应 promise 推进 | 生成 HealthAlert |
+| R2 (橙) | 连续 4+ 次同类型重复推进 | 生成 HealthAlert + 结构调整建议 |
+| R3 (红) | 连续 10 章静默 | 先关键词降级检查 → 降级为 R1 或生成严重告警 |
+
+**防疲劳**: 同一 `(promise_id, rule)` 3 章内最多 1 次。章级增量算法 O(1)。
+
+### 4.7 DAO 层统一规范
+
+**目标**: 13 个 DAO 子类共享统一的查询行为和安全约束。
+
+| 规范 | 实现 |
+|------|------|
+| limit 钳制 | `DEFAULT_MAX_LIMIT=500`, `_CURSOR_MAX_LIMIT=200` |
+| 软删除约定 | `include_deleted=False` 默认过滤，6 DAO 24 处 `is_deleted=False` |
+| 游标分页 | `list_cursor()` 返回 `(items, next_cursor)` |
+| 事务契约 | DAO 只 flush，禁止 commit |
+
+### 4.8 安全加固
+
+| 加固项 | 位置 | 说明 |
+|--------|------|------|
+| Content-Length 拦截 | `app/middleware/content_length_limit.py` | ASGI 层前置拦截，10MB 默认限制，`excluded_paths` 排除机制 |
+| Redis 密码 | `config.py` + `dependencies.py` | `REDIS_PASSWORD` env var，生产环境警告 |
+| CORS 审查 | `config.py` | 生产环境禁用 `*` 通配符 |
+| Refresh Token 轮换 | `app/router/auth.py` | 签发新 token 同时作废旧 token（Redis 黑名单） |
+| File upload 限制 | `app/middleware/content_length_limit.py` | 排除路径白名单 |
+
+### 4.9 Windows 平台兼容
+
+**实现位置**: `app/dependencies.py`
+
+| 适配 | 原理 |
+|------|------|
+| greenlet 猴子补丁 → `ThreadPoolExecutor` | Windows 无原生 greenlet |
+| `_SyncAsyncSessionWrapper` | 同步 Session → awaitable |
+| 事件系统补丁 `_get_exec_once_mutex` | SQLAlchemy Windows bug |
+| 双轨会话 `get_db` + `get_sync_db` | auth 依赖避开 greenlet |
+
+### 4.10 模型关系补全
+
+**目标**: 19 个 SQLAlchemy 模型补 `relationship()` 定义，支持 ORM 级联查询。
+
+**变更**: 18 文件修改（19 模型），覆盖所有 FK 列的 `back_populates` 双向关系。
+
+### 4.11 API 端点加固
+
+| 加固项 | 影响 |
+|--------|------|
+| 7 个新 Pydantic Schema | 8 个端点 response_model 从 dict → 具体 Schema 类型 |
+| Template 端点认证 | 3 个端点添加 `Depends(get_current_user)` |
+| 角色校验 | admin 路由添加 `Depends(require_admin)` |
+| `current_user` 类型一致化 | 7 个 Router 文件 32 处 `dict` → `User` |
+| Schema `__init__.py` 全量导出 | admin(8)/phase4(4)/setting(6)/weave(3) 共 21 类 |
+| Token Budget Redis 持久化 | `app/llm/client.py` TokenBudgetManager 异步 Redis 化 |
+
+### 4.12 Token 预算 Redis 持久化 (RF2.10)
+
+> **状态**: ✅ 已完成 — 2026-06-21  
+> **关联文档**: `docs/ARCHITECTURE.md` — Token 预算管理章节
+
+| 变更 | 文件 | 说明 |
+|------|------|------|
+| TOKEN_BUDGET_LIMIT | `app/config.py` | 环境变量配置（默认 1,000,000 tokens/天） |
+| TokenBudgetManager 重构 | `app/llm/client.py` (+196/-66) | 同步内存 → 异步 Redis (redis.asyncio) |
+| Caller 适配 | `client.py` + `app/router/admin.py` | 3 处 await 化 + admin note 更新 |
+| 多 Worker 共享 | Redis Sorted Set | Key: `moling:token_budget:{user_id}`, 按日分区 |
+
+### 4.13 ID 类型统一风险评估 (R3.4)
+
+> **状态**: ⚠️ 评估完成，不执行 DB 迁移  
+> **关联文档**: `docs/id-type-unification-plan.md` (350 行完整评估)
+
+- 21 个模型 3 种 PK 类型混用（String(36) ×15, Integer ×4, Uuid ×1, Key ×1）
+- 28 条 FK 关系，2 条类型不匹配（IngestJob.user_id 🔴 严重 Bug）
+- 推荐方案 C：保持现状 + ID 抽象层
+
+### 4.14 LOW 问题 7 项全修复
+
+| LL# | 问题 | 修复文件 | 状态 |
+|-----|------|---------|:--:|
+| LL1 | 编码中文乱码 | `phase4_store.py` +2 `decode("utf-8")` | ✅ |
+| LL2 | engine dispose | 已有保护（main.py, worker/db.py） | ✅ |
+| LL3 | Redis 无密码 | 已有 REDIS_PASSWORD validator | ✅ |
+| LL4 | DAO 类型注解 | 4 dao 文件 | ✅ |
+| LL5 | 导入文件未清理 | `import_service.py` +os.remove | ✅ |
+| LL6 | Driver 重复 | 仅 2 处（dependencies, worker/db） | ✅ |
+| LL7 | Schema 未导出 | `__init__.py` +21 类 | ✅ |
+
+---
+
+## 5. 质量门禁
 
 ### 4.1 通用门禁
 
@@ -210,6 +397,7 @@ python -m pytest tests/test_confidence_level.py -v --tb=short        # ≥10
 
 | 版本 | 日期 | 内容 |
 |:----|:----|:-----|
+| 2.1.0 | 2026-06-21 | 文档闭环回填：新增架构加固规格（4.1-4.11），覆盖 AppError 体系、Worker 会话管理、三层异常处理、Celery Beat、健康检查、子情节监控、DAO 规范、安全加固、Windows 适配、模型关系、API 端点 |
 | 2.0.0 | 2026-06-18 | 整合 p0-specs.md + p1-specs.md + p0-remaining-arch.md + 算法文档 |
 | 1.0.0 | 2026-06-17 | 原始三份规格文档分拆版本 |
 

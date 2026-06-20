@@ -1,7 +1,7 @@
 # 墨灵(Moling) 新开发者快速上手指南
 
-> **文档版本**: 1.1.0  
-> **最后更新**: 2026-06-18  
+> **文档版本**: 1.2.0  
+> **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 新加入的开发人员
 
@@ -249,6 +249,31 @@ brew install postgresql@16
 pip install psycopg[binary]
 ```
 
+#### 问题 4：Windows 下 greenlet 兼容问题
+
+墨灵后端在 Windows 上通过 `app/dependencies.py` 内置的 greenlet 猴子补丁自动适配。
+如果遇到 `greenlet_spawn` 相关错误：
+- 确保使用 SQLite（`sqlite+aiosqlite:///./moling.db`），这会触发 `_SyncAsyncSessionWrapper` 包装
+- 确保 Python 版本 ≥ 3.10
+- 技术原理：Windows 缺少原生 greenlet 支持，补丁将 `greenlet_spawn` 替换为 `ThreadPoolExecutor` 实现
+
+#### 问题 5：Celery Worker 无法启动
+
+```bash
+# 检查 Redis 是否运行
+redis-cli ping  # 应返回 PONG
+
+# 检查环境变量
+echo $CELERY_BROKER_URL  # 应为 redis://localhost:6379/1
+
+# 启动 Worker（开发环境）
+celery -A app.worker.celery_app worker -Q default,llm --loglevel=info
+
+# 验证健康检查
+curl http://localhost:8000/api/v1/health
+# 应返回 {"status":"ok","database":"ok","redis":"ok","celery":"ok"}
+```
+
 ---
 
 ## 配置环境变量
@@ -271,30 +296,41 @@ vim .env  # 或者使用 VS Code: code .env
 ```bash
 # .env 文件示例
 
-# 数据库连接（本地开发）
-DATABASE_URL=postgresql+asyncpg://moling:moling@localhost:5432/moling
+# --- 数据库 ---
+# 本地开发用 SQLite（Windows 绿色线程兼容）
+DATABASE_URL=sqlite+aiosqlite:///./moling.db
+# 生产环境用 PostgreSQL:
+# DATABASE_URL=postgresql+asyncpg://moling:moling@localhost:5432/moling
 
-# 或者使用同步驱动（调试时可能需要）
-# DATABASE_URL=postgresql+psycopg://moling:moling@localhost:5432/moling
-
-# Redis 连接
+# --- Redis ---
 REDIS_URL=redis://localhost:6379/0
+# REDIS_PASSWORD=your-redis-password       # 生产环境必须设置
 
-# JWT 密钥（使用 openssl rand -hex 32 生成）
-SECRET_KEY=your-secret-key-here
+# --- Celery ---
+CELERY_BROKER_URL=redis://localhost:6379/1
+CELERY_RESULT_BACKEND=redis://localhost:6379/2
 
-# LLM API 密钥（可选，如果不使用 AI 功能可以留空）
-OPENAI_API_KEY=sk-...
-OPENAI_BASE_URL=https://api.openai.com/v1
+# --- JWT 安全 ---
+SECRET_KEY=your-secret-key-here            # openssl rand -hex 32 生成
 
-# Sentry DSN（可选，用于错误追踪）
-SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+# --- LLM 配置 ---
+LLM_MODEL=deepseek-chat                    # 默认模型
+LLM_PROVIDER=deepseek                      # deepseek / openai / custom
+LLM_API_KEY=sk-your-api-key                # API Key（也可通过后台管理页面配置）
+LLM_BASE_URL=https://api.deepseek.com/v1
+# LLM_PRO_KEYS=sk-key1,sk-key2             # Pro Key Pool（逗号分隔）
+# LLM_FLASH_KEYS=sk-fast1,sk-fast2         # Flash Key Pool
 
-# 环境标识
-ENVIRONMENT=development
-
-# CORS 配置（允许本地前端访问）
+# --- 安全 ---
+MAX_BODY_SIZE=10485760                     # 10MB 请求体限制
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# --- 监控（可选） ---
+# SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+
+# --- 环境标识 ---
+ENVIRONMENT=development
+APP_VERSION=0.1.0
 ```
 
 ### 前端环境变量

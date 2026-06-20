@@ -12,7 +12,7 @@ from app.models.phase4_task import Phase4Task
 class Phase4DAO(BaseDAO[Phase4Task]):
     """Data access object for Phase4Task model."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(Phase4Task)
 
     async def get_by_nonce(

@@ -62,6 +62,35 @@ from app.schemas.coherence import (
     CoherencePipelineResult,
     GROUP_DEFINITIONS,
 )
+from app.schemas.admin import (
+    SystemStatsResp,
+    LlmUsageResp,
+    LLMConfigReq,
+    LLMConfigResp,
+    AdminStatsResp,
+    UserManageResp,
+    ProjectManageResp,
+    UpdateUserReq,
+)
+from app.schemas.phase4 import (
+    Phase4SuggestionResp,
+    ApplyPhase4Req,
+    RejectReviewReq,
+    Phase4TaskResp,
+)
+from app.schemas.setting import (
+    UserSettings,
+    HealthMonitorReq,
+    Phase4ReviewReq,
+    Phase4ModeReq,
+    ChangePasswordReq,
+    UpdateProfileReq,
+)
+from app.schemas.weave import (
+    WeaveSuggestionResp,
+    ApplyWeaveReq,
+    WeaveAnalysisResp,
+)
 
 __all__ = [
     # common
@@ -113,4 +142,29 @@ __all__ = [
     "CoherenceValidationResult",
     "CoherencePipelineResult",
     "GROUP_DEFINITIONS",
+    # admin
+    "SystemStatsResp",
+    "LlmUsageResp",
+    "LLMConfigReq",
+    "LLMConfigResp",
+    "AdminStatsResp",
+    "UserManageResp",
+    "ProjectManageResp",
+    "UpdateUserReq",
+    # phase4
+    "Phase4SuggestionResp",
+    "ApplyPhase4Req",
+    "RejectReviewReq",
+    "Phase4TaskResp",
+    # setting
+    "UserSettings",
+    "HealthMonitorReq",
+    "Phase4ReviewReq",
+    "Phase4ModeReq",
+    "ChangePasswordReq",
+    "UpdateProfileReq",
+    # weave
+    "WeaveSuggestionResp",
+    "ApplyWeaveReq",
+    "WeaveAnalysisResp",
 ]

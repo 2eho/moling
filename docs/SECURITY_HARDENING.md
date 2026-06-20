@@ -2,13 +2,15 @@
 
 ## 概述
 
-本文档记录了墨灵项目实施的 5 项安全加固措施：
+本文档记录了墨灵项目实施的安全加固措施：
 
 1. **Rate Limiting（速率限制）** - 防止暴力破解
 2. **JWT 黑名单** - 实现登出立即失效
 3. **HTTPS 强制 + HSTS** - 传输层安全
 4. **SQL 注入防护审计** - 代码审计结果
 5. **CSP 防 XSS** - 内容安全策略
+6. **Content-Length 请求体限制** - DoS 防护
+7. **Refresh Token 轮换** - 防止 Token 泄露滥用
 
 ---
 
@@ -517,6 +519,66 @@ connect-src 'self' https://api.yourdomain.com https://www.google-analytics.com;
 
 ---
 
+## 6. Content-Length 请求体限制
+
+> **新增于 2026-06-21 R1+R2 架构加固**
+
+### 目标
+
+在 ASGI 层前置拦截超大请求体，**在读取 body 之前**就根据 `Content-Length` 头拒绝，防止大请求体内存攻击。
+
+### 实现位置
+
+**文件**: `moling-server/app/middleware/content_length_limit.py`
+
+### 配置
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `DEFAULT_MAX_SIZE` | 10MB | 通过 `MAX_BODY_SIZE` 环境变量覆盖 |
+| `excluded_paths` | `("/api/v1/import/upload",)` | 排除路径白名单 |
+
+### 413 响应格式
+
+```json
+{
+  "code": 41301,
+  "message": "请求体过大",
+  "data": null,
+  "meta": {
+    "max_size": 10485760,
+    "request_id": "...",
+    "timestamp": "2026-06-21T02:00:00Z"
+  }
+}
+```
+
+### 集成方式
+
+在 `app/main.py` 中通过 `app.add_middleware()` 注册，位于其他中间件之前。
+
+---
+
+## 7. Refresh Token 轮换
+
+> **新增于 2026-06-21 R1 架构加固**
+
+### 目标
+
+防止 Refresh Token 泄露后的长期滥用。
+登录接口返回 `access_token` + `refresh_token`，
+`POST /api/v1/auth/refresh` 端点实现轮换逻辑：
+- 验证 refresh token → 签发新 access token + 新 refresh token
+- 旧 refresh token 加入 Redis 黑名单（TTL = 原过期时间）
+
+### 安全优势
+
+- 即使 Refresh Token 被窃取，旧 Token 也会在下次合法使用时被作废
+- 攻击者无法同时持有新旧两个有效 Token
+- 黑名单持久化在 Redis 中，Worker/Celery 共享
+
+---
+
 ## 部署检查清单
 
 ### 1. 环境变量
@@ -673,7 +735,9 @@ sudo ufw allow 6379
 - [ ] JWT token 包含 `jti` 字段
 - [ ] 登出端点已将 token 加入黑名单
 - [ ] Token 验证时检查黑名单
-- [ ] Redis 已部署并运行
+- [ ] Redis 密码已设置（生产环境）并验证
+- [ ] Content-Length 中间件已注册，MAX_BODY_SIZE 已配置
+- [ ] Refresh Token 轮换端点已测试
 - [ ] Nginx 配置包含 HTTPS 强制跳转
 - [ ] Nginx 配置包含所有安全响应头
 - [ ] SSL 证书已配置（生产环境）
@@ -723,6 +787,6 @@ docker-compose logs -f app
 
 ---
 
-**文档版本**: 1.0  
-**最后更新**: 2026-06-16  
-**作者**: AI 安全加固助手
+**文档版本**: 1.1.0  
+**最后更新**: 2026-06-21  
+**作者**: Moling Team
