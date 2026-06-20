@@ -685,8 +685,8 @@ P11-1 → P11-2 (导入引擎) → P1-3 (双状态) → P7-2 (两套提取)
 | H2 | 日志路径/轮转/保留全部硬编码 | `audit_log.py:15-55` | 运维不可控 |
 | H3 | 审计日志仅按时间轮转无大小保护 | `audit_log.py:31` | 磁盘写满风险 |
 | H4 | Content-Length limit 与 config 脱节 | `content_length_limit.py:16` vs `main.py:166` | 修改配置不生效 |
-| H5 | SECRET_KEY validator 依赖 Pydantic 字段声明顺序 | `config.py:174-177` | 生产可能用弱密钥 |
-| H6 | PostgreSQL 连接池缺 pool_recycle/pool_pre_ping | `dependencies.py:127-132` | 空闲连接过期异常 |
+| H5 | SECRET_KEY validator 依赖 Pydantic 字段声明顺序 | `config.py:174-177` | 生产可能用弱密钥 | ✅ |
+| H6 | PostgreSQL 连接池缺 pool_recycle/pool_pre_ping | `dependencies.py:127-132` | 空闲连接过期异常 | ✅ |
 
 #### 修复优先级
 
@@ -713,7 +713,7 @@ H1 (敏感数据) → H5 (弱密钥) → H6 (连接池) → H2-H4 (运维化)
 
 | ID | 问题 | 位置 | 影响 |
 |----|------|------|------|
-| S4 | 黑名单降级策略：Redis 不可用时 `is_blacklisted()` 返回 False | `auth/blacklist.py` | 所有已登出 Token 仍然有效 |
+| S4 | 黑名单降级策略：Redis 不可用时 `is_blacklisted()` 返回 False | `auth/blacklist.py` | 所有已登出 Token 仍然有效 | ✅ |
 | S5 | RBAC 不成熟：`status` 字段既是账户状态又是角色 | `models/user.py` | 权限模型脆弱，无法扩展 |
 | S6 | python-jose 维护停滞（最后更新 2021） | `dependencies.py` | 建议迁移 PyJWT |
 
@@ -1188,7 +1188,7 @@ docker exec moling-db pg_dump -U moling moling > backup_$(date +%Y%m%d).sql
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
-| 1.7.0 | 2026-06-21 | 🛠 架构加固 Batch 5 — 扫描 v4 CRITICAL+AHIGH 修复闭环：Phase 4 (P2-2锁安全/P9-2健康字段/P5-3项目隔离/P6-4 stale检查) + Core (C1 Windows崩溃) + Auth (S1/S2 Token过期) + LLM (L1流式预算/L3 key退避/L4 LLM_MODEL配置) | Moling Team |
+| 1.7.0 | 2026-06-21 | 🛠 架构加固 Batch 5-7 — 扫描 v4: Phase4(P2-2/P9-2/P5-3/P6-4) + Core(C1/H5/H6) + Auth(S1/S2/S4) + LLM(L1/L3/L4); RF3.4: IngestJob FK + 6 Schema类型修正。共 15 项修复，14 文件变更 | Moling Team |
 | 1.6.2 | 2026-06-21 | 文档债：新增认证安全扫描 v4 发现 — 3 P0 + 3 P1 安全技术债入档（S1-S6 Token过期/密码/RBAC/黑名单降级/jose迁移） | Moling Team |
 | 1.6.1 | 2026-06-21 | 文档债：新增 Core/Middleware 深度扫描 v4 发现 — 4 Critical + 6 High 已知技术债入档（C1-C4 Windows/限流/审计/OOM） | Moling Team |
 | 1.6.0 | 2026-06-21 | 文档债：回填 Phase 4 深度扫描 v4 发现（71.5/100 B级）—— 4 Critical + 4 High 已知技术债入档，含修复优先级路线图 | Moling Team |
