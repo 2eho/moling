@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="moling">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Writing 工作台 — Agent 协作面板</title>
+<style>
+/* ===== 墨灵·深空 主题 ===== */
+:root, [data-theme="moling"] {
+  --th-bg:           #0d0f1a;
+  --th-card:         #111827;
+  --th-elevated:     #1a1f2e;
+  --th-hover:        #1e2435;
+  --th-text:         #e5e7eb;
+  --th-text-2:       #d1d5db;
+  --th-text-3:       #9ca3af;
+  --th-text-4:       #6b7280;
+  --th-border-subtle:#1f2937;
+  --th-border:       #374151;
+  --th-accent:       #6366f1;
+  --th-accent-text:  #818cf8;
+  --th-accent-dim:   rgba(99,102,241,0.12);
+  --th-accent-glow:  rgba(99,102,241,0.35);
+  --th-logo-from:    #6366f1;
+  --th-logo-to:      #a78bfa;
+  --th-success:      #34d399;
+  --th-warning:      #fbbf24;
+  --th-danger:       #f87171;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--th-bg); color: var(--th-text); overflow: hidden; font-size: 14px; }
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--th-border); border-radius: 4px; }
+
+/* ===== Layout ===== */
+.app { display: flex; height: 100vh; }
+
+/* ===== Sidebar ===== */
+.sidebar {
+  display: flex; flex-direction: column;
+  width: 240px; min-width: 0; height: 100%;
+  background: var(--th-card); border-right: 1px solid var(--th-border-subtle);
+}
+.sidebar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 12px 8px;
+}
+.sidebar-header h1 {
+  font-size: 13px; font-weight: 700; color: var(--th-accent-text);
+  letter-spacing: 0.5px;
+}
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 4px 8px; }
+.sidebar-section {
+  padding: 10px 4px 4px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--th-text-4);
+}
+.sidebar-footer { padding: 8px; border-top: 1px solid var(--th-border-subtle); }
+
+/* Project cards */
+.project-card { margin-bottom: 2px; }
+.project-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  transition: all 0.15s; font-size: 12px; color: var(--th-text-2);
+}
+.project-row:hover { background: var(--th-hover); }
+.project-row.active { color: var(--th-accent-text); background: var(--th-accent-dim); }
+.project-row .chevron { transition: transform 0.2s; color: var(--th-text-4); font-size: 10px; }
+.project-row .chevron.open { transform: rotate(90deg); }
+.project-row .badge {
+  font-size: 8px; padding: 1px 5px; border-radius: 3px; margin-left: auto;
+  color: var(--th-text-4); background: var(--th-hover);
+}
+.project-row .badge.completed { color: var(--th-accent-text); background: var(--th-accent-dim); }
+
+/* Chapters */
+.chapters { overflow: hidden; transition: max-height 0.25s; max-height: 0; }
+.chapters.open { max-height: 500px; }
+.chapter-item {
+  display: block; padding: 5px 10px 5px 36px; font-size: 11px;
+  color: var(--th-text-3); border-radius: 4px; cursor: pointer; transition: all 0.12s;
+}
+.chapter-item:hover { color: var(--th-text-2); background: var(--th-hover); }
+.chapter-item.active { color: var(--th-accent-text); background: var(--th-accent-dim); }
+.chapter-item.disabled { opacity: 0.35; pointer-events: none; }
+
+/* Placeholder items */
+.placeholder-item {
+  display: flex; align-items: center; gap: 7px; padding: 7px 10px;
+  border-radius: 8px; font-size: 11px; color: var(--th-text-4); cursor: default;
+}
+
+/* ===== Main ===== */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  border-bottom: 1px solid var(--th-border-subtle); flex-shrink: 0;
+}
+.status-indicator { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; }
+.status-indicator.writing { color: var(--th-accent-text); }
+.spacer { flex: 1; }
+
+/* Content */
+.content-area { flex: 1; overflow-y: auto; padding: 24px 32px; }
+.content-inner { max-width: 680px; margin: 0 auto; }
+.content-inner h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--th-text); }
+.content-inner .prose {
+  font-size: 14px; line-height: 1.85; color: var(--th-text-2); white-space: pre-wrap;
+}
+
+/* Bottom bar */
+.bottombar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 16px; font-size: 10px; color: var(--th-text-4);
+  border-top: 1px solid var(--th-border-subtle); flex-shrink: 0;
+}
+
+/* ===== Options Panel ===== */
+.options-panel { border-top: 1px solid var(--th-border-subtle); padding: 12px 16px; flex-shrink: 0; }
+.options-mode { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.option-card {
+  width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--th-border-subtle); background: var(--th-card);
+  cursor: pointer; transition: all 0.15s; margin-bottom: 8px; display: flex; gap: 12px;
+}
+.option-card:hover { border-color: var(--th-border); }
+.option-card.selected { border-color: var(--th-accent-text); background: var(--th-accent-dim); }
+.option-label {
+  width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  background: var(--th-hover); color: var(--th-text-3);
+}
+.option-card.selected .option-label { background: var(--th-accent-text); color: #fff; }
+.option-title { font-size: 12px; font-weight: 600; color: var(--th-text); margin-bottom: 3px; }
+.option-desc { font-size: 11px; color: var(--th-text-3); }
+.confirm-btn {
+  width: 100%; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  border: none; cursor: pointer; transition: all 0.15s;
+  background: var(--th-hover); color: var(--th-text-4);
+}
+.confirm-btn.active { background: var(--th-accent-text); color: #fff; }
+.confirm-btn.active:hover { opacity: 0.9; }
+
+/* ===== Right Panel — Agent 协作 ===== */
+.right-panel {
+  width: 280px; min-width: 0; height: 100%; display: flex; flex-direction: column;
+  background: var(--th-card); border-left: 1px solid var(--th-border-subtle); overflow: hidden;
+}
+.rp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 14px 10px; border-bottom: 1px solid var(--th-border-subtle);
+}
+.rp-title { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: var(--th-text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+.rp-body { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Global status card */
+.status-card {
+  padding: 12px; border-radius: 10px;
+  background: var(--th-accent-dim); border: 1px solid var(--th-accent-dim);
+}
+.status-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.status-card-title { font-size: 10px; font-weight: 600; color: var(--th-accent-text); display: flex; align-items: center; gap: 5px; }
+.status-card-count { font-size: 9px; font-weight: 600; color: var(--th-accent-text); }
+.progress-bar {
+  height: 3px; border-radius: 3px; background: var(--th-hover); overflow: hidden; margin-bottom: 8px;
+}
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--th-logo-from), var(--th-logo-to)); transition: width 0.5s; }
+.status-mini { display: flex; gap: 12px; font-size: 9px; }
+.status-mini .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 3px; }
+
+/* Agent cards */
+.section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--th-text-4); padding: 2px 4px; }
+.agent-card {
+  padding: 10px 12px; border-radius: 8px; background: var(--th-bg);
+  transition: all 0.15s; border: 1px solid transparent;
+}
+.agent-card.active { background: var(--th-hover); border-color: var(--th-success); }
+.agent-card.thinking { background: var(--th-hover); border-color: var(--th-warning); }
+.agent-row { display: flex; align-items: center; gap: 8px; }
+.agent-icon { flex-shrink: 0; display: flex; align-items: center; }
+.agent-label { flex: 1; font-size: 11px; font-weight: 500; color: var(--th-text-2); }
+.agent-status {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 600;
+}
+.agent-role { font-size: 9px; color: var(--th-text-4); margin-top: 4px; padding-left: 24px; }
+.agent-output {
+  margin-top: 8px; padding: 8px 10px; border-radius: 6px;
+  background: var(--th-card); font-size: 10px; color: var(--th-text-3);
+  border-left: 2px solid var(--th-accent-text); line-height: 1.5;
+  animation: fadeIn 0.3s;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Status dot and pulse */
+.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.status-dot.pulse { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Coordinator output */
+.coordinator-output {
+  padding: 12px; border-radius: 10px;
+  border: 1px solid var(--th-border-subtle); background: var(--th-bg);
+}
+.coordinator-output .label {
+  font-size: 9px; font-weight: 700; color: var(--th-text-4); text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;
+}
+.coordinator-output .item { font-size: 10px; color: var(--th-text-2); padding: 4px 0; display: flex; align-items: center; gap: 6px; }
+.coordinator-output .item .icon-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* Hint card */
+.hint-card { padding: 10px; border-radius: 8px; background: var(--th-bg); }
+.hint-card p { font-size: 9px; line-height: 1.6; color: var(--th-text-4); }
+
+/* ===== Buttons ===== */
+.btn-sm {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 6px; font-size: 10px; font-weight: 600;
+  border: none; cursor: pointer; transition: all 0.15s;
+  background: var(--th-hover); color: var(--th-text-3);
+}
+.btn-sm:hover { opacity: 0.8; }
+.btn-sm.primary { background: var(--th-accent-text); color: #fff; }
+.btn-icon {
+  width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; border: none; cursor: pointer; transition: all 0.15s;
+  background: transparent; color: var(--th-text-3);
+}
+.btn-icon:hover { background: var(--th-hover); }
+
+/* ===== SVG icons (inline) ===== */
+.icon { display: inline-block; vertical-align: middle; }
+
+/* ===== Info banner at top ===== */
+.info-banner {
+  background: var(--th-accent-dim); border-bottom: 1px solid rgba(99,102,241,0.2);
+  padding: 6px 16px; font-size: 10px; color: var(--th-accent-text);
+  text-align: center; font-weight: 500;
+}
+</style>
+</head>
+<body>
+<div class="info-banner">
+  ⚡ 预览版 — Agent 协作面板设计 v2 · 未改动原页面
+</div>
+<div class="app">
+
+  <!-- ===== LEFT SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>墨灵</h1>
+      <button class="btn-icon" title="新建项目">＋</button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">我的小说</div>
+
+      <!-- 剑道巅峰 — 活跃 -->
+      <div class="project-card">
+        <div class="project-row active" onclick="toggleProject(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span style="flex:1;text-align:left">剑道巅峰</span>
+          <span class="badge" style="color:var(--th-success)">连载中</span>
+          <span class="chevron open">▸</span>
+        </div>
+        <div class="chapters open">
+          <div class="chapter-item active">第 3 章 · 剑指苍穹</div>
+          <div class="chapter-item">第 2 章 · 剑骨觉醒</div>
+          <div class="chapter-item">第 1 章 · 废材少年</div>
+        </div>
+      </div>
+
+      <!-- 末世重生 -->
+      <div class="project-card">
+        <div class="project-row" onclick="toggleProject(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span style="flex:1;text-align:left">末世重生</span>
+          <span class="badge" style="color:var(--th-warning)">连载中</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="chapters">
+          <div class="chapter-item disabled">第 2 章 · 前世记忆</div>
+          <div class="chapter-item disabled">第 1 章 · 血月降临</div>
+        </div>
+      </div>
+
+      <!-- 都市修仙传 -->
+      <div class="project-card">
+        <div class="project-row" onclick="toggleProject(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span style="flex:1;text-align:left">都市修仙传</span>
+          <span class="badge" style="color:var(--th-warning)">连载中</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="chapters">
+          <div class="chapter-item disabled">第 4 章 · 破境之战</div>
+          <div class="chapter-item disabled">第 1 章 · 灵根初醒</div>
+        </div>
+      </div>
+
+      <!-- 星际流浪者 — 已完结 -->
+      <div class="project-card">
+        <div class="project-row">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span style="flex:1;text-align:left">星际流浪者</span>
+          <span class="badge completed">已完结</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="margin-top:12px">知识中心</div>
+      <div class="placeholder-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span>知识库 (即将推出)</span>
+      </div>
+
+      <div class="sidebar-section" style="margin-top:4px">插件市场</div>
+      <div class="placeholder-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.91 8.84L8.56 2.23a1.93 1.93 0 0 0-1.81 0L3.1 4.13a2.12 2.12 0 0 0-.82 2.66l4.54 9a2.08 2.08 0 0 0 .65.84l7.14 5.11a2.12 2.12 0 0 0 2.74-.22l4.78-4.78a2.12 2.12 0 0 0-.22-2.74z"/><circle cx="17.5" cy="6.5" r=".5"/></svg>
+        <span>插件市场 (即将推出)</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="placeholder-item" style="padding:6px 8px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>用户设置</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main">
+    <!-- Top Bar -->
+    <div class="topbar">
+      <div class="status-indicator writing">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        <span>写作中 · 草稿阶段</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn-sm" style="display:flex;align-items:center;gap:4px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 6v6l4 2"/>
+        </svg>
+        🌙 墨灵·深空
+      </button>
+      <button class="btn-icon" style="color: var(--th-accent-text)" title="Agent 面板">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="content-area">
+      <div class="content-inner">
+        <h2>第 3 章 — 剑指苍穹</h2>
+        <div class="prose">宗门议事大殿中，掌门与诸位长老目光灼灼。
+
+"林风，你可知剑骨觉醒意味着什么？"掌门的声音带着一丝颤抖。
+
+九州千年以来，剑骨觉醒者不过三人。每一人，都曾改写了大陆的格局。
+
+林风抬头，目光平静却坚定："我只知道，我再也不做废材了。"</div>
+      </div>
+    </div>
+
+    <!-- Options Panel -->
+    <div class="options-panel">
+      <div class="options-mode">
+        <button class="btn-sm primary" style="margin-right:4px">选项</button>
+        <button class="btn-sm">自定义</button>
+        <div class="spacer"></div>
+        <button class="btn-sm">⟳ 重新生成</button>
+      </div>
+
+      <div class="option-card selected" onclick="selectOption(this)">
+        <div class="option-label">A</div>
+        <div>
+          <div class="option-title">展开宗门试炼</div>
+          <div class="option-desc">林风在剑骨觉醒后迎来第一次宗门试炼，面对昔日嘲笑他的同门...</div>
+        </div>
+      </div>
+      <div class="option-card" onclick="selectOption(this)">
+        <div class="option-label">B</div>
+        <div>
+          <div class="option-title">神秘老者来访</div>
+          <div class="option-desc">剑骨觉醒震动了一位隐居多年的剑道宗师...</div>
+        </div>
+      </div>
+      <div class="option-card" onclick="selectOption(this)">
+        <div class="option-label">C</div>
+        <div>
+          <div class="option-title">外门试剑大会</div>
+          <div class="option-desc">宗门举办外门试剑大会，林风代表外门出战...</div>
+        </div>
+      </div>
+
+      <button class="confirm-btn active">确认选择 (A)</button>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottombar">
+      <span>剑道巅峰 · 第 3 章 / 12 章 · 草稿</span>
+      <span>玄幻修仙</span>
+    </div>
+  </main>
+
+  <!-- ===== RIGHT PANEL — Agent 协作面板 ===== -->
+  <aside class="right-panel">
+    <div class="rp-header">
+      <div class="rp-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 1 5 5v2h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5z"/></svg>
+        Agent 调度中心
+      </div>
+    </div>
+
+    <div class="rp-body">
+      <!-- 全局状态 -->
+      <div class="status-card">
+        <div class="status-card-header">
+          <div class="status-card-title">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09z"/></svg>
+            Agent 协作中
+          </div>
+          <span class="status-card-count">5/5</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:100%"></div>
+        </div>
+        <div class="status-mini">
+          <span style="color:var(--th-success)"><span class="dot" style="background:var(--th-success)"></span> 活跃 3</span>
+          <span style="color:var(--th-warning)"><span class="dot pulse" style="background:var(--th-warning)"></span> 思考 2</span>
+        </div>
+      </div>
+
+      <!-- Coordinator output -->
+      <div class="coordinator-output">
+        <div class="label">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 1 5 5v2h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5z"/></svg>
+          协调器输出
+        </div>
+        <div class="item">
+          <span class="icon-dot" style="background:var(--th-accent-text)"></span>
+          已分析第3章上下文 — 剑骨觉醒后
+        </div>
+        <div class="item">
+          <span class="icon-dot" style="background:var(--th-success)"></span>
+          生成 3 个剧情方向选项
+        </div>
+        <div class="item">
+          <span class="icon-dot" style="background:var(--th-warning)"></span>
+          检测 2 处伏笔待回收
+        </div>
+      </div>
+
+      <!-- Agent 列表 -->
+      <div class="section-label">代理成员</div>
+
+      <!-- Plot — 活跃 -->
+      <div class="agent-card active">
+        <div class="agent-row">
+          <span class="agent-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--th-accent-text)" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+          </span>
+          <span class="agent-label">剧情代理</span>
+          <span class="agent-status" style="color:var(--th-success)">
+            <span class="status-dot" style="background:var(--th-success);box-shadow:0 0 6px var(--th-success)"></span>
+            活跃
+          </span>
+        </div>
+        <div class="agent-role">叙事架构师 · 故事结构、冲突管理、情节节奏</div>
+        <div class="agent-output">
+          选项A/B/C已生成 · 置信度 0.87/0.82/0.75 · 基于第2章剑骨觉醒事件展开
+        </div>
+      </div>
+
+      <!-- Character — 思考中 -->
+      <div class="agent-card thinking">
+        <div class="agent-row">
+          <span class="agent-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--th-success)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <span class="agent-label">人物代理</span>
+          <span class="agent-status" style="color:var(--th-warning)">
+            <span class="status-dot pulse" style="background:var(--th-warning);box-shadow:0 0 6px var(--th-warning)"></span>
+            思考中
+          </span>
+        </div>
+        <div class="agent-role">人物设计师 · 角色弧光、关系网络、成长轨迹</div>
+      </div>
+
+      <!-- Dialogue — 活跃 -->
+      <div class="agent-card active">
+        <div class="agent-row">
+          <span class="agent-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--th-warning)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="agent-label">对话代理</span>
+          <span class="agent-status" style="color:var(--th-success)">
+            <span class="status-dot" style="background:var(--th-success)"></span>
+            活跃
+          </span>
+        </div>
+        <div class="agent-role">对话导演 · 台词风格、语气语调、潜台词</div>
+        <div class="agent-output">
+          角色语音画像已更新 · 林风: 沉稳不服输 · 掌门: 威严带忧
+        </div>
+      </div>
+
+      <!-- Style — 活跃 -->
+      <div class="agent-card active">
+        <div class="agent-row">
+          <span class="agent-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--th-accent)" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </span>
+          <span class="agent-label">风格代理</span>
+          <span class="agent-status" style="color:var(--th-success)">
+            <span class="status-dot" style="background:var(--th-success)"></span>
+            活跃
+          </span>
+        </div>
+        <div class="agent-role">风格顾问 · 文风统一、修辞手法、叙事视角</div>
+        <div class="agent-output">
+          文风检查通过 · 热血升级流 · 保持第一人称穿插镜头感
+        </div>
+      </div>
+
+      <!-- World — 思考中 -->
+      <div class="agent-card thinking">
+        <div class="agent-row">
+          <span class="agent-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--th-logo-to)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </span>
+          <span class="agent-label">世界观代理</span>
+          <span class="agent-status" style="color:var(--th-warning)">
+            <span class="status-dot pulse" style="background:var(--th-warning)"></span>
+            思考中
+          </span>
+        </div>
+        <div class="agent-role">世界构建师 · 规则一致性、设定细节、环境氛围</div>
+      </div>
+
+      <!-- Hint -->
+      <div class="hint-card">
+        <p>左侧选择章节 → Agent 自动分析上下文<br>中央展示 A/B/C 选项 → 点击推进创作<br>右栏监控 Agent 协作状态 — 实时透明</p>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+function toggleProject(row) {
+  const chevron = row.querySelector('.chevron');
+  const chapters = row.parentElement.querySelector('.chapters');
+  chevron.classList.toggle('open');
+  chapters.classList.toggle('open');
+}
+
+function selectOption(card) {
+  document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  const label = card.querySelector('.option-label').textContent;
+  document.querySelector('.confirm-btn').textContent = '确认选择 (' + label + ')';
+}
+</script>
+</body>
+</html>

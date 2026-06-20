@@ -43,6 +43,13 @@ except ImportError as e:
     pass
 
 try:
+    from app.router.generation import router as generation_status_router
+    api_router.include_router(generation_status_router, prefix="/generation", tags=["generation"])
+except ImportError as e:
+    print(f"[WARN] Generation status router not loaded: {e}")
+    pass
+
+try:
     from app.router.vault import router as vault_router
     api_router.include_router(vault_router, prefix="/projects/{project_id}/vault", tags=["vault"])
 except ImportError:

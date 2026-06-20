@@ -405,7 +405,7 @@ class GenerationService:
         chapter: Optional[Chapter],
         generated_content: str,
     ) -> Dict[str, Any]:
-        """Step 10: Coherence validation using CoherenceService."""
+        """Step 10: Coherence validation using CoherenceService (v2 grouped checks)."""
         try:
             from app.service.coherence_service import coherence_service
             result = await coherence_service.validate_post_generation(
@@ -414,19 +414,20 @@ class GenerationService:
                 chapter_id=chapter.id if chapter else 0,
                 generated_content=generated_content,
             )
+            # Parse into schema to use flatten_issues, then convert back for pipeline
+            from app.schemas.coherence import CoherenceValidationResult
+            parsed = CoherenceValidationResult(**result)
+            flattened_issues = parsed.flatten_issues()
             return {
                 "passed": result["passed"],
                 "score": result["overall_score"],
-                "issues": [
-                    detail
-                    for check in result.get("checks", {}).values()
-                    for detail in (check.get("details", []) if isinstance(check.get("details"), list) else [check.get("details", "")])
-                    if not check.get("passed", True)
-                ],
+                "version": result.get("version", "v2-grouped"),
+                "issues": flattened_issues,
+                "groups": result.get("groups", []),
             }
         except Exception as e:
             logger.error(f"Coherence validation failed: {e}")
-            return {"passed": True, "score": 0.85, "issues": []}
+            return {"passed": True, "score": 0.85, "version": "v2-grouped", "issues": [], "groups": []}
 
     async def _step11_dynamic_layer_update(
         self,

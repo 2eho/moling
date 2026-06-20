@@ -55,6 +55,13 @@ from app.schemas.notification import (
 from app.schemas.subscription import (
     PlanResp,
 )
+from app.schemas.coherence import (
+    CoherenceCheckItem,
+    CoherenceGroupCheck,
+    CoherenceValidationResult,
+    CoherencePipelineResult,
+    GROUP_DEFINITIONS,
+)
 
 __all__ = [
     # common
@@ -100,4 +107,10 @@ __all__ = [
     "NotificationResp",
     # subscription
     "PlanResp",
+    # coherence
+    "CoherenceCheckItem",
+    "CoherenceGroupCheck",
+    "CoherenceValidationResult",
+    "CoherencePipelineResult",
+    "GROUP_DEFINITIONS",
 ]

@@ -21,6 +21,11 @@ from app.dao import project_dao, chapter_dao, vault_dao
 from app.errors import NotFoundError, ErrorCode, AppError
 from app.models import Project, Chapter, Secret, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld
 from app.llm.client import llm_client
+from app.schemas.coherence import (
+    CoherenceCheckItem,
+    CoherenceGroupCheck,
+    CoherenceValidationResult,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -155,22 +160,20 @@ class CoherenceService:
         chapter_id: int,
         generated_content: str,
     ) -> Dict[str, Any]:
-        """Post-generation coherence validation (7-step check).
+        """Post-generation coherence validation (3 grouped LLM calls, v2).
         
-        Args:
-            db: Database session
-            project_id: Project ID
-            chapter_id: Generated chapter ID
-            generated_content: Generated chapter content
-            
+        Groups the 8 individual checks into 3 merged LLM calls:
+          Group A: Narrative Consistency (character + timeline + plot promise)
+          Group B: Writing Quality (world rule + style + pacing)
+          Group C: Continuity (chapter transition + secret debt)
+        
+        Returns a dict matching CoherenceValidationResult schema for backward
+        compatibility with the pipeline's _step10_coherence_validation.
+        
         Returns:
-            Validation result with detailed checks
+            Dict with keys: passed, overall_score, version, groups
         """
-        result = {
-            "passed": True,
-            "overall_score": 1.0,
-            "checks": {},
-        }
+        result = CoherenceValidationResult()
         
         try:
             # Get project and chapter
@@ -198,80 +201,416 @@ class CoherenceService:
                         Chapter.chapter_number == chapter.chapter_number - 1,
                     )
                 )
-                result = await db.execute(stmt)
-                previous_chapter = result.scalar_one_or_none()
+                result_obj = await db.execute(stmt)
+                previous_chapter = result_obj.scalar_one_or_none()
             
-            # ===== Check 1: Character Behavior Consistency =====
-            logger.info(f"Post-validation: Check 1 - Character consistency for chapter {chapter_id}")
-            check1 = await self._check_character_consistency_post(
+            # ===== Group A: Narrative Consistency (character + timeline + plot promise) =====
+            logger.info(f"Post-validation: Group A - Narrative consistency for chapter {chapter_id}")
+            group_a = await self._check_group_narrative_consistency(
                 db, project, chapter, generated_content
             )
-            result["checks"]["character_consistency"] = check1
+            result.groups.append(group_a)
             
-            # ===== Check 2: Timeline Continuity =====
-            logger.info(f"Post-validation: Check 2 - Timeline continuity for chapter {chapter_id}")
-            check2 = await self._check_timeline_continuity_post(
-                db, project, chapter, generated_content
+            # ===== Group B: Writing Quality (world rule + style + pacing) =====
+            logger.info(f"Post-validation: Group B - Writing quality for chapter {chapter_id}")
+            group_b = await self._check_group_writing_quality(
+                db, project, chapter, previous_chapter, generated_content
             )
-            result["checks"]["timeline_continuity"] = check2
+            result.groups.append(group_b)
             
-            # ===== Check 3: Plot Promise Status Consistency =====
-            logger.info(f"Post-validation: Check 3 - Plot promise status for chapter {chapter_id}")
-            check3 = await self._check_plot_promise_status_post(
-                db, project, chapter, generated_content
+            # ===== Group C: Continuity (chapter transition + secret debt) =====
+            logger.info(f"Post-validation: Group C - Continuity for chapter {chapter_id}")
+            group_c = await self._check_group_continuity(
+                db, project, chapter, previous_chapter, generated_content
             )
-            result["checks"]["plot_promise_status"] = check3
-            
-            # ===== Check 4: World Rule Consistency =====
-            logger.info(f"Post-validation: Check 4 - World rule consistency for chapter {chapter_id}")
-            check4 = await self._check_world_rule_consistency_post(
-                db, project, generated_content
-            )
-            result["checks"]["world_rule_consistency"] = check4
-            
-            # ===== Check 5: Writing Style Consistency =====
-            logger.info(f"Post-validation: Check 5 - Writing style consistency for chapter {chapter_id}")
-            check5 = await self._check_writing_style_consistency_post(
-                db, project, previous_chapter, generated_content
-            )
-            result["checks"]["writing_style_consistency"] = check5
-            
-            # ===== Check 6: Narrative Pacing Rationality =====
-            logger.info(f"Post-validation: Check 6 - Narrative pacing for chapter {chapter_id}")
-            check6 = await self._check_narrative_pacing_post(
-                db, project, chapter, generated_content
-            )
-            result["checks"]["narrative_pacing"] = check6
-            
-            # ===== Check 7: Chapter Transition Naturalness =====
-            logger.info(f"Post-validation: Check 7 - Chapter transition for chapter {chapter_id}")
-            check7 = await self._check_chapter_transition_post(
-                db, project, previous_chapter, generated_content
-            )
-            result["checks"]["chapter_transition"] = check7
-            
-            # ===== Check 8: 秘密债务检查 (§5.2 第7项) =====
-            logger.info(f"Post-validation: Check 8 - Secret debt for chapter {chapter_id}")
-            check8 = await self._check_secret_debt(db, project, chapter)
-            result["checks"]["secret_debt"] = check8
+            result.groups.append(group_c)
             
             # Calculate overall result
-            all_passed = all(c["passed"] for c in result["checks"].values())
-            total_score = sum(c["score"] for c in result["checks"].values())
-            avg_score = total_score / len(result["checks"]) if result["checks"] else 1.0
+            all_passed = all(g.passed for g in result.groups)
+            total_score = sum(g.score for g in result.groups)
+            avg_score = total_score / len(result.groups) if result.groups else 1.0
             
-            result["passed"] = all_passed
-            result["overall_score"] = avg_score
+            result.passed = all_passed
+            result.overall_score = round(avg_score, 2)
             
-            logger.info(f"Post-validation completed for chapter {chapter_id}: passed={all_passed}, score={avg_score:.2f}")
-            return result
+            logger.info(
+                f"Post-validation completed for chapter {chapter_id}: "
+                f"passed={all_passed}, score={avg_score:.2f}"
+            )
+            return result.model_dump()
             
         except Exception as e:
             logger.error(f"Post-validation failed: {e}", exc_info=True)
-            result["passed"] = False
-            result["overall_score"] = 0.0
-            result["error"] = str(e)
-            return result
+            result.passed = False
+            result.overall_score = 0.0
+            return result.model_dump()
+
+    # ===== Grouped Check Implementations (v2 merged) =====
+
+    async def _check_group_narrative_consistency(
+        self,
+        db: AsyncSession,
+        project: Project,
+        chapter: Chapter,
+        generated_content: str,
+    ) -> CoherenceGroupCheck:
+        """Group A: Narrative Consistency - merged check for Character + Timeline + Plot Promise.
+
+        Cross-referencing benefit: character location vs timeline events,
+        plot promise implications for character behavior.
+        """
+        group = CoherenceGroupCheck(
+            group_name="narrative_consistency",
+            display_name="叙事一致性",
+        )
+
+        # Gather context data
+        try:
+            character_list = await self._get_character_list(db, project.id)
+
+            # Timeline events (last 10)
+            vault_events = await vault_dao.get_timeline(db, project.id)
+            timeline_summary = "\n".join([
+                f"- 第{e.chapter_number}章: {e.event}"
+                for e in vault_events[-10:]
+            ]) if vault_events else "暂无"
+
+            # Active plot promises (top 8)
+            promises = await vault_dao.get_plot_promises(db, project.id)
+            active_promises = [p for p in promises if p.status in ["dormant", "active"]]
+            promise_summary = "\n".join([
+                f"- [{p.type}] {p.description[:100] or '无描述'} (状态: {p.status}, 紧迫度: {p.urgency})"
+                for p in active_promises[:8]
+            ]) if active_promises else "无活跃伏笔"
+
+            prompt = f"""请对以下小说章节内容执行 3 项连贯性检查，并以 JSON 格式返回结果。
+
+项目：{project.title}
+当前章节：第{chapter.chapter_number}章《{chapter.title}》
+
+【检查 1 — 角色行为一致性】
+角色列表：{character_list}
+
+【检查 2 — 时间线连续性】
+现有时间线事件：
+{timeline_summary}
+
+【检查 3 — 伏笔状态】
+活跃伏笔列表：
+{promise_summary}
+
+【章节内容】
+{generated_content[:4000]}
+
+请逐项检查，并返回如下 JSON 格式（只返回 JSON，不要其他内容）：
+{{
+  "checks": [
+    {{
+      "check_name": "character_consistency",
+      "display_name": "角色行为一致性",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体问题描述"]或[]
+    }},
+    {{
+      "check_name": "timeline_continuity",
+      "display_name": "时间线连续性",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体问题描述"]或[]
+    }},
+    {{
+      "check_name": "plot_promise_status",
+      "display_name": "伏笔状态",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体问题描述"]或[]
+    }}
+  ],
+  "cross_cutting_issues": ["跨维度发现（如角色出现在时间线矛盾的位置）"]或[]
+}}
+"""
+            response = await self._call_llm(prompt, max_tokens=3072)
+            result = json.loads(response)
+            raw_checks = result.get("checks", []) if isinstance(result, dict) else []
+
+            for raw in raw_checks:
+                group.checks.append(CoherenceCheckItem(
+                    check_name=raw.get("check_name", "unknown"),
+                    display_name=raw.get("display_name", ""),
+                    passed=raw.get("passed", True),
+                    score=raw.get("score", 0.9),
+                    issues=raw.get("issues", []),
+                ))
+
+            group.cross_cutting_issues = result.get("cross_cutting_issues", []) if isinstance(result, dict) else []
+
+            # Aggregate group score
+            if group.checks:
+                group.score = round(sum(c.score for c in group.checks) / len(group.checks), 2)
+                group.passed = all(c.passed for c in group.checks)
+
+        except Exception as e:
+            logger.error(f"Group A (narrative consistency) failed: {e}", exc_info=True)
+            group.checks = [
+                CoherenceCheckItem(check_name="character_consistency", display_name="角色行为一致性", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="timeline_continuity", display_name="时间线连续性", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="plot_promise_status", display_name="伏笔状态", passed=True, score=0.8, issues=[]),
+            ]
+            group.passed = True
+            group.score = 0.8
+
+        return group
+
+    async def _check_group_writing_quality(
+        self,
+        db: AsyncSession,
+        project: Project,
+        chapter: Chapter,
+        previous_chapter: Optional[Chapter],
+        generated_content: str,
+    ) -> CoherenceGroupCheck:
+        """Group B: Writing Quality - merged check for World Rule + Style + Pacing."""
+        group = CoherenceGroupCheck(
+            group_name="writing_quality",
+            display_name="写作质量",
+        )
+
+        try:
+            # World rules
+            world_entries = await vault_dao.get_world_entries(db, project.id)
+            world_summary = "\n".join([
+                f"- [{e.category}] {e.name}: {e.description[:150] or '无描述'}"
+                + (f" (约束: {e.constraint[:100]})" if e.constraint else "")
+                for e in world_entries
+            ]) if world_entries else "无世界观设定"
+
+            # Previous chapter style reference
+            prev_style_ref = ""
+            if previous_chapter and previous_chapter.content:
+                prev_style_ref = previous_chapter.content[:1500]
+
+            content_len = len(generated_content)
+
+            prompt = f"""请对以下小说章节内容执行 3 项写作质量检查，并以 JSON 格式返回结果。
+
+项目：{project.title}
+当前章节：第{chapter.chapter_number}章《{chapter.title}》
+章节长度：{content_len} 字
+
+【检查 1 — 世界观规则一致性】
+世界观设定条目：
+{world_summary}
+
+【检查 2 — 文风一致性】
+前序章节内容（前1500字）：
+{prev_style_ref or "（无前序章节）"}
+
+【检查 3 — 叙事节奏合理性】
+
+【章节内容】
+{generated_content[:4000]}
+
+请逐项检查，并返回如下 JSON 格式（只返回 JSON，不要其他内容）：
+{{
+  "checks": [
+    {{
+      "check_name": "world_rule_consistency",
+      "display_name": "世界观规则一致性",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体违规描述"]或[]
+    }},
+    {{
+      "check_name": "writing_style_consistency",
+      "display_name": "文风一致性",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体差异描述"]或[]
+    }},
+    {{
+      "check_name": "narrative_pacing",
+      "display_name": "叙事节奏",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体问题描述"]或[]
+    }}
+  ],
+  "cross_cutting_issues": ["跨维度发现（如世界规则导致的节奏问题）"]或[]
+}}
+"""
+            response = await self._call_llm(prompt, max_tokens=3072)
+            result = json.loads(response)
+            raw_checks = result.get("checks", []) if isinstance(result, dict) else []
+
+            for raw in raw_checks:
+                group.checks.append(CoherenceCheckItem(
+                    check_name=raw.get("check_name", "unknown"),
+                    display_name=raw.get("display_name", ""),
+                    passed=raw.get("passed", True),
+                    score=raw.get("score", 0.9),
+                    issues=raw.get("issues", []),
+                ))
+
+            group.cross_cutting_issues = result.get("cross_cutting_issues", []) if isinstance(result, dict) else []
+
+            if group.checks:
+                group.score = round(sum(c.score for c in group.checks) / len(group.checks), 2)
+                group.passed = all(c.passed for c in group.checks)
+
+        except Exception as e:
+            logger.error(f"Group B (writing quality) failed: {e}", exc_info=True)
+            group.checks = [
+                CoherenceCheckItem(check_name="world_rule_consistency", display_name="世界观规则一致性", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="writing_style_consistency", display_name="文风一致性", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="narrative_pacing", display_name="叙事节奏", passed=True, score=0.8, issues=[]),
+            ]
+            group.passed = True
+            group.score = 0.8
+
+        return group
+
+    async def _check_group_continuity(
+        self,
+        db: AsyncSession,
+        project: Project,
+        chapter: Chapter,
+        previous_chapter: Optional[Chapter],
+        generated_content: str,
+    ) -> CoherenceGroupCheck:
+        """Group C: Continuity - merged check for Chapter Transition + Secret Debt.
+
+        Rule-based secret debt calculation is done before the LLM call;
+        the LLM handles secret leakage detection and chapter transition quality.
+        """
+        group = CoherenceGroupCheck(
+            group_name="continuity",
+            display_name="连续性",
+        )
+
+        try:
+            # --- Chapter transition context ---
+            prev_end = ""
+            if previous_chapter and previous_chapter.content:
+                prev_end = previous_chapter.content[-1000:]
+
+            new_start = generated_content[:1000]
+
+            # --- Secret debt calculation (rule-based, §2.8.2 + §5.2) ---
+            stmt = select(Secret).where(Secret.project_id == project.id)
+            db_result = await db.execute(stmt)
+            secrets: list[Secret] = list(db_result.scalars().all())
+
+            secret_debt_issues: list[str] = []
+            secrets_for_llm: list[Secret] = []
+
+            if secrets:
+                current_chapter_num = chapter.chapter_number
+                for secret in secrets:
+                    if secret.secrecy_level in ("revealed", "open"):
+                        continue
+                    if secret.created_chapter is None:
+                        continue
+
+                    secrets_for_llm.append(secret)
+                    chapters_elapsed = max(0, current_chapter_num - secret.created_chapter)
+                    unknown_count = len(secret.unknown_to) if secret.unknown_to else 0
+                    debt = chapters_elapsed * unknown_count
+
+                    if debt > 30:
+                        secret_debt_issues.append(
+                            f"秘密「{secret.description}」信息债务过高（{debt} = {chapters_elapsed}章 × {unknown_count}人不知晓），建议安排揭露"
+                        )
+
+            # --- Build LLM prompt for transition + secret leakage ---
+            secret_lines = []
+            for s in secrets_for_llm[:10]:
+                known = ", ".join(s.known_by) if s.known_by else "无"
+                unknown = ", ".join(s.unknown_to) if s.unknown_to else "无"
+                secret_lines.append(
+                    f"- 秘密(#{s.id}): {s.description}\n"
+                    f"  知晓者: {known} | 不知晓者: {unknown} | "
+                    f"保密层级: {s.secrecy_level}"
+                )
+            secret_summary = "\n".join(secret_lines) if secret_lines else "无未公开秘密"
+
+            prompt = f"""请对以下小说章节内容执行 2 项连续性检查，并以 JSON 格式返回结果。
+
+项目：{project.title}
+当前章节：第{chapter.chapter_number}章《{chapter.title}》
+
+【检查 1 — 章节衔接自然性】
+前序章节结尾（末尾1000字）：
+{prev_end or "（无前序章节，此项直接通过）"}
+
+当前章节开头（前1000字）：
+{new_start}
+
+【检查 2 — 秘密债务一致性】
+项目秘密列表（未公开）：
+{secret_summary}
+
+【章节内容】（全文用于秘密检测）：
+{generated_content[:3000]}
+
+请逐项检查：
+- 章节衔接：两章之间的衔接是否自然流畅？场景/视角切换是否合理？
+- 秘密债务：是否有角色说出了TA不该知道的秘密？或做出了对已知秘密的矛盾反应？
+
+返回如下 JSON 格式（只返回 JSON，不要其他内容，不要 markdown 代码块）：
+{{
+  "checks": [
+    {{
+      "check_name": "chapter_transition",
+      "display_name": "章节衔接",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体问题描述"]或[]
+    }},
+    {{
+      "check_name": "secret_debt",
+      "display_name": "秘密债务",
+      "passed": true/false,
+      "score": 0.0-1.0,
+      "issues": ["具体问题描述"]或[]
+    }}
+  ],
+  "cross_cutting_issues": ["跨维度发现（如秘密泄露影响章节衔接）"]或[]
+}}
+"""
+            response = await self._call_llm(prompt, max_tokens=3072)
+            result = json.loads(response)
+            raw_checks = result.get("checks", []) if isinstance(result, dict) else []
+
+            for raw in raw_checks:
+                issues = raw.get("issues", [])
+                # Append rule-based secret debt issues to the secret_debt check
+                if raw.get("check_name") == "secret_debt" and secret_debt_issues:
+                    issues = issues + secret_debt_issues
+                group.checks.append(CoherenceCheckItem(
+                    check_name=raw.get("check_name", "unknown"),
+                    display_name=raw.get("display_name", ""),
+                    passed=raw.get("passed", True),
+                    score=raw.get("score", 0.9),
+                    issues=issues,
+                ))
+
+            group.cross_cutting_issues = result.get("cross_cutting_issues", []) if isinstance(result, dict) else []
+
+            if group.checks:
+                group.score = round(sum(c.score for c in group.checks) / len(group.checks), 2)
+                group.passed = all(c.passed for c in group.checks)
+
+        except Exception as e:
+            logger.error(f"Group C (continuity) failed: {e}", exc_info=True)
+            group.checks = [
+                CoherenceCheckItem(check_name="chapter_transition", display_name="章节衔接", passed=True, score=0.8, issues=[]),
+                CoherenceCheckItem(check_name="secret_debt", display_name="秘密债务", passed=True, score=0.8, issues=[]),
+            ]
+            group.passed = True
+            group.score = 0.8
+
+        return group
 
     # ===== Individual Check Implementations =====
 
@@ -1151,8 +1490,16 @@ class CoherenceService:
             return "暂无角色"
         return ", ".join([c.name for c in characters[:10]])
 
-    async def _call_llm(self, prompt: str) -> str:
-        """Call LLM with prompt and return response text."""
+    async def _call_llm(self, prompt: str, max_tokens: int = 2048) -> str:
+        """Call LLM with prompt and return cleaned response text.
+
+        Args:
+            prompt: The user prompt to send
+            max_tokens: Max output tokens (2048 default, 3072 for grouped checks)
+
+        Returns:
+            Cleaned response text string
+        """
         messages = [
             {"role": "system", "content": "你是一个专业的小说质量检查助手。"},
             {"role": "user", "content": prompt},
@@ -1162,10 +1509,16 @@ class CoherenceService:
             messages=messages,
             model=settings.LLM_MODEL,
             temperature=0.3,
-            max_tokens=2048,
+            max_tokens=max_tokens,
         )
         
-        return response["choices"][0]["message"]["content"]
+        raw = response["choices"][0]["message"]["content"]
+        # Strip markdown code fences if present
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[-1]
+            cleaned = cleaned.rsplit("```", 1)[0]
+        return cleaned.strip()
 
 
 # Singleton instance

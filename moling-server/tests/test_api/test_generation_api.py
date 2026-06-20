@@ -21,12 +21,12 @@ class TestGenerationStart:
             "temperature": 0.7
         }
         params = {
-            "project_id": test_project.id,
+            "project_id": test_project["id"],
         }
 
         # Act
         resp = await async_client.post(
-            f"{GEN_PREFIX}/chapters/{test_chapter.id}/generate",
+            f"{GEN_PREFIX}/chapters/{test_chapter['id']}/generate",
             json=payload,
             headers=auth_headers,
             params=params
@@ -47,11 +47,11 @@ class TestGenerationStart:
         """未认证请求应返回 401。"""
         # Arrange
         payload = {"prompt": "测试"}
-        params = {"project_id": test_project.id}
+        params = {"project_id": test_project["id"]}
 
         # Act
         resp = await async_client.post(
-            f"{GEN_PREFIX}/chapters/{test_chapter.id}/generate",
+            f"{GEN_PREFIX}/chapters/{test_chapter['id']}/generate",
             json=payload,
             params=params
         )
@@ -64,7 +64,7 @@ class TestGenerationStart:
         """无效章节 ID（非整数）应返回 422 验证错误。"""
         # Arrange
         payload = {"prompt": "测试"}
-        params = {"project_id": test_project.id}
+        params = {"project_id": test_project["id"]}
 
         # Act
         resp = await async_client.post(

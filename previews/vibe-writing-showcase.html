@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="moling">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨灵 Vibe Writing — 5 Agent × 6 Phase 展示</title>
+<style>
+/* ====== CSS Variables (moling theme default) ====== */
+:root, [data-theme="moling"] {
+  --th-bg: #0d0f1a; --th-card: #151829; --th-card-hover: #1a1d33;
+  --th-input: #111327; --th-hover: rgba(255,255,255,0.04);
+  --th-hover-strong: rgba(255,255,255,0.07);
+  --th-text: #e8e9f0; --th-text-2: #9ca3c4; --th-text-3: #6b7199; --th-text-4: #3d4166;
+  --th-border: #2a2d45; --th-border-subtle: #1e2138;
+  --th-accent: #6366f1; --th-accent-text: #a5b4fc;
+  --th-accent-dim: rgba(99,102,241,0.12); --th-accent-glow: rgba(99,102,241,0.25);
+  --th-success: #34d399; --th-warning: #fbbf24; --th-danger: #ef4444;
+  --th-logo-from: #6366f1; --th-logo-to: #06b6d4;
+  --th-scrollbar-thumb: #2d2d3f; --th-scrollbar-track: #0a0a0f;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--th-bg); color: var(--th-text);
+  -webkit-font-smoothing: antialiased; overflow: hidden;
+  height: 100vh;
+}
+
+/* ====== Layout ====== */
+.app { display: flex; height: 100vh; }
+
+/* ----- Sidebar ----- */
+.sidebar {
+  width: 240px; min-width: 240px; display: flex; flex-direction: column;
+  background: var(--th-card); border-right: 1px solid var(--th-border-subtle);
+  overflow-y: auto;
+}
+.sidebar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--th-border-subtle);
+}
+.sidebar-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--th-text);
+}
+.sidebar-logo .dot {
+  width: 20px; height: 20px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--th-logo-from), var(--th-logo-to));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 10px;
+}
+.new-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--th-border);
+  background: var(--th-hover); color: var(--th-text-3);
+  font-size: 11px; cursor: pointer; font-family: inherit;
+}
+
+/* Projects list */
+.projects-label {
+  padding: 12px 14px 6px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--th-text-4);
+}
+.project-group { margin-bottom: 2px; }
+
+.project-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; cursor: pointer; font-size: 12px;
+  color: var(--th-text-2); transition: background 0.15s;
+  user-select: none; font-family: inherit; border: none;
+  width: 100%; text-align: left; background: none;
+}
+.project-item:hover { background: var(--th-hover); }
+.project-item.active {
+  background: var(--th-accent-dim); color: var(--th-accent-text);
+  font-weight: 600;
+}
+.project-item .chevron { font-size: 10px; color: var(--th-text-4); width: 12px; }
+.project-item.active .chevron { color: var(--th-accent-text); }
+
+/* Chapters */
+.chapter-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 14px 5px 38px; cursor: pointer; font-size: 11px;
+  color: var(--th-text-3); transition: background 0.15s;
+  user-select: none; font-family: inherit; border: none;
+  width: 100%; text-align: left; background: none;
+}
+.chapter-item:hover { background: var(--th-hover); color: var(--th-text-2); }
+.chapter-item.disabled { opacity: 0.4; cursor: default; }
+.chapter-item.disabled:hover { background: none; color: var(--th-text-3); }
+.chapter-item.selected {
+  background: var(--th-accent-dim); color: var(--th-accent-text);
+  font-weight: 600;
+}
+.chapter-item .dot-status {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+.chapter-item .dot-status.draft { background: var(--th-text-4); }
+.chapter-item .dot-status.completed { background: var(--th-success); }
+.completed-badge {
+  margin-left: auto; font-size: 9px; padding: 1px 6px; border-radius: 4px;
+  background: var(--th-accent-dim); color: var(--th-accent-text);
+}
+
+/* Bottom nav */
+.sidebar-bottom {
+  margin-top: auto; padding: 8px 0; border-top: 1px solid var(--th-border-subtle);
+}
+.sidebar-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; font-size: 11px; color: var(--th-text-3);
+  cursor: pointer; font-family: inherit; border: none;
+  width: 100%; text-align: left; background: none;
+}
+.sidebar-nav-item:hover { background: var(--th-hover); }
+
+/* ----- Main ----- */
+.main {
+  flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+}
+
+/* Top bar */
+.top-bar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+  border-bottom: 1px solid var(--th-border-subtle); flex-shrink: 0;
+}
+.status-indicator {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: var(--th-accent-text);
+}
+.spacer { flex: 1; }
+.theme-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 8px; cursor: pointer;
+  border: none; font-size: 10px; background: var(--th-hover);
+  color: var(--th-text-2); font-family: inherit;
+}
+.panel-toggle {
+  padding: 6px; border-radius: 8px; cursor: pointer; border: none;
+  background: none; color: var(--th-text-3);
+}
+
+/* ====== KEY FEATURE: 6-Phase Navigator ====== */
+.phase-nav {
+  display: flex; align-items: center; gap: 3px; padding: 10px 14px;
+  border-bottom: 1px solid var(--th-border-subtle); flex-shrink: 0;
+  overflow-x: auto;
+}
+.phase-step {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 20px; cursor: pointer;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+  font-family: inherit; border: none;
+  transition: all 0.25s ease;
+}
+.phase-step.completed {
+  background: var(--th-card); color: var(--th-text-2);
+}
+.phase-step.completed .phase-icon { color: var(--th-success); }
+.phase-step.current {
+  background: var(--th-accent); color: #fff;
+  box-shadow: 0 2px 12px var(--th-accent-glow);
+  transform: scale(1.05);
+}
+.phase-step.current .phase-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+.phase-step.future {
+  background: transparent; color: var(--th-text-3);
+}
+.phase-step.future .phase-dot {
+  width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--th-text-3);
+}
+.phase-connector {
+  width: 16px; height: 1px; background: var(--th-border); flex-shrink: 0;
+}
+.phase-connector.done { background: var(--th-success); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ----- Content ----- */
+.content-area {
+  flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+.chapter-view {
+  flex: 1; overflow-y: auto; padding: 20px 24px;
+}
+.chapter-title {
+  font-size: 15px; font-weight: 700; margin-bottom: 12px;
+  color: var(--th-text);
+}
+.chapter-title .badge {
+  margin-left: 8px; padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 500; vertical-align: middle;
+  background: var(--th-accent-dim); color: var(--th-accent-text);
+}
+.chapter-body {
+  font-size: 13px; line-height: 2; color: var(--th-text-2);
+  white-space: pre-wrap;
+}
+
+/* ====== KEY FEATURE: OptionsPanel ====== */
+.options-panel {
+  flex-shrink: 0; border-top: 1px solid var(--th-border-subtle);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+}
+.options-row {
+  display: flex; gap: 8px;
+}
+.option-card {
+  flex: 1; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--th-border-subtle); cursor: pointer;
+  background: var(--th-card); transition: all 0.2s;
+  font-family: inherit; text-align: left;
+}
+.option-card:hover { border-color: var(--th-accent-text); }
+.option-card.selected {
+  border-color: var(--th-accent-text);
+  background: var(--th-accent-dim);
+}
+.option-label {
+  width: 22px; height: 22px; border-radius: 6px; font-size: 10px;
+  font-weight: 800; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 6px;
+}
+.option-a { background: var(--th-accent-dim); color: var(--th-accent-text); }
+.option-b { background: rgba(52,211,153,0.12); color: #6ee7b7; }
+.option-c { background: rgba(251,191,36,0.12); color: #fcd34d; }
+.option-card.selected .option-a { background: var(--th-accent-text); color: #fff; }
+.option-card.selected .option-b { background: #34d399; color: #fff; }
+.option-card.selected .option-c { background: #fbbf24; color: #1a1a1a; }
+
+.option-title { font-size: 12px; font-weight: 600; color: var(--th-text); margin-bottom: 3px; }
+.option-desc { font-size: 10px; color: var(--th-text-3); line-height: 1.5; margin-bottom: 4px; }
+.option-preview { font-size: 10px; color: var(--th-text-4); font-style: italic; }
+.option-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 4px;
+  font-size: 9px; margin-left: 6px; background: var(--th-hover); color: var(--th-success);
+}
+.confirm-btn {
+  padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; font-family: inherit; border: none;
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.confirm-btn.ready {
+  background: var(--th-accent-text); color: #fff;
+}
+.confirm-btn.idle {
+  background: var(--th-hover); color: var(--th-text-4); cursor: default;
+}
+
+/* Bottom bar */
+.bottom-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 14px; border-top: 1px solid var(--th-border-subtle);
+  font-size: 10px; color: var(--th-text-4); flex-shrink: 0;
+}
+
+/* ====== KEY FEATURE: Agent Panel (right) ====== */
+.agent-panel {
+  width: 280px; min-width: 280px; display: flex; flex-direction: column;
+  background: var(--th-card); border-left: 1px solid var(--th-border-subtle);
+  overflow-y: auto;
+}
+.agent-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; border-bottom: 1px solid var(--th-border-subtle);
+  font-size: 11px; font-weight: 700; color: var(--th-text-2);
+  text-transform: uppercase; letter-spacing: 0.8px;
+}
+.agent-body { padding: 10px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+/* Agent status card */
+.agent-status-card {
+  padding: 10px; border-radius: 8px;
+  background: var(--th-accent-dim); border: 1px solid var(--th-accent-dim);
+}
+.agent-status-card .label {
+  font-size: 10px; color: var(--th-accent-text); margin-bottom: 4px;
+}
+.agent-bar {
+  height: 4px; border-radius: 2px; background: var(--th-hover);
+  overflow: hidden; margin: 6px 0;
+}
+.agent-bar-fill {
+  height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, var(--th-logo-from), var(--th-logo-to));
+  transition: width 0.5s;
+}
+
+/* Individual agent */
+.agent-card {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px; border-radius: 8px;
+  background: var(--th-bg);
+}
+.agent-card.active {
+  background: var(--th-hover); box-shadow: 0 0 0 1px var(--th-success) inset;
+}
+.agent-card.thinking {
+  background: var(--th-hover); box-shadow: 0 0 0 1px var(--th-warning) inset;
+}
+.agent-row { display: flex; align-items: center; gap: 8px; }
+.agent-icon { font-size: 14px; }
+.agent-name { font-size: 11px; font-weight: 600; color: var(--th-text-2); flex: 1; }
+.agent-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.agent-dot.active { background: var(--th-success); box-shadow: 0 0 8px var(--th-success); }
+.agent-dot.thinking { background: var(--th-warning); box-shadow: 0 0 8px var(--th-warning); animation: pulse-dot 1s ease-in-out infinite; }
+.agent-dot.idle { background: var(--th-text-4); }
+.agent-tag {
+  font-size: 9px; font-weight: 600;
+}
+.agent-tag.active { color: var(--th-success); }
+.agent-tag.thinking { color: var(--th-warning); }
+.agent-tag.idle { color: var(--th-text-4); }
+.agent-role { font-size: 9px; color: var(--th-text-3); padding-left: 22px; }
+
+/* Section title */
+.section-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--th-text-4); padding: 4px 2px;
+}
+
+/* Pulse bar */
+.pulse-bar {
+  padding: 10px; border-radius: 8px; background: var(--th-bg);
+  border: 1px solid var(--th-accent-dim);
+}
+.pulse-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: var(--th-accent-text);
+}
+.pulse-indicator {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--th-accent-text);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+.pulse-lines { display: flex; gap: 4px; margin-top: 6px; }
+.pulse-line {
+  flex: 1; height: 3px; border-radius: 2px; background: var(--th-accent-dim);
+  overflow: hidden;
+}
+.pulse-line-inner {
+  height: 100%; border-radius: 2px; width: 70%;
+  background: linear-gradient(90deg, var(--th-logo-from), var(--th-logo-to));
+  animation: pulse-line 1.4s ease-in-out infinite;
+}
+.pulse-line:nth-child(2) .pulse-line-inner { animation-delay: 0.2s; }
+.pulse-line:nth-child(3) .pulse-line-inner { animation-delay: 0.4s; }
+
+@keyframes pulse-line {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Help tip */
+.help-tip {
+  padding: 8px; border-radius: 6px; background: var(--th-bg);
+  font-size: 9px; color: var(--th-text-4); line-height: 1.5;
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ====== SIDEBAR ====== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="dot">✦</div>
+        墨灵
+      </div>
+      <button class="new-btn">+ 新建</button>
+    </div>
+
+    <div class="projects-label">我的小说</div>
+
+    <!-- Active project - expanded -->
+    <div class="project-group">
+      <button class="project-item active">
+        <span class="chevron">▼</span> 剑道巅峰
+        <span style="margin-left:auto;font-size:9px;color:var(--th-text-4)">玄幻</span>
+      </button>
+      <!-- Chapters - newest first (reverse) -->
+      <button class="chapter-item selected">
+        <span class="dot-status draft"></span> 第3章 · 剑指苍穹
+      </button>
+      <button class="chapter-item">
+        <span class="dot-status completed"></span> 第2章 · 剑骨觉醒
+      </button>
+      <button class="chapter-item">
+        <span class="dot-status completed"></span> 第1章 · 废材少年
+      </button>
+    </div>
+
+    <!-- Other projects - collapsed -->
+    <div class="project-group">
+      <button class="project-item">
+        <span class="chevron">▶</span> 都市修仙传
+      </button>
+    </div>
+    <div class="project-group">
+      <button class="project-item">
+        <span class="chevron">▶</span> 末世重生
+      </button>
+    </div>
+    <div class="project-group">
+      <button class="project-item">
+        <span class="chevron">▶</span> 星际流浪者
+        <span class="completed-badge">已完结</span>
+      </button>
+    </div>
+
+    <!-- Bottom -->
+    <div class="sidebar-bottom">
+      <button class="sidebar-nav-item">
+        <span style="font-size:12px">📚</span> 知识中心
+      </button>
+      <button class="sidebar-nav-item">
+        <span style="font-size:12px">🧩</span> 插件市场
+      </button>
+      <button class="sidebar-nav-item" style="margin-top:4px;font-weight:600">
+        <span style="font-size:12px">⚙️</span> 用户设置
+      </button>
+    </div>
+  </aside>
+
+  <!-- ====== MAIN ====== -->
+  <main class="main">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="status-indicator">
+        <span style="font-size:14px">✏️</span>
+        写作中 · 草稿
+      </div>
+      <div class="spacer"></div>
+      <button class="theme-btn" onclick="cycleTheme()">
+        <span style="font-size:12px">🎨</span> 主题
+      </button>
+      <button class="panel-toggle" onclick="toggleAgentPanel()" style="color:var(--th-accent-text)" title="Agent 调度中心">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg>
+      </button>
+    </div>
+
+    <!-- ====== 6-PHASE NAVIGATOR ====== -->
+    <div class="phase-nav" style="justify-content:center">
+      <button class="phase-step completed" onclick="this.classList.remove('completed','current','future');document.querySelectorAll('.phase-step').forEach(el=>el.classList.remove('current'));this.classList.add('current');document.querySelectorAll('.phase-connector').forEach(c=>c.classList.remove('done'));">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="phase-icon"><path d="M5 13l4 4L19 7"/></svg>
+        构思
+      </button>
+      <div class="phase-connector done"></div>
+      <button class="phase-step completed" onclick="this.classList.remove('completed','current','future');document.querySelectorAll('.phase-step').forEach(el=>el.classList.remove('current'));this.classList.add('current');document.querySelectorAll('.phase-connector').forEach(c=>c.classList.remove('done'));">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="phase-icon"><path d="M5 13l4 4L19 7"/></svg>
+        大纲
+      </button>
+      <div class="phase-connector done"></div>
+      <button class="phase-step completed" onclick="this.classList.remove('completed','current','future');document.querySelectorAll('.phase-step').forEach(el=>el.classList.remove('current'));this.classList.add('current');document.querySelectorAll('.phase-connector').forEach(c=>c.classList.remove('done'));">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="phase-icon"><path d="M5 13l4 4L19 7"/></svg>
+        人设
+      </button>
+      <div class="phase-connector done"></div>
+      <button class="phase-step completed" onclick="this.classList.remove('completed','current','future');document.querySelectorAll('.phase-step').forEach(el=>el.classList.remove('current'));this.classList.add('current');document.querySelectorAll('.phase-connector').forEach(c=>c.classList.remove('done'));">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="phase-icon"><path d="M5 13l4 4L19 7"/></svg>
+        世界观
+      </button>
+      <div class="phase-connector done"></div>
+      <button class="phase-step current">
+        <div class="phase-dot"></div>
+        草稿
+      </button>
+      <div class="phase-connector"></div>
+      <button class="phase-step future">
+        <div class="phase-dot"></div>
+        修订
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="content-area">
+      <div class="chapter-view">
+        <h2 class="chapter-title">
+          第 3 章 — 剑指苍穹
+          <span class="badge">草稿</span>
+        </h2>
+        <div class="chapter-body">宗门议事大殿中，掌门与诸位长老目光灼灼。
+
+"林风，你可知剑骨觉醒意味着什么？"掌门的声音带着一丝颤抖。
+
+九州千年以来，剑骨觉醒者不过三人。每一人，都曾改写了大陆的格局。
+
+林风抬头，目光平静却坚定："我只知道，我再也不做废材了。"
+
+殿中一片静默。大长老抚须沉吟，二长老目露赞许，唯有三长老面色阴沉，不知在想什么。
+
+"既如此，"掌门站起身，一字一顿，"三日后的外门试剑大会，你代表外门出战。"</div>
+      </div>
+
+      <!-- ====== A/B/C OPTIONS ====== -->
+      <div class="options-panel">
+        <div class="options-row">
+          <button class="option-card selected" onclick="selectOption(this, 'a')">
+            <div class="option-label option-a">A</div>
+            <div class="option-title">展开宗门试炼 <span class="option-badge">87% 置信</span></div>
+            <div class="option-desc">林风在剑骨觉醒后迎来第一次宗门试炼，面对昔日嘲笑他的同门，用实力证明自己。</div>
+            <div class="option-preview">"林风，你敢与我一战？" 曾经最看不起他的人站在擂台中央……</div>
+          </button>
+          <button class="option-card" onclick="selectOption(this, 'b')">
+            <div class="option-label option-b">B</div>
+            <div class="option-title">神秘老者来访 <span class="option-badge">82% 置信</span></div>
+            <div class="option-desc">剑骨觉醒震动了一位隐居多年的剑道宗师，他夜访林风，带来了一个关于剑骨的惊天秘密。</div>
+            <div class="option-preview">"你的剑骨，并非天生的。" 月光下，老者的话让林风愣住了……</div>
+          </button>
+          <button class="option-card" onclick="selectOption(this, 'c')">
+            <div class="option-label option-c">C</div>
+            <div class="option-title">外门试剑大会 <span class="option-badge">75% 置信</span></div>
+            <div class="option-desc">宗门举办外门试剑大会，林风代表外门出战内门天才，一场越级之战即将打响。</div>
+            <div class="option-preview">"外门废材也想挑战内门？" 全场哗然，只有林风神色如常……</div>
+          </button>
+        </div>
+        <button class="confirm-btn ready" onclick="this.textContent='⚡ 生成中...';setTimeout(()=>this.textContent='✅ 确认选择',1200)">
+          ✅ 确认选择
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+      <span>剑道巅峰 · 第 3 章 / 12 章 · 草稿</span>
+      <span>玄幻修仙</span>
+    </div>
+  </main>
+
+  <!-- ====== AGENT PANEL (right) ====== -->
+  <aside class="agent-panel" id="agentPanel">
+    <div class="agent-header">
+      <span style="font-size:14px">🧠</span> Agent 调度中心
+    </div>
+    <div class="agent-body">
+      <!-- Coordinator status -->
+      <div class="agent-status-card">
+        <div class="label" style="font-weight:700">Coordinator · 总协调</div>
+        <div style="font-size:10px;color:var(--th-text-3);margin-bottom:4px">5 Agent 协作中 · 3 活跃</div>
+        <div class="agent-bar">
+          <div class="agent-bar-fill" style="width:60%"></div>
+        </div>
+        <div style="display:flex;gap:12px;font-size:9px;margin-top:4px">
+          <span style="color:var(--th-success)">🟢 活跃 3</span>
+          <span style="color:var(--th-warning)">🟡 思考 0</span>
+          <span style="color:var(--th-text-4)">⚫ 待命 2</span>
+        </div>
+      </div>
+
+      <div class="section-label">代理成员</div>
+
+      <!-- Plot Agent -->
+      <div class="agent-card active">
+        <div class="agent-row">
+          <span class="agent-icon" style="color:var(--th-accent-text)">🌿</span>
+          <span class="agent-name">剧情代理 · Plot</span>
+          <span class="agent-tag active">活跃</span>
+          <div class="agent-dot active"></div>
+        </div>
+        <div class="agent-role">叙事架构师 · 冲突管理 · 伏笔回收</div>
+      </div>
+
+      <!-- Character Agent -->
+      <div class="agent-card active">
+        <div class="agent-row">
+          <span class="agent-icon" style="color:var(--th-success)">👤</span>
+          <span class="agent-name">人物代理 · Character</span>
+          <span class="agent-tag active">活跃</span>
+          <div class="agent-dot active"></div>
+        </div>
+        <div class="agent-role">人物设计师 · 弧光规划 · 关系网络</div>
+      </div>
+
+      <!-- Dialogue Agent -->
+      <div class="agent-card">
+        <div class="agent-row">
+          <span class="agent-icon" style="color:var(--th-warning)">💬</span>
+          <span class="agent-name">对话代理 · Dialogue</span>
+          <span class="agent-tag idle">待命</span>
+          <div class="agent-dot idle"></div>
+        </div>
+        <div class="agent-role">对话导演 · 台词匹配 · 潜台词</div>
+      </div>
+
+      <!-- Style Agent -->
+      <div class="agent-card active">
+        <div class="agent-row">
+          <span class="agent-icon" style="color:var(--th-accent)">🖊️</span>
+          <span class="agent-name">风格代理 · Style</span>
+          <span class="agent-tag active">活跃</span>
+          <div class="agent-dot active"></div>
+        </div>
+        <div class="agent-role">风格顾问 · 文风控制 · 叙事视角</div>
+      </div>
+
+      <!-- World Agent -->
+      <div class="agent-card">
+        <div class="agent-row">
+          <span class="agent-icon" style="color:var(--th-logo-to)">🌍</span>
+          <span class="agent-name">世界观代理 · World</span>
+          <span class="agent-tag idle">待命</span>
+          <div class="agent-dot idle"></div>
+        </div>
+        <div class="agent-role">世界构建师 · 规则一致性 · 设定细节</div>
+      </div>
+
+      <!-- Generating pulse -->
+      <div class="pulse-bar">
+        <div class="pulse-row">
+          <div class="pulse-indicator"></div>
+          Agent 协作中 — 正在生成选项...
+        </div>
+        <div class="pulse-lines">
+          <div class="pulse-line"><div class="pulse-line-inner"></div></div>
+          <div class="pulse-line"><div class="pulse-line-inner"></div></div>
+          <div class="pulse-line"><div class="pulse-line-inner"></div></div>
+        </div>
+      </div>
+
+      <!-- Help -->
+      <div class="help-tip">
+        💡 左侧选章节 → 5 Agent 并行分析上下文<br>
+        A/B/C 选项由 Coordinator 整合提炼 →<br>
+        选择后 → Agent 团队并行执行更新
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const THEMES = ['moling','nord','onedark','dracula','solarized-dark','solarized-light','paper','github-light'];
+let themeIdx = 0;
+function cycleTheme() {
+  themeIdx = (themeIdx + 1) % THEMES.length;
+  document.documentElement.setAttribute('data-theme', THEMES[themeIdx]);
+}
+function toggleAgentPanel() {
+  const panel = document.getElementById('agentPanel');
+  panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+}
+function selectOption(el, _opt) {
+  document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>
