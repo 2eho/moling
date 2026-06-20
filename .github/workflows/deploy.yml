@@ -63,7 +63,7 @@ env:
   IMAGE_NAME_FRONTEND: ${{ github.repository }}/moling-frontend
   PYTHON_VERSION: "3.13"
   NODE_VERSION: "22"
-  FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL || '' }}
+  FEISHU_WEBHOOK_URL: ""
 
 jobs:
   # ==========================================================================
