@@ -6,6 +6,10 @@ Background tasks for analyzing books:
 - Plot analysis
 - Style detection
 - World-building analysis
+
+Note: The BookAnalysisService methods are synchronous (internally bridge
+async DAO calls via asyncio.run), so these Celery tasks call them directly
+without need for an explicit asyncio wrapper.
 """
 
 from __future__ import annotations
@@ -19,13 +23,7 @@ logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True, max_retries=1)
 def analyze_book_characters(self, project_id: int) -> dict:
-    """Analyze characters in a book.
-
-    This task:
-    1. Extracts character information from chapters
-    2. Builds character relationships
-    3. Generates character profiles
-    """
+    """Analyze characters in a book."""
     logger.info("Analyzing characters for project %s", project_id)
 
     try:
@@ -43,13 +41,7 @@ def analyze_book_characters(self, project_id: int) -> dict:
 
 @celery_app.task(bind=True, max_retries=1)
 def analyze_book_plot(self, project_id: int) -> dict:
-    """Analyze plot structure of a book.
-
-    This task:
-    1. Identifies plot points
-    2. Analyzes story arcs
-    3. Detects plot holes
-    """
+    """Analyze plot structure of a book."""
     logger.info("Analyzing plot for project %s", project_id)
 
     try:
@@ -67,13 +59,7 @@ def analyze_book_plot(self, project_id: int) -> dict:
 
 @celery_app.task(bind=True, max_retries=1)
 def detect_writing_style(self, project_id: int) -> dict:
-    """Detect writing style of a book.
-
-    This task:
-    1. Analyzes writing patterns
-    2. Extracts style features
-    3. Generates style profile
-    """
+    """Detect writing style of a book."""
     logger.info("Detecting writing style for project %s", project_id)
 
     try:

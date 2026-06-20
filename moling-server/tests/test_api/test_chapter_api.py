@@ -5,11 +5,9 @@ from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 
-API_PREFIX = "/api/v1/chapters"
-
 
 class TestChapterCreate:
-    """测试创建章节端点 POST /api/v1/chapters。"""
+    """测试创建章节端点 POST /api/v1/projects/{project_id}/chapters。"""
 
     async def test_create_chapter_success(self, async_client: AsyncClient, 
                                         auth_headers, test_project):
@@ -18,41 +16,34 @@ class TestChapterCreate:
         payload = {
             "chapter_number": 1,
             "title": "第一章 测试章节",
-            "content": "这是章节内容。"
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            API_PREFIX, 
+            f"/api/v1/projects/{test_project.id}/chapters", 
             json=payload, 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 201
-        data = resp.json()
+        data = resp.json()["data"]
         assert data["chapter_number"] == 1
         assert data["title"] == "第一章 测试章节"
-        assert data["content"] == "这是章节内容。"
         assert "id" in data
 
     async def test_create_chapter_no_auth(self, async_client: AsyncClient, test_project):
-        """未认证请求应返回 403。"""
+        """未认证请求应返回 401。"""
         # Arrange
         payload = {
             "chapter_number": 1,
             "title": "测试",
-            "content": "内容"
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            API_PREFIX, 
+            f"/api/v1/projects/{test_project.id}/chapters", 
             json=payload, 
-            params=params
         )
 
         # Assert
@@ -65,16 +56,13 @@ class TestChapterCreate:
         payload = {
             "chapter_number": 1,
             "title": "测试",
-            "content": "内容"
         }
-        params = {"project_id": 99999}
 
         # Act
         resp = await async_client.post(
-            API_PREFIX, 
+            "/api/v1/projects/99999/chapters", 
             json=payload, 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -82,90 +70,74 @@ class TestChapterCreate:
 
 
 class TestChapterList:
-    """测试章节列表端点 GET /api/v1/chapters。"""
+    """测试章节列表端点 GET /api/v1/projects/{project_id}/chapters。"""
 
     async def test_list_chapters_success(self, async_client: AsyncClient, 
                                        auth_headers, test_project, test_chapter):
         """获取章节列表成功应返回 200 及章节数组。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.get(
-            API_PREFIX, 
+            f"/api/v1/projects/{test_project.id}/chapters", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["data"]
         assert isinstance(data, list)
         assert len(data) >= 1
         assert any(ch["id"] == test_chapter.id for ch in data)
 
     async def test_list_chapters_no_project(self, async_client: AsyncClient, 
                                            auth_headers):
-        """未提供项目 ID 应返回 422。"""
+        """缺少项目 ID 路径参数应返回 404 或 422。"""
         # Act
         resp = await async_client.get(
-            API_PREFIX, 
+            "/api/v1/projects/0/chapters", 
             headers=auth_headers
         )
 
         # Assert
-        assert resp.status_code == 422
+        assert resp.status_code in [404, 422]
 
     async def test_list_chapters_other_user(self, async_client: AsyncClient, 
                                            auth_headers):
         """访问其他用户的项目应返回 404。"""
-        # Arrange
-        params = {"project_id": 99999}
-
         # Act
         resp = await async_client.get(
-            API_PREFIX, 
+            "/api/v1/projects/99999/chapters", 
             headers=auth_headers,
-            params=params
         )
 
-        # Assert - 应该返回空列表或 404，取决于实现
+        # Assert
         assert resp.status_code in [200, 404]
 
 
 class TestChapterGet:
-    """测试获取单个章节端点 GET /api/v1/chapters/{chapter_id}。"""
+    """测试获取单个章节端点 GET /api/v1/projects/{project_id}/chapters/{chapter_id}。"""
 
     async def test_get_chapter_success(self, async_client: AsyncClient, 
                                       auth_headers, test_project, test_chapter):
         """获取章节成功应返回 200 及 ChapterResp。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.get(
-            f"{API_PREFIX}/{test_chapter.id}", 
+            f"/api/v1/projects/{test_project.id}/chapters/{test_chapter.id}", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["data"]
         assert data["id"] == test_chapter.id
         assert data["title"] == test_chapter.title
 
     async def test_get_chapter_not_found(self, async_client: AsyncClient, 
                                         auth_headers, test_project):
         """获取不存在的章节应返回 404。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.get(
-            f"{API_PREFIX}/99999", 
+            f"/api/v1/projects/{test_project.id}/chapters/99999", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -173,7 +145,7 @@ class TestChapterGet:
 
 
 class TestChapterUpdate:
-    """测试更新章节端点 PUT /api/v1/chapters/{chapter_id}。"""
+    """测试更新章节端点 PUT /api/v1/projects/{project_id}/chapters/{chapter_id}。"""
 
     async def test_update_chapter_success(self, async_client: AsyncClient, 
                                          auth_headers, test_project, test_chapter):
@@ -183,19 +155,17 @@ class TestChapterUpdate:
             "title": "更新后的标题",
             "content": "更新后的内容。"
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.put(
-            f"{API_PREFIX}/{test_chapter.id}", 
+            f"/api/v1/projects/{test_project.id}/chapters/{test_chapter.id}", 
             json=payload,
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["data"]
         assert data["title"] == "更新后的标题"
         assert data["content"] == "更新后的内容。"
 
@@ -204,14 +174,12 @@ class TestChapterUpdate:
         """更新不存在的章节应返回 404。"""
         # Arrange
         payload = {"title": "测试"}
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.put(
-            f"{API_PREFIX}/99999", 
+            f"/api/v1/projects/{test_project.id}/chapters/99999", 
             json=payload,
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -219,19 +187,15 @@ class TestChapterUpdate:
 
 
 class TestChapterDelete:
-    """测试删除章节端点 DELETE /api/v1/chapters/{chapter_id}。"""
+    """测试删除章节端点 DELETE /api/v1/projects/{project_id}/chapters/{chapter_id}。"""
 
     async def test_delete_chapter_success(self, async_client: AsyncClient, 
                                          auth_headers, test_project, test_chapter):
         """删除章节成功应返回 204。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.delete(
-            f"{API_PREFIX}/{test_chapter.id}", 
+            f"/api/v1/projects/{test_project.id}/chapters/{test_chapter.id}", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -239,23 +203,18 @@ class TestChapterDelete:
 
         # 验证删除后获取不到
         resp2 = await async_client.get(
-            f"{API_PREFIX}/{test_chapter.id}", 
+            f"/api/v1/projects/{test_project.id}/chapters/{test_chapter.id}", 
             headers=auth_headers,
-            params=params
         )
         assert resp2.status_code == 404
 
     async def test_delete_chapter_not_found(self, async_client: AsyncClient, 
                                            auth_headers, test_project):
         """删除不存在的章节应返回 404。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.delete(
-            f"{API_PREFIX}/99999", 
+            f"/api/v1/projects/{test_project.id}/chapters/99999", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -263,39 +222,38 @@ class TestChapterDelete:
 
 
 class TestChapterReorder:
-    """测试章节重新排序端点 POST /api/v1/chapters/reorder。"""
+    """测试章节重新排序端点 POST /api/v1/projects/{project_id}/chapters/reorder。"""
 
     async def test_reorder_chapters_success(self, async_client: AsyncClient, 
                                             auth_headers, test_project):
         """重新排序章节成功应返回 200 及重新排序后的章节列表。"""
+        project_id = test_project.id
+
         # Arrange - 先创建两个章节
-        payload1 = {"chapter_number": 1, "title": "第一章", "content": "内容1"}
-        payload2 = {"chapter_number": 2, "title": "第二章", "content": "内容2"}
-        params = {"project_id": test_project.id}
+        payload1 = {"chapter_number": 1, "title": "第一章"}
+        payload2 = {"chapter_number": 2, "title": "第二章"}
         
         resp1 = await async_client.post(
-            API_PREFIX, json=payload1, headers=auth_headers, params=params
+            f"/api/v1/projects/{project_id}/chapters",
+            json=payload1, headers=auth_headers
         )
         resp2 = await async_client.post(
-            API_PREFIX, json=payload2, headers=auth_headers, params=params
+            f"/api/v1/projects/{project_id}/chapters",
+            json=payload2, headers=auth_headers
         )
         
-        chapter1_id = resp1.json()["id"]
-        chapter2_id = resp2.json()["id"]
+        assert resp1.status_code == 201
+        assert resp2.status_code == 201
 
-        # 重新排序：交换顺序
-        reorder_payload = {"chapter_numbers": [chapter2_id, chapter1_id]}
-
-        # Act
+        # 重新排序：交换顺序 (chapter_numbers 为 query 参数)
         resp = await async_client.post(
-            f"{API_PREFIX}/reorder", 
-            json=reorder_payload,
+            f"/api/v1/projects/{project_id}/chapters/reorder", 
+            params={"chapter_numbers": [2, 1]},
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["data"]
         assert isinstance(data, list)
         assert len(data) == 2

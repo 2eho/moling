@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from sqlalchemy import DateTime, Integer, JSON, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -51,8 +51,9 @@ class Phase4Task(Base, TimestampMixin):
         index=True,
         comment="幂等性令牌 (格式: ch${chapter}_${timestamp})",
     )
-    project_id: Mapped[str] = mapped_column(
-        String(36),
+    project_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="项目 ID",
@@ -61,7 +62,7 @@ class Phase4Task(Base, TimestampMixin):
         String(36),
         nullable=False,
         index=True,
-        comment="章节 ID",
+        comment="章节 ID (UUID)",
     )
     status: Mapped[str] = mapped_column(
         String(20),

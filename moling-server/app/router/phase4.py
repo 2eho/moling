@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, require_admin
 from app.errors import NotFoundError, ForbiddenError
 from app.service.phase4_service import phase4_service
 from app.schemas.phase4 import Phase4SuggestionResp, ApplyPhase4Req, Phase4TaskResp, RejectReviewReq
@@ -94,14 +94,22 @@ async def get_pending_reviews(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    """获取待审核的精修建议列表。从 Phase4Task 表查询 status='reviewing' 的记录。"""
+    """获取当前用户项目的待审核精修建议列表（自动过滤 user_id）。"""
     skip = (page - 1) * page_size
+
+    # Get user's project IDs first for filtering
+    user_projects = await project_dao.get_multi(db, filters={"user_id": current_user.id})
+    user_project_ids = [int(p.id) for p in user_projects]
 
     tasks = await phase4_dao.list_by_status(db, "reviewing", skip=skip, limit=page_size)
     total = await phase4_dao.count_by_status(db, "reviewing")
 
     reviews = []
     for t in tasks:
+        # Only include tasks belonging to current user's projects
+        if t.project_id and int(t.project_id) not in user_project_ids:
+            total -= 1  # Adjust total count
+            continue
         reviews.append({
             "id": t.id,
             "nonce": t.nonce,
@@ -118,7 +126,7 @@ async def get_pending_reviews(
 
     return {
         "reviews": reviews,
-        "total": total,
+        "total": max(0, total),
         "page": page,
         "page_size": page_size,
     }
@@ -129,19 +137,18 @@ async def approve_review(
     review_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
+    _admin=Depends(require_admin),
 ) -> dict:
-    """批准精修建议，将任务状态更新为 'approved'。"""
+    """批准精修建议，将任务状态更新为 'approved'（需管理员权限）。"""
     task = await phase4_dao.get(db, review_id)
 
     if not task:
         raise NotFoundError(detail=f"Review task {review_id} not found")
 
-    # Verify project ownership
+    # Verify project existence
     project = await project_dao.get(db, int(task.project_id))
     if project is None:
         raise NotFoundError(detail="Project not found")
-    if str(project.user_id) != str(current_user.id):
-        raise ForbiddenError(detail="Not authorized to approve this review")
 
     task.status = "approved"
     task.state = Phase4State.DONE.value
@@ -160,20 +167,19 @@ async def reject_review(
     req: RejectReviewReq,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
+    _admin=Depends(require_admin),
 ) -> dict:
-    """拒绝精修建议，记录原因，更新状态为 'rejected'。"""
+    """拒绝精修建议，记录原因，更新状态为 'rejected'（需管理员权限）。"""
     reason = req.reason or ""
     task = await phase4_dao.get(db, review_id)
 
     if not task:
         raise NotFoundError(detail=f"Review task {review_id} not found")
 
-    # Verify project ownership
+    # Verify project existence
     project = await project_dao.get(db, int(task.project_id))
     if project is None:
         raise NotFoundError(detail="Project not found")
-    if str(project.user_id) != str(current_user.id):
-        raise ForbiddenError(detail="Not authorized to reject this review")
 
     task.status = "rejected"
     task.state = Phase4State.FAILED.value
@@ -194,8 +200,9 @@ async def retry_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
+    _admin=Depends(require_admin),
 ) -> dict:
-    """重置任务状态为 'queued'，允许重新执行。"""
+    """重置任务状态为 'queued'，允许重新执行（需管理员权限）。"""
     task = await phase4_dao.get(db, task_id)
 
     if not task:

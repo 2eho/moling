@@ -55,7 +55,7 @@ class UpdateProjectReq(BaseModel):
 class ProjectResp(BaseModel):
     """Project response (all fields except user_id)."""
 
-    id: str = Field(..., description="项目 ID (UUID)")
+    id: int = Field(..., description="项目 ID")
     title: str = Field(..., description="作品标题")
     author: str = Field(..., description="作者署名")
     genre: str = Field(..., description="作品类型/题材")
@@ -71,7 +71,7 @@ class ProjectResp(BaseModel):
     style: Optional[str] = Field(default=None, description="写作风格")
     status: str = Field(default="draft", description="项目状态")
     creation_mode: str = Field(default="from_scratch", description="创建模式")
-    template_id: Optional[str] = Field(default=None, description="模板 ID (UUID)")
+    template_id: Optional[int] = Field(default=None, description="模板 ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 

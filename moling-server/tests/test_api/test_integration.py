@@ -148,14 +148,11 @@ class TestChapterWorkflow:
         create_payload = {
             "chapter_number": 1,
             "title": "工作流测试章节",
-            "content": "这是测试内容。"
         }
-        params = {"project_id": project_id}
         create_resp = await async_client.post(
-            "/api/v1/chapters", 
+            f"/api/v1/projects/{project_id}/chapters", 
             json=create_payload,
             headers=auth_headers,
-            params=params
         )
         assert create_resp.status_code == 201
         chapter_data = create_resp.json()["data"]
@@ -163,9 +160,8 @@ class TestChapterWorkflow:
 
         # 2. 列出章节
         list_resp = await async_client.get(
-            "/api/v1/chapters", 
+            f"/api/v1/projects/{project_id}/chapters", 
             headers=auth_headers,
-            params=params
         )
         assert list_resp.status_code == 200
         list_data = list_resp.json()["data"]
@@ -173,9 +169,8 @@ class TestChapterWorkflow:
 
         # 3. 获取章节详情
         detail_resp = await async_client.get(
-            f"/api/v1/chapters/{chapter_id}", 
+            f"/api/v1/projects/{project_id}/chapters/{chapter_id}", 
             headers=auth_headers,
-            params=params
         )
         assert detail_resp.status_code == 200
 
@@ -185,26 +180,23 @@ class TestChapterWorkflow:
             "content": "更新后的内容。"
         }
         update_resp = await async_client.put(
-            f"/api/v1/chapters/{chapter_id}", 
+            f"/api/v1/projects/{project_id}/chapters/{chapter_id}", 
             json=update_payload,
             headers=auth_headers,
-            params=params
         )
         assert update_resp.status_code == 200
 
         # 5. 删除章节
         delete_resp = await async_client.delete(
-            f"/api/v1/chapters/{chapter_id}", 
+            f"/api/v1/projects/{project_id}/chapters/{chapter_id}", 
             headers=auth_headers,
-            params=params
         )
         assert delete_resp.status_code == 204
 
         # 6. 验证删除后获取不到
         not_found_resp = await async_client.get(
-            f"/api/v1/chapters/{chapter_id}", 
+            f"/api/v1/projects/{project_id}/chapters/{chapter_id}", 
             headers=auth_headers,
-            params=params
         )
         assert not_found_resp.status_code == 404
 
@@ -223,12 +215,10 @@ class TestVaultWorkflow:
             "description": "这是一个测试角色。",
             "traits": ["勇敢"]
         }
-        params = {"project_id": project_id}
         create_resp = await async_client.post(
-            "/api/v1/vault/characters", 
+            f"/api/v1/projects/{project_id}/vault/characters", 
             json=create_payload,
             headers=auth_headers,
-            params=params
         )
         assert create_resp.status_code == 201
         character_data = create_resp.json()["data"]
@@ -236,9 +226,8 @@ class TestVaultWorkflow:
 
         # 2. 列出人物
         list_resp = await async_client.get(
-            "/api/v1/vault/characters", 
+            f"/api/v1/projects/{project_id}/vault/characters", 
             headers=auth_headers,
-            params=params
         )
         assert list_resp.status_code == 200
         list_data = list_resp.json()["data"]
@@ -250,17 +239,15 @@ class TestVaultWorkflow:
             "description": "更新后的描述。"
         }
         update_resp = await async_client.put(
-            f"/api/v1/vault/characters/{character_id}", 
+            f"/api/v1/projects/{project_id}/vault/characters/{character_id}", 
             json=update_payload,
             headers=auth_headers,
-            params=params
         )
         assert update_resp.status_code == 200
 
         # 4. 删除人物
         delete_resp = await async_client.delete(
-            f"/api/v1/vault/characters/{character_id}", 
+            f"/api/v1/projects/{project_id}/vault/characters/{character_id}", 
             headers=auth_headers,
-            params=params
         )
         assert delete_resp.status_code == 204

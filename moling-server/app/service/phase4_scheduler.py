@@ -102,6 +102,13 @@ class Phase4Scheduler:
         self._state_lock = asyncio.Lock()
         self._state = SchedulerState()
 
+        # 内存非持久缓存（Layer 1 快速幂等检查 / 分布式锁 / 任务状态）
+        self._nonce_set: set = set()
+        self._nonce_cache = OrderedDict()
+        self._lock_store: dict = {}
+        self._task_store: dict = {}
+        self._current_lock_owner: dict = {}
+
     async def init_store(self, redis) -> None:
         """Initialise the storage backend; pass *redis* client or None."""
         await self._store.init(redis)
@@ -154,7 +161,7 @@ class Phase4Scheduler:
         # ==================================================================
         task = Phase4Task(
             nonce=nonce,
-            project_id=str(project_id),
+            project_id=project_id,
             chapter_id=str(chapter_id),
             state=Phase4State.QUEUED.value,
             status="pending",

@@ -10,6 +10,7 @@ Background tasks for importing novels/books:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from app.worker.celery_app import celery_app
@@ -30,11 +31,12 @@ def import_book_task(self, project_id: int, file_path: str, import_mode: str) ->
     logger.info("Starting book import for project %s from %s", project_id, file_path)
 
     try:
-        import asyncio
         from app.service.import_service import ImportService
 
         service = ImportService()
-        result = asyncio.run(service.import_book(project_id, file_path, import_mode))
+        result = asyncio.run(
+            asyncio.ensure_future(service.import_book(project_id, file_path, import_mode))
+        )
 
         logger.info("Book import completed for project %s", project_id)
         return {"status": "done", "project_id": project_id, "result": result}
@@ -46,21 +48,16 @@ def import_book_task(self, project_id: int, file_path: str, import_mode: str) ->
 
 @celery_app.task(bind=True)
 def analyze_import_content(self, project_id: int) -> dict:
-    """Analyze imported content for suggestions.
-
-    This task:
-    1. Analyzes chapter structure
-    2. Extracts style information
-    3. Generates import suggestions
-    """
+    """Analyze imported content for suggestions."""
     logger.info("Analyzing import content for project %s", project_id)
 
     try:
-        import asyncio
         from app.service.import_service import ImportService
 
         service = ImportService()
-        result = asyncio.run(service.analyze_content(project_id))
+        result = asyncio.run(
+            asyncio.ensure_future(service.analyze_content(project_id))
+        )
 
         return {"status": "done", "project_id": project_id, "analysis": result}
 

@@ -75,7 +75,7 @@ class ProjectService:
         
         # Enrich with chapter count
         for project in projects:
-            project.chapter_count = await chapter_dao.count_by_project(db, int(project.id))
+            project.chapters = await chapter_dao.count_by_project(db, int(project.id))
         
         return {
             "items": [ProjectResp.model_validate(p) for p in projects],
@@ -95,7 +95,7 @@ class ProjectService:
         project = await verify_project_ownership(db, project_id, user_id)
         
         # Enrich with chapter count
-        project.chapter_count = await chapter_dao.count_by_project(db, int(project.id))
+        project.chapters = await chapter_dao.count_by_project(db, int(project.id))
         
         return ProjectResp.model_validate(project)
 

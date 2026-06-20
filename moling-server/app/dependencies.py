@@ -364,3 +364,23 @@ def get_optional_user(
         return get_current_user(credentials, db)
     except HTTPException:
         return None
+
+
+# ---------------------------------------------------------------------------
+# Admin role dependency — shared across all routers
+# ---------------------------------------------------------------------------
+
+async def require_admin(
+    current_user=Depends(get_current_user),
+) -> dict:
+    """Verify the current user has admin role (status == "admin").
+
+    Raises 403 if the user is not an admin.
+    Must be added to every admin-only endpoint.
+    """
+    if getattr(current_user, "status", None) != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限",
+        )
+    return current_user

@@ -11,39 +11,15 @@ the caller in ``generation_service`` marks the task as ``failed``.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import platform
+from uuid import UUID
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-
-from app.config import get_settings
 from app.service.generation_service import GenerationService
 from app.worker.celery_app import celery_app
+from app.worker.db import get_worker_session
 
 logger = logging.getLogger(__name__)
-
-
-def _get_db_url() -> str:
-    """返回适配当前平台的数据库 URL（Windows + SQLite 用 aiosqlite）。"""
-    settings = get_settings()
-    url = settings.DATABASE_URL
-    if platform.system() == "Windows" and url.startswith("sqlite"):
-        if "aiosqlite" not in url:
-            url = url.replace("sqlite://", "sqlite+aiosqlite://", 1)
-    return url
-
-
-def _create_session_factory() -> async_sessionmaker[AsyncSession]:
-    """Build an async sessionmaker from settings (called once per task)."""
-    engine = create_async_engine(_get_db_url(), echo=False, pool_size=2)
-    return async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-
-_session_factory = _create_session_factory()
 
 
 # ---------------------------------------------------------------------------
@@ -53,8 +29,32 @@ _session_factory = _create_session_factory()
 
 async def _run_pipeline(service: GenerationService, generation_task_id: str) -> dict:
     """Run the generation pipeline with a proper database session."""
-    async with _session_factory() as db:
+    async with get_worker_session() as db:
         return await service.execute_generation_pipeline(db, generation_task_id)
+
+
+async def _get_task_status(task_uuid: UUID):
+    """Query the DB for a generation task's current status (for idempotency)."""
+    from app.dao import generation_dao
+    async with get_worker_session() as db:
+        task = await generation_dao.get(db, task_uuid)
+        return task.status if task else None
+
+
+async def _mark_failed(task_id: str, error_message: str) -> None:
+    """Mark a generation task as failed."""
+    from app.dao import generation_dao
+
+    task_uuid = UUID(task_id)
+    async with get_worker_session() as db:
+        task = await generation_dao.get(db, task_uuid)
+        if task:
+            await generation_dao.update(
+                db,
+                task,
+                {"status": "failed", "error_message": error_message},
+            )
+            await db.commit()
 
 
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=30)
@@ -71,9 +71,6 @@ def run_generation_task(self, generation_task_id: str) -> dict:
 
     # ── P1 加固：幂等性检查 ──
     # 防止 visibility_timeout 超时重投递 → 同一任务被多个 worker 重复执行
-    import asyncio
-    from uuid import UUID
-
     task_uuid = UUID(generation_task_id)
     status = asyncio.run(_get_task_status(task_uuid))
     if status == "done":
@@ -94,28 +91,3 @@ def run_generation_task(self, generation_task_id: str) -> dict:
         # Mark task as failed
         asyncio.run(_mark_failed(generation_task_id, str(exc)))
         raise self.retry(exc=exc) from exc
-
-
-async def _get_task_status(task_uuid):
-    """Query the DB for a generation task's current status (for idempotency)."""
-    from app.dao import generation_dao
-    async with _session_factory() as db:
-        task = await generation_dao.get(db, task_uuid)
-        return task.status if task else None
-
-
-async def _mark_failed(task_id: str, error_message: str) -> None:
-    """Mark a generation task as failed."""
-    from uuid import UUID
-    from app.dao import generation_dao
-
-    task_uuid = UUID(task_id)
-    async with _session_factory() as db:
-        task = await generation_dao.get(db, task_uuid)
-        if task:
-            await generation_dao.update(
-                db,
-                task,
-                {"status": "failed", "error_message": error_message},
-            )
-            await db.commit()

@@ -25,8 +25,8 @@ from app.dao import (
     generation_dao,
     system_config_dao,
 )
-from app.dependencies import get_current_user, get_db
-from app.errors import ErrorCode, PermissionError, NotFoundError
+from app.dependencies import get_current_user, get_db, require_admin
+from app.errors import ErrorCode, NotFoundError
 from app.schemas.admin import LLMConfigReq, LLMConfigResp, AdminStatsResp, UserManageResp, ProjectManageResp, UpdateUserReq
 
 logger = logging.getLogger(__name__)
@@ -66,23 +66,6 @@ async def _save_config_to_db(
         description="LLM 配置",
     )
     await db.commit()
-
-
-# ---------------------------------------------------------------------------
-# Dependencies
-# ---------------------------------------------------------------------------
-
-async def require_admin(
-    current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> dict:
-    """Verify the current user has admin role."""
-    if not getattr(current_user, "is_admin", False) and getattr(current_user, "role", None) != "admin":
-        raise PermissionError(
-            error_code=ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS,
-            detail="需要管理员权限",
-        )
-    return current_user
 
 
 # ---------------------------------------------------------------------------

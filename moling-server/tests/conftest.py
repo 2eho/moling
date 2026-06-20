@@ -131,12 +131,16 @@ if not IS_WINDOWS:
         return {"Authorization": f"Bearer {test_user.access_token}"}
 
     @pytest_asyncio.fixture()
-    async def async_client(test_db):
+    async def async_client(test_db, test_user):
         """创建异步测试客户端。"""
         async def override_get_db():
             yield test_db
         
+        async def override_get_current_user():
+            return test_user.user
+        
         app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = override_get_current_user
         
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:

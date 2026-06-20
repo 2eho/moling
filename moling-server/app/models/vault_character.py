@@ -123,9 +123,9 @@ class VaultCharacter(BaseModel, SoftDeleteMixin):
         comment="已出场章节数",
     )
     embedding: Mapped[Optional[list[float]]] = mapped_column(
-        Float,
+        JSON,
         nullable=True,
-        comment="语义嵌入向量 (pgvector)",
+        comment="语义嵌入向量 (JSON 数组)",
     )
 
     def __repr__(self) -> str:

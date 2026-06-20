@@ -163,9 +163,9 @@ class CardPool(BaseModel, SoftDeleteMixin):
         comment="剩余寿命 (章节数, 过期后失效)",
     )
     embedding: Mapped[Optional[list[float]]] = mapped_column(
-        Float,
+        JSON,
         nullable=True,
-        comment="语义嵌入向量 (1536 维, pgvector)",
+        comment="语义嵌入向量 (1536 维, JSON 数组)",
     )
 
     def __repr__(self) -> str:

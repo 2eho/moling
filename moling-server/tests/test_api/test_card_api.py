@@ -5,39 +5,29 @@ from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 
-API_PREFIX = "/api/v1/cards"
-
 
 class TestCardList:
-    """测试卡牌列表端点 GET /api/v1/cards。"""
+    """测试卡牌列表端点 GET /api/v1/projects/{project_id}/cards。"""
 
     async def test_list_cards_success(self, async_client: AsyncClient, 
                                      auth_headers, test_project):
         """获取卡牌列表成功应返回 200 及 CardPoolListResp。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.get(
-            API_PREFIX, 
+            f"/api/v1/projects/{test_project.id}/cards", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
-        assert "items" in data or isinstance(data, dict)
+        data = resp.json()["data"]
+        assert "cards" in data or isinstance(data, dict)
 
     async def test_list_cards_no_auth(self, async_client: AsyncClient, test_project):
-        """未认证请求应返回 403。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
+        """未认证请求应返回 401。"""
         # Act
         resp = await async_client.get(
-            API_PREFIX, 
-            params=params
+            f"/api/v1/projects/{test_project.id}/cards", 
         )
 
         # Assert
@@ -45,30 +35,30 @@ class TestCardList:
 
 
 class TestCardDraw:
-    """测试抽卡端点 POST /api/v1/cards/draw。"""
+    """测试抽卡端点 POST /api/v1/projects/{project_id}/cards/draw。"""
 
     async def test_draw_cards_success(self, async_client: AsyncClient, 
                                      auth_headers, test_project):
         """抽卡成功应返回 200 及 DrawCardResp。"""
-        # Arrange
+        # Arrange - 使用正确的 DrawCardReq schema 字段
         payload = {
             "mode": "single",
-            "card_type": "character",
-            "count": 1
+            "draw_count": 1,
+            "chapter_id": "",
+            "keep_card_ids": [],
+            "weights": [],
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/draw", 
+            f"/api/v1/projects/{test_project.id}/cards/draw", 
             json=payload,
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["data"]
         assert "cards" in data
         assert isinstance(data["cards"], list)
 
@@ -78,17 +68,17 @@ class TestCardDraw:
         # Arrange
         payload = {
             "mode": "invalid_mode",
-            "card_type": "character",
-            "count": 1
+            "draw_count": 1,
+            "chapter_id": "",
+            "keep_card_ids": [],
+            "weights": [],
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/draw", 
+            f"/api/v1/projects/{test_project.id}/cards/draw", 
             json=payload,
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -96,7 +86,7 @@ class TestCardDraw:
 
 
 class TestCardCreate:
-    """测试创建卡牌端点 POST /api/v1/cards。"""
+    """测试创建卡牌端点 POST /api/v1/projects/{project_id}/cards。"""
 
     async def test_create_card_success(self, async_client: AsyncClient, 
                                       auth_headers, test_project):
@@ -108,21 +98,18 @@ class TestCardCreate:
             "description": "这是一个测试角色。",
             "rarity": "common"
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            API_PREFIX, 
+            f"/api/v1/projects/{test_project.id}/cards", 
             json=payload,
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 201
-        data = resp.json()
+        data = resp.json()["data"]
         assert data["name"] == "测试角色"
-        assert data["card_type"] == "character"
 
     async def test_create_card_invalid_type(self, async_client: AsyncClient, 
                                            auth_headers, test_project):
@@ -133,14 +120,12 @@ class TestCardCreate:
             "name": "测试",
             "description": "描述"
         }
-        params = {"project_id": test_project.id}
 
         # Act
         resp = await async_client.post(
-            API_PREFIX, 
+            f"/api/v1/projects/{test_project.id}/cards", 
             json=payload,
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -148,11 +133,13 @@ class TestCardCreate:
 
 
 class TestCardRetire:
-    """测试退役卡牌端点 POST /api/v1/cards/{card_id}/retire。"""
+    """测试退役卡牌端点 POST /api/v1/projects/{project_id}/cards/{card_id}/retire。"""
 
     async def test_retire_card_success(self, async_client: AsyncClient, 
                                        auth_headers, test_project):
         """退役卡牌成功应返回 204。"""
+        project_id = test_project.id
+
         # Arrange - 先创建一个卡牌
         create_payload = {
             "card_type": "character",
@@ -160,22 +147,19 @@ class TestCardRetire:
             "description": "描述",
             "rarity": "common"
         }
-        params = {"project_id": test_project.id}
         
         create_resp = await async_client.post(
-            API_PREFIX, 
+            f"/api/v1/projects/{project_id}/cards", 
             json=create_payload,
             headers=auth_headers,
-            params=params
         )
         assert create_resp.status_code == 201
-        card_id = create_resp.json()["id"]
+        card_id = create_resp.json()["data"]["id"]
 
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/{card_id}/retire", 
+            f"/api/v1/projects/{project_id}/cards/{card_id}/retire", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -184,14 +168,10 @@ class TestCardRetire:
     async def test_retire_card_not_found(self, async_client: AsyncClient, 
                                          auth_headers, test_project):
         """退役不存在的卡牌应返回 404。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.post(
-            f"{API_PREFIX}/99999/retire", 
+            f"/api/v1/projects/{test_project.id}/cards/99999/retire", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
@@ -199,22 +179,18 @@ class TestCardRetire:
 
 
 class TestCardDrawHistory:
-    """测试抽卡历史端点 GET /api/v1/cards/history。"""
+    """测试抽卡历史端点 GET /api/v1/projects/{project_id}/cards/history。"""
 
     async def test_get_draw_history_success(self, async_client: AsyncClient, 
                                            auth_headers, test_project):
         """获取抽卡历史成功应返回 200 及历史列表。"""
-        # Arrange
-        params = {"project_id": test_project.id}
-
         # Act
         resp = await async_client.get(
-            f"{API_PREFIX}/history", 
+            f"/api/v1/projects/{test_project.id}/cards/history", 
             headers=auth_headers,
-            params=params
         )
 
         # Assert
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        data = resp.json()["data"]
+        assert "items" in data

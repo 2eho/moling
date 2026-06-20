@@ -7,9 +7,11 @@ and rebuilding the Four Databases (四库).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from app.worker.celery_app import celery_app
+from app.worker.db import get_worker_session
 
 logger = logging.getLogger(__name__)
 
@@ -32,92 +34,70 @@ def vault_full_reanalyze(self, project_id: int, user_id: str) -> dict:
         "Starting full reanalysis for project %s (user: %s)", project_id, user_id
     )
 
-    try:
-        import asyncio
-        from sqlalchemy import select
-        from sqlalchemy.ext.asyncio import (
-            AsyncSession,
-            async_sessionmaker,
-            create_async_engine,
-        )
-
-        from app.config import get_settings
-        from app.dao import project_dao
-        from app.models.chapter import Chapter
+    async def _reanalyze() -> dict:
+        from app.dao import project_dao, chapter_dao
         from app.service.vault_service import VaultService
 
-        settings = get_settings()
-        engine = create_async_engine(settings.DATABASE_URL, echo=False)
-        SessionLocal = async_sessionmaker(
-            engine, expire_on_commit=False, class_=AsyncSession
-        )
+        async with get_worker_session() as db:
+            # Verify project exists
+            project = await project_dao.get(db, project_id)
+            if project is None:
+                raise ValueError(f"Project {project_id} not found")
 
-        async def _reanalyze() -> dict:
-            async with SessionLocal() as db:
-                # Verify project exists
-                project = await project_dao.get(db, project_id)
-                if project is None:
-                    raise ValueError(f"Project {project_id} not found")
+            # Get all chapters via DAO
+            chapters = await chapter_dao.get_by_project(db, project_id)
 
-                # Get all chapters
-                stmt = (
-                    select(Chapter)
-                    .where(Chapter.project_id == project_id)
-                    .order_by(Chapter.chapter_number)
-                )
-                result = await db.execute(stmt)
-                chapters = list(result.scalars().all())
-
-                if not chapters:
-                    return {
-                        "status": "done",
-                        "project_id": project_id,
-                        "total_chapters": 0,
-                        "total_created": 0,
-                        "total_updated": 0,
-                        "message": "No chapters found in project",
-                    }
-
-                vault = VaultService()
-                total_created = 0
-                total_updated = 0
-                total_entities = 0
-                chapter_results = []
-
-                for chapter in chapters:
-                    try:
-                        r = await vault.update_from_chapter(
-                            project_id=project_id,
-                            chapter_id=chapter.id,
-                        )
-                        chapter_results.append(r)
-                        total_created += r.get("created", 0)
-                        total_updated += r.get("updated", 0)
-                        total_entities += r.get("total_entities", 0)
-                    except Exception as e:
-                        logger.warning(
-                            "Failed to reanalyze chapter %s: %s", chapter.id, e
-                        )
-                        chapter_results.append({
-                            "chapter_id": chapter.id,
-                            "chapter_number": chapter.chapter_number,
-                            "error": str(e),
-                        })
-
+            if not chapters:
                 return {
                     "status": "done",
                     "project_id": project_id,
-                    "total_chapters": len(chapters),
-                    "total_created": total_created,
-                    "total_updated": total_updated,
-                    "total_entities_found": total_entities,
-                    "chapter_results": chapter_results,
-                    "message": (
-                        f"Reanalysis complete: {len(chapters)} chapters processed, "
-                        f"{total_created} created, {total_updated} updated"
-                    ),
+                    "total_chapters": 0,
+                    "total_created": 0,
+                    "total_updated": 0,
+                    "message": "No chapters found in project",
                 }
 
+            vault = VaultService()
+            total_created = 0
+            total_updated = 0
+            total_entities = 0
+            chapter_results = []
+
+            for chapter in chapters:
+                try:
+                    r = await vault.update_from_chapter(
+                        project_id=project_id,
+                        chapter_id=chapter.id,
+                    )
+                    chapter_results.append(r)
+                    total_created += r.get("created", 0)
+                    total_updated += r.get("updated", 0)
+                    total_entities += r.get("total_entities", 0)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to reanalyze chapter %s: %s", chapter.id, e
+                    )
+                    chapter_results.append({
+                        "chapter_id": chapter.id,
+                        "chapter_number": getattr(chapter, 'chapter_number', 0),
+                        "error": str(e),
+                    })
+
+            return {
+                "status": "done",
+                "project_id": project_id,
+                "total_chapters": len(chapters),
+                "total_created": total_created,
+                "total_updated": total_updated,
+                "total_entities_found": total_entities,
+                "chapter_results": chapter_results,
+                "message": (
+                    f"Reanalysis complete: {len(chapters)} chapters processed, "
+                    f"{total_created} created, {total_updated} updated"
+                ),
+            }
+
+    try:
         result = asyncio.run(_reanalyze())
 
         logger.info(
