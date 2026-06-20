@@ -57,6 +57,7 @@ def pytest_collection_modifyitems(config, items):
 if not IS_WINDOWS:
     import pytest_asyncio
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from sqlalchemy.pool import NullPool
     from jose import jwt
     from datetime import datetime, timedelta, timezone
 
@@ -73,8 +74,12 @@ if not IS_WINDOWS:
 
     @pytest_asyncio.fixture(scope="session")
     async def test_engine():
-        """创建测试数据库引擎。"""
-        engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+        """创建测试数据库引擎（NullPool 避免 asyncpg 连接复用冲突）。"""
+        engine = create_async_engine(
+            TEST_DATABASE_URL,
+            echo=False,
+            poolclass=NullPool,
+        )
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         yield engine
@@ -98,27 +103,23 @@ if not IS_WINDOWS:
         return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
     @pytest_asyncio.fixture()
-    async def test_user(test_engine):
-        """创建测试用户并返回用户信息（独立 session 避免连接池污染）。"""
+    async def test_user(test_db):
+        """创建测试用户并返回用户信息。"""
         from app.service import auth_service
         from app.schemas.auth import RegisterReq, LoginReq
         
         email = "testuser@example.com"
         password = "TestPassword123!"
         
-        session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
-        async with session_factory() as session:
-            try:
-                req = RegisterReq(email=email, nickname="测试用户", password=password)
-                result = await auth_service.register(session, req)
-                await session.commit()
-                return result
-            except Exception:
-                await session.rollback()
-                req = LoginReq(email=email, password=password)
-                result = await auth_service.login(session, req)
-                await session.commit()
-                return result
+        try:
+            req = RegisterReq(email=email, nickname="测试用户", password=password)
+            result = await auth_service.register(test_db, req)
+            return result
+        except Exception:
+            await test_db.rollback()
+            req = LoginReq(email=email, password=password)
+            result = await auth_service.login(test_db, req)
+            return result
 
     @pytest.fixture()
     def auth_headers(test_user):
