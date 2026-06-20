@@ -215,20 +215,20 @@ class TestExtractCardIds:
             char_refs=[{"id": 1001}, {"id": 1002}],
             prom_refs=[{"id": 2001}],
             timeline_pt="15",
-            world_refs=[{"id": 3001}, {"id": "w002"}],
+            world_refs=[{"id": 3001}, {"id": 3002}],
         )
         result = service._extract_card_ids([card])
-        assert sorted(result["character_ids"]) == [1001, 1002]
-        assert result["promise_ids"] == [2001]
+        assert sorted(result["character_ids"]) == ["1001", "1002"]
+        assert result["promise_ids"] == ["2001"]
         assert result["timeline_points"] == ["15"]
-        assert sorted(result["world_rule_ids"]) == [3001, "w002"]
+        assert sorted(result["world_rule_ids"]) == ["3001", "3002"]
 
     def test_multiple_cards_dedup(self, service):
         """多张卡片引用同一 ID 应去重。"""
         c1 = make_card(char_refs=[{"id": 1001}, {"id": 1002}])
         c2 = make_card(char_refs=[{"id": 1001}, {"id": 1003}])
         result = service._extract_card_ids([c1, c2])
-        assert sorted(result["character_ids"]) == [1001, 1002, 1003]
+        assert sorted(result["character_ids"]) == ["1001", "1002", "1003"]
 
     def test_null_fields_ignored(self, service):
         """None / 空列表字段应被安全忽略。"""
@@ -340,12 +340,12 @@ class TestFetchFilteredPromises:
 
     async def test_match_promises(self, svc, mock_db):
         p1 = make_promise(id=2001)
-        p2 = make_promise(id="p002")
+        p2 = make_promise(id=2002)
         mock_db.execute.side_effect = mock_execute(
             "promises", promises=[p1, p2]
         )
 
-        result = await svc._fetch_filtered_promises(mock_db, 1, [2001, "p002"])
+        result = await svc._fetch_filtered_promises(mock_db, 1, [2001, 2002])
         assert len(result) == 2
 
     async def test_partial_match(self, svc, mock_db):
@@ -354,7 +354,7 @@ class TestFetchFilteredPromises:
             "promises", promises=[p1]
         )
 
-        result = await svc._fetch_filtered_promises(mock_db, 1, [2001, "p999"])
+        result = await svc._fetch_filtered_promises(mock_db, 1, [2001, 2999])
         assert len(result) == 1
         assert result[0].id == 2001
 
@@ -369,12 +369,12 @@ class TestFetchFilteredWorld:
 
     async def test_match_world_entries(self, svc, mock_db):
         w1 = make_world(id=3001, name="筑基期")
-        w2 = make_world(id="w002", name="金丹期")
+        w2 = make_world(id=3002, name="金丹期")
         mock_db.execute.side_effect = mock_execute(
             "world", world=[w1, w2]
         )
 
-        result = await svc._fetch_filtered_world(mock_db, 1, [3001, "w002"])
+        result = await svc._fetch_filtered_world(mock_db, 1, [3001, 3002])
         assert len(result) == 2
 
 
