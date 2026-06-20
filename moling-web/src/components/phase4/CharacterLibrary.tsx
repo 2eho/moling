@@ -138,8 +138,8 @@ export function CharacterLibrary({ projectId }: CharacterLibraryProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜索角色..."
-          className="flex-1 bg-transparent text-xs outline-none"
-          style={{ color: "var(--th-text)", placeholderColor: "var(--th-text-4)" }}
+          className="flex-1 bg-transparent text-xs outline-none placeholder-[var(--th-text-4)]"
+          style={{ color: "var(--th-text)" }}
         />
         {characters.length > 0 && (
           <span className="text-[10px]" style={{ color: "var(--th-text-4)" }}>
