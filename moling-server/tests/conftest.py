@@ -57,12 +57,14 @@ def pytest_collection_modifyitems(config, items):
 if not IS_WINDOWS:
     import pytest_asyncio
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from sqlalchemy.pool import NullPool
     from jose import jwt
     from datetime import datetime, timedelta, timezone
 
     import os
     TEST_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite://")
     settings = get_settings()
+    _IS_PG = "postgresql" in TEST_DATABASE_URL
 
     @pytest.fixture(scope="session")
     def event_loop():
@@ -73,8 +75,11 @@ if not IS_WINDOWS:
 
     @pytest_asyncio.fixture(scope="session")
     async def test_engine():
-        """创建测试数据库引擎。"""
-        engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+        """创建测试数据库引擎（PostgreSQL 用 NullPool 避免连接复用冲突）。"""
+        engine_kwargs: dict = {"echo": False}
+        if _IS_PG:
+            engine_kwargs["poolclass"] = NullPool
+        engine = create_async_engine(TEST_DATABASE_URL, **engine_kwargs)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         yield engine
