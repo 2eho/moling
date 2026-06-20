@@ -232,41 +232,14 @@ class GenerationService:
                 await db.flush()
 
                 # ===== Step 8.5: Pre-generation Coherence Validation (§5.1) =====
-                # Algorithm doc §5.1: 生成前校验—检测卡片选择 + vault 状态的
-                # 潜在冲突，通过率 < 40% 阻止生成，< 70% 仅告警。
-                logger.info(f"Task {task_id}: Step 8.5 - Pre-generation validation")
-                try:
-                    from app.service.coherence_service import coherence_service
-                    generation_params = {
-                        "card_ids": card_ids,
-                        "weights": weights,
-                        "mode": task.input_params.get("mode", "single"),
-                        "chapter_id": chapter.id if chapter else None,
-                        "chapter_number": chapter.chapter_number if chapter else None,
-                    }
-                    pre_check = await coherence_service.validate_pre_generation(
-                        db, project.id, chapter.id if chapter else None, generation_params
-                    )
-                    pre_score = pre_check.get("overall_score", 1.0)
-                    logger.info(f"Task {task_id}: Pre-check score={pre_score:.2f}")
-
-                    if pre_score < 0.4:
-                        task.status = "failed"
-                        task.error_message = (
-                            f"生成前连贯性检查未通过 (score={pre_score:.2f})。"
-                            f"建议减少卡牌数量或更换卡牌组合。"
-                        )
-                        task.progress_percent = 55
-                        await db.flush()
-                        return {"error": task.error_message, "pre_check": pre_check}
-
-                    if pre_score < 0.7:
-                        logger.warning(
-                            f"Task {task_id}: Pre-check score {pre_score:.2f} < 0.7, "
-                            f"proceeding with caution"
-                        )
-                except Exception as e:
-                    logger.error(f"Task {task_id}: Pre-check failed (non-blocking): {e}")
+                # v1 的 validate_pre_generation 已被移除。
+                # 预检查功能已整合到 Step 10 的 v2 分组检查中
+                #（_check_group_narrative_consistency / _check_group_writing_quality /
+                #  _check_group_continuity），在生成后通过 validate_post_generation 执行。
+                logger.info(
+                    f"Task {task_id}: Step 8.5 - Pre-generation validation "
+                    f"(migrated to v2 post-generation grouped checks in Step 10)"
+                )
 
                 # ===== Step 9: Body Text Writing (Large Model) =====
                 logger.info(f"Task {task_id}: Step 9 - Body text writing")

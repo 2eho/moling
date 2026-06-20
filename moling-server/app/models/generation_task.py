@@ -6,10 +6,10 @@ from typing import Optional
 from sqlalchemy import JSON, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.models.base import Base, TimestampMixin, SoftDeleteMixin
 
 
-class GenerationTask(Base, TimestampMixin):
+class GenerationTask(Base, TimestampMixin, SoftDeleteMixin):
     """An AI generation / revision task.
 
     Unlike most models, ``id`` is a UUID string (not auto-increment integer)
@@ -30,7 +30,7 @@ class GenerationTask(Base, TimestampMixin):
         index=True,
         comment="所属项目 ID",
     )
-    chapter_id: Mapped[Optional[int]] = mapped_column(
+    chapter_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey("chapters.id", ondelete="SET NULL"),
         nullable=True,
         index=True,

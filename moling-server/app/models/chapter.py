@@ -6,10 +6,10 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, SoftDeleteMixin
 
 
-class Chapter(BaseModel):
+class Chapter(BaseModel, SoftDeleteMixin):
     """A single chapter within a project."""
 
     __tablename__ = "chapters"

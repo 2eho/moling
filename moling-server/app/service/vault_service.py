@@ -548,7 +548,7 @@ class VaultService:
                         db,
                         {
                             "project_id": project_id,
-                            "term": loc_name,
+                            "name": loc_name,
                             "description": f"从第 {chapter.chapter_number} 章自动提取的地点",
                             "category": "location",
                             "reference_chapters": [],
@@ -569,7 +569,7 @@ class VaultService:
                         db,
                         {
                             "project_id": project_id,
-                            "term": item_name,
+                            "name": item_name,
                             "description": f"从第 {chapter.chapter_number} 章自动提取的物品",
                             "category": "item",
                             "reference_chapters": [],

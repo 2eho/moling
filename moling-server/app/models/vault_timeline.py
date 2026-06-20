@@ -5,15 +5,15 @@ from typing import Optional
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, SoftDeleteMixin
 
 
-class VaultTimeline(BaseModel):
+class VaultTimeline(BaseModel, SoftDeleteMixin):
     """A single event / entry in the project's timeline."""
 
     __tablename__ = "vault_timeline"
 
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

@@ -12,12 +12,16 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.vault import (
     CharacterResp,
     CharacterCreate,
+    CharacterUpdate,
     TimelineResp,
     TimelineCreate,
+    TimelineUpdate,
     PlotPromiseResp,
     PlotPromiseCreate,
+    PlotPromiseUpdate,
     WorldResp,
     WorldCreate,
+    WorldUpdate,
 )
 from app.service import vault_service
 
@@ -65,13 +69,13 @@ async def create_character(
 async def update_character(
     project_id: int,
     character_id: int,
-    character_data: dict = ...,
+    character_data: CharacterUpdate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> CharacterResp:
     """Update a character in the vault."""
     return await vault_service.update_character(
-        db, current_user.id, project_id, character_id, character_data
+        db, current_user.id, project_id, character_id, character_data.model_dump(exclude_unset=True)
     )
 
 
@@ -127,13 +131,13 @@ async def create_timeline_event(
 async def update_timeline_event(
     project_id: int,
     event_id: int,
-    event_data: dict = ...,
+    event_data: TimelineUpdate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> TimelineResp:
     """Update a timeline event in the vault."""
     return await vault_service.update_timeline_event(
-        db, current_user.id, project_id, event_id, event_data
+        db, current_user.id, project_id, event_id, event_data.model_dump(exclude_unset=True)
     )
 
 
@@ -189,13 +193,13 @@ async def create_plot_promise(
 async def update_plot_promise(
     project_id: int,
     promise_id: int,
-    promise_data: dict = ...,
+    promise_data: PlotPromiseUpdate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> PlotPromiseResp:
     """Update a plot promise in the vault."""
     return await vault_service.update_plot_promise(
-        db, current_user.id, project_id, promise_id, promise_data
+        db, current_user.id, project_id, promise_id, promise_data.model_dump(exclude_unset=True)
     )
 
 
@@ -251,13 +255,13 @@ async def create_world_entry(
 async def update_world_entry(
     project_id: int,
     entry_id: int,
-    entry_data: dict = ...,
+    entry_data: WorldUpdate,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> WorldResp:
     """Update a world-building entry in the vault."""
     return await vault_service.update_world_entry(
-        db, current_user.id, project_id, entry_id, entry_data
+        db, current_user.id, project_id, entry_id, entry_data.model_dump(exclude_unset=True)
     )
 
 

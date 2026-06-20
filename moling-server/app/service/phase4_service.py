@@ -761,7 +761,7 @@ class Phase4Service:
             # 创建新世界观元素
             world = VaultWorld(
                 project_id=project_id,
-                term=world_data["term"],
+                name=world_data["term"],
                 description=world_data.get("description", ""),
                 category=world_data.get("category", "concept"),
                 rules=world_data.get("rules", {}),

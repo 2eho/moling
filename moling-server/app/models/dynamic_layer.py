@@ -17,7 +17,7 @@ class DynamicLayer(BaseModel):
 
     __tablename__ = "dynamic_layers"
 
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

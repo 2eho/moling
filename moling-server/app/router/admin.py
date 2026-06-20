@@ -26,7 +26,7 @@ from app.dao import (
     system_config_dao,
 )
 from app.dependencies import get_current_user, get_db
-from app.schemas.admin import LLMConfigReq, LLMConfigResp, AdminStatsResp, UserManageResp, ProjectManageResp
+from app.schemas.admin import LLMConfigReq, LLMConfigResp, AdminStatsResp, UserManageResp, ProjectManageResp, UpdateUserReq
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["admin"])
@@ -229,7 +229,7 @@ async def get_projects(
 @router.patch("/users/{user_id}")
 async def update_user(
     user_id: str,
-    data: dict,
+    data: UpdateUserReq,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):

@@ -6,10 +6,10 @@ from typing import Optional
 from sqlalchemy import DateTime, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, SoftDeleteMixin
 
 
-class User(BaseModel):
+class User(BaseModel, SoftDeleteMixin):
     """Platform user account."""
 
     __tablename__ = "users"

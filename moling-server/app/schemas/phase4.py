@@ -24,6 +24,12 @@ class ApplyPhase4Req(BaseModel):
     auto_apply: bool = Field(default=False, description="是否自动应用所有建议")
 
 
+class RejectReviewReq(BaseModel):
+    """拒绝 Phase 4 精修建议请求。"""
+
+    reason: Optional[str] = Field(default=None, max_length=500, description="拒绝原因")
+
+
 class Phase4TaskResp(BaseModel):
     """Phase 4 任务响应。"""
 

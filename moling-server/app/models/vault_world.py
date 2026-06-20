@@ -5,15 +5,15 @@ from typing import Optional
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, SoftDeleteMixin
 
 
-class VaultWorld(BaseModel):
+class VaultWorld(BaseModel, SoftDeleteMixin):
     """A single term / rule entry in the project's world-building vault."""
 
     __tablename__ = "vault_world"
 
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

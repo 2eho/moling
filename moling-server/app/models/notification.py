@@ -2,13 +2,13 @@
 
 from typing import Optional
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.models.base import Base, TimestampMixin, SoftDeleteMixin
 
 
-class Notification(Base, TimestampMixin):
+class Notification(Base, TimestampMixin, SoftDeleteMixin):
     """A notification for a user."""
 
     __tablename__ = "notifications"
@@ -46,12 +46,12 @@ class Notification(Base, TimestampMixin):
         default=False,
         comment="是否已读",
     )
-    project_id: Mapped[Optional[str]] = mapped_column(
-        String(36),
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
         ForeignKey("projects.id", ondelete="SET NULL"),
         nullable=True,
         default=None,
-        comment="关联项目 ID（可选，UUID）",
+        comment="关联项目 ID（可选）",
     )
 
     def __repr__(self) -> str:

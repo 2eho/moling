@@ -250,7 +250,7 @@ class VaultWorldDAO(BaseDAO[VaultWorld]):
     ) -> VaultWorld | None:
         stmt = select(VaultWorld).where(
             VaultWorld.project_id == project_id,
-            VaultWorld.term == term,
+            VaultWorld.name == term,
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()

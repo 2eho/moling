@@ -228,6 +228,41 @@ def upgrade() -> None:
         sa.Column("dynamic_conflict_score", sa.Float(), nullable=True),
     )
 
+    # ================================================================
+    # Phase 2b: Add soft-delete columns (is_deleted + deleted_at)
+    # for all models that inherit SoftDeleteMixin
+    # ================================================================
+    _soft_delete_cols = [
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+            comment="软删除标记",
+        ),
+        sa.Column(
+            "deleted_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="删除时间",
+        ),
+    ]
+
+    _tables_with_soft_delete = [
+        "users",
+        "chapters",
+        "projects",
+        "card_pool",
+        "generation_tasks",
+        "vault_characters",
+        "vault_timeline",
+        "vault_plot_promises",
+        "vault_world",
+    ]
+    for _table in _tables_with_soft_delete:
+        for _col in _soft_delete_cols:
+            op.add_column(_table, _col)
+
     # --- vault_world: rename, drop, add ---
     op.alter_column("vault_world", "term", new_column_name="name")
     op.drop_column("vault_world", "change_type")
@@ -573,10 +608,23 @@ def upgrade() -> None:
         ),
         sa.Column(
             "project_id",
-            sa.String(36),
+            sa.Integer(),
             sa.ForeignKey("projects.id", ondelete="SET NULL"),
             nullable=True,
-            comment="关联项目 ID（可选，UUID）",
+            comment="关联项目 ID（可选）",
+        ),
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+            comment="软删除标记",
+        ),
+        sa.Column(
+            "deleted_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="删除时间",
         ),
         sa.Column(
             "created_at",
@@ -644,6 +692,19 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("0"),
             comment="叙事债务值",
+        ),
+        sa.Column(
+            "is_deleted",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+            comment="软删除标记",
+        ),
+        sa.Column(
+            "deleted_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="删除时间",
         ),
         sa.Column(
             "created_at",
@@ -1061,6 +1122,22 @@ def downgrade() -> None:
         sa.Column("change_type", sa.String(20), nullable=True),
     )
     op.alter_column("vault_world", "name", new_column_name="term")
+
+    # -- Reverse Phase 2b: soft-delete columns --
+    _tables_with_soft_delete = [
+        "vault_world",
+        "vault_plot_promises",
+        "vault_timeline",
+        "vault_characters",
+        "generation_tasks",
+        "card_pool",
+        "projects",
+        "chapters",
+        "users",
+    ]
+    for _table in _tables_with_soft_delete:
+        op.drop_column(_table, "deleted_at")
+        op.drop_column(_table, "is_deleted")
 
     # -- Reverse card_pool columns --
     op.drop_column("card_pool", "dynamic_conflict_score")

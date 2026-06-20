@@ -78,3 +78,13 @@ class ProjectManageResp(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
 
     model_config = {"from_attributes": True}
+
+
+class UpdateUserReq(BaseModel):
+    """Admin update user request (all fields optional)."""
+
+    email: Optional[str] = Field(default=None, description="邮箱")
+    username: Optional[str] = Field(default=None, min_length=1, max_length=100, description="用户名")
+    bio: Optional[str] = Field(default=None, description="个人简介")
+    role: Optional[str] = Field(default=None, description="角色")
+    status: Optional[str] = Field(default=None, description="状态")

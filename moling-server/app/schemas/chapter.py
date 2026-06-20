@@ -57,3 +57,24 @@ class AgentInstructionReq(BaseModel):
 
     type: str = Field(..., min_length=1, max_length=50, description="指令类型")
     content: str = Field(..., min_length=1, description="指令内容")
+
+
+class SyncGenerateReq(BaseModel):
+    """Request body for the deprecated sync generation endpoint."""
+
+    card_ids: list[str] = Field(..., description="选中的卡片 ID 列表")
+    weights: list[float] = Field(default=[], description="对应权重")
+    mode: str = Field(
+        default="single",
+        pattern=r"^(none|single|dual|all|hybrid)$",
+        description="抽取模式",
+    )
+    creativity: int = Field(default=5, ge=1, le=10, description="创意程度")
+    word_count: int = Field(default=2000, ge=500, le=5000, description="目标字数")
+
+
+class RedrawCardsReq(BaseModel):
+    """Request body for redrawing cards."""
+
+    keep_card_ids: list[int] = Field(default=[], description="保留的卡片 ID 列表")
+    draw_count: int = Field(default=3, ge=1, le=10, description="抽取数量")

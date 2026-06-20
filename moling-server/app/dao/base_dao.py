@@ -187,9 +187,18 @@ class BaseDAO(Generic[ModelT]):
         self,
         db: AsyncSession,
         filters: Optional[dict[str, Any]] = None,
+        *,
+        include_deleted: bool = False,
     ) -> int:
-        """Count records matching the optional filters."""
+        """Count records matching the optional filters.
+
+        By default excludes soft-deleted records when the model supports it.
+        """
         stmt = select(func.count()).select_from(self.model_class)
+
+        if not include_deleted and hasattr(self.model_class, 'is_deleted'):
+            stmt = stmt.where(self.model_class.is_deleted == False)
+
         stmt = self._apply_filters(stmt, filters)
         result = await db.execute(stmt)
         return result.scalar_one()

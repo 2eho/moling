@@ -5,15 +5,15 @@ from typing import Optional
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, SoftDeleteMixin
 
 
-class VaultPlotPromise(BaseModel):
+class VaultPlotPromise(BaseModel, SoftDeleteMixin):
     """A plot promise / foreshadowing element that tracks narrative debt."""
 
     __tablename__ = "vault_plot_promises"
 
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

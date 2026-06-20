@@ -12,6 +12,7 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.chapter import (
     CreateChapterReq, ChapterResp, UpdateChapterReq,
     ChapterConfirmReq, ChapterReviseReq, AgentInstructionReq,
+    SyncGenerateReq, RedrawCardsReq,
 )
 from app.schemas.generation import GenerateReq
 from app.service import chapter_service, generation_service, card_service
@@ -160,7 +161,7 @@ async def send_agent_instruction(
 async def generate_chapter_content_sync(
     project_id: int,
     chapter_id: int,
-    req: dict = ...,
+    req: SyncGenerateReq,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
@@ -175,7 +176,7 @@ async def generate_chapter_content_sync(
         DeprecationWarning,
         stacklevel=2,
     )
-    generate_req = GenerateReq(**req)
+    generate_req = GenerateReq(**req.model_dump())
     result = await generation_service.start_generation(
         db, current_user.id, project_id, chapter_id, generate_req
     )
@@ -186,7 +187,7 @@ async def generate_chapter_content_sync(
 async def redraw_chapter_cards(
     project_id: int,
     chapter_id: int,
-    data: dict = ...,
+    data: RedrawCardsReq,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
@@ -196,15 +197,12 @@ async def redraw_chapter_cards(
     请求参数：{keep_card_ids: list[int], draw_count: int = 3}
     响应：{cards: list, draw_round: int, remaining_redraws: int}
     """
-    keep_card_ids = data.get("keep_card_ids", [])
-    draw_count = data.get("draw_count", 3)
-
     result = await card_service.redraw_cards(
         db,
         current_user.id,
         project_id,
         chapter_id,
-        keep_card_ids=keep_card_ids,
-        draw_count=draw_count,
+        keep_card_ids=data.keep_card_ids,
+        draw_count=data.draw_count,
     )
     return result

@@ -5,10 +5,10 @@ from typing import Optional
 from sqlalchemy import Float, ForeignKey, Integer, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, SoftDeleteMixin
 
 
-class CardPool(BaseModel):
+class CardPool(BaseModel, SoftDeleteMixin):
     """A direction card in a project's card pool.
 
     卡片池存储用于生成章节灵感的卡片。
@@ -17,7 +17,7 @@ class CardPool(BaseModel):
 
     __tablename__ = "card_pool"
 
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

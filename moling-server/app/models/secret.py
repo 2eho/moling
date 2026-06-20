@@ -5,10 +5,10 @@ from typing import Optional
 from sqlalchemy import ForeignKey, Integer, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, SoftDeleteMixin
 
 
-class Secret(BaseModel):
+class Secret(BaseModel, SoftDeleteMixin):
     """A secret / hidden truth in the project's narrative."""
 
     __tablename__ = "secrets"

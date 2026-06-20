@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user
 from app.errors import NotFoundError, ForbiddenError
 from app.service.phase4_service import phase4_service
-from app.schemas.phase4 import Phase4SuggestionResp, ApplyPhase4Req, Phase4TaskResp
+from app.schemas.phase4 import Phase4SuggestionResp, ApplyPhase4Req, Phase4TaskResp, RejectReviewReq
 from app.models.phase4_task import Phase4State
 from app.dao.phase4_dao import phase4_dao
 from app.dao import project_dao
@@ -157,12 +157,12 @@ async def approve_review(
 @router.post("/reviews/{review_id}/reject", status_code=200)
 async def reject_review(
     review_id: int,
-    req: dict,
+    req: RejectReviewReq,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
     """拒绝精修建议，记录原因，更新状态为 'rejected'。"""
-    reason = req.get("reason", "")
+    reason = req.reason or ""
     task = await phase4_dao.get(db, review_id)
 
     if not task:

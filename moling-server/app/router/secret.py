@@ -62,6 +62,12 @@ async def update_secrets_by_character(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Update secrets for a character (by ID, for backward compatibility)."""
+    # Verify project ownership
+    project = await project_dao.get(db, project_id)
+    if project is None:
+        raise NotFoundError(detail="Project not found")
+    if str(project.user_id) != str(current_user.id):
+        raise ForbiddenError(detail="Not authorized to access this project")
     result = await secret_service.update_secrets_by_character(
         db, project_id, character_id, data
     )
@@ -77,6 +83,12 @@ async def update_secret(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Update a specific secret (edit known_by, unknown_to, debt_count)."""
+    # Verify project ownership
+    project = await project_dao.get(db, project_id)
+    if project is None:
+        raise NotFoundError(detail="Project not found")
+    if str(project.user_id) != str(current_user.id):
+        raise ForbiddenError(detail="Not authorized to access this project")
     result = await secret_service.update_secret(
         db, project_id, secret_id, data
     )
