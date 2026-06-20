@@ -15,7 +15,7 @@ class PlanDAO(BaseDAO[Plan]):
     """Data access for subscription plans."""
 
     def __init__(self) -> None:
-        super().__init__(Plan)
+        BaseDAO.__init__(self, Plan)
 
     async def get_active_plans(
         self,
@@ -35,7 +35,7 @@ class UserSubscriptionDAO(BaseDAO[UserSubscription]):
     """Data access for user subscriptions."""
 
     def __init__(self) -> None:
-        super().__init(UserSubscription)
+        BaseDAO.__init__(self, UserSubscription)
 
     async def get_by_user(
         self,
