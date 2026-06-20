@@ -11,7 +11,7 @@ from pydantic import BaseModel
 class SecretResp(BaseModel):
     """Secret detail response."""
 
-    id: int
+    id: str  # String(36) UUID — matches Secret model PK
     project_id: int
     description: str
     known_by: list[str]

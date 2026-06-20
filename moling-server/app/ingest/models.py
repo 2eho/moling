@@ -26,11 +26,11 @@ class IngestJob(BaseModel):
         index=True,
         comment="所属项目 ID",
     )
-    user_id: Mapped[int] = mapped_column(
-        Integer,
+    user_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        comment="发起导入的用户 ID",
+        comment="发起导入的用户 UUID",
     )
     source_type: Mapped[str] = mapped_column(
         String(20),

@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 class PlanResp(BaseModel):
     """Plan detail response."""
 
-    id: int
+    id: str  # String(36) UUID — matches Plan model PK
     name: str
     price: float
     currency: str
@@ -25,7 +25,7 @@ class PlanResp(BaseModel):
 class CreateSubscriptionReq(BaseModel):
     """Create subscription request."""
 
-    plan_id: int = Field(..., description="订阅方案 ID")
+    plan_id: str = Field(..., description="订阅方案 ID (UUID)")
     auto_renew: bool = Field(default=True, description="是否自动续费")
 
 
