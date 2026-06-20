@@ -669,7 +669,6 @@ def upgrade() -> None:
             sa.Integer(),
             sa.ForeignKey("projects.id", ondelete="CASCADE"),
             nullable=False,
-            index=True,
             comment="所属项目 ID",
         ),
         sa.Column(
