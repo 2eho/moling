@@ -33,7 +33,7 @@ class TestAuthRegister:
         assert data["token_type"] == "bearer"
         assert "user" in data
         assert data["user"]["email"] == "newuser@example.com"
-        assert data["user"]["username"] == "新用户"
+        assert data["user"]["nickname"] == "新用户"
 
     async def test_register_duplicate_email(self, async_client: AsyncClient, test_user):
         """重复注册相同邮箱应返回 400。"""

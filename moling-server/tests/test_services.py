@@ -21,13 +21,13 @@ class TestAuthService:
 
         req = RegisterReq(
             email="new@example.com",
-            username="新用户",
+            nickname="新用户",
             password="password123",
         )
         result = await auth_service.register(test_db, req)
 
         assert result.user.email == "new@example.com"
-        assert result.user.username == "新用户"
+        assert result.user.nickname == "新用户"
         assert result.access_token is not None
         assert result.refresh_token is not None
         assert result.user.id is not None
@@ -40,7 +40,7 @@ class TestAuthService:
 
         req = RegisterReq(
             email="test@moling.com",
-            username="另一个用户",
+            nickname="另一个用户",
             password="password123",
         )
         with pytest.raises(ConflictError):
@@ -54,7 +54,7 @@ class TestAuthService:
 
         req = RegisterReq(
             email="other@moling.com",
-            username="测试用户",
+            nickname="测试用户",
             password="password123",
         )
         with pytest.raises(ConflictError):
