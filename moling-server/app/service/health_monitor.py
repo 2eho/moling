@@ -17,6 +17,7 @@ from typing import Any, List, Optional, Set, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vault_plot_promise import VaultPlotPromise
+from app.utils.service_helpers import _get_last_advance_chapter
 
 logger = logging.getLogger(__name__)
 
@@ -151,19 +152,6 @@ async def _check_promise(
         alerts.append(r3)
 
     return alerts
-
-
-def _get_last_advance_chapter(promise: VaultPlotPromise) -> int:
-    """获取承诺最后一次推进的章节号。
-
-    若有 advancement_log，取最后一条记录的 chapter 值；
-    否则用 planted_chapter 兜底。
-    """
-    if promise.advancement_log and isinstance(promise.advancement_log, list):
-        last_entry = promise.advancement_log[-1]
-        if isinstance(last_entry, dict):
-            return last_entry.get("chapter", 0) or 0
-    return promise.planted_chapter or 0
 
 
 def _check_r1(

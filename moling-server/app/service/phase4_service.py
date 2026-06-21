@@ -23,6 +23,7 @@ from app.service.merge_service import (
 )
 from app.errors import ErrorCode, NotFoundError, ValidationError, AppError
 from app.utils.security import verify_project_ownership
+from app.utils.service_helpers import _calc_edit_distance
 from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool
 from app.models.phase4_task import Phase4Task, Phase4State
 from app.llm.client import llm_client
@@ -1512,29 +1513,6 @@ class Phase4Service:
     # §11.7 [15]: 人物库合并
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _calc_edit_distance(s1: str, s2: str) -> int:
-        """计算两个字符串之间的编辑距离（Levenshtein）。"""
-        if len(s1) < len(s2):
-            s1, s2 = s2, s1
-        if not s2:
-            return len(s1)
-
-        prev_row = list(range(len(s2) + 1))
-        for i, c1 in enumerate(s1):
-            curr_row = [i + 1]
-            for j, c2 in enumerate(s2):
-                cost = 0 if c1 == c2 else 1
-                curr_row.append(
-                    min(
-                        curr_row[j] + 1,         # 删除
-                        prev_row[j + 1] + 1,     # 插入
-                        prev_row[j] + cost,       # 替换
-                    )
-                )
-            prev_row = curr_row
-        return prev_row[-1]
-
     async def _merge_characters(
         self,
         db: AsyncSession,
@@ -1572,9 +1550,9 @@ class Phase4Service:
                 matched_char = None
                 matched_name = ""
                 for existing_name in char_name_map:
-                    dist = self._calc_edit_distance(name, existing_name)
+                    dist = _calc_edit_distance(name, existing_name)
                     if dist < CHARACTER_FUZZY_THRESHOLD:
-                        if matched_char is None or dist < self._calc_edit_distance(
+                        if matched_char is None or dist < _calc_edit_distance(
                             name, matched_name
                         ):
                             matched_char = char_name_map[existing_name]
@@ -1608,7 +1586,7 @@ class Phase4Service:
                         })
                         logger.info(
                             f"Character fuzzy matched: '{name}' → '{matched_name}' "
-                            f"(edit_distance={self._calc_edit_distance(name, matched_name)})"
+                            f"(edit_distance={_calc_edit_distance(name, matched_name)})"
                         )
                 else:
                     # 真正的创建新角色

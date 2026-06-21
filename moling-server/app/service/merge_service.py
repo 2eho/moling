@@ -33,6 +33,7 @@ from app.models.vault_timeline import VaultTimeline
 from app.models.vault_plot_promise import VaultPlotPromise
 from app.models.vault_world import VaultWorld
 from app.models.vault_changelog import VaultChangelog
+from app.utils.service_helpers import _calc_edit_distance, _get_last_advance_chapter
 
 logger = logging.getLogger(__name__)
 
@@ -55,22 +56,6 @@ EDIT_DIST_CONFIDENCE = {0: 1.0, 1: 0.9, 2: 0.75}
 CONFIDENCE_HIGH_THRESHOLD = 0.8   # > 0.8 自动入库
 CONFIDENCE_MEDIUM_THRESHOLD = 0.5 # 0.5-0.8 后台标记需审核
 CONFIDENCE_LOW_THRESHOLD = 0.3    # 0.3-0.5 弹窗确认
-
-
-def _get_last_advance_chapter(promise) -> int:
-    """P6-4 fix: 获取承诺最后推进章节号。
-    
-    优先用 advancement_log 最后一条记录的 chapter，
-    兜底用 planted_chapter。
-    """
-    log = promise.advancement_log or []
-    if isinstance(log, list) and log:
-        last_entry = log[-1]
-        if isinstance(last_entry, dict):
-            ch = last_entry.get("chapter", 0)
-            if ch:
-                return ch
-    return promise.planted_chapter or 0
 
 
 # ---------------------------------------------------------------------------
@@ -217,28 +202,6 @@ class MergeService:
     # ==================================================================
     # 工具方法
     # ==================================================================
-
-    @staticmethod
-    def _calc_edit_distance(s1: str, s2: str) -> int:
-        """计算两个字符串之间的编辑距离（Levenshtein）。"""
-        if len(s1) < len(s2):
-            s1, s2 = s2, s1
-        if not s2:
-            return len(s1)
-        prev_row = list(range(len(s2) + 1))
-        for i, c1 in enumerate(s1):
-            curr_row = [i + 1]
-            for j, c2 in enumerate(s2):
-                cost = 0 if c1 == c2 else 1
-                curr_row.append(
-                    min(
-                        curr_row[j] + 1,         # 删除
-                        prev_row[j + 1] + 1,     # 插入
-                        prev_row[j] + cost,       # 替换
-                    )
-                )
-            prev_row = curr_row
-        return prev_row[-1]
 
     @staticmethod
     def _calc_confidence(edit_distance: int, matched: bool = True) -> float:
@@ -489,7 +452,7 @@ class MergeService:
         ambiguous_matches: List[Tuple[str, int]] = []
 
         for c in existing:
-            dist = self._calc_edit_distance(name, c.name)
+            dist = _calc_edit_distance(name, c.name)
             if dist <= 2 and dist < best_dist:
                 best_dist = dist
                 best_id = c.id
