@@ -10,10 +10,8 @@
   Layer 3 — 本章方向 / 编织方案  → 保留头部
   Layer 4 — 风格约束             → 可抛弃（优先级最低）
 
-Token 估算约定（与 vault_filter._CHARS_PER_TOKEN 保持一致）：
-  中文：≈ 2 chars/token
-  英文：≈ 4 chars/token
-  混合文本使用保守估计 2 chars/token。
+Token 估算约定（与 client.py:count_tokens 保持一致）：
+  统一使用 4 chars/token + 1 offset 的保守估计。
 
 安全因子：0.85 — 为 max_tokens（输出）留出 15% 余量。
 """
@@ -27,7 +25,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ── 常量 ──────────────────────────────────────────────
-_CHARS_PER_TOKEN = 2         # 中文字符与 token 的保守换算（≈ 0.5 token/char）
+_CHARS_PER_TOKEN = 4         # chars/token 保守换算（≈ 0.25 token/char，与 client.py 一致）
 _SAFETY_FACTOR = 0.85        # 上下文窗口利用的安全因子
 _DEFAULT_MAX_TOKENS = 128_000  # DeepSeek V3 上下文窗口
 _DEEPSEEK_V3_WINDOW = 128_000
@@ -66,10 +64,10 @@ class ContextBudget:
 
     @staticmethod
     def estimate_tokens(text: str) -> int:
-        """估算文本所占 token 数（保守估计）。"""
+        """估算文本所占 token 数（保守估计，4 chars ≈ 1 token + 1 offset）。"""
         if not text:
             return 0
-        return max(1, len(text) // _CHARS_PER_TOKEN)
+        return max(1, len(text) // _CHARS_PER_TOKEN + 1)
 
     @staticmethod
     def get_model_window(model: str | None) -> int:

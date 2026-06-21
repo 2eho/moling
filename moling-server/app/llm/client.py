@@ -6,7 +6,7 @@ Supports OpenAI / DeepSeek / compatible API formats with:
 - Automatic retry via tenacity
 - Token counting (approximate)
 - Runtime config reload from DB overrides (admin panel)
-- API Key Pool + Fallback Chain (§2.7)
+- API Key Pool via KeyManager (Pro + Flash pools)
 - Rate Limit management
 - Token budget control
 """
@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from collections import defaultdict
 
 import httpx
+from httpx import HTTPStatusError
 from tenacity import (
     before_sleep_log,
     retry,
@@ -35,69 +36,6 @@ from app.llm.context_budget import ContextBudget
 from app.llm.key_manager import KeyManager, key_manager, NoAvailableKeyError
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# API Key Pool Management
-# ---------------------------------------------------------------------------
-
-class APIKeyPool:
-    """Manage a pool of API keys with fallback chain."""
-
-    def __init__(self, keys: List[str], max_retries: int = 3) -> None:
-        self.keys = keys
-        self.max_retries = max_retries
-        self.current_index = 0
-        self.key_errors: Dict[str, int] = defaultdict(int)  # Track errors per key
-        self.key_disabled: Dict[str, bool] = defaultdict(bool)  # Track disabled keys
-
-    def get_key(self, index: Optional[int] = None) -> Optional[str]:
-        """Get API key by index (with fallback)."""
-        if not self.keys:
-            return None
-
-        if index is not None:
-            return self.keys[index] if index < len(self.keys) else None
-
-        # Return current active key
-        attempts = 0
-        while attempts < len(self.keys):
-            key = self.keys[self.current_index]
-            if not self.key_disabled[key]:
-                return key
-            self._rotate_index()
-            attempts += 1
-
-        # All keys disabled, reset and try again
-        logger.warning("All API keys disabled, resetting...")
-        self.key_disabled.clear()
-        for key in self.keys:
-            self.key_errors[key] = 0
-        return self.keys[0] if self.keys else None
-
-    def report_error(self, key: str, error_type: str = "rate_limit") -> None:
-        """Report an error for a key."""
-        self.key_errors[key] += 1
-
-        # Disable key if too many errors
-        if self.key_errors[key] >= self.max_retries:
-            if error_type == "rate_limit":
-                # Disable temporarily (will reset after cooldown)
-                self.key_disabled[key] = True
-                logger.warning(f"API key disabled due to rate limit: {key[:10]}...")
-            else:
-                # Disable permanently for this session
-                self.key_disabled[key] = True
-                logger.error(f"API key disabled due to errors: {key[:10]}...")
-
-    def report_success(self, key: str) -> None:
-        """Report a success for a key (reset error count)."""
-        self.key_errors[key] = 0
-        self.key_disabled[key] = False
-
-    def _rotate_index(self) -> None:
-        """Rotate to next key index."""
-        self.current_index = (self.current_index + 1) % len(self.keys)
 
 
 # ---------------------------------------------------------------------------
@@ -424,7 +362,7 @@ _RETRY_DECORATOR = retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     retry=retry_if_exception_type(
-        (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError)
+        (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError, HTTPStatusError)
     ),
     before_sleep=before_sleep_log(logger, 20),
     reraise=True,
@@ -443,7 +381,7 @@ class LLMClient:
     This allows admin panel config changes to take effect immediately.
 
     Features:
-    - API Key Pool with fallback chain
+    - KeyManager (Pro + Flash pools) with health checks and fallback
     - Rate limit management
     - Token budget control
 
@@ -458,16 +396,8 @@ class LLMClient:
 
     def __init__(self, timeout: float = 120.0) -> None:
         self.timeout = timeout
-        # Key Manager（双池管理）
+        # Key Manager（双池管理 — Pro Pool + Flash Pool）
         self.key_manager = key_manager
-        # API Key Pool
-        config = get_effective_llm_config()
-        api_keys = config.get("api_keys", [])
-        if not api_keys:
-            # Fallback to single key
-            single_key = config.get("api_key", "")
-            api_keys = [single_key] if single_key else []
-        self.key_pool = APIKeyPool(api_keys)
         # Rate limit tracker
         self.rate_limiter = RateLimitTracker()
         # Token budget manager (user quotas)
@@ -506,7 +436,7 @@ class LLMClient:
         stream: bool = False,
         pool: Optional[str] = None,
     ) -> dict[str, Any]:
-        """Send a chat completion request (with key pool + fallback).
+        """Send a chat completion request (with KeyManager key pool + fallback).
 
         Args:
             messages: Chat messages.
@@ -514,8 +444,7 @@ class LLMClient:
             temperature: Sampling temperature.
             max_tokens: Max tokens in response.
             stream: Whether to stream response.
-            pool: API Key pool to use ("pro" | "flash").  When set, uses
-                  KeyManager for key selection instead of the legacy key pool.
+            pool: API Key pool to use ("pro" | "flash"). Defaults to "pro".
 
         Returns the full response dict (same format as OpenAI API).
         """
@@ -550,86 +479,15 @@ class LLMClient:
             # 不在此层截断 — 截断由上游 prompt_service 负责
             # 这里只做监测和告警
 
-        # Try with key pool (with fallback)
-        last_error = None
-
-        # Use KeyManager when pool is specified
-        if pool is not None:
-            return await self._call_with_key_manager(
-                messages=messages,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=stream,
-                pool=pool,
-                estimated_tokens=estimated_tokens,
-            )
-
-        # Legacy key pool fallback (no pool specified)
-        for attempt in range(len(self.key_pool.keys)):
-            # Get API key
-            api_key = self.key_pool.get_key()
-            if not api_key:
-                raise AppError(
-                    ErrorCode.INTERNAL_ERROR,
-                    detail="No API key available"
-                )
-
-            # Check rate limit
-            if not self.rate_limiter.can_make_request(api_key, estimated_tokens):
-                logger.warning(f"Rate limit reached for key {api_key[:10]}..., switching key...")
-                self.key_pool.report_error(api_key, "rate_limit")
-                self.key_pool._rotate_index()
-                last_error = AppError(
-                    ErrorCode.RATE_LIMIT_EXCEEDED,
-                    detail=f"Rate limit reached for current key, trying next key"
-                )
-                continue
-
-            # Make request
-            payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": stream,
-            }
-
-            try:
-                if stream:
-                    response = await self._chat_stream(payload, api_key)
-                    # L1 fix: 流式路径也需要记录 Token 用量 + 上报成功
-                    self.key_pool.report_success(api_key)
-                    actual_tokens = response.get("usage", {}).get("completion_tokens", 0)
-                    self.rate_limiter.record_request(api_key, actual_tokens)
-                    await self.budget_manager.record_usage(actual_tokens)
-                    return response
-                else:
-                    response = await self._chat_non_stream(payload, api_key)
-                    # Record success
-                    self.key_pool.report_success(api_key)
-                    actual_tokens = response.get("usage", {}).get("completion_tokens", 0)
-                    self.rate_limiter.record_request(api_key, actual_tokens)
-                    await self.budget_manager.record_usage(actual_tokens)
-                    return response
-
-            except AppError as e:
-                last_error = e
-                if "rate_limit" in str(e).lower() or "429" in str(e):
-                    logger.warning(f"Rate limit error with key {api_key[:10]}..., switching to next key...")
-                    self.key_pool.report_error(api_key, "rate_limit")
-                else:
-                    logger.error(f"LLM request failed with key {api_key[:10]}...: {e}")
-                    self.key_pool.report_error(api_key, "other")
-                # 自动轮换到下一个可用密钥（get_key 内部会跳过已禁用的密钥）
-                self.key_pool._rotate_index()
-                continue
-
-        # All keys failed
-        logger.error("All API keys failed")
-        raise last_error or AppError(
-            ErrorCode.INTERNAL_ERROR,
-            detail="All API keys failed"
+        # 统一使用 KeyManager（默认 pool="pro"）
+        return await self._call_with_key_manager(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=stream,
+            pool=pool or "pro",
+            estimated_tokens=estimated_tokens,
         )
 
     async def chat_stream(
@@ -667,12 +525,10 @@ class LLMClient:
                 try:
                     key = await self.key_manager.select_key("pro")
                 except NoAvailableKeyError:
-                    key = self.key_pool.get_key()
-                    if not key:
-                        raise AppError(
-                            ErrorCode.INTERNAL_ERROR,
-                            detail="No API key available",
-                        )
+                    raise AppError(
+                        ErrorCode.INTERNAL_ERROR,
+                        detail="No API key available",
+                    )
 
             collected = ""
             client = self._get_client(key)

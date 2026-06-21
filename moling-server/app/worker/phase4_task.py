@@ -15,12 +15,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.worker.celery_app import celery_app
 from app.worker.db import get_worker_session
+from app.worker.idempotency import is_duplicate, mark_completed, mark_failed
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,10 @@ def run_phase4_analysis(self, project_id: int) -> dict:
     2. Identifies entities to store in vault
     3. Updates vault entries
     """
+    task_key = f"task:{project_id}:run_phase4_analysis"
+    if is_duplicate(task_key):
+        return {"status": "already_processed", "project_id": project_id}
+
     logger.info("Starting Phase 4 analysis for project %s", project_id)
 
     async def _run():
@@ -48,19 +54,23 @@ def run_phase4_analysis(self, project_id: int) -> dict:
 
     try:
         result = asyncio.run(_run())
+        mark_completed(task_key)
         logger.info("Phase 4 analysis completed for project %s", project_id)
         return {"status": "done", "project_id": project_id, "result": result}
 
     except SoftTimeLimitExceeded:
         logger.error("Phase 4 analysis timed out for project %s", project_id)
+        mark_failed(task_key)
         raise
 
     except _RETRYABLE as exc:
         logger.exception("Phase 4 analysis failed (retryable) for project %s", project_id)
+        mark_failed(task_key)
         raise self.retry(exc=exc) from exc
 
     except Exception as exc:
         logger.exception("Phase 4 analysis failed (non-retryable) for project %s", project_id)
+        mark_failed(task_key)
         return {"status": "failed", "project_id": project_id, "error": str(exc)}
 
 
@@ -72,6 +82,10 @@ def phase4_auto_advance(self) -> dict:
     查找 phase4_review_mode="auto" 的项目，检查是否有待推进的章节，
     如有则触发 Phase 4 分析流水线。
     """
+    task_key = f"task:beat:phase4_auto_advance:{datetime.now().strftime('%Y-%m-%d-%H')}"
+    if is_duplicate(task_key):
+        return {"status": "already_processed"}
+
     logger.info("Phase 4 auto-advance: starting periodic scan")
 
     async def _run():
@@ -99,17 +113,21 @@ def phase4_auto_advance(self) -> dict:
 
     try:
         result = asyncio.run(_run())
+        mark_completed(task_key)
         logger.info("Phase 4 auto-advance completed: scanned %s projects", result["scanned"])
         return {"status": "done", **result}
 
     except SoftTimeLimitExceeded:
         logger.error("Phase 4 auto-advance timed out")
+        mark_failed(task_key)
         raise
 
     except _RETRYABLE as exc:
         logger.exception("Phase 4 auto-advance failed (retryable)")
+        mark_failed(task_key)
         raise self.retry(exc=exc) from exc
 
     except Exception as exc:
         logger.exception("Phase 4 auto-advance failed (non-retryable)")
+        mark_failed(task_key)
         return {"status": "failed", "error": str(exc)}
