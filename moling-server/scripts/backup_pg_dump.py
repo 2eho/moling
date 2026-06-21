@@ -86,7 +86,7 @@ def parse_db_url(db_url: str) -> dict:
     # 简单的 URL 解析（生产环境建议使用 urllib.parse）
     # 格式: postgresql://user:password@host:port/database
     # Strip scheme prefix, including any +driver suffix (e.g. +psycopg, +asyncpg)
-    url = re.sub(r'^postgresql(?:\+[^:/]+)?://', '', db_url)
+    url = re.sub(r"^postgresql(?:\+[^:/]+)?://", "", db_url)
 
     # 提取用户名和密码
     if "@" in url:
