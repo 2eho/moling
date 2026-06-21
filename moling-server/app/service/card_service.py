@@ -9,7 +9,7 @@ import random
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import card_dao, project_dao
-from app.errors import NotFoundError, ErrorCode
+from app.errors import NotFoundError, ErrorCode, AppError
 from app.utils.security import verify_project_ownership
 from app.models import CardPool
 from app.schemas.card import DrawCardReq, CardResp, DrawCardResp, CardPoolListResp
@@ -121,7 +121,8 @@ class CardService:
         active_cards = await card_dao.get_active_cards(db, project_id, count=100)
         
         if not active_cards:
-            raise PermissionError(
+            raise AppError(
+                status_code=403,
                 error_code=ErrorCode.INVALID_REQUEST,
                 detail="No active cards in pool",
             )
@@ -349,7 +350,8 @@ class CardService:
         active_cards = await card_dao.get_active_cards(db, project_id, count=100)
 
         if not active_cards:
-            raise PermissionError(
+            raise AppError(
+                status_code=403,
                 error_code=ErrorCode.INVALID_REQUEST,
                 detail="No active cards in pool",
             )

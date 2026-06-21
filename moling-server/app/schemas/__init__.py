@@ -49,6 +49,14 @@ from app.schemas.secret import (
     SecretResp,
     UpdateSecretReq,
 )
+from app.schemas.ingest import (
+    IngestStartResp,
+    IngestJobStatusResp,
+    IngestJobListResp,
+    PhaseRunResp,
+    PhaseStatusResp,
+    FullImportResp,
+)
 from app.schemas.notification import (
     NotificationResp,
 )
@@ -132,6 +140,13 @@ __all__ = [
     # secret
     "SecretResp",
     "UpdateSecretReq",
+    # ingest
+    "IngestStartResp",
+    "IngestJobStatusResp",
+    "IngestJobListResp",
+    "PhaseRunResp",
+    "PhaseStatusResp",
+    "FullImportResp",
     # notification
     "NotificationResp",
     # subscription

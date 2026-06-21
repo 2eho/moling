@@ -17,6 +17,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.ingest.service import IngestService
+from app.schemas.ingest import (
+    IngestStartResp,
+    IngestJobStatusResp,
+    IngestJobListResp,
+    PhaseRunResp,
+    PhaseStatusResp,
+    FullImportResp,
+)
 
 # 文件上传最大大小（与中间件保持一致）
 _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -29,7 +37,7 @@ router = APIRouter(prefix="/projects/{project_id}/import", tags=["Import"])
 # ═══════════════════════════════════════════════════════════════
 
 
-@router.post("")
+@router.post("", response_model=IngestStartResp)
 async def submit_import(
     project_id: str,
     body: Optional[dict] = None,
@@ -131,7 +139,7 @@ async def submit_import(
 # ═══════════════════════════════════════════════════════════════
 
 
-@router.get("/{job_id}")
+@router.get("/{job_id}", response_model=IngestJobStatusResp)
 async def get_import_job(
     project_id: str,
     job_id: str,
@@ -172,7 +180,7 @@ async def get_import_job(
 # ═══════════════════════════════════════════════════════════════
 
 
-@router.get("")
+@router.get("", response_model=IngestJobListResp)
 async def list_import_jobs(
     project_id: str,
     db: AsyncSession = Depends(get_db),
@@ -203,7 +211,7 @@ async def list_import_jobs(
 # ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/{job_id}/phase1")
+@router.post("/{job_id}/phase1", response_model=PhaseRunResp)
 async def run_phase1(
     project_id: str,
     job_id: str,
@@ -214,7 +222,7 @@ async def run_phase1(
     return await IngestService.run_phase1(db, job_id)
 
 
-@router.get("/{job_id}/phase1/result")
+@router.get("/{job_id}/phase1/result", response_model=PhaseStatusResp)
 async def get_phase1_result(
     project_id: str,
     job_id: str,
@@ -237,7 +245,7 @@ async def get_phase1_result(
 # ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/{job_id}/phase2")
+@router.post("/{job_id}/phase2", response_model=PhaseRunResp)
 async def run_phase2(
     project_id: str,
     job_id: str,
@@ -248,7 +256,7 @@ async def run_phase2(
     return await IngestService.run_phase2(db, job_id)
 
 
-@router.get("/{job_id}/phase2/result")
+@router.get("/{job_id}/phase2/result", response_model=PhaseStatusResp)
 async def get_phase2_result(
     project_id: str,
     job_id: str,
@@ -271,7 +279,7 @@ async def get_phase2_result(
 # ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/{job_id}/confirm")
+@router.post("/{job_id}/confirm", response_model=PhaseRunResp)
 async def confirm_import(
     project_id: str,
     job_id: str,
@@ -286,7 +294,7 @@ async def confirm_import(
     return await IngestService.run_phase3(db, job_id, resolve_strategy)
 
 
-@router.get("/{job_id}/phase3/result")
+@router.get("/{job_id}/phase3/result", response_model=PhaseStatusResp)
 async def get_phase3_result(
     project_id: str,
     job_id: str,
@@ -309,7 +317,7 @@ async def get_phase3_result(
 # ═══════════════════════════════════════════════════════════════
 
 
-@router.post("/full-import")
+@router.post("/full-import", response_model=FullImportResp)
 async def full_import(
     project_id: str,
     text: str = Query(..., description="小说正文纯文本"),
