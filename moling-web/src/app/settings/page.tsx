@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowLeft, User } from "lucide-react";
 
@@ -43,14 +41,8 @@ export default function SettingsPage() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="px-3 py-2.5 rounded-lg text-sm transition-colors"
+                className="px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-[var(--th-hover)]"
                 style={{ color: "var(--th-text-2)" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--th-hover)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
               >
                 {item.label}
               </Link>
