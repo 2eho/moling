@@ -245,8 +245,8 @@ class ChapterService:
             try:
                 from app.worker.phase4_task import update_vault_entries
                 update_vault_entries.delay(project_id, chapter_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"后台vault更新失败: {e}")
         except Exception as e:
             logger.error(
                 f"Failed to dispatch Phase 4 task for chapter {chapter_id}: {e}",
