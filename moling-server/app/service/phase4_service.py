@@ -24,7 +24,7 @@ from app.service.merge_service import (
 from app.errors import ErrorCode, NotFoundError, ValidationError, AppError
 from app.utils.security import verify_project_ownership
 from app.models import Chapter, Project, DynamicLayer, VaultCharacter, VaultTimeline, VaultPlotPromise, VaultWorld, CardPool
-from app.models.phase4_task import Phase4Task
+from app.models.phase4_task import Phase4Task, Phase4State
 from app.llm.client import llm_client
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ class Phase4Service:
         if existing_task:
             return {
                 "task_id": existing_task.id,
-                "status": existing_task.status,
+                "state": existing_task.state,
                 "message": "该收纳任务已存在",
             }
 
@@ -155,7 +155,7 @@ class Phase4Service:
             nonce=nonce,
             project_id=str(project_id),
             chapter_id=str(chapter_id),
-            status="pending",
+            state=Phase4State.IDLE,
         )
         db.add(task)
         await db.flush()
@@ -167,7 +167,7 @@ class Phase4Service:
 
         return {
             "task_id": task.id,
-            "status": task.status,
+            "state": task.state,
             "message": "收纳任务已创建，正在处理中",
         }
 
@@ -318,11 +318,11 @@ class Phase4Service:
             grouped[etype] = sorted(items, key=lambda x: x["confidence"], reverse=True)
 
         # 6. 更新 Phase4Task 记录（标记分析完成）
-        pending_tasks = await phase4_dao.get_by_project(
-            db, str(project_id), status="pending"
-        )
-        for task in pending_tasks:
-            task.status = "analyzed"
+            pending_tasks = await phase4_dao.get_by_project(
+                db, str(project_id), status="idle"
+            )
+            for task in pending_tasks:
+                task.state = Phase4State.ANALYZED.value
         await db.commit()
 
         total_entities = sum(len(v) for v in entities.values())
@@ -368,8 +368,8 @@ class Phase4Service:
                 detail="Task not found",
             )
 
-        # 2. 更新任务状态为 running
-        task.status = "running"
+        # 2. 更新任务状态为 running（对应 Phase4State.EXTRACTING）
+        task.state = Phase4State.EXTRACTING.value
         task.started_at = datetime.now(timezone.utc)
         await db.commit()
 
@@ -408,7 +408,7 @@ class Phase4Service:
 
             # 7. 记录收纳历史（更新章节的 phase4_status）
             chapter.phase4_status = "done"
-            task.status = "done"
+            task.state = Phase4State.DONE.value
             task.completed_at = datetime.now(timezone.utc)
             await db.commit()
 
@@ -421,7 +421,7 @@ class Phase4Service:
 
         except Exception as e:
             logger.error(f"Phase 4 storage failed: {e}", exc_info=True)
-            task.status = "failed"
+            task.state = Phase4State.FAILED.value
             task.error_message = str(e)
             task.completed_at = datetime.now(timezone.utc)
             if chapter:
@@ -429,13 +429,61 @@ class Phase4Service:
             await db.commit()
             raise
 
+    # ==================================================================
+    # P7-2 修复: 统一 LLM 提取方法 — 消除两套管道的重复代码
+    # 所有章节分析统一经过此方法，提供一致的错误处理和 JSON 解析
+    # ==================================================================
+
+    async def _call_llm_and_parse(
+        self,
+        messages: list[dict],
+        default_result: dict,
+    ) -> dict:
+        """统一 LLM 调用 + JSON 解析（P7-2 修复）。
+
+        替换原 _analyze_chapter_content 和 _call_extraction_llm 中的重复代码。
+        两套管道现在共享相同的调用/解析/降级逻辑。
+
+        Args:
+            messages: LLM messages (system + user)
+            default_result: 解析失败或空响应时的降级结果
+
+        Returns:
+            解析后的 dict，失败时返回 default_result
+        """
+        try:
+            response = await llm_client.chat(
+                messages=messages,
+                model=settings.LLM_MODEL,
+                temperature=0.3,
+                max_tokens=4096,
+            )
+            content = response["choices"][0]["message"]["content"]
+
+            # 尝试解析 JSON
+            json_start = content.find("{")
+            json_end = content.rfind("}") + 1
+            if json_start >= 0 and json_end > json_start:
+                json_str = content[json_start:json_end]
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError:
+                    logger.warning("LLM response JSON parse failed, using raw text")
+                    return {"raw_analysis": content}
+            else:
+                return {"raw_analysis": content}
+
+        except Exception as e:
+            logger.error(f"LLM extraction call failed: {e}", exc_info=True)
+            return default_result
+
     async def _analyze_chapter_content(
         self,
         db: AsyncSession,
         project: Project,
         chapter: Chapter,
     ) -> Dict[str, Any]:
-        """调用 LLM 分析章节内容，提取变更。
+        """调用 LLM 分析章节内容，提取变更（P7-2 修复: 穿透到统一 _call_llm_and_parse）。
         
         Returns:
             分析结果，包含：
@@ -446,53 +494,20 @@ class Phase4Service:
             - summary: 章节摘要
             - anchors: 章节锚点（POV、地点、时间）
         """
-        # 构建 LLM 提示词
         prompt = self._build_analysis_prompt(project, chapter)
-        
-        # 调用 LLM
         messages = [
             {"role": "system", "content": "你是一个专业的小说内容分析助手。请分析章节内容，提取关键信息。"},
             {"role": "user", "content": prompt},
         ]
-        
-        try:
-            response = await llm_client.chat(
-                messages=messages,
-                model=settings.LLM_MODEL,
-                temperature=0.3,
-                max_tokens=4096,
-            )
-            
-            # 解析 LLM 响应
-            content = response["choices"][0]["message"]["content"]
-            
-            # 尝试解析 JSON
-            try:
-                # 查找 JSON 部分
-                json_start = content.find("{")
-                json_end = content.rfind("}") + 1
-                if json_start >= 0 and json_end > json_start:
-                    json_str = content[json_start:json_end]
-                    result = json.loads(json_str)
-                else:
-                    # 如果不是 JSON，返回原始文本
-                    result = {"raw_analysis": content}
-            except json.JSONDecodeError:
-                result = {"raw_analysis": content}
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"LLM analysis failed: {e}", exc_info=True)
-            # 返回空结果，使用默认值
-            return {
-                "characters": [],
-                "timeline_events": [],
-                "plot_promises": [],
-                "world_elements": [],
-                "summary": "",
-                "anchors": {},
-            }
+        default_result = {
+            "characters": [],
+            "timeline_events": [],
+            "plot_promises": [],
+            "world_elements": [],
+            "summary": "",
+            "anchors": {},
+        }
+        return await self._call_llm_and_parse(messages, default_result)
 
     def _build_analysis_prompt(
         self,
@@ -856,7 +871,7 @@ class Phase4Service:
         
         return {
             "task_id": task.id,
-            "status": task.status,
+            "state": task.state,
             "error_message": task.error_message,
             "started_at": task.started_at.isoformat() if task.started_at else None,
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
@@ -924,8 +939,8 @@ class Phase4Service:
                     "description": f"当前有 {len(active_chars)} 个活跃角色，注意避免角色过多导致读者混淆。",
                     "priority": "low",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"活跃角色检测失败: {e}")
 
         # 4. 分析伏笔状态
         try:
@@ -940,8 +955,8 @@ class Phase4Service:
                     "description": f"有 {len(dormant)} 个伏笔处于休眠状态，考虑在本章或后续章节回收。",
                     "priority": "high" if len(dormant) > 3 else "medium",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"伏笔状态检测失败: {e}")
 
         # 5. 计算总体评分
         overall_score = 1.0
@@ -1036,7 +1051,7 @@ class Phase4Service:
             "nonce": task.nonce,
             "project_id": task.project_id,
             "chapter_id": task.chapter_id,
-            "status": task.status,
+            "state": task.state,
             "error_message": task.error_message,
             "started_at": task.started_at.isoformat() if task.started_at else None,
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
@@ -1137,12 +1152,11 @@ class Phase4Service:
         # LLM 调用和解析在事务外（不消耗事务资源）
         # 四库合并 + 卡牌充实 + 卡牌淘汰 + 变更日志在 savepoint 内
         try:
-            # 步骤 [14]: LLM 调用 — 事务外（可重试，不消耗事务资源）
+            # 步骤 [14]: LLM 调用 — 事务外（P7-2 修复: 直接返回解析后 dict）
             logger.info("Step [14]: Building extraction prompt and calling LLM")
-            extraction_result = await self._call_extraction_llm(
+            parsed = await self._call_extraction_llm(
                 db, project_id, chapter_text, card_ids or []
             )
-            parsed = self._parse_extraction_result(extraction_result)
 
             # ── savepoint：包含所有 DB 写入操作 ──────────────────────
             # savepoint 失败时回滚 savepoint，不中断主事务
@@ -1401,41 +1415,22 @@ class Phase4Service:
         project_id: int,
         chapter_text: str,
         card_ids: list,
-    ) -> str:
-        """调用 LLM 提取四库变更。"""
-        # 使用 _build_extraction_prompt 构建 prompt
+    ) -> dict:
+        """调用 LLM 提取四库变更（P7-2 修复: 穿透到统一 _call_llm_and_parse）。
+
+        返回值从 str 改为 dict，与 _analyze_chapter_content 保持一致。
+        原调用方不再需要手动 _parse_extraction_result。
+        """
         prompt = await self._build_extraction_prompt(
             db, project_id, chapter_text, card_ids
         )
-
         messages = [
             {"role": "system", "content": _SYSTEM_EXTRACTION},
             {"role": "user", "content": prompt},
         ]
-
-        try:
-            response = await llm_client.chat(
-                messages=messages,
-                temperature=0.3,
-                max_tokens=4096,
-            )
-            content = response["choices"][0]["message"]["content"]
-            logger.info(
-                f"LLM extraction response received, length={len(content)}"
-            )
-            return content
-        except Exception as e:
-            logger.error(f"LLM extraction call failed: {e}", exc_info=True)
-            # 优雅降级：返回空提取结果
-            return json.dumps(
-                {
-                    "character_updates": [],
-                    "timeline_updates": [],
-                    "plot_promise_updates": [],
-                    "world_updates": [],
-                    "card_pool_entries": [],
-                }
-            )
+        return await self._call_llm_and_parse(
+            messages, self._empty_extraction_result()
+        )
 
     # ------------------------------------------------------------------
     # §11.5: 解析 LLM 返回的 JSON
@@ -2125,7 +2120,8 @@ class Phase4Service:
         try:
             existing_cards = await card_dao.get_active_cards(db, project_id, count=1000)
             existing_titles = {c.name for c in existing_cards}
-        except Exception:
+        except Exception as e:
+            logger.error(f"卡牌去重失败: {e}")
             existing_titles = set()
 
         for entry in entries:
