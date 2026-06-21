@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.dependencies import get_current_user, get_db
-from app.errors import NotFoundError, ValidationError
+from app.errors import AppError, NotFoundError, ValidationError
 from app.genre.cold_start_loader import ColdStartLoader, DataRetirementManager, KNOWN_GENRES
 from app.schemas.auth import UserResp
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -169,10 +169,10 @@ async def trigger_prefill(
             async_analysis_triggered=result.async_analysis_triggered,
             session_id=session_id,
         )
-    except HTTPException:
+    except AppError:
         raise
     except Exception as e:
-        from app.errors import AppError, ErrorCode
+        from app.errors import ErrorCode
         logger.error("冷启动失败: project_id=%d, genre=%s, error=%s", req.project_id, req.genre, e)
         raise AppError(ErrorCode.INTERNAL_ERROR, detail=f"冷启动失败: {str(e)}")
 
@@ -202,10 +202,10 @@ async def get_prefill(
             created_at=session["created_at"],
             updated_at=session["updated_at"],
         )
-    except HTTPException:
+    except AppError:
         raise
     except Exception as e:
-        from app.errors import AppError, ErrorCode
+        from app.errors import ErrorCode
         logger.error("获取预填数据失败: project_id=%d, error=%s", project_id, e)
         raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
 
@@ -227,9 +227,9 @@ async def confirm_prefill(
         return ConfirmResponse(**result)
     except ValueError as e:
         raise ValidationError(detail=str(e))
-    except HTTPException:
+    except AppError:
         raise
     except Exception as e:
-        from app.errors import AppError, ErrorCode
+        from app.errors import ErrorCode
         logger.error("确认预填失败: project_id=%d, error=%s", project_id, e)
         raise AppError(ErrorCode.INTERNAL_ERROR, detail=str(e))
