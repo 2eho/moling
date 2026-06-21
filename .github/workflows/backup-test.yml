@@ -121,6 +121,7 @@ jobs:
             --backup-dir /tmp/backups \
             --backup-type full \
             --max-age-hours 1 \
+            --min-size-mb 0 \
             --quiet
 
       - name: Upload backup artifacts

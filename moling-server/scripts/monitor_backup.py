@@ -188,7 +188,7 @@ def send_slack_notification(message: str, webhook_url: str = None) -> bool:
         print("✗ 错误: 未设置 SLACK_WEBHOOK_URL")
         return False
 
-    print(f"\n发送 Slack 通知...")
+    print("\n发送 Slack 通知...")
 
     try:
         payload = {
@@ -321,9 +321,10 @@ def main():
             subject = "备份监控告警 - 备份已过期"
             body = f"{warning_msg}\n\n"
             body += f"备份文件: {latest_backup.name}\n"
-            body += f"备份时间: {datetime.datetime.fromtimestamp(latest_backup.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')}\n"
+            mtime = latest_backup.stat().st_mtime
+            body += f"备份时间: {datetime.datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')}\n"
             body += f"当前时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-            body += f"\n请检查备份任务是否正常运行。"
+            body += "\n请检查备份任务是否正常运行。"
 
             send_email_notification(subject, body, [])
             send_slack_notification(f"🚨 {subject}\n{warning_msg}")
@@ -345,7 +346,7 @@ def main():
             body = f"{warning_msg}\n\n"
             body += f"备份文件: {latest_backup.name}\n"
             body += f"文件大小: {size_mb:.2f} MB\n"
-            body += f"\n备份可能失败，请检查备份日志。"
+            body += "\n备份可能失败，请检查备份日志。"
 
             send_email_notification(subject, body, [])
             send_slack_notification(f"🚨 {subject}\n{warning_msg}")
