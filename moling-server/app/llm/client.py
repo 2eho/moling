@@ -640,7 +640,11 @@ class LLMClient:
         max_tokens: int = 4096,
         api_key: Optional[str] = None,
     ) -> AsyncGenerator[str, None]:
-        """Stream a chat completion, yielding content deltas."""
+        """Stream a chat completion, yielding content deltas.
+
+        完整的重试 + Key 轮换逻辑：最多重试 3 次，每次从 KeyManager 获取下一个 Key，
+        完成后调用 report_success / record_usage / record_request。
+        """
         config = self._get_config()
         model = model or config["model"]
 
@@ -652,36 +656,85 @@ class LLMClient:
             "stream": True,
         }
 
-        # Use provided key or pick from pool
-        api_key = api_key or self.key_pool.get_key()
-        if not api_key:
-            raise AppError(
-                ErrorCode.INTERNAL_ERROR,
-                detail="No API key available"
-            )
+        max_retries = 3
+        last_error: Optional[Exception] = None
 
-        client = self._get_client(api_key)
-        async with client.stream("POST", "/chat/completions", json=payload) as resp:
-            if resp.status_code != 200:
-                error_body = await resp.aread()
-                raise _build_error(resp.status_code, error_body)
-
-            async for line in resp.aiter_lines():
-                if line.startswith("data: "):
-                    data_str = line[6:].strip()
-                    if data_str == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(data_str)
-                        delta = (
-                            chunk.get("choices", [{}])[0]
-                            .get("delta", {})
-                            .get("content", "")
+        for attempt in range(max_retries):
+            # Get key: prefer provided key on first attempt, then use KeyManager
+            if api_key and attempt == 0:
+                key = api_key
+            else:
+                try:
+                    key = await self.key_manager.select_key("pro")
+                except NoAvailableKeyError:
+                    key = self.key_pool.get_key()
+                    if not key:
+                        raise AppError(
+                            ErrorCode.INTERNAL_ERROR,
+                            detail="No API key available",
                         )
-                        if delta:
-                            yield delta
-                    except json.JSONDecodeError:
-                        continue
+
+            collected = ""
+            client = self._get_client(key)
+            # 为流式响应添加显式 read timeout（防止连接挂起）
+            client.timeout = httpx.Timeout(self.timeout, read=30.0)
+
+            try:
+                async with client.stream(
+                    "POST", "/chat/completions", json=payload
+                ) as resp:
+                    if resp.status_code != 200:
+                        error_body = await resp.aread()
+                        raise _build_error(resp.status_code, error_body)
+
+                    async for line in resp.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:].strip()
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(data_str)
+                                delta = (
+                                    chunk.get("choices", [{}])[0]
+                                    .get("delta", {})
+                                    .get("content", "")
+                                )
+                                if delta:
+                                    collected += delta
+                                    yield delta
+                            except json.JSONDecodeError:
+                                continue
+
+                # Stream completed successfully
+                await self.key_manager.report_success(key)
+                actual_tokens = await self.count_tokens(collected)
+                self.rate_limiter.record_request(key, actual_tokens)
+                await self.budget_manager.record_usage(actual_tokens)
+                return
+
+            except (httpx.TimeoutException, httpx.ConnectError,
+                    httpx.RemoteProtocolError, AppError) as e:
+                last_error = e
+                logger.warning(
+                    "chat_stream attempt %d/%d failed: %s",
+                    attempt + 1, max_retries, e,
+                )
+                await self.key_manager.report_error(
+                    key,
+                    error_type="rate_limit" if "429" in str(e) else "other",
+                )
+                # If we already yielded content, don't retry (caller received it)
+                if collected:
+                    logger.error(
+                        "Stream partially completed but failed: %d chars yielded",
+                        len(collected),
+                    )
+                    raise
+
+        # All retries exhausted
+        raise last_error or AppError(
+            ErrorCode.INTERNAL_ERROR, detail="All API keys failed"
+        )
 
     async def count_tokens(self, text: str) -> int:
         """Approximate token count (4 chars ≈ 1 token for Chinese/English)."""
