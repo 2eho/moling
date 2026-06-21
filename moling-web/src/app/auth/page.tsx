@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import { apiPost } from "@/lib/http/client";
+import { setTokens } from "@/lib/http/auth";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -19,11 +21,19 @@ export default function AuthPage() {
     setError("");
     setLoading(true);
 
-    // Simulate auth for now
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
+      const body = mode === "login"
+        ? { email, password }
+        : { email, password, username };
+
+      const res = await apiPost<{ access_token: string; refresh_token?: string }>(endpoint, body);
+      setTokens(res.access_token, res.refresh_token);
       router.push("/projects");
-    }, 800);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "登录失败");
+      setLoading(false);
+    }
   };
 
   return (

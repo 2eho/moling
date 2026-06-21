@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useWritingStore, type AgentStatus } from "@/stores/useWritingStore";
+import { MOCK_OUTPUTS } from "@/mock/data/agent-outputs";
 import {
   Brain,
   GitBranch,
@@ -53,33 +54,6 @@ const AGENT_META: Record<
     color: "var(--th-logo-to)",
     description: "世界观一致性校验、设定细节管理、力量体系逻辑",
   },
-};
-
-/** Mock 分析输出 —— 后续接真实 API */
-const MOCK_OUTPUTS: Record<string, string[]> = {
-  plot: [
-    "已分析第3章剑骨觉醒上下文",
-    "生成 3 个剧情方向 · 置信度 [0.87, 0.82, 0.75]",
-    "检测到伏笔#7「掌门对剑骨的异常反应」待后续展开",
-  ],
-  character: [
-    "人物一致性扫描通过: 林风 · 标签「不服输」「隐忍」「剑痴」",
-    "注意: 第2章末尾林风语气偏激进，建议第3章柔化过渡",
-    "新增人物关系: 林风→掌门(态度转变) · 建议降重记录",
-  ],
-  dialogue: [
-    "角色语音画像已更新 · 林风: 沉稳+偶尔爆发式情感 · 掌门: 威严带忧",
-    "第3章对话节奏评估: 优秀 · 沉默留白占比 18%",
-  ],
-  style: [
-    "文风检查通过 · 热血升级流 · 战斗场景词汇饱满",
-    "建议: 过渡段落适当增加环境描写以缓解节奏",
-  ],
-  world: [
-    "世界观一致性校验通过",
-    "剑骨设定无冲突 · 九州大陆等级体系自洽",
-    "注意: 剑骨觉醒异象设定需统一(第1章紫光 vs 第2章金光)",
-  ],
 };
 
 interface AgentPanelProps {
