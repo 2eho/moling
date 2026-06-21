@@ -12,7 +12,7 @@ from app.models.base import BaseModel
 class DrawHistory(BaseModel):
     """Record of a card draw action by a user (draw_history)."""
 
-    __tablename__ = "draw_history"
+    __tablename__ = "draw_histories"
 
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),

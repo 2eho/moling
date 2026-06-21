@@ -15,7 +15,7 @@ class CardPool(BaseModel, SoftDeleteMixin):
     每张卡片包含一个方向文本和方向类型，用户可以通过抽卡来获取创作灵感。
     """
 
-    __tablename__ = "card_pool"
+    __tablename__ = "card_pools"
 
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),

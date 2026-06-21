@@ -15,7 +15,7 @@ class VaultChangelog(BaseModel):
     记录每次 Phase 4 收纳后对四库的变更操作。
     """
 
-    __tablename__ = "vault_changelog"
+    __tablename__ = "vault_changelogs"
 
     project_id: Mapped[int] = mapped_column(
         Integer,

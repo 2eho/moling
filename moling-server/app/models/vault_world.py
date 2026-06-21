@@ -11,7 +11,7 @@ from app.models.base import BaseModel, SoftDeleteMixin
 class VaultWorld(BaseModel, SoftDeleteMixin):
     """A single term / rule entry in the project's world-building vault."""
 
-    __tablename__ = "vault_world"
+    __tablename__ = "vault_worlds"
 
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),

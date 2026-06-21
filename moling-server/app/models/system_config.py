@@ -15,7 +15,7 @@ class SystemConfig(Base, TimestampMixin):
     Values are encrypted/stored server-side, never exposed to client browsers.
     """
 
-    __tablename__ = "system_config"
+    __tablename__ = "system_configs"
 
     key: Mapped[str] = mapped_column(
         String(128), primary_key=True, comment="配置键名"
