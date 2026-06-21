@@ -50,8 +50,8 @@ export interface Foreshadowing {
   chapter?: number;
 }
 
-/** 项目 */
-export interface Project {
+/** 项目（写作工作区模型） */
+export interface WritingProject {
   id: string;
   title: string;
   genre: string;
@@ -69,7 +69,7 @@ export interface Project {
 /** 写作 Store */
 interface WritingStore {
   /** 所有项目 */
-  projects: Project[];
+  projects: WritingProject[];
   /** 当前激活项目 ID */
   activeProjectId: string | null;
   /** 当前选中的章节 ID（中心区域正在查看的章节） */
@@ -77,7 +77,7 @@ interface WritingStore {
   /** 当前展开的项目 ID（同一时间只能展开一个） */
   expandedProjectId: string | null;
   /** 当前项目 */
-  project: Project | null;
+  project: WritingProject | null;
   /** 当前选项列表 */
   options: Option[];
   /** 已选中的选项 ID */
@@ -92,15 +92,15 @@ interface WritingStore {
   isGenerating: boolean;
 
   /** 加载所有项目 */
-  loadProjects: (projects: Project[]) => void;
+  loadProjects: (projects: WritingProject[]) => void;
   /** 加载项目 */
-  loadProject: (project: Project) => void;
+  loadProject: (project: WritingProject) => void;
   /** 切换激活项目 */
   setActiveProject: (projectId: string) => void;
   /** 设置当前查看的章节 */
   setActiveChapter: (chapterId: number) => void;
   /** 添加新项目 */
-  addProject: (project: Project) => void;
+  addProject: (project: WritingProject) => void;
   /** 切换项目展开/折叠 */
   toggleProjectExpand: (projectId: string) => void;
   /** 设置阶段 */
@@ -307,7 +307,7 @@ export const useWritingStore = create<WritingStore>((set, get) => ({
 
   completeChapter: (projectId, chapterId) =>
     set((s) => {
-      const updateP = (p: Project) => {
+      const updateP = (p: WritingProject) => {
         if (p.id !== projectId) return p;
         const chapters = p.chapters.map((ch) =>
           ch.id === chapterId ? { ...ch, status: "completed" as const } : ch,

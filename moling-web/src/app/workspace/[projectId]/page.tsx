@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWritingStore, PHASE_LABELS } from "@/stores/useWritingStore";
-import type { Project } from "@/stores/useWritingStore";
+import type { WritingProject } from "@/stores/useWritingStore";
 import { useTheme, THEMES } from "@/stores/useTheme";
 import type { ThemeId } from "@/stores/useTheme";
 import type { Option } from "@/stores/useWritingStore";
@@ -14,7 +14,7 @@ import { AgentPanel } from "@/components/vibe/AgentPanel";
 import { PanelRight, Send, RefreshCw, BookOpen, Edit3, Eye, CheckCircle2, Copy, Menu, X, Plus, ChevronDown, ChevronLeft, ChevronRight, Library, Package, Settings } from "lucide-react";
 import { MOCK_PROJECTS, MOCK_OPTIONS } from "@/mock/data/workspace";
 
-function OptionsPanel({ project, onDraftStep }: { project: Project; onDraftStep?: () => void }) {
+function OptionsPanel({ project, onDraftStep }: { project: WritingProject; onDraftStep?: () => void }) {
   const [options] = useState<Option[]>(MOCK_OPTIONS);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [customInput, setCustomInput] = useState("");

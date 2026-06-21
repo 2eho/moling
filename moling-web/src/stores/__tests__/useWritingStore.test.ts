@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useWritingStore, type Project, type Chapter, type Option, type Phase } from "../useWritingStore";
+import { useWritingStore, type WritingProject, type Chapter, type Option, type Phase } from "../useWritingStore";
 
 /** 构造测试用项目 */
-function createProject(overrides: Partial<Project> = {}): Project {
+function createProject(overrides: Partial<WritingProject> = {}): WritingProject {
   const defaultChapters: Chapter[] = [
     { id: 1, title: "第1章", summary: "开头", content: "", status: "draft" },
   ];
