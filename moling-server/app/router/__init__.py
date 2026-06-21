@@ -16,7 +16,6 @@ _ROUTER_REGISTRY = [
     ("app.router.project_health",  "router",  "/projects",                    ["project-health"]),
     ("app.router.chapter",         "router",  "/projects/{project_id}",        ["chapters"]),
     ("app.router.card",            "router",  "/projects/{project_id}",        ["cards"]),
-    ("app.generation.router",      "router",  "/generate",                     ["generation"]),
     ("app.router.generation",      "router",  "/generation",                  ["generation"]),
     ("app.router.vault",           "router",  "/projects/{project_id}/vault",  ["vault"]),
     ("app.router.health",          "router",  "/health",                      ["health"]),
