@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ingest.phase3.conflict import I10_conflict_check
@@ -30,40 +30,37 @@ __all__ = [
 # ──────────────────────────────────────────────── 数据模型
 
 
-@dataclass
-class ConflictItem:
+class ConflictItem(BaseModel):
     """一条冲突记录"""
-    type: str
-    field: str = ""
-    name: str = ""
-    existing: Any = None
-    incoming: Any = None
-    severity: str = "medium"
-    resolution_strategy: str = "keep_existing"
-    detail: str = ""
+    type: str = Field(description="冲突类型: character_conflict / timeline_conflict / world_conflict / overwrite_warning")
+    field: str = Field(default="", description="冲突字段名")
+    name: str = Field(default="", description="冲突项名称")
+    existing: Any = Field(default=None, description="已有值")
+    incoming: Any = Field(default=None, description="新导入值")
+    severity: str = Field(default="medium", description="严重程度: low / medium / high / critical")
+    resolution_strategy: str = Field(default="keep_existing", description="建议解决策略")
+    detail: str = Field(default="", description="冲突详情")
 
 
-@dataclass
-class Phase3Input:
+class Phase3Input(BaseModel):
     """Phase 3 输入"""
-    project_id: str
-    job_id: str
-    phase1_result: dict
-    phase2_result: Optional[dict] = None
-    resolve_strategy: str = "keep_existing"  # keep_existing / merge / replace
+    project_id: str = Field(description="项目 ID")
+    job_id: str = Field(description="导入任务 ID")
+    phase1_result: dict[str, Any] = Field(description="Phase 1 四库分析结果")
+    phase2_result: Optional[dict[str, Any]] = Field(default=None, description="Phase 2 动态层结果")
+    resolve_strategy: str = Field(default="keep_existing", description="冲突解决策略: keep_existing / merge / replace")
 
 
-@dataclass
-class Phase3Result:
+class Phase3Result(BaseModel):
     """Phase 3 输出"""
-    status: str  # completed / blocked / failed / warning
-    conflicts: list[dict] = field(default_factory=list)
-    imported_characters: int = 0
-    imported_timeline_events: int = 0
-    imported_promises: int = 0
-    imported_world_items: int = 0
-    card_pool_generated: int = 0
-    message: str = ""
+    status: str = Field(description="导入状态: completed / blocked / failed / warning")
+    conflicts: list[dict[str, Any]] = Field(default_factory=list, description="冲突列表")
+    imported_characters: int = Field(default=0, description="已导入角色数")
+    imported_timeline_events: int = Field(default=0, description="已导入时间线事件数")
+    imported_promises: int = Field(default=0, description="已导入承诺数")
+    imported_world_items: int = Field(default=0, description="已导入世界观条目数")
+    card_pool_generated: int = Field(default=0, description="生成的卡牌数")
+    message: str = Field(default="", description="结果消息")
 
 
 # ──────────────────────────────────────────────── 流水线
