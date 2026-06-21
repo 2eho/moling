@@ -8,14 +8,12 @@
 
 from __future__ import annotations
 
-import json
 import logging
-from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dao.ingest_dao import ingest_dao
 from app.ingest.scraper import (
     dissect_from_url as _dissect_from_url,
     dissect_html as _dissect_html,
@@ -177,12 +175,7 @@ class IngestService:
         db: AsyncSession, project_id: str
     ) -> list[IngestJob]:
         """获取项目的所有导入任务。"""
-        result = await db.execute(
-            select(IngestJob)
-            .where(IngestJob.project_id == project_id)
-            .order_by(IngestJob.id.desc())
-        )
-        return list(result.scalars().all())
+        return await ingest_dao.get_by_project(db, project_id)
 
     # ════════════════════════════════════════════════════════════════
     # Phase 1: 全量四库分析
@@ -233,60 +226,8 @@ class IngestService:
                 config=config,
             )
 
-            # 保存结果
-            result_dict = {
-                "characters": [
-                    {
-                        "name": c.name,
-                        "aliases": c.aliases,
-                        "first_appearance": c.first_appearance,
-                        "chapters_active": c.chapters_active,
-                        "dialogue_count": c.dialogue_count,
-                        "description": c.description,
-                        "tags": c.tags,
-                    }
-                    for c in result.characters
-                ],
-                "timeline_events": [
-                    {
-                        "description": e.description,
-                        "relative_time": e.relative_time,
-                        "time_anchor": e.time_anchor,
-                        "characters": e.characters,
-                        "importance": e.importance,
-                        "chapter_index": e.chapter_index,
-                        "is_key_event": e.is_key_event,
-                    }
-                    for e in result.timeline_events
-                ],
-                "promises": [
-                    {
-                        "type": p.type,
-                        "text": p.text,
-                        "context": p.context,
-                        "chapter_index": p.chapter_index,
-                        "status": p.status,
-                        "urgency": p.urgency,
-                        "related_characters": p.related_characters,
-                    }
-                    for p in result.promises
-                ],
-                "world_items": [
-                    {
-                        "term": w.term,
-                        "description": w.description,
-                        "category": w.category,
-                        "first_appearance": w.first_appearance,
-                        "reference_chapters": w.reference_chapters,
-                        "related_terms": w.related_terms,
-                    }
-                    for w in result.world_items
-                ],
-                "chapter_count": result.chapter_count,
-                "total_llm_calls": result.total_llm_calls,
-                "failed_llm_calls": result.failed_llm_calls,
-                "errors": result.errors,
-            }
+            # 保存结果 (Pydantic model_dump 替代手动逐字段转 dict)
+            result_dict = result.model_dump()
 
             job.phase1_result = result_dict
             job.progress_percent = 100.0
@@ -305,6 +246,7 @@ class IngestService:
             job.current_phase = "failed"
             job.error_message = str(exc)
             await db.flush()
+            await db.rollback()  # 清理 Phase 1 已写入的部分数据
             return {"success": False, "error": str(exc), "phase": "phase1"}
 
     # ════════════════════════════════════════════════════════════════
@@ -352,37 +294,8 @@ class IngestService:
 
             result: Phase2Result = await run_phase2_pipeline(phase2_input)
 
-            result_dict = {
-                "chapter_anchors": [
-                    {
-                        "chapter_index": a.chapter_index,
-                        "chapter_title": a.chapter_title,
-                        "opening_hook": a.opening_hook,
-                        "midpoint_turn": a.midpoint_turn,
-                        "closing_cliff": a.closing_cliff,
-                        "action_peak": a.action_peak,
-                    }
-                    for a in result.chapter_anchors
-                ],
-                "coherence": result.coherence,
-                "open_hooks": [
-                    {
-                        "type": h.type,
-                        "text": h.text,
-                        "chapter_index": h.chapter_index,
-                        "age_in_chapters": h.age_in_chapters,
-                        "stale": h.stale,
-                    }
-                    for h in result.open_hooks
-                ],
-                "recent_changes": result.recent_changes,
-                "feasibility": {
-                    "plot_density": result.feasibility.plot_density,
-                    "loose_thread_count": result.feasibility.loose_thread_count,
-                    "continuation_confidence": result.feasibility.continuation_confidence,
-                    "recommendation": result.feasibility.recommendation,
-                },
-            }
+            # 保存结果 (Pydantic model_dump 替代手动逐字段转 dict)
+            result_dict = result.model_dump()
 
             job.phase2_result = result_dict
             job.progress_percent = 100.0
@@ -401,6 +314,7 @@ class IngestService:
             job.current_phase = "failed"
             job.error_message = str(exc)
             await db.flush()
+            await db.rollback()  # 清理 Phase 2 已写入的部分数据
             return {"success": False, "error": str(exc), "phase": "phase2"}
 
     # ════════════════════════════════════════════════════════════════
@@ -449,18 +363,8 @@ class IngestService:
                 input_data=phase3_input,
             )
 
-            result_dict = {
-                "status": result.status,
-                "conflicts": result.conflicts,
-                "imported": {
-                    "characters": result.imported_characters,
-                    "timeline_events": result.imported_timeline_events,
-                    "promises": result.imported_promises,
-                    "world_items": result.imported_world_items,
-                },
-                "card_pool_generated": result.card_pool_generated,
-                "message": result.message,
-            }
+            # 保存结果 (Pydantic model_dump 替代手动构建)
+            result_dict = result.model_dump()
 
             job.phase3_result = result_dict
             job.current_phase = "completed" if result.status == "completed" else "failed"
