@@ -67,3 +67,20 @@ class UpdateProfileReq(BaseModel):
     nickname: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
+
+
+class UserProfileResp(BaseModel):
+    """User profile response schema."""
+
+    username: str
+    email: str
+    avatar: Optional[str] = None
+    created_at: str
+
+    model_config = {"from_attributes": False}
+
+
+class ExportDataResp(BaseModel):
+    """Export user data response."""
+
+    export_url: str

@@ -31,3 +31,11 @@ class SuccessResp(BaseModel):
     code: int = Field(default=200, description="状态码")
     message: str = Field(default="success", description="提示信息")
     data: Optional[dict] = Field(default=None, description="返回数据")
+
+
+class MessageResp(BaseModel):
+    """Standard message response for simple confirmations."""
+
+    message: str = Field(..., description="响应消息")
+
+    model_config = {"from_attributes": False}
