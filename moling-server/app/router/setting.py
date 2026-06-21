@@ -11,11 +11,14 @@ from app.models.user import User
 from app.service.setting_service import setting_service
 from app.schemas.setting import (
     ChangePasswordReq,
+    ExportDataResp,
     HealthMonitorReq,
     Phase4ModeReq,
     UpdateProfileReq,
+    UserProfileResp,
     UserSettings,
 )
+from app.schemas.common import MessageResp
 
 router = APIRouter()
 
@@ -48,7 +51,7 @@ async def update_settings(
     return result
 
 
-@router.post("/change-password", status_code=200)
+@router.post("/change-password", response_model=MessageResp, status_code=200)
 async def change_password(
     req: ChangePasswordReq,
     db: AsyncSession = Depends(get_db),
@@ -64,7 +67,7 @@ async def change_password(
     return result
 
 
-@router.get("/profile", response_model=dict)
+@router.get("/profile", response_model=UserProfileResp)
 async def get_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -131,7 +134,7 @@ async def update_health_monitor(
     }
 
 
-@router.post("/export", status_code=200)
+@router.post("/export", response_model=ExportDataResp, status_code=200)
 async def export_user_data(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
