@@ -10,7 +10,10 @@ from app.models.phase4_task import Phase4Task
 
 
 class Phase4DAO(BaseDAO[Phase4Task]):
-    """Data access object for Phase4Task model."""
+    """Data access object for Phase4Task model.
+    
+    P1-3 修复: 参数名 status 保留为 API（向后兼容），内部通过 Phase4Task.state 查询。
+    """
 
     def __init__(self) -> None:
         super().__init__(Phase4Task)
@@ -21,7 +24,10 @@ class Phase4DAO(BaseDAO[Phase4Task]):
         nonce: str,
     ) -> Phase4Task | None:
         """Get task by nonce (for idempotency check)."""
-        stmt = select(Phase4Task).where(Phase4Task.nonce == nonce)
+        stmt = select(Phase4Task).where(
+            Phase4Task.nonce == nonce,
+            Phase4Task.is_deleted == False,
+        )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -33,10 +39,13 @@ class Phase4DAO(BaseDAO[Phase4Task]):
         status: str | None = None,
     ) -> list[Phase4Task]:
         """Get tasks by chapter ID."""
-        stmt = select(Phase4Task).where(Phase4Task.chapter_id == chapter_id)
+        stmt = select(Phase4Task).where(
+            Phase4Task.chapter_id == chapter_id,
+            Phase4Task.is_deleted == False,
+        )
         
         if status:
-            stmt = stmt.where(Phase4Task.status == status)
+            stmt = stmt.where(Phase4Task.state == status)
         
         stmt = stmt.order_by(Phase4Task.created_at.desc())
         result = await db.execute(stmt)
@@ -50,10 +59,13 @@ class Phase4DAO(BaseDAO[Phase4Task]):
         status: str | None = None,
     ) -> list[Phase4Task]:
         """Get tasks by project ID."""
-        stmt = select(Phase4Task).where(Phase4Task.project_id == project_id)
+        stmt = select(Phase4Task).where(
+            Phase4Task.project_id == project_id,
+            Phase4Task.is_deleted == False,
+        )
         
         if status:
-            stmt = stmt.where(Phase4Task.status == status)
+            stmt = stmt.where(Phase4Task.state == status)
         
         stmt = stmt.order_by(Phase4Task.created_at.desc())
         result = await db.execute(stmt)
@@ -70,7 +82,10 @@ class Phase4DAO(BaseDAO[Phase4Task]):
         """Get tasks by status with pagination, newest first."""
         stmt = (
             select(Phase4Task)
-            .where(Phase4Task.status == status)
+            .where(
+                Phase4Task.state == status,
+                Phase4Task.is_deleted == False,
+            )
             .order_by(Phase4Task.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -84,7 +99,7 @@ class Phase4DAO(BaseDAO[Phase4Task]):
         status: str,
     ) -> int:
         """Count tasks matching a given status."""
-        return await self.count(db, filters={"status": status})
+        return await self.count(db, filters={"state": status})
 
 
 # Singleton instance
