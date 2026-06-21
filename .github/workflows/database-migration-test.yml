@@ -67,11 +67,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: $-pip-migration-v2-$
+          key: ${{ runner.os }}-pip-migration-v2-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            $-pip-migration-v2-
-            $-pip-migration-
-            $-pip-
+            ${{ runner.os }}-pip-migration-v2-
+            ${{ runner.os }}-pip-migration-
+            ${{ runner.os }}-pip-
 
       - name: 安装依赖
         run: |
@@ -120,7 +120,7 @@ jobs:
           python -c "
           import asyncio
           from sqlalchemy import text
-          from app.database import async_session_factory
+          from app.dependencies import async_session_factory
 
           async def test():
               async with async_session_factory() as session:
@@ -280,7 +280,7 @@ jobs:
           cd moling-server
           python -m pip install --upgrade pip
           pip install ".[dev]"
-          pip install alembic python-dotenv
+          pip install alembic python-dotenv psycopg2-binary
 
       - name: 安装 PostgreSQL 客户端工具
         run: |
@@ -297,7 +297,7 @@ jobs:
         run: |
           cd moling-server
           python scripts/disaster_recovery_drill.py \
-            --db-url "postgresql://testuser:testpass@localhost:5432/moling_test" \
+            --db-url "postgresql+psycopg://testuser:testpass@localhost:5432/moling_test" \
             --target-db moling_drill_test \
             --no-cleanup \
             --report-file drill_report.txt
