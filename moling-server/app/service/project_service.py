@@ -7,14 +7,11 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.dao import project_dao, chapter_dao, vault_dao
 from app.errors import NotFoundError, ErrorCode
 from app.utils.security import verify_project_ownership
 from app.models import Project
 from app.schemas.project import CreateProjectReq, UpdateProjectReq, ProjectResp, ProjectStatsResp
-
-settings = get_settings()
 
 
 class ProjectService:
