@@ -41,7 +41,6 @@ from __future__ import annotations
 import argparse
 import datetime
 import gzip
-import json
 import os
 import shutil
 import subprocess
@@ -162,7 +161,7 @@ def backup_full(db_url: str, backup_dir: Path, compress: bool = True) -> Path:
     try:
         # 执行 pg_dump
         with open(backup_file, "w") as f:
-            result = subprocess.run(
+            subprocess.run(
                 cmd,
                 env=env,
                 stdout=f,
@@ -259,7 +258,7 @@ def encrypt_backup(backup_file: Path, recipient: str = None) -> Path:
         print("警告: 未设置 GPG_RECIPIENT，跳过加密")
         return backup_file
 
-    print(f"\n使用 GPG 加密备份文件...")
+    print("\n使用 GPG 加密备份文件...")
 
     encrypted_file = backup_file.with_suffix(backup_file.suffix + ".gpg")
 
@@ -272,7 +271,7 @@ def encrypt_backup(backup_file: Path, recipient: str = None) -> Path:
             str(backup_file),
         ]
 
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             capture_output=True,
             text=True,
@@ -320,7 +319,7 @@ def decrypt_backup(encrypted_file: Path, output_file: Path = None) -> Path:
             str(encrypted_file),
         ]
 
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             capture_output=True,
             text=True,
@@ -516,7 +515,7 @@ def verify_backup_by_restore(backup_file: Path, db_url: str) -> bool:
 
         # 如果是 .gz 文件，解压
         if restore_file.suffix == ".gz":
-            print(f"  解压备份文件...")
+            print("  解压备份文件...")
             decompressed = work_path / restore_file.stem
             with gzip.open(restore_file, "rb") as f_in:
                 with open(decompressed, "wb") as f_out:
@@ -538,7 +537,7 @@ def verify_backup_by_restore(backup_file: Path, db_url: str) -> bool:
         ]
 
         subprocess.run(create_cmd, env=env, capture_output=True, check=True)
-        print(f"  ✓ 临时数据库已创建")
+        print("  ✓ 临时数据库已创建")
 
         # 恢复备份
         restore_cmd = [
@@ -552,10 +551,10 @@ def verify_backup_by_restore(backup_file: Path, db_url: str) -> bool:
             str(restore_file),
         ]
 
-        result = subprocess.run(
+        subprocess.run(
             restore_cmd, env=env, capture_output=True, text=True, check=True
         )
-        print(f"  ✓ 备份已恢复到临时数据库")
+        print("  ✓ 备份已恢复到临时数据库")
 
         # 运行测试查询
         test_cmd = [
@@ -575,7 +574,7 @@ def verify_backup_by_restore(backup_file: Path, db_url: str) -> bool:
         table_count = result.stdout.strip()
         print(f"  ✓ 测试查询成功: {table_count} 个表")
 
-        print(f"✓ 备份验证成功（通过恢复）")
+        print("✓ 备份验证成功（通过恢复）")
         return True
 
     except subprocess.CalledProcessError as e:
@@ -693,11 +692,11 @@ def main():
     print(f"备份目录: {backup_dir}")
     print(f"备份类型: {args.type}")
     if args.encrypt:
-        print(f"加密: 启用 (GPG)")
+        print("加密: 启用 (GPG)")
     if args.upload:
         print(f"上传: {args.upload}")
     if args.verify:
-        print(f"验证: 启用（恢复验证）")
+        print("验证: 启用（恢复验证）")
     print("=" * 60)
 
     try:

@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import datetime
 import gzip
-import json
 import os
 import shutil
 import smtplib
@@ -177,14 +176,14 @@ def drop_database(db_params: dict):
     ]
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             drop_cmd,
             env=env,
             capture_output=True,
             text=True,
             check=False,  # 数据库可能不存在
         )
-        print(f"✓ 数据库已删除或不存在")
+        print("✓ 数据库已删除或不存在")
     except FileNotFoundError:
         print("✗ 错误: 未找到 dropdb 命令")
         raise
@@ -208,14 +207,14 @@ def create_database(db_params: dict):
     ]
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             create_cmd,
             env=env,
             capture_output=True,
             text=True,
             check=True,
         )
-        print(f"✓ 数据库已创建")
+        print("✓ 数据库已创建")
     except subprocess.CalledProcessError as e:
         print(f"✗ 创建数据库失败: {e.stderr}")
         raise
@@ -249,14 +248,14 @@ def restore_backup(backup_file: Path, db_params: dict):
     ]
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             restore_cmd,
             env=env,
             capture_output=True,
             text=True,
             check=True,
         )
-        print(f"✓ 备份恢复完成")
+        print("✓ 备份恢复完成")
     except subprocess.CalledProcessError as e:
         print(f"✗ 备份恢复失败: {e.stderr}")
         raise
@@ -568,7 +567,7 @@ def send_slack_notification(message: str, webhook_url: str = None) -> bool:
         print("请设置环境变量或在参数中指定")
         return False
 
-    print(f"\n发送 Slack 通知...")
+    print("\n发送 Slack 通知...")
 
     try:
         payload = {

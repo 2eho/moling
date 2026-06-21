@@ -34,3 +34,9 @@ class WeaveAnalysisResp(BaseModel):
     created_at: str
 
     model_config = {"from_attributes": True}
+
+
+class ApplyWeaveResp(BaseModel):
+    """Weave 应用编织响应。"""
+
+    message: Optional[str] = None
