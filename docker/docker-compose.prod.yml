@@ -67,7 +67,7 @@ services:
     expose:
       - "8000"
     env_file:
-      - ../moling-server/.env
+      - .env
     environment:
       # === 数据库（可通过 GitHub Secrets 覆盖）===
       - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///app/data/moling.db}
@@ -112,7 +112,7 @@ services:
     container_name: moling-worker
     command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
     env_file:
-      - ../moling-server/.env
+      - .env
     environment:
       - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///app/data/moling.db}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-moling_redis_password}@redis:6379/0
