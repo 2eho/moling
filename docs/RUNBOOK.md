@@ -31,6 +31,9 @@
 4. **记录操作**：在故障处理过程中，记录所有操作和结果
 5. **及时升级**：如果 30 分钟内无法恢复，立即升级到技术负责人
 
+> **Compose 文件位置**：以下命令通过 `export COMPOSE_FILE=docker/docker-compose.yml` 预设 compose 文件路径。
+> 如使用生产 CI/CD 编排，改为 `export COMPOSE_FILE=docker/docker-compose.prod.yml`。
+
 ### 紧急联系人
 
 | 角色 | 姓名 | 电话 | 邮箱 | 备注 |
@@ -64,7 +67,7 @@
 
 ```bash
 # 访问 Sentry 仪表板
-open https://sentry.io/organizations/[your-org]/issues/
+echo "访问: https://sentry.io/organizations/[your-org]/issues/"
 
 # 或查看项目配置的 Sentry DSN
 cat moling-server/.env | grep SENTRY_DSN
@@ -82,7 +85,7 @@ cat moling-server/.env | grep SENTRY_DSN
 docker logs -f moling-app --tail 100
 
 # Docker Compose 部署
-docker compose logs -f app
+docker compose -f $COMPOSE_FILE logs -f app
 
 # 查看特定时间段的日志
 docker logs moling-app --since "2026-06-16T10:00:00" --until "2026-06-16T11:00:00"
@@ -153,7 +156,7 @@ free -h
 docker restart moling-app
 
 # Docker Compose 部署
-docker compose restart app
+docker compose -f $COMPOSE_FILE restart app
 
 # 等待服务启动（约 10-30 秒）
 sleep 30
@@ -477,7 +480,7 @@ docker update --cpus=4 --memory=8g moling-db
 docker logs moling-web --tail 100
 
 # Docker Compose 部署
-docker compose logs web
+docker compose -f $COMPOSE_FILE logs web
 
 # 查看前端容器状态
 docker ps | grep moling-web

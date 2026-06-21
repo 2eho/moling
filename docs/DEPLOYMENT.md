@@ -176,17 +176,18 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 | `app` | `moling-app` | 本地构建 (moling-server) | 8000 |
 | `web` | `moling-web` | 本地构建 (moling-web) | 3000 |
 
-**`docker/docker-compose.yml`** — 生产级完整编排（8 个服务）：
+**`docker/docker-compose.yml`** — 生产级完整编排（9 个服务）：
 
 | 服务 | 容器名 | 镜像 | 端口 | 说明 |
 |------|--------|------|------|------|
 | `frontend` | `moling-frontend` | 本地构建 (moling-web) | 80 / 443 | Nginx 静态文件 + 反向代理 |
 | `app` | `moling-api` | 本地构建 (moling-server) | 8000 (expose) | FastAPI 应用，仅内网可达 |
 | `worker` | `moling-worker` | 本地构建 (moling-server) | — | Celery Worker（消费 default+llm 队列） |
-| `beat` | `moling-beat` | 本地构建 (moling-server) | — | Celery Beat（4 个周期性任务调度） |
 | `db` | `moling-db` | `pgvector/pgvector:pg17` | 5432 (内网) | PostgreSQL 17 + pgvector |
 | `redis` | `moling-redis` | `redis:7-alpine` | 6379 (内网) | 带密码持久化（--requirepass） |
 | `prometheus` | `moling-prometheus` | `prom/prometheus:latest` | 9090 | 指标收集 |
+| `alertmanager` | `moling-alertmanager` | `prom/alertmanager:latest` | 9093 | 告警路由 → 飞书 |
+| `feishu-bridge` | `moling-feishu-bridge` | 本地构建 (Dockerfile.feishu-bridge) | 9094 | AlertManager → 飞书卡片转换 |
 | `grafana` | `moling-grafana` | `grafana/grafana:latest` | 3001 | 可视化仪表板 |
 
 ### 4.2 Docker 镜像构建要点
@@ -215,6 +216,44 @@ docker compose up -d --build
 docker compose build --no-cache web
 docker compose up -d web
 ```
+
+### 4.4 CI/CD 自动部署（GHCR）
+
+项目配置 GitHub Actions 自动化流水线，在 push 到 `main` 分支时自动构建并推送 Docker 镜像到 GitHub Container Registry。
+
+**镜像命名规则**：
+- 后端：`ghcr.io/<owner>/<repo>/moling-backend:<tag>`
+- 前端：`ghcr.io/<owner>/<repo>/moling-frontend:<tag>`
+- 标签含 `latest`、短 SHA (`abc1234`)、版本号 (`20260621-120000-abc1234`)
+
+**部署流水线** (`.github/workflows/deploy.yml`)：
+1. `prepare` — 生成版本元数据
+2. `lint` — 代码质量 + 安全扫描
+3. `test` — 后端 pytest + 前端构建验证
+4. `build` — Docker 镜像构建 + 推送到 GHCR
+5. `deploy` — SSH 远程部署 + 数据库迁移 + 健康检查
+6. `verify` — 冒烟测试 + 部署状态通知
+7. `rollback` — 失败时自动回滚到上一版本
+
+**生产部署（预构建镜像）**：
+```bash
+# 服务器端拉取并启动
+docker compose -f docker/docker-compose.prod.yml pull
+docker compose -f docker/docker-compose.prod.yml up -d
+
+# 查看服务状态
+docker compose -f docker/docker-compose.prod.yml ps
+```
+
+**所需 GitHub Secrets**：
+| Secret | 说明 |
+|--------|------|
+| `SSH_HOST` | 生产服务器 IP/域名 |
+| `SSH_USER` | SSH 用户名 |
+| `SSH_PRIVATE_KEY` | SSH 私钥 |
+| `DEPLOY_PATH` | 服务器上项目路径 |
+| `DATABASE_URL` | 生产数据库连接串 |
+| `FEISHU_WEBHOOK_URL` | 飞书通知 Webhook（可选） |
 
 ---
 
