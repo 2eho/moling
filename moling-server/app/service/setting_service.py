@@ -73,7 +73,11 @@ class SettingService:
         
         # Save back to user
         user.settings = current_settings
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(user)
         
         return UserSettings(**current_settings)
@@ -110,7 +114,11 @@ class SettingService:
         
         # Update password
         user.password_hash = _hash_password(new_password)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         
         return {"message": "密码修改成功"}
 
@@ -172,7 +180,11 @@ class SettingService:
         if avatar_url is not None:
             user.avatar_url = avatar_url
         
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(user)
         
         return {

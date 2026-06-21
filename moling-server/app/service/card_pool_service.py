@@ -130,7 +130,11 @@ class CardPoolService:
             card.status = "retired"
             card.retired_chapter = now_chapter
 
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
 
         return {
             "project_id": project_id,

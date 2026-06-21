@@ -67,7 +67,11 @@ class TemplateService:
     ) -> TemplateResp:
         """Create a new template."""
         template = await template_dao.create(db, req)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(template)
         
         return TemplateResp.model_validate(template)
@@ -88,7 +92,11 @@ class TemplateService:
             )
         
         updated = await template_dao.update(db, template, req)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(updated)
         
         return TemplateResp.model_validate(updated)
@@ -108,7 +116,11 @@ class TemplateService:
             )
         
         await db.delete(template)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
 
     async def create_project_from_template(
         self,
@@ -150,7 +162,11 @@ class TemplateService:
         )
         
         db.add(project)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(project)
         
         return {
