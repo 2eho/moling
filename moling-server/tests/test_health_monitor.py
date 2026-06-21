@@ -115,8 +115,8 @@ class TestGetLastAdvanceChapter:
         """advancement_log 有数据时返回最后推进的 chapter。"""
         promise = make_promise(
             advancement_log=[
-                {"chapter": 3, "note": "初现端倪", "event_type": "foreshadow"},
-                {"chapter": 5, "note": "再次出现", "event_type": "advance"},
+                {"chapter": 3, "note": "初现端倪", "event": "foreshadow"},
+                {"chapter": 5, "note": "再次出现", "event": "advance"},
             ]
         )
         assert _get_last_advance_chapter(promise) == 5
@@ -134,7 +134,8 @@ class TestGetLastAdvanceChapter:
     def test_missing_chapter_key_in_log(self):
         """advancement_log 条目不包含 chapter 时忽略。"""
         promise = make_promise(
-            advancement_log=[{"note": "no chapter here"}]
+            advancement_log=[{"note": "no chapter here"}],
+            planted_chapter=0,
         )
         assert _get_last_advance_chapter(promise) == 0
 
@@ -190,7 +191,7 @@ class TestR1:
         """active 状态的承诺超过 8 章未推进应触发告警。"""
         promise = make_promise(
             status="active",
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         alert = _check_r1(promise, current_chapter=10, promise_title="神秘人的真实身份")
         assert alert is not None
@@ -201,7 +202,7 @@ class TestR1:
         """advancing 状态的承诺超过 8 章未推进应触发告警。"""
         promise = make_promise(
             status="advancing",
-            advancement_log=[{"chapter": 1, "event_type": "advance"}],
+            advancement_log=[{"chapter": 1, "event": "advance"}],
         )
         alert = _check_r1(promise, current_chapter=10, promise_title="复仇之路")
         assert alert is not None
@@ -210,7 +211,7 @@ class TestR1:
         """8 章内有推进记录不触发告警。"""
         promise = make_promise(
             status="active",
-            advancement_log=[{"chapter": 5, "event_type": "advance"}],
+            advancement_log=[{"chapter": 5, "event": "advance"}],
         )
         alert = _check_r1(promise, current_chapter=10, promise_title="神秘人的真实身份")
         assert alert is None  # 10 - 5 = 5 < 8
@@ -219,7 +220,7 @@ class TestR1:
         """恰好 8 章未推进应触发告警。"""
         promise = make_promise(
             status="active",
-            advancement_log=[{"chapter": 2, "event_type": "advance"}],
+            advancement_log=[{"chapter": 2, "event": "advance"}],
         )
         alert = _check_r1(promise, current_chapter=10, promise_title="神秘人的真实身份")
         assert alert is not None  # 10 - 2 = 8 >= 8
@@ -228,7 +229,7 @@ class TestR1:
         """已解决状态的承诺不触发告警。"""
         promise = make_promise(
             status="resolved",
-            advancement_log=[{"chapter": 1, "event_type": "advance"}],
+            advancement_log=[{"chapter": 1, "event": "advance"}],
         )
         alert = _check_r1(promise, current_chapter=10, promise_title="神秘人的真实身份")
         assert alert is None
@@ -237,7 +238,7 @@ class TestR1:
         """休眠状态的承诺不触发告警。"""
         promise = make_promise(
             status="dormant",
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         alert = _check_r1(promise, current_chapter=10, promise_title="神秘人的真实身份")
         assert alert is None
@@ -272,13 +273,13 @@ class TestR2:
     """R2: 4+ 同类型重复推进行为测试。"""
 
     def test_identical_event_types_triggers(self):
-        """全部同类型推进 >=4 次触发告警。"""
+        """全部同 event 类型推进 >=4 次触发告警。"""
         promise = make_promise(
             advancement_log=[
-                {"chapter": 1, "event_type": "foreshadow"},
-                {"chapter": 3, "event_type": "foreshadow"},
-                {"chapter": 5, "event_type": "foreshadow"},
-                {"chapter": 7, "event_type": "foreshadow"},
+                {"chapter": 1, "event": "foreshadow"},
+                {"chapter": 3, "event": "foreshadow"},
+                {"chapter": 5, "event": "foreshadow"},
+                {"chapter": 7, "event": "foreshadow"},
             ]
         )
         alert = _check_r2(promise, promise_title="神秘人的真实身份")
@@ -288,13 +289,13 @@ class TestR2:
         assert "foreshadow" in alert["detail"]
 
     def test_mixed_types_no_alert(self):
-        """不同 event_type 混合不触发告警。"""
+        """不同 event 混合不触发告警。"""
         promise = make_promise(
             advancement_log=[
-                {"chapter": 1, "event_type": "foreshadow"},
-                {"chapter": 3, "event_type": "advance"},
-                {"chapter": 5, "event_type": "twist"},
-                {"chapter": 7, "event_type": "climax"},
+                {"chapter": 1, "event": "foreshadow"},
+                {"chapter": 3, "event": "advance"},
+                {"chapter": 5, "event": "twist"},
+                {"chapter": 7, "event": "climax"},
             ]
         )
         alert = _check_r2(promise, promise_title="神秘人的真实身份")
@@ -304,9 +305,9 @@ class TestR2:
         """少于 4 条记录不触发告警。"""
         promise = make_promise(
             advancement_log=[
-                {"chapter": 1, "event_type": "foreshadow"},
-                {"chapter": 3, "event_type": "foreshadow"},
-                {"chapter": 5, "event_type": "foreshadow"},
+                {"chapter": 1, "event": "foreshadow"},
+                {"chapter": 3, "event": "foreshadow"},
+                {"chapter": 5, "event": "foreshadow"},
             ]
         )
         alert = _check_r2(promise, promise_title="神秘人的真实身份")
@@ -324,15 +325,15 @@ class TestR2:
         alert = _check_r2(promise, promise_title="神秘人的真实身份")
         assert alert is None
 
-    def test_mixed_with_none_event_type(self):
-        """部分记录缺少 event_type，但有 >=4 条同类型仍触发。"""
+    def test_mixed_with_missing_event_field(self):
+        """部分记录缺少 event 字段，但有 >=4 条同类型仍触发。"""
         promise = make_promise(
             advancement_log=[
-                {"chapter": 1, "event_type": "foreshadow"},
+                {"chapter": 1, "event": "foreshadow"},
                 {"chapter": 3, "note": "no type here"},
-                {"chapter": 5, "event_type": "foreshadow"},
-                {"chapter": 7, "event_type": "foreshadow"},
-                {"chapter": 9, "event_type": "foreshadow"},
+                {"chapter": 5, "event": "foreshadow"},
+                {"chapter": 7, "event": "foreshadow"},
+                {"chapter": 9, "event": "foreshadow"},
             ]
         )
         alert = _check_r2(promise, promise_title="神秘人的真实身份")
@@ -342,11 +343,11 @@ class TestR2:
         """检测 detail 中应包含总推进次数。"""
         promise = make_promise(
             advancement_log=[
-                {"chapter": 1, "event_type": "advance"},
-                {"chapter": 3, "event_type": "advance"},
-                {"chapter": 5, "event_type": "advance"},
-                {"chapter": 7, "event_type": "advance"},
-                {"chapter": 9, "event_type": "advance"},
+                {"chapter": 1, "event": "advance"},
+                {"chapter": 3, "event": "advance"},
+                {"chapter": 5, "event": "advance"},
+                {"chapter": 7, "event": "advance"},
+                {"chapter": 9, "event": "advance"},
             ]
         )
         alert = _check_r2(promise, promise_title="神秘人的真实身份")
@@ -365,7 +366,7 @@ class TestR3:
     def test_silent_triggers_red(self):
         """超过 10 章无推进且无提及触发红色告警。"""
         promise = make_promise(
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         alert = _check_r3(
             promise,
@@ -381,7 +382,7 @@ class TestR3:
         """有关键词提及但无正式推进 → 降级为 R1。"""
         promise = make_promise(
             title="地宫秘密",
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         alert = _check_r3(
             promise,
@@ -397,7 +398,7 @@ class TestR3:
     def test_within_window_no_alert(self):
         """10 章内有推进不触发告警。"""
         promise = make_promise(
-            advancement_log=[{"chapter": 5, "event_type": "advance"}],
+            advancement_log=[{"chapter": 5, "event": "advance"}],
         )
         alert = _check_r3(
             promise,
@@ -410,7 +411,7 @@ class TestR3:
     def test_exact_boundary_triggers(self):
         """恰好 10 章无推进触发告警。"""
         promise = make_promise(
-            advancement_log=[{"chapter": 2, "event_type": "advance"}],
+            advancement_log=[{"chapter": 2, "event": "advance"}],
         )
         alert = _check_r3(
             promise,
@@ -583,7 +584,7 @@ class TestCheckHealth:
             promise_id="p0001",
             title="神秘人的真实身份",
             status="active",
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         mock_promises.return_value = [promise]
         mock_content.return_value = None
@@ -611,10 +612,10 @@ class TestCheckHealth:
             title="重复伏笔",
             status="active",
             advancement_log=[
-                {"chapter": 1, "event_type": "foreshadow"},
-                {"chapter": 3, "event_type": "foreshadow"},
-                {"chapter": 5, "event_type": "foreshadow"},
-                {"chapter": 7, "event_type": "foreshadow"},
+                {"chapter": 1, "event": "foreshadow"},
+                {"chapter": 3, "event": "foreshadow"},
+                {"chapter": 5, "event": "foreshadow"},
+                {"chapter": 7, "event": "foreshadow"},
             ],
         )
         mock_promises.return_value = [promise]
@@ -643,7 +644,7 @@ class TestCheckHealth:
             promise_id="p0003",
             title="地宫秘密",
             status="active",
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         mock_promises.return_value = [promise]
         mock_content.return_value = "今天的天气很好"
@@ -671,7 +672,7 @@ class TestCheckHealth:
             promise_id="p0003",
             title="地宫秘密",
             status="active",
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         mock_promises.return_value = [promise]
         mock_content.return_value = "主角发现了地宫秘密的线索"
@@ -708,7 +709,7 @@ class TestCheckHealth:
             promise_id="p0001",
             title="神秘人的真实身份",
             status="active",
-            advancement_log=[{"chapter": 1, "event_type": "foreshadow"}],
+            advancement_log=[{"chapter": 1, "event": "foreshadow"}],
         )
         mock_promises.return_value = [promise]
         mock_content.return_value = None
