@@ -12,8 +12,17 @@ WORKDIR /app
 COPY feishu-alert-bridge.py /app/
 RUN pip install --no-cache-dir flask requests
 
+# 创建非 root 用户
+RUN useradd -m -u 1000 feishu-bridge
+
 # 暴露端口
 EXPOSE 9094
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9094/health')" || exit 1
+
+USER feishu-bridge
 
 # 启动
 CMD ["python", "/app/feishu-alert-bridge.py"]
