@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 
 from pydantic import BaseModel, Field, Field
 
@@ -27,7 +26,7 @@ class ApplyPhase4Req(BaseModel):
 class RejectReviewReq(BaseModel):
     """拒绝 Phase 4 精修建议请求。"""
 
-    reason: Optional[str] = Field(default=None, max_length=500, description="拒绝原因")
+    reason: str | None = Field(default=None, max_length=500, description="拒绝原因")
 
 
 class Phase4TaskResp(BaseModel):
@@ -38,9 +37,9 @@ class Phase4TaskResp(BaseModel):
     project_id: str
     chapter_id: str
     state: str
-    error_message: Optional[str] = None
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
+    error_message: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
     created_at: str
 
     model_config = {"from_attributes": True}
@@ -49,8 +48,8 @@ class Phase4TaskResp(BaseModel):
 class ApplyPhase4Resp(BaseModel):
     """Phase 4 应用精修响应。"""
 
-    message: Optional[str] = None
-    task_id: Optional[int] = None
+    message: str | None = None
+    task_id: int | None = None
 
 
 class PendingReviewItem(BaseModel):
@@ -58,15 +57,15 @@ class PendingReviewItem(BaseModel):
 
     id: int
     nonce: str
-    project_id: Optional[str] = None
-    chapter_id: Optional[str] = None
-    status: Optional[str] = None
-    state: Optional[str] = None
-    error_message: Optional[str] = None
-    retry_count: Optional[int] = None
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
-    created_at: Optional[str] = None
+    project_id: str | None = None
+    chapter_id: str | None = None
+    status: str | None = None
+    state: str | None = None
+    error_message: str | None = None
+    retry_count: int | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    created_at: str | None = None
 
 
 class PendingReviewsResp(BaseModel):

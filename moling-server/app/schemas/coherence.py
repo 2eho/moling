@@ -50,7 +50,6 @@ Output contract (for frontend consumption via TaskStatusResp.output_data.coheren
 
 from __future__ import annotations
 
-from typing import Optional
 
 from pydantic import BaseModel, Field
 

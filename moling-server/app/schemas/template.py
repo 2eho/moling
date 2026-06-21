@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,8 +13,8 @@ class TemplateResp(BaseModel):
     name: str = Field(..., description="模板名称")
     description: str = Field(..., description="模板描述")
     genre: str = Field(..., description="适用题材")
-    target_words: Optional[int] = Field(default=None, description="建议目标字数")
-    style: Optional[str] = Field(default=None, description="建议写作风格")
+    target_words: int | None = Field(default=None, description="建议目标字数")
+    style: str | None = Field(default=None, description="建议写作风格")
 
     model_config = {"from_attributes": True}
 
@@ -26,16 +25,16 @@ class CreateTemplateReq(BaseModel):
     name: str = Field(..., description="模板名称")
     description: str = Field(..., description="模板描述")
     genre: str = Field(..., description="适用题材")
-    structure: Optional[dict] = Field(default=None, description="模板结构 (JSON)")
+    structure: dict | None = Field(default=None, description="模板结构 (JSON)")
 
 
 class UpdateTemplateReq(BaseModel):
     """Request body for updating a template."""
 
-    name: Optional[str] = Field(default=None, description="模板名称")
-    description: Optional[str] = Field(default=None, description="模板描述")
-    genre: Optional[str] = Field(default=None, description="适用题材")
-    structure: Optional[dict] = Field(default=None, description="模板结构 (JSON)")
+    name: str | None = Field(default=None, description="模板名称")
+    description: str | None = Field(default=None, description="模板描述")
+    genre: str | None = Field(default=None, description="适用题材")
+    structure: dict | None = Field(default=None, description="模板结构 (JSON)")
 
 
 class TemplateListResp(BaseModel):

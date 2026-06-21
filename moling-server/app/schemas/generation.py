@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -41,10 +40,10 @@ class TaskStatusResp(BaseModel):
 
     task_id: str = Field(..., description="生成任务 ID (UUID)")
     status: str = Field(..., description="任务状态")
-    progress_stage: Optional[str] = Field(default=None, description="当前进度阶段")
+    progress_stage: str | None = Field(default=None, description="当前进度阶段")
     progress_percent: int = Field(default=0, description="进度百分比")
-    error_message: Optional[str] = Field(default=None, description="错误信息")
-    output_data: Optional[dict] = Field(default=None, description="输出数据")
+    error_message: str | None = Field(default=None, description="错误信息")
+    output_data: dict | None = Field(default=None, description="输出数据")
 
 
 class TaskCancelResp(BaseModel):

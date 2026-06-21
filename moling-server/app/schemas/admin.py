@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -83,8 +82,8 @@ class ProjectManageResp(BaseModel):
 class UpdateUserReq(BaseModel):
     """Admin update user request (all fields optional)."""
 
-    email: Optional[str] = Field(default=None, description="邮箱")
-    username: Optional[str] = Field(default=None, min_length=1, max_length=100, description="用户名")
-    bio: Optional[str] = Field(default=None, description="个人简介")
-    role: Optional[str] = Field(default=None, description="角色")
-    status: Optional[str] = Field(default=None, description="状态")
+    email: str | None = Field(default=None, description="邮箱")
+    username: str | None = Field(default=None, min_length=1, max_length=100, description="用户名")
+    bio: str | None = Field(default=None, description="个人简介")
+    role: str | None = Field(default=None, description="角色")
+    status: str | None = Field(default=None, description="状态")

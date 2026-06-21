@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,14 +21,14 @@ class UserSettings(BaseModel):
     cooldown_redraws: int = Field(default=3, ge=1, le=10)
     health_monitor_enabled: bool = Field(default=True)
     phase4_review_mode: str = Field(default="auto")
-    nickname: Optional[str] = Field(default=None, description="用户昵称")
-    bio: Optional[str] = Field(default=None, description="个人简介")
-    email: Optional[str] = Field(default=None, description="邮箱")
+    nickname: str | None = Field(default=None, description="用户昵称")
+    bio: str | None = Field(default=None, description="个人简介")
+    email: str | None = Field(default=None, description="邮箱")
     language: str = Field(default="zh-CN", description="语言")
     creativity: float = Field(default=0.7, ge=0.0, le=1.0, description="创造力")
     word_count: int = Field(default=0, description="总字数")
-    target_words: Optional[int] = Field(default=None, description="目标总字数")
-    update_frequency: Optional[str] = Field(default=None, description="更新频率")
+    target_words: int | None = Field(default=None, description="目标总字数")
+    update_frequency: str | None = Field(default=None, description="更新频率")
 
 
 class HealthMonitorReq(BaseModel):
@@ -74,7 +73,7 @@ class UserProfileResp(BaseModel):
 
     username: str
     email: str
-    avatar: Optional[str] = None
+    avatar: str | None = None
     created_at: str
 
     model_config = {"from_attributes": False}

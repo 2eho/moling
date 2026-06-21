@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -30,7 +30,7 @@ class SuccessResp(BaseModel):
 
     code: int = Field(default=200, description="状态码")
     message: str = Field(default="success", description="提示信息")
-    data: Optional[dict] = Field(default=None, description="返回数据")
+    data: dict | None = Field(default=None, description="返回数据")
 
 
 class MessageResp(BaseModel):

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -39,7 +38,7 @@ class UserResp(BaseModel):
     id: str = Field(..., description="用户 ID (UUID)")
     email: str = Field(..., description="邮箱")
     nickname: str = Field(..., validation_alias="username", description="用户昵称")
-    avatar_url: Optional[str] = Field(default=None, description="头像 URL")
+    avatar_url: str | None = Field(default=None, description="头像 URL")
     status: str = Field(default="active", description="用户状态")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")

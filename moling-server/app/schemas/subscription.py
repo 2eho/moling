@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -37,7 +36,7 @@ class SubscriptionResp(BaseModel):
     plan_id: str
     status: str
     start_date: datetime
-    end_date: Optional[datetime] = None
+    end_date: datetime | None = None
     auto_renew: bool
     created_at: datetime
 

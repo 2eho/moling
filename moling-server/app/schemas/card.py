@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -39,7 +38,7 @@ class CardResp(BaseModel):
     rarity: str = Field(..., description="稀有度")
     direction_type: str = Field(..., description="方向类型")
     direction_text: str = Field(..., description="方向指示文本")
-    freshness_chapter: Optional[int] = Field(default=None, description="新鲜度章节号")
+    freshness_chapter: int | None = Field(default=None, description="新鲜度章节号")
     status: str = Field(default="active", description="卡片状态")
 
     model_config = {"from_attributes": True}

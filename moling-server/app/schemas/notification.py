@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -15,10 +14,10 @@ class NotificationResp(BaseModel):
     user_id: str = Field(..., description="用户 ID (UUID)")
     type: str = Field(..., description="通知类型")
     title: str = Field(..., description="通知标题")
-    content: Optional[str] = Field(default=None, description="通知正文")
-    message: Optional[str] = Field(default=None, description="通知消息内容（兼容前端 message 字段）")
+    content: str | None = Field(default=None, description="通知正文")
+    message: str | None = Field(default=None, description="通知消息内容（兼容前端 message 字段）")
     is_read: bool = Field(default=False, description="是否已读")
-    project_id: Optional[str] = Field(default=None, description="关联项目 ID (UUID)")
+    project_id: str | None = Field(default=None, description="关联项目 ID (UUID)")
     created_at: datetime = Field(..., description="创建时间")
 
     model_config = {"from_attributes": True}

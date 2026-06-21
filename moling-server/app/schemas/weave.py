@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -39,4 +38,4 @@ class WeaveAnalysisResp(BaseModel):
 class ApplyWeaveResp(BaseModel):
     """Weave 应用编织响应。"""
 
-    message: Optional[str] = None
+    message: str | None = None
