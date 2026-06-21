@@ -13,15 +13,23 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dao.vault_dao import (
+    VaultCharacterDAO,
+    VaultTimelineDAO,
+    VaultWorldDAO,
+)
 from app.models.vault_character import VaultCharacter
 from app.models.vault_timeline import VaultTimeline
-from app.models.vault_plot_promise import VaultPlotPromise
 from app.models.vault_world import VaultWorld
 
 logger = logging.getLogger(__name__)
+
+# Module-level DAO singletons
+_vault_char_dao = VaultCharacterDAO()
+_vault_timeline_dao = VaultTimelineDAO()
+_vault_world_dao = VaultWorldDAO()
 
 
 async def I10_conflict_check(
@@ -63,11 +71,9 @@ async def _check_character_conflicts(
     """检查角色冲突：同名不同设定。"""
     conflicts = []
 
-    # 获取系统已有角色
-    result = await db.execute(
-        select(VaultCharacter).where(VaultCharacter.project_id == project_id)
-    )
-    existing_chars = {c.name: c for c in result.scalars().all()}
+    # 获取系统已有角色 (通过 DAO 封装，不直接 select())
+    existing_characters = await _vault_char_dao.get_by_project(db, project_id)
+    existing_chars = {c.name: c for c in existing_characters}
 
     # 新导入的角色
     new_chars = {}
@@ -118,11 +124,9 @@ async def _check_timeline_conflicts(
     """检查时间线冲突。"""
     conflicts = []
 
-    # 获取已有时间线
-    result = await db.execute(
-        select(VaultTimeline).where(VaultTimeline.project_id == project_id)
-    )
-    existing_events = {e.event[:30]: e for e in result.scalars().all()}
+    # 获取已有时间线 (通过 DAO 封装，不直接 select())
+    existing_events_list = await _vault_timeline_dao.get_by_project(db, project_id)
+    existing_events = {e.event[:30]: e for e in existing_events_list}
 
     for new_event in new_data.get("timeline_events", []):
         desc = new_event.get("description", "")[:30]
@@ -148,10 +152,9 @@ async def _check_world_conflicts(
     """检查世界观冲突。"""
     conflicts = []
 
-    result = await db.execute(
-        select(VaultWorld).where(VaultWorld.project_id == project_id)
-    )
-    existing_terms = {w.term: w for w in result.scalars().all()}
+    # 获取已有世界观条目 (通过 DAO 封装，不直接 select())
+    existing_terms_list = await _vault_world_dao.get_by_project(db, project_id)
+    existing_terms = {w.term: w for w in existing_terms_list}
 
     for new_item in new_data.get("world_items", []):
         term = new_item.get("term", "")

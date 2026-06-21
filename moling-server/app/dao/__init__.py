@@ -21,6 +21,7 @@ from app.dao.dynamic_layer_dao import DynamicLayerDAO
 from app.dao.health_alert_dao import HealthAlertDAO
 from app.dao.system_config_dao import SystemConfigDAO
 from app.dao.subscription_dao import PlanDAO, UserSubscriptionDAO, plan_dao, user_subscription_dao
+from app.dao.ingest_dao import IngestJobDAO, ingest_dao
 
 # Singleton DAO instances (shared across the application)
 user_dao = UserDAO()
@@ -73,4 +74,6 @@ __all__ = [
     "system_config_dao",
     "plan_dao",
     "user_subscription_dao",
+    "IngestJobDAO",
+    "ingest_dao",
 ]
