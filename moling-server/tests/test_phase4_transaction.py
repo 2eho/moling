@@ -52,48 +52,45 @@ def mock_db():
 
 
 @pytest.fixture
-def sample_extraction_json() -> str:
-    """Sample LLM response JSON."""
-    return json.dumps(
-        {
-            "character_updates": [
-                {
-                    "action": "create",
-                    "name": "林峰",
-                    "changes": [{"role": "protagonist"}],
-                    "confidence": 0.95,
-                },
-            ],
-            "timeline_updates": [
-                {
-                    "action": "add",
-                    "event": "林峰返回城镇",
-                    "day": 1,
-                    "chapter": 1,
-                    "participants": ["林峰"],
-                    "importance": "major",
-                },
-            ],
-            "plot_promise_updates": [
-                {
-                    "action": "create",
-                    "title": "幽冥教封印松动",
-                    "type": "剧情转折",
-                    "status": "active",
-                },
-            ],
-            "world_updates": [
-                {
-                    "action": "create",
-                    "name": "幽冥教",
-                    "category": "faction",
-                    "content": "被封印百年的邪教",
-                },
-            ],
-            "card_pool_entries": [],
-        },
-        ensure_ascii=False,
-    )
+def sample_extraction_json() -> dict:
+    """Sample LLM response as parsed dict."""
+    return {
+        "character_updates": [
+            {
+                "action": "create",
+                "name": "林峰",
+                "changes": [{"role": "protagonist"}],
+                "confidence": 0.95,
+            },
+        ],
+        "timeline_updates": [
+            {
+                "action": "add",
+                "event": "林峰返回城镇",
+                "day": 1,
+                "chapter": 1,
+                "participants": ["林峰"],
+                "importance": "major",
+            },
+        ],
+        "plot_promise_updates": [
+            {
+                "action": "create",
+                "title": "幽冥教封印松动",
+                "type": "剧情转折",
+                "status": "active",
+            },
+        ],
+        "world_updates": [
+            {
+                "action": "create",
+                "name": "幽冥教",
+                "category": "faction",
+                "content": "被封印百年的邪教",
+            },
+        ],
+        "card_pool_entries": [],
+    }
 
 
 @pytest.fixture
@@ -325,13 +322,13 @@ async def test_transaction_concurrent_isolation(
     db1 = _make_concurrent_mock_db()
     db2 = _make_concurrent_mock_db()
 
-    extraction = json.dumps({
-        "character_updates": [{"action": "create", "name": f"角色A", "changes": [], "confidence": 0.9}],
+    extraction = {
+        "character_updates": [{"action": "create", "name": "角色A", "changes": [], "confidence": 0.9}],
         "timeline_updates": [],
         "plot_promise_updates": [],
         "world_updates": [],
         "card_pool_entries": [],
-    })
+    }
 
     mock_chapter = MagicMock(spec=Chapter)
     mock_chapter.id = "ch-uuid"
@@ -531,16 +528,16 @@ async def test_transaction_empty_merge_commits_successfully(
     """LLM 返回空提取结果 → savepoint 内无操作 → 提交无异常。"""
     mock_db, mock_chapter, mocks, _ = full_mock_dependencies
 
-    empty_json = json.dumps({
+    empty_parsed = {
         "character_updates": [],
         "timeline_updates": [],
         "plot_promise_updates": [],
         "world_updates": [],
         "card_pool_entries": [],
-    })
+    }
 
     with patch.object(phase4_service, "_call_extraction_llm") as mock_llm:
-        mock_llm.return_value = empty_json
+        mock_llm.return_value = empty_parsed
 
         result = await phase4_service.run_phase4(
             mock_db, project_id=1, chapter_id=1,

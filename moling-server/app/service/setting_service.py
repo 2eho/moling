@@ -143,7 +143,7 @@ class SettingService:
             "avatar_url": user.avatar_url,
             "bio": user.bio,
             "status": user.status,
-            "created_at": user.created_at,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
         }
 
     async def update_profile(
@@ -194,7 +194,7 @@ class SettingService:
             "avatar_url": user.avatar_url,
             "bio": user.bio,
             "status": user.status,
-            "created_at": user.created_at,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
         }
 
 

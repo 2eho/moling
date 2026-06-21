@@ -1,6 +1,6 @@
 # 墨灵前端设计文档
 
-> **版本**: 2.1.0 | **最后更新**: 2026-06-21
+> **版本**: 2.2.0 | **最后更新**: 2026-06-21
 > 本文档是前端开发的唯一真相来源。合并了原 DESIGN.md / design-decisions.md / VIBE_WRITING_DESIGN.md / 前端重建方案.md 的关键内容。
 
 ---
@@ -129,10 +129,97 @@
 
 ---
 
+---
+
+## 9. Phase 2 专项优化 — 前端补齐 (M12)
+
+> **日期**: 2026-06-21
+
+### 9.1 路由 Loading 状态
+
+为 8 个子路由添加 `loading.tsx`（Suspense fallback），消除路由切换时的白屏闪烁：
+
+| 路由 | 文件 | 效果 |
+|------|------|------|
+| `/projects` | `loading.tsx` | 项目列表骨架屏 |
+| `/projects/new` | `loading.tsx` | 新建表单骨架屏 |
+| `/projects/[projectId]` | `loading.tsx` | 项目详情骨架屏 |
+| `/workspace/[projectId]` | `loading.tsx` | 工作台骨架屏 |
+| `/settings` | `loading.tsx` | 设置页骨架屏 |
+| `/auth` | `loading.tsx` | 认证页骨架屏 |
+| `/` (root) | `loading.tsx` | 首页骨架屏 |
+| (catch-all) | `loading.tsx` | 通用骨架屏 |
+
+**原因**: Next.js App Router 页面切换时，若目标页面数据未就绪，会出现短暂白屏。`loading.tsx` 自动作为 Suspense 边界，在加载期间渲染骨架屏，改善感知性能。
+
+### 9.2 组件无障碍 (WCAG 2.1 AA)
+
+11 个业务组件添加 `aria-*` 属性，支持屏幕阅读器：
+
+| 组件 | 新增属性 | 原因 |
+|------|---------|------|
+| `OptionsPanel` | `role="radiogroup"`, `aria-label="写作选项"` | 屏幕阅读器正确朗读选项组 |
+| `Sidebar` | `role="navigation"`, `aria-label="主导航"` | 明确导航区域 |
+| `ChapterList` | `role="listbox"`, `aria-label="章节目录"` | 列表可被朗读为可选择列表 |
+| `ProjectCard` | `role="article"`, `aria-labelledby` | 卡片内容结构化 |
+| `SettingsForm` | `aria-describedby` 各输入框 | 表单字段关联描述文本 |
+| `SearchInput` | `role="searchbox"`, `aria-label="搜索项目"` | 明确搜索功能 |
+| `ThemeSelector` | `role="listbox"`, `aria-label="主题选择"` | 主题列表可被朗读 |
+| `Modal` | `role="dialog"`, `aria-modal="true"`, `aria-labelledby` | 对话框语义化 |
+| `Toast` | `role="alert"`, `aria-live="polite"` | 通知自动朗读 |
+| `LoadingSpinner` | `role="status"`, `aria-label="加载中"` | 加载状态可感知 |
+| `ErrorDisplay` | `role="alert"`, `aria-live="assertive"` | 错误立即朗读 |
+
+**原因**: 确保视障用户可通过屏幕阅读器正常使用全部功能，满足无障碍合规要求。
+
+### 9.3 颜色令牌统一
+
+所有组件的颜色引用从 `var(--color-*)` 旧命名迁移至 `var(--th-*)` 通用语义变量：
+
+| 旧令牌（示例） | 新令牌 | 说明 |
+|---------------|--------|------|
+| `var(--color-brand-indigo)` | `var(--th-primary)` | 主色 |
+| `var(--color-bg-dark)` | `var(--th-bg)` | 背景色 |
+| `var(--color-text-primary)` | `var(--th-text)` | 主文字色 |
+| `var(--color-border)` | `var(--th-border)` | 边框色 |
+| `var(--color-accent-amber)` | `var(--th-accent)` | 强调色 |
+
+**原因**: 旧命名绑定特定色值（如 `indigo`），无法随主题切换变化。`--th-*` 是主题感知的抽象层，切换 `data-theme` 时自动映射到对应色值，保证 8 套主题一致性。
+
+### 9.4 类型系统统一
+
+| 变更 | 说明 | 原因 |
+|------|------|------|
+| `Project` 接口移除 | 仅保留 `WritingProject` | 两个类型 90% 字段重叠，维护两套定义容易产生不一致 |
+| 所有组件引用更新 | `Project` → `WritingProject` | 消除 TypeScript 编译警告 |
+
+### 9.5 API 端点常量化
+
+`api.ts` 中硬编码的 URL 路径全部替换为 `constants.ts` 中的 `API_ENDPOINTS` 引用：
+
+```typescript
+// 旧: fetch('/api/v1/projects')
+// 新: fetch(API_ENDPOINTS.projects)
+```
+
+**原因**: 端点路径集中管理，API 版本升级或路径变更时仅需修改一处。
+
+### 9.6 空目录清理
+
+删除 3 个无内容的遗留目录：
+- `components/deprecated/`
+- `pages/` (Pages Router 残留)
+- `styles/` (CSS Module 残留)
+
+**原因**: 减少目录导航噪音，避免新成员误用废弃目录结构。
+
+---
+
 ## 文档版本历史
 
 | 版本 | 日期 | 内容 |
 |------|------|------|
-| 2.1.0 | 2026-06-21 | 🛠 前端错误边界+Mock数据补全 — 新建 8 个 `error.tsx` 错误边界（projects/new/projects/[projectId]/workspace/[projectId]/settings/auth 路由全覆盖），React Error Boundary 捕获渲染期异常并上报 Sentry；新建 Mock 数据文件（projects/chapters/users），前端可独立开发不依赖后端；settings 页面移除 `"use client"` 指令对齐 SSR 最佳实践 | Moling Team |
-| 2.0.0 | 2026-06-21 | Agent 优化合并：吸收 VIBE_WRITING_DESIGN / design-decisions / 前端重建方案 / DESIGN.md 关键内容 |
+| 2.2.0 | 2026-06-21 | Phase 2 专项优化 — 前端补齐(M12)：8子路由 loading.tsx 消除白屏、11组件 aria 无障碍(WCAG 2.1 AA)、颜色令牌 `var(--color-*)`→`var(--th-*)` 统一、`Project`/`WritingProject` 类型合并、`api.ts` 端点常量化、3空目录清理 | Moling Team |
+| 2.1.0 | 2026-06-21 | 🛠 前端错误边界+Mock数据补全 | Moling Team |
+| 2.0.0 | 2026-06-21 | Agent 优化合并 | Moling Team |
 | 1.0.0 | 2026-06-20 | 原始 DESIGN.md 设计系统文档 |

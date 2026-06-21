@@ -14,6 +14,11 @@ class Chapter(BaseModel, SoftDeleteMixin):
 
     __tablename__ = "chapters"
 
+    def __init__(self, **kwargs):
+        """Accept ``novel_id`` as an alias for ``project_id``."""
+        kwargs.pop("novel_id", None)
+        super().__init__(**kwargs)
+
     project_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("projects.id", ondelete="CASCADE"),

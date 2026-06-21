@@ -36,7 +36,7 @@ class TestVaultCharacter:
             "role": "主角",
             "description": "这是一个测试角色。",
             "traits": ["勇敢", "正直"],
-            "relationships": {}
+            "relationships": []
         }
 
         # Act

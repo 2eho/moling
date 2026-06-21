@@ -23,6 +23,7 @@ from app.models.notification import Notification
 from app.models.template import Template
 from app.models.subscription import Plan, UserSubscription
 from app.models.phase4_task import Phase4Task
+from app.models.sub_plot import SubPlot, SubPlotStatusLog
 
 __all__ = [
     "Base",
@@ -48,4 +49,6 @@ __all__ = [
     "Plan",
     "UserSubscription",
     "Phase4Task",
+    "SubPlot",
+    "SubPlotStatusLog",
 ]

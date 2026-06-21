@@ -21,7 +21,9 @@ class TestSecretList:
         # Assert
         assert resp.status_code == 200
         data = resp.json()
-        assert isinstance(data, list)
+        # 统一响应格式：响应体为 {code, message, data: [...], meta}
+        assert "data" in data
+        assert isinstance(data["data"], list)
 
     async def test_list_secrets_no_project(self, async_client: AsyncClient, 
                                            auth_headers):

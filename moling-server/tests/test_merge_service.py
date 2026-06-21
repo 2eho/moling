@@ -29,6 +29,7 @@ from app.models.vault_character import VaultCharacter
 from app.models.vault_timeline import VaultTimeline
 from app.models.vault_plot_promise import VaultPlotPromise
 from app.models.vault_world import VaultWorld
+from app.utils.service_helpers import _calc_edit_distance
 
 
 # ====================================================================
@@ -765,15 +766,15 @@ class TestMatchingUtilities:
 
     def test_edit_distance_zero(self, service):
         """[29a] 相同字符串编辑距离为 0。"""
-        assert service._calc_edit_distance("林峰", "林峰") == 0
+        assert _calc_edit_distance("林峰", "林峰") == 0
 
     def test_edit_distance_one(self, service):
         """[29b] 编辑距离=1。"""
-        assert service._calc_edit_distance("林峰", "林锋") == 1
+        assert _calc_edit_distance("林峰", "林锋") == 1
 
     def test_edit_distance_two(self, service):
         """[29c] 编辑距离=2。"""
-        assert service._calc_edit_distance("林峰", "林风") <= 2
+        assert _calc_edit_distance("林峰", "林风") <= 2
 
     def test_surname_match_true(self, service):
         """[29d] 姓氏匹配成功。"""

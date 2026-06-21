@@ -1,6 +1,6 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.10.0  
+> **文档版本**: 1.11.0  
 > **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
@@ -1202,4 +1202,51 @@ docker exec moling-db pg_dump -U moling moling > backup_$(date +%Y%m%d).sql
 
 ---
 
+## Phase 2 专项优化 — 后端变更 (v1.11.0)
+
+> **日期**: 2026-06-21 | **范围**: M8 Ingest / M9 Model / M10 Router+DAO / M11 Service
+
+### M8: Ingest 类型安全
+
+| 变更 | 文件 | 原因 |
+|------|------|------|
+| 新建 18 个 Pydantic 模型 | `app/schemas/ingest_data.py` | 消除 `dict` 裸类型传递，提供请求/响应全链路类型校验 |
+| Phase 间传递改为 `model_dump()` | `phase4_service.py` 等调用方 | 替代手动 dict 构造，避免字段遗漏/拼写错误 |
+| 新建 `IngestJobDAO` | `app/dao/ingest_dao.py` | 遵循 DAO 层统一规范（limit 钳制/软删除/事务契约），替代裸 session 查询 |
+| `conflict.py` 3 处 `select()` 迁移至 DAO | `app/service/conflict.py` | 消除 Service 层直接操作 ORM，确保异常处理统一 |
+| Phase 失败添加 `db.rollback()` | Phase 相关 Service | 防止失败时未提交的事务残留，避免后续请求读到脏数据 |
+| Committer 去重外层 rollback | Phase 相关 Service | 重复提交时外层正确回滚，避免幂等键未命中时的事务泄漏 |
+
+### M9: Model 规范化
+
+| 变更 | 文件 | 原因 |
+|------|------|------|
+| 5 张表名单数→复数 | `app/models/` (vault_world→vault_worlds 等) | 遵循 SQLAlchemy 命名约定 `__tablename__` 复数形式，与数据库实际表名一致 |
+| Alembic 迁移 | `c8e0a2417478` (rename_table) | 数据库侧同步重命名，保证 ORM 模型与物理表名一致 |
+| 模型继承设计确认 | `app/models/` | 审查 `Base→TimestampMixin→业务Model` 三层继承链，确认无菱形继承/方法冲突 |
+
+### M10: Router + DAO 一致性
+
+| 变更 | 文件 | 原因 |
+|------|------|------|
+| auth 路由 register/login `sync`→`async` | `app/router/auth.py` | 统一使用 `Depends(get_db)` 异步会话，消除 sync/async 混用导致的 greenlet 问题 |
+| `user_dao` 3 个 sync 方法加 `try/except` | `app/dao/user_dao.py` | 补齐异常处理，防止 DB 错误直接抛到 Router 层导致 500 |
+| `card_dao` 5 个 sync 方法加 `try/except` | `app/dao/card_dao.py` | 同上，确保 DAO 层异常统一转为 AppError |
+
+### M11: Service 深度清理
+
+| 变更 | 文件 | 原因 |
+|------|------|------|
+| `phase4_scheduler` 异常→`AppError` | `app/service/phase4_scheduler.py` | 替代裸 `raise Exception()`，统一错误码和中文消息，便于前端解析 |
+| `card_service` 常量文档化 | `app/service/card_service.py` | `MAX_ACTIVE_CARDS=80` / `FRESHNESS_DAYS` 等魔术数字添加注释说明来源和含义 |
+| vault/auth Service 类型注解补充 | `app/service/vault.py`, `app/service/auth.py` | 补齐返回值类型注解，消除 `mypy` 严格模式警告 |
+| LLM tenacity 添加 `ReadError`/`WriteError` | `app/llm/client.py` | 区分网络读/写超时，分别对应不同的重试策略（读可重试，写需幂等检查后重试） |
+
+### D. 文档版本历史（续）
+
+| 版本 | 日期 | 变更内容 | 作者 |
+|------|------|----------|------|
+| 1.11.0 | 2026-06-21 | Phase 2 专项优化 — 后端文档回填：M8 Ingest 类型安全(18 Pydantic模型+IngestJobDAO+conflict DAO迁移+Phase rollback)、M9 Model 规范化(5表复数重命名+Alembic迁移+继承确认)、M10 Router+DAO 一致性(auth async化+user_dao/card_dao try/except)、M11 Service 深度清理(phase4_scheduler AppError+card常量文档+vault/auth类型注解+LLM tenacity读写分离) | Moling Team |
+
+---
 **END**

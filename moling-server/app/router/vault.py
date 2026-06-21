@@ -83,7 +83,7 @@ async def update_character(
 @router.delete("/characters/{character_id}", status_code=204)
 async def delete_character(
     project_id: int,
-    character_id: int,
+    character_id: str,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> None:

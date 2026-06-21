@@ -65,7 +65,9 @@ class TestNotificationUnreadCount:
         # Assert
         assert resp.status_code == 200
         data = resp.json()
-        assert "count" in data or "unread_count" in data
+        # 统一响应格式：{code, message, data: {unread_count: N}, meta}
+        inner = data.get("data", data)
+        assert "count" in inner or "unread_count" in inner
 
 
 class TestNotificationMarkRead:

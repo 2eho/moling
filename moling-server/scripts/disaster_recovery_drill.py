@@ -28,6 +28,7 @@ import argparse
 import datetime
 import gzip
 import os
+import re
 import shutil
 import smtplib
 import subprocess
@@ -62,7 +63,8 @@ except ImportError:
 
 def parse_db_url(db_url: str) -> dict:
     """解析数据库连接 URL"""
-    url = db_url.replace("postgresql://", "").replace("postgresql+asyncpg://", "")
+    # Strip scheme prefix, including any +driver suffix (e.g. +psycopg, +asyncpg)
+    url = re.sub(r'^postgresql(?:\+[^:/]+)?://', '', db_url)
 
     if "@" in url:
         user_pass, rest = url.split("@", 1)

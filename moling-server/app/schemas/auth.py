@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -38,7 +39,7 @@ class UserResp(BaseModel):
     id: str = Field(..., description="用户 ID (UUID)")
     email: str = Field(..., description="邮箱")
     nickname: str = Field(..., validation_alias="username", description="用户昵称")
-    avatar_url: str | None = Field(default=None, description="头像 URL")
+    avatar_url: Optional[str] = Field(default=None, description="头像 URL")
     status: str = Field(default="active", description="用户状态")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
@@ -54,6 +55,11 @@ class TokenResp(BaseModel):
     token_type: str = Field(default="bearer", description="令牌类型")
     expires_in: int = Field(default=900, description="访问令牌过期时间(秒)")
     user: UserResp = Field(..., description="当前用户信息")
+
+    @property
+    def id(self) -> str:
+        """Convenience alias for ``user.id``."""
+        return self.user.id
 
 
 class UpdateProfileReq(BaseModel):

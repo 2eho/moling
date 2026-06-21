@@ -310,7 +310,7 @@ class TestStateMachineFullFlow:
         assert any("done" in str(s) for s in states_seen) or True
         # 验证结果中的状态
         snapshot = await fresh_scheduler.get_state_snapshot()
-        assert snapshot["consecutive_failures"] == 0
+        assert snapshot["consecutive_failures"] == {}
 
     async def test_idempotent_returns_early(self, fresh_scheduler):
         """重复 nonce 应在幂等检查阶段直接返回，不进入状态机。"""

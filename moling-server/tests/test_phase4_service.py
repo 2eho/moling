@@ -21,6 +21,7 @@ from app.service.phase4_service import (
     CHARACTER_FUZZY_THRESHOLD,
     CARD_FRESHNESS_WINDOW,
 )
+from app.utils.service_helpers import _calc_edit_distance
 
 
 # ====================================================================
@@ -195,23 +196,23 @@ class TestEditDistance:
     """Test the edit distance calculation used for character fuzzy matching."""
 
     def test_exact_match(self, phase4_service: Phase4Service):
-        assert phase4_service._calc_edit_distance("林峰", "林峰") == 0
+        assert _calc_edit_distance("林峰", "林峰") == 0
 
     def test_one_char_difference(self, phase4_service: Phase4Service):
-        assert phase4_service._calc_edit_distance("林峰", "林峰峰") == 1
+        assert _calc_edit_distance("林峰", "林峰峰") == 1
 
     def test_completely_different(self, phase4_service: Phase4Service):
-        assert phase4_service._calc_edit_distance("林峰", "苏暮雪") == 3
+        assert _calc_edit_distance("林峰", "苏暮雪") == 3
 
     def test_empty_string(self, phase4_service: Phase4Service):
-        assert phase4_service._calc_edit_distance("", "林峰") == 2
-        assert phase4_service._calc_edit_distance("林峰", "") == 2
+        assert _calc_edit_distance("", "林峰") == 2
+        assert _calc_edit_distance("林峰", "") == 2
 
     def test_threshold_behavior(self, phase4_service: Phase4Service):
         # 编辑距离 < 3 应该被视为可能的匹配
-        assert phase4_service._calc_edit_distance("林峰", "林丰") < CHARACTER_FUZZY_THRESHOLD
+        assert _calc_edit_distance("林峰", "林丰") < CHARACTER_FUZZY_THRESHOLD
         # 编辑距离 >= 3 应该被视为不同
-        assert phase4_service._calc_edit_distance("林峰", "苏暮雪") >= CHARACTER_FUZZY_THRESHOLD
+        assert _calc_edit_distance("林峰", "苏暮雪") >= CHARACTER_FUZZY_THRESHOLD
 
 
 # ====================================================================
@@ -931,7 +932,7 @@ async def test_run_phase4_success(
         mock_vault_dao.create_world_entry = AsyncMock()
         mock_card_dao.get_active_cards = AsyncMock(return_value=[])
 
-        mock_llm.return_value = sample_extraction_json
+        mock_llm.return_value = json.loads(sample_extraction_json)
 
         result = await phase4_service.run_phase4(
             mock_db,
@@ -980,7 +981,7 @@ async def test_run_phase4_llm_failure_graceful_degradation(
 
         mock_chapter_dao.get = AsyncMock(return_value=mock_chapter)
         # LLM 调用返回空的 JSON 降级结果
-        mock_llm.return_value = json.dumps(phase4_service._empty_extraction_result())
+        mock_llm.return_value = phase4_service._empty_extraction_result()
 
         result = await phase4_service.run_phase4(
             mock_db,

@@ -1,6 +1,6 @@
 # 墨灵 (Moling) 规格文档
 
-> **版本**: 2.5.0 | **最后更新**: 2026-06-21
+> **版本**: 2.6.0 | **最后更新**: 2026-06-21
 > 本文档整合了 P0/P1 规格、P0 剩余架构项、卡牌组合算法规格及架构加固实现规格。
 
 ---
@@ -509,4 +509,71 @@ python -m pytest tests/test_confidence_level.py -v --tb=short        # ≥10
 
 ---
 
+## 6. Phase 2 专项优化修复记录
+
+> **日期**: 2026-06-21 | **范围**: M8-M13 全模块
+
+### 6.1 M8: Ingest 类型安全
+
+| 问题 | 修复 | 原因 |
+|------|------|------|
+| Phase 间传递裸 `dict`，无类型校验 | 新建 `app/schemas/ingest_data.py`（18 个 Pydantic 模型），调用方改用 `model_dump()` | 消除字段拼写错误和遗漏风险 |
+| `conflict.py` 直接操作 ORM `select()` | 3 处迁移至 `IngestJobDAO` | 遵循 DAO 层统一规范，确保异常处理一致 |
+| Ingest 操作无 DAO 封装 | 新建 `app/dao/ingest_dao.py`（`IngestJobDAO`） | 统一 CRUD + 软删除 + 游标分页 |
+| Phase 失败后事务未回滚 | 添加 `db.rollback()` | 防止脏数据残留 |
+| Committer 去重逻辑外层无 rollback | 外层添加 `rollback()` | 避免幂等键未命中时事务泄漏 |
+
+### 6.2 M9: Model 规范化
+
+| 问题 | 修复 | 原因 |
+|------|------|------|
+| 5 张表 `__tablename__` 单数形式 | 改为复数（`vault_world→vault_worlds` 等） | 遵循 SQLAlchemy 命名约定，与 DB 物理表名一致 |
+| 数据库表名与 ORM 不一致 | Alembic 迁移 `c8e0a2417478` 执行 `rename_table` | 物理表同步重命名 |
+| 模型继承链未审查 | 确认 `Base→TimestampMixin→业务Model` 三层合理 | 排除菱形继承和 MRO 冲突 |
+
+### 6.3 M10: Router + DAO 一致性
+
+| 问题 | 修复 | 原因 |
+|------|------|------|
+| auth 路由 `register`/`login` 使用同步 `Depends(get_db)` | 改为 `async` + `Depends(get_db)` | 统一异步会话，消除 sync/async 混用 |
+| `user_dao` 3 个 sync 方法无异常保护 | 添加 `try/except SQLAlchemyError → AppError` | 防止 DB 错误直接抛到 Router 层 |
+| `card_dao` 5 个 sync 方法无异常保护 | 添加 `try/except SQLAlchemyError → AppError` | 同上 |
+
+### 6.4 M11: Service 深度清理
+
+| 问题 | 修复 | 原因 |
+|------|------|------|
+| `phase4_scheduler` 抛裸 `Exception()` | 改为 `AppError` 子类 | 统一错误码 + 中文消息 + 前端可解析 |
+| `card_service` 魔术数字无注释 | `MAX_ACTIVE_CARDS=80` / `FRESHNESS_DAYS` 等添加文档 | 常量来源和含义可追溯 |
+| vault/auth Service 缺少返回值类型注解 | 补充 `-> ModelType` / `-> list[ModelType]` | 消除 mypy 严格模式警告 |
+| LLM tenacity 未区分读/写超时 | 添加 `ReadError` / `WriteError` 分类 | 读超时可立即重试，写超时需幂等检查 |
+
+### 6.5 M12: 前端补齐
+
+| 问题 | 修复 | 原因 |
+|------|------|------|
+| 8 个子路由缺少 `loading.tsx` | 新建 `loading.tsx`（Suspense fallback） | 路由切换时显示骨架屏，消除白屏闪烁 |
+| 11 个组件无无障碍标注 | 添加 `aria-label` / `role` / `aria-describedby` | 符合 WCAG 2.1 AA 标准，支持屏幕阅读器 |
+| 颜色令牌混用 `var(--color-*)` 旧命名 | 全部替换为 `var(--th-*)` | 对齐 8 主题设计系统，保证主题切换一致 |
+| `Project` / `WritingProject` 类型分裂 | 统一为 `WritingProject` | 消除类型重复定义，减少维护成本 |
+| `api.ts` 端点硬编码 URL | 引用 `constants.ts` 中的 `API_ENDPOINTS` | 端点集中管理，修改一处全局生效 |
+| 3 个空目录残留 | 删除 | 清理无效目录，减少导航噪音 |
+
+### 6.6 M13: 基础设施 + Schema
+
+| 问题 | 修复 | 原因 |
+|------|------|------|
+| `nginx.conf` 与生产配置冲突风险 | 标记为备用模板（添加注释 `# TEMPLATE: 非生产配置`） | 防止误用 |
+| `backup-test` 使用 PG15 | 升级至 PG16 | 对齐生产 PostgreSQL 版本 |
+| `ci-cd.yml` GHCR 认证失败 | 添加 `docker/login-action@v3` + `GITHUB_TOKEN` | 修复镜像推送权限问题 |
+| `DEPLOYMENT.md` / `RUNBOOK.md` 过时 | 更新部署步骤和运维命令 | 匹配当前 Docker Compose 两套编排 |
+| 19 个 Schema 文件 `Optional[X]` | 改为 `X \| None` | 遵循 Python 3.10+ 类型注解最佳实践 |
+
+### 版本历史（续）
+
+| 版本 | 日期 | 内容 |
+|:----|:----|:-----|
+| 2.6.0 | 2026-06-21 | Phase 2 专项优化文档回填 — M8 Ingest类型安全(18 Pydantic+IngestJobDAO+conflict迁移+rollback)、M9 Model规范化(5表复数+迁移+继承确认)、M10 Router+DAO一致性(auth async+user/card dao try/except)、M11 Service清理(AppError+常量文档+类型注解+tenacity读写分离)、M12 前端补齐(loading.tsx+aria+颜色令牌+类型统一+端点常量化+空目录清理)、M13 基础设施(nginx模板+PG16+GHCR+部署文档更新+19 Schema Optional→\| None) | Moling Team |
+
+---
 **END**

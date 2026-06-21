@@ -19,6 +19,7 @@ IS_WINDOWS = platform.system() == "Windows"
 # ---------------------------------------------------------------------------
 # 导入
 # ---------------------------------------------------------------------------
+from fastapi import Request
 from fastapi.testclient import TestClient
 from httpx import AsyncClient, ASGITransport
 
@@ -116,7 +117,15 @@ if not IS_WINDOWS:
         async def override_get_db():
             yield test_db
         
-        async def override_get_current_user():
+        async def override_get_current_user(request: Request):
+            auth_header = request.headers.get("authorization", "")
+            if not auth_header.startswith("Bearer "):
+                from app.errors import AppError, ErrorCode
+                raise AppError(
+                    ErrorCode.AUTH_INVALID_TOKEN,
+                    detail="缺少认证令牌",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
             return test_user.user
         
         app.dependency_overrides[get_db] = override_get_db

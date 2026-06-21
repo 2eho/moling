@@ -223,7 +223,7 @@ class TestFailureHandling:
                 ValueError("测试错误"),
             )
         assert len(fresh_scheduler._state.fallback_queue) == 1
-        assert fresh_scheduler._state.consecutive_failures == 1
+        assert fresh_scheduler._state.consecutive_failures["1"] == 1
 
     async def test_handle_failure_three_times(self, fresh_scheduler):
         """连续 3 次失败后应记录日志 (触发角标逻辑)."""
@@ -235,7 +235,7 @@ class TestFailureHandling:
                     mock_db, 1, 16 + i, f"nonce_00{i}",
                     ValueError(f"错误 #{i+1}"),
                 )
-        assert fresh_scheduler._state.consecutive_failures == 3
+        assert fresh_scheduler._state.consecutive_failures["1"] == 3
         assert len(fresh_scheduler._state.fallback_queue) == 3
 
     async def test_handle_failure_five_triggers_pause(self, fresh_scheduler):
@@ -255,7 +255,7 @@ class TestFailureHandling:
                     ValueError("错误 #5"),
                 )
 
-        assert fresh_scheduler._state.consecutive_failures == MAX_CONSECUTIVE_FAILURES
+        assert fresh_scheduler._state.consecutive_failures["1"] == MAX_CONSECUTIVE_FAILURES
         # 队列应已被清空
         assert len(fresh_scheduler._state.queue) == 0
 
@@ -267,17 +267,17 @@ class TestFailureHandling:
             await fresh_scheduler._handle_failure(
                 mock_db, 1, 16, "n1", ValueError("e1"),
             )
-            assert fresh_scheduler._state.consecutive_failures == 1
+            assert fresh_scheduler._state.consecutive_failures["1"] == 1
 
-        # 模拟成功
-        fresh_scheduler._state.consecutive_failures = 0
+        # 模拟成功 (pop project key from dict)
+        fresh_scheduler._state.consecutive_failures.pop("1", None)
 
         with patch("app.service.phase4_scheduler.phase4_dao.get_by_nonce",
                    return_value=AsyncMock()):
             await fresh_scheduler._handle_failure(
                 mock_db, 1, 17, "n2", ValueError("e2"),
             )
-        assert fresh_scheduler._state.consecutive_failures == 1  # 重新计数
+        assert fresh_scheduler._state.consecutive_failures["1"] == 1  # 重新计数
 
 
 # ============================================================================
@@ -559,7 +559,7 @@ class TestScheduleIntegration:
                     mock_db, 1, 1, "测试内容",
                 )
 
-        assert fresh_scheduler._state.consecutive_failures >= 1
+        assert fresh_scheduler._state.consecutive_failures.get("1", 0) >= 1
         assert len(fresh_scheduler._state.fallback_queue) == 1
 
 
@@ -616,14 +616,14 @@ class TestStateManagement:
         # 先写入一些状态
         fresh_scheduler._nonce_set.add("test")
         fresh_scheduler._lock_store["test"] = time.monotonic()
-        fresh_scheduler._state.consecutive_failures = 3
+        fresh_scheduler._state.consecutive_failures["1"] = 3
 
         await fresh_scheduler.reset_state()
 
         snapshot = await fresh_scheduler.get_state_snapshot()
         assert snapshot["nonce_set_size"] == 0
         assert snapshot["lock_count"] == 0
-        assert snapshot["consecutive_failures"] == 0
+        assert snapshot["consecutive_failures"] == {}
         assert snapshot["queue_length"] == 0
 
     async def test_vault_version_update(self, fresh_scheduler):
