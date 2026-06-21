@@ -1,6 +1,6 @@
 # 墨灵前端设计文档
 
-> **版本**: 2.0.0 | **最后更新**: 2026-06-21
+> **版本**: 2.1.0 | **最后更新**: 2026-06-21
 > 本文档是前端开发的唯一真相来源。合并了原 DESIGN.md / design-decisions.md / VIBE_WRITING_DESIGN.md / 前端重建方案.md 的关键内容。
 
 ---
@@ -133,5 +133,6 @@
 
 | 版本 | 日期 | 内容 |
 |------|------|------|
+| 2.1.0 | 2026-06-21 | 🛠 前端错误边界+Mock数据补全 — 新建 8 个 `error.tsx` 错误边界（projects/new/projects/[projectId]/workspace/[projectId]/settings/auth 路由全覆盖），React Error Boundary 捕获渲染期异常并上报 Sentry；新建 Mock 数据文件（projects/chapters/users），前端可独立开发不依赖后端；settings 页面移除 `"use client"` 指令对齐 SSR 最佳实践 | Moling Team |
 | 2.0.0 | 2026-06-21 | Agent 优化合并：吸收 VIBE_WRITING_DESIGN / design-decisions / 前端重建方案 / DESIGN.md 关键内容 |
 | 1.0.0 | 2026-06-20 | 原始 DESIGN.md 设计系统文档 |

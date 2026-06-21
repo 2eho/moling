@@ -1,6 +1,6 @@
 # 墨灵 (Moling) 规格文档
 
-> **版本**: 2.3.0 | **最后更新**: 2026-06-21
+> **版本**: 2.5.0 | **最后更新**: 2026-06-21
 > 本文档整合了 P0/P1 规格、P0 剩余架构项、卡牌组合算法规格及架构加固实现规格。
 
 ---
@@ -498,6 +498,7 @@ python -m pytest tests/test_confidence_level.py -v --tb=short        # ≥10
 
 | 版本 | 日期 | 内容 |
 |:----|:----|:-----|
+| 2.5.0 | 2026-06-21 | 🛠 全体 7 模块修复闭环 — CRITICAL(4修复/physical吞异常+重试+调试残留) + Service(5修复/helper抽取+事务保护+AppError迁移) + Router+DAO+Model(5修复/AppError+is_deleted+Schema化+去重) + Worker(4修复/四模块全量幂等) + Ingest+Genre+Schema(4修复/Schema化+LLM超时+scraper合并+Field补齐) + Frontend(3修复/error.tsx边界+Mock数据+settings去use client) + Infra(3修复/docker-compose+CI对齐+Nginx安全头)。共 28+ 项修复，覆盖 7 模块 | Moling Team |
 | 2.3.0 | 2026-06-21 | 🛠 架构加固 Batch 5 — 扫描 v4 CRITICAL+HIGH 修复闭环：Phase4(P2-2锁/P9-2健康字段/P5-3项目隔离/P6-4 stale) + Core(C1 Windows崩溃) + Auth(S1/S2 Token过期) + LLM(L1流式预算/L3 key退避/L4配置)，共 8 CRITICAL + 2 HIGH = 10 项修复，9 文件变更 |
 | 2.2.2 | 2026-06-21 | 文档债：§4.17 新增认证安全深度扫描 v4 发现 — 3 P0 + 3 P1 安全技术债入档（Token过期/密码/RBAC） |
 | 2.2.1 | 2026-06-21 | 文档债：§4.16 新增 Core/Middleware 深度扫描 v4 发现 — 4 Critical + 6 High 技术债入档 |

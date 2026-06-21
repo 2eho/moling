@@ -49,6 +49,7 @@ _dotenv_path = PROJECT_ROOT / ".env"
 if _dotenv_path.exists():
     try:
         from dotenv import load_dotenv
+
         load_dotenv(_dotenv_path)
     except ImportError:
         pass
@@ -259,15 +260,13 @@ def main():
     args = parser.parse_args()
 
     # 获取配置
-    backup_dir = Path(args.backup_dir) if args.backup_dir else Path(
-        os.environ.get("BACKUP_DIR", PROJECT_ROOT / "backups")
+    backup_dir = (
+        Path(args.backup_dir) if args.backup_dir else Path(os.environ.get("BACKUP_DIR", PROJECT_ROOT / "backups"))
     )
-    max_age_hours = args.max_age_hours if args.max_age_hours is not None else float(
-        os.environ.get("MAX_BACKUP_AGE_HOURS", "24")
+    max_age_hours = (
+        args.max_age_hours if args.max_age_hours is not None else float(os.environ.get("MAX_BACKUP_AGE_HOURS", "24"))
     )
-    min_size_mb = args.min_size_mb if args.min_size_mb is not None else float(
-        os.environ.get("MIN_BACKUP_SIZE_MB", "1")
-    )
+    min_size_mb = args.min_size_mb if args.min_size_mb is not None else float(os.environ.get("MIN_BACKUP_SIZE_MB", "1"))
 
     if not args.quiet:
         print("=" * 60)

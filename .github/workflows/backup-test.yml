@@ -138,6 +138,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-backup
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: moling_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -174,6 +189,17 @@ jobs:
           EOF
           gpg --batch --gen-key /tmp/gpg-key.params
           echo "GPG_RECIPIENT=test@example.com" >> $GITHUB_ENV
+
+      - name: Create test database schema
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d moling_test -c "
+            CREATE TABLE IF NOT EXISTS test_table (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO test_table (name) VALUES ('test1'), ('test2'), ('test3');
+          "
 
       - name: Test backup encryption
         run: |

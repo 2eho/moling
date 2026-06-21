@@ -46,6 +46,7 @@ _dotenv_path = PROJECT_ROOT / ".env"
 if _dotenv_path.exists():
     try:
         from dotenv import load_dotenv
+
         load_dotenv(_dotenv_path)
     except ImportError:
         pass
@@ -313,6 +314,7 @@ def verify_restored_data(db_url: str) -> bool:
     except Exception as e:
         print(f"✗ 验证失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -346,14 +348,10 @@ def run_basic_queries(db_url: str) -> bool:
             print(f"  ✓ 当前数据库: {db_name}")
 
             # 测试 3: 查询表数量
-            result = conn.execute(
-                text(
-                    """
+            result = conn.execute(text("""
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = 'public'
-            """
-                )
-            )
+            """))
             table_count = result.scalar()
             print(f"  ✓ 公共模式表数量: {table_count}")
 
@@ -645,6 +643,7 @@ def verify_restored_data_enhanced(db_url: str) -> dict:
     except Exception as e:
         result["数据完整性验证"]["details"] = str(e)
         import traceback
+
         traceback.print_exc()
 
     return result
@@ -694,14 +693,10 @@ def run_basic_queries_enhanced(db_url: str) -> dict:
 
             # 测试 3: 查询表数量
             try:
-                result = conn.execute(
-                    text(
-                        """
+                result = conn.execute(text("""
                     SELECT COUNT(*) FROM information_schema.tables
                     WHERE table_schema = 'public'
-                """
-                    )
-                )
+                """))
                 table_count = result.scalar()
                 results["表数量查询"]["success"] = True
                 results["表数量查询"]["details"] = f"{table_count} 个表"
@@ -884,6 +879,7 @@ def main():
     except Exception as e:
         print(f"\n✗ 演练失败: {e}")
         import traceback
+
         traceback.print_exc()
 
         # 生成失败报告

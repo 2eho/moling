@@ -1,6 +1,6 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.7.0  
+> **文档版本**: 1.10.0  
 > **最后更新**: 2026-06-21  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
@@ -1188,6 +1188,7 @@ docker exec moling-db pg_dump -U moling moling > backup_$(date +%Y%m%d).sql
 
 | 版本 | 日期 | 变更内容 | 作者 |
 |------|------|----------|------|
+| 1.10.0 | 2026-06-21 | 🛠 全体 7 模块深度修复闭环 — CRITICAL: phase4_service/chapter_service 静默吞异常→logger.error, client.py 完整重试+Key轮换+Token计数统一, genre/__init__.py 删print调试; Service: 新建 service_helpers.py 抽取共享工具, template/card_pool/setting/vault 全量事务保护, card_service PermissionError→AppError; Router+DAO+Model: genre.py HTTPException→AppError, phase4_dao/template_dao 添加 is_deleted 过滤, 24端点 response_model Schema化, router/__init__.py 移除重复generation路由; Worker: card_retire/book_analysis/import/phase4 四模块10+任务全量幂等保护; Ingest+Genre+Schema: ingest 10端点 response_model Schema化, Genre LLM超时+重试, scraper依赖合并到项目根, secret Schema Field描述补齐; Frontend: 8个error.tsx错误边界, Mock数据文件创建, settings去"use client"; Infra: docker-compose.prod.yml 端口/env_file修复, CI合并+版本对齐, Nginx安全头统一 | Moling Team |
 | 1.7.0 | 2026-06-21 | 🛠 架构加固 Batch 5-7 — 扫描 v4: Phase4(P2-2/P9-2/P5-3/P6-4) + Core(C1/H5/H6) + Auth(S1/S2/S4) + LLM(L1/L3/L4); RF3.4: IngestJob FK + 6 Schema类型修正。共 15 项修复，14 文件变更 | Moling Team |
 | 1.6.2 | 2026-06-21 | 文档债：新增认证安全扫描 v4 发现 — 3 P0 + 3 P1 安全技术债入档（S1-S6 Token过期/密码/RBAC/黑名单降级/jose迁移） | Moling Team |
 | 1.6.1 | 2026-06-21 | 文档债：新增 Core/Middleware 深度扫描 v4 发现 — 4 Critical + 6 High 已知技术债入档（C1-C4 Windows/限流/审计/OOM） | Moling Team |

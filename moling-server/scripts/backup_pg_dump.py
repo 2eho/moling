@@ -266,8 +266,10 @@ def encrypt_backup(backup_file: Path, recipient: str = None) -> Path:
         cmd = [
             "gpg",
             "--encrypt",
-            "--recipient", recipient,
-            "--output", str(encrypted_file),
+            "--recipient",
+            recipient,
+            "--output",
+            str(encrypted_file),
             str(backup_file),
         ]
 
@@ -315,7 +317,8 @@ def decrypt_backup(encrypted_file: Path, output_file: Path = None) -> Path:
         cmd = [
             "gpg",
             "--decrypt",
-            "--output", str(output_file),
+            "--output",
+            str(output_file),
             str(encrypted_file),
         ]
 
@@ -395,9 +398,7 @@ def upload_to_azure(backup_file: Path, container: str):
                 credential=account_key,
             )
 
-        blob_client = blob_service_client.get_blob_client(
-            container=container, blob=backup_file.name
-        )
+        blob_client = blob_service_client.get_blob_client(container=container, blob=backup_file.name)
 
         with open(backup_file, "rb") as data:
             blob_client.upload_blob(data, overwrite=True)
@@ -551,9 +552,7 @@ def verify_backup_by_restore(backup_file: Path, db_url: str) -> bool:
             str(restore_file),
         ]
 
-        subprocess.run(
-            restore_cmd, env=env, capture_output=True, text=True, check=True
-        )
+        subprocess.run(restore_cmd, env=env, capture_output=True, text=True, check=True)
         print("  ✓ 备份已恢复到临时数据库")
 
         # 运行测试查询
@@ -568,9 +567,7 @@ def verify_backup_by_restore(backup_file: Path, db_url: str) -> bool:
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';",
         ]
 
-        result = subprocess.run(
-            test_cmd, env=env, capture_output=True, text=True, check=True
-        )
+        result = subprocess.run(test_cmd, env=env, capture_output=True, text=True, check=True)
         table_count = result.stdout.strip()
         print(f"  ✓ 测试查询成功: {table_count} 个表")
 
@@ -761,6 +758,7 @@ def main():
     except Exception as e:
         print(f"\n✗ 备份失败: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
