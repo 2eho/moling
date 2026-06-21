@@ -97,6 +97,7 @@ function TaskCard({ task }: { task: Phase4Task }) {
 
   return (
     <div
+      role="listitem"
       className="rounded-lg border transition-all"
       style={{
         borderColor: task.state === "failed" ? config.bg : "var(--th-border-subtle)",
@@ -294,7 +295,7 @@ export function Phase4TaskPanel({ projectId }: Phase4TaskPanelProps) {
   });
 
   return (
-    <div className="space-y-2">
+    <div role="list" className="space-y-2">
       {sorted.map((task) => (
         <TaskCard key={task.id} task={task} />
       ))}

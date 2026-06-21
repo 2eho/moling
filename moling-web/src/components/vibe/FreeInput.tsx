@@ -50,6 +50,7 @@ export function FreeInput() {
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           onKeyDown={handleKeyDown}
+          aria-label="自由输入"
           placeholder="比如：让林风在战斗中领悟新的剑意，同时柳如烟在一旁观察..."
           rows={2}
           className="w-full rounded-xl px-3 py-2 text-[12px] resize-none transition-all duration-200 outline-none"

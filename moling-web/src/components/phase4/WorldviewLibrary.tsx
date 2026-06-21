@@ -27,6 +27,7 @@ function WorldviewCard({ item }: { item: VaultWorldviewType }) {
 
   return (
     <div
+      role="listitem"
       className="rounded-lg p-3 border transition-all hover:translate-y-[-1px]"
       style={{
         background: "var(--th-card)",
@@ -159,7 +160,7 @@ export function WorldviewLibrary({ projectId }: WorldviewLibraryProps) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div role="list" className="space-y-2">
           {items.map((item) => (
             <WorldviewCard key={item.id} item={item} />
           ))}

@@ -29,6 +29,8 @@ export function OptionCard({ option, isSelected, onSelect }: Props) {
   return (
     <button
       onClick={() => onSelect(option.id)}
+      role="option"
+      aria-selected={isSelected}
       className="relative flex flex-col gap-2 p-4 rounded-2xl text-left w-full glass-card cursor-pointer transition-all duration-300 ease-out hover:translate-y-[-2px] border-2"
       style={{
         borderColor: isSelected ? vars.text : vars.border,

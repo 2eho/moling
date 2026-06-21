@@ -21,6 +21,7 @@ function TimelineItem({ item }: { item: VaultTimelineType }) {
 
   return (
     <div
+      role="listitem"
       className="rounded-lg p-3 border transition-all hover:translate-y-[-1px]"
       style={{
         background: "var(--th-card)",
@@ -131,7 +132,7 @@ export function TimelineLibrary({ projectId }: TimelineLibraryProps) {
   const sorted = [...items].sort((a, b) => a.chapter - b.chapter);
 
   return (
-    <div className="space-y-2">
+    <div role="list" className="space-y-2">
       {sorted.map((item) => (
         <TimelineItem key={item.id} item={item} />
       ))}

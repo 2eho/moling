@@ -22,6 +22,7 @@ function CharacterCard({ character }: { character: VaultCharacter }) {
 
   return (
     <div
+      role="listitem"
       className="rounded-lg p-3 border transition-all hover:translate-y-[-1px]"
       style={{
         background: "var(--th-card)",
@@ -160,7 +161,7 @@ export function CharacterLibrary({ projectId }: CharacterLibraryProps) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div role="list" className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {characters.map((char) => (
             <CharacterCard key={char.id} character={char} />
           ))}

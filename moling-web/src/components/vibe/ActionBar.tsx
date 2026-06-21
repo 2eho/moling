@@ -20,6 +20,8 @@ export function ActionBar() {
 
   return (
     <footer
+      role="toolbar"
+      aria-label="写作操作"
       className="flex items-center justify-between px-6 py-3"
       style={{
         borderTop: "1px solid var(--th-border-subtle)",

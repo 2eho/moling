@@ -30,6 +30,7 @@ function CardItem({ card }: { card: CardPoolItem }) {
 
   return (
     <div
+      role="listitem"
       className="rounded-lg p-3 border transition-all hover:translate-y-[-1px]"
       style={{
         background: "var(--th-card)",
@@ -200,7 +201,7 @@ export function CardManager({ projectId }: CardManagerProps) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div role="list" className="space-y-2">
           {cards.map((card) => (
             <CardItem key={card.id} card={card} />
           ))}

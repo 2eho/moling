@@ -19,6 +19,8 @@ export function ThemeSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-200 text-[11px]"
         style={{ background: "var(--th-hover)", color: "var(--th-text-2)" }}
       >
@@ -31,6 +33,7 @@ export function ThemeSwitcher() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
+            role="listbox"
             className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl overflow-hidden shadow-2xl"
             style={{ background: "var(--th-card)", border: "1px solid var(--th-border)" }}
           >
@@ -64,6 +67,8 @@ function ThemeRow({ t, active, onClick }: { t: (typeof THEMES)[number]; active: 
   return (
     <button
       type="button"
+      role="option"
+      aria-selected={active}
       onClick={onClick}
       className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-150 text-xs"
       style={{ background: active ? "var(--th-hover-strong)" : "transparent", color: active ? "var(--th-text)" : "var(--th-text-2)" }}

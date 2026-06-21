@@ -21,6 +21,7 @@ function ForeshadowingCard({ item }: { item: VaultForeshadowing }) {
 
   return (
     <div
+      role="listitem"
       className="rounded-lg p-3 border transition-all hover:translate-y-[-1px]"
       style={{
         background: "var(--th-card)",
@@ -149,7 +150,7 @@ export function ForeshadowingLibrary({ projectId }: ForeshadowingLibraryProps) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div role="list" className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {items.map((item) => (
             <ForeshadowingCard key={item.id} item={item} />
           ))}
