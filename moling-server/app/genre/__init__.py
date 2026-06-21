@@ -23,8 +23,6 @@
 
     chapters = ["第一章正文...", "第二章正文...", ...]
     profile = run_full_analysis(chapters, genre="玄幻")
-
-    print(profile.character_archetypes)
 """
 
 from __future__ import annotations
