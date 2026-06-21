@@ -18,7 +18,9 @@ from app.schemas.card import DrawCardReq, CardResp, DrawCardResp, CardPoolListRe
 class CardService:
     """Service for card operations."""
 
-    # Rarity weights for weighted random
+    # ------------------------------------------------------------------
+    # 抽卡算法常量 (可通过构造参数或项目配置覆盖)
+    # ------------------------------------------------------------------
     RARITY_WEIGHTS = {
         "common": 1,
         "rare": 2,
@@ -26,13 +28,13 @@ class CardService:
         "legendary": 4,
     }
 
-    # Pity mechanism: guarantee rare+ card after N draws without rare+
-    PITY_THRESHOLD = 10  # After 10 draws without rare+, guarantee rare+
-    PITY_RARITY_MIN = "rare"  # Minimum rarity for pity
+    # 保底机制: 连续 N 抽未出稀有卡时触发保底
+    PITY_THRESHOLD = 10       # 未出 rare+ 卡的最大次数
+    PITY_RARITY_MIN = "rare"  # 保底触发时保证的最低稀有度
 
-    # Freshness bonus: bonus weight for cards not drawn recently
-    FRESHNESS_BONUS = 2  # Bonus weight for fresh cards
-    FRESHNESS_THRESHOLD = 5  # Cards not drawn in last 5 draws get bonus
+    # 新鲜度加成: 近期未抽到的卡获得额外权重
+    FRESHNESS_BONUS = 2       # 新鲜卡的额外权重倍率
+    FRESHNESS_THRESHOLD = 5   # 最近 N 次抽卡中未出现即视为"新鲜"
 
     # 每次抽牌后的重抽次数上限，可通过构造参数覆盖
     MAX_DRAW_RETRIES = 3
