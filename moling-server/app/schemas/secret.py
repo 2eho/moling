@@ -5,22 +5,22 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SecretResp(BaseModel):
     """Secret detail response."""
 
-    id: str  # String(36) UUID — matches Secret model PK
-    project_id: int
-    description: str
-    known_by: list[str]
-    unknown_to: list[str]
-    secrecy_level: str
-    created_chapter: Optional[int] = None
-    debt: int
-    created_at: datetime
-    updated_at: datetime
+    id: str = Field(description="密钥 ID（UUID 格式）")
+    project_id: int = Field(description="所属项目 ID")
+    description: str = Field(description="秘密内容描述")
+    known_by: list[str] = Field(description="已知该秘密的角色列表")
+    unknown_to: list[str] = Field(description="未知该秘密的角色列表")
+    secrecy_level: str = Field(description="保密等级")
+    created_chapter: Optional[int] = Field(default=None, description="创建该秘密的章节号")
+    debt: int = Field(description="秘密债值（未揭示的秘密计数）")
+    created_at: datetime = Field(description="创建时间")
+    updated_at: datetime = Field(description="最后更新时间")
 
     model_config = {"from_attributes": True}
 
@@ -28,26 +28,26 @@ class SecretResp(BaseModel):
 class UpdateSecretReq(BaseModel):
     """Request body for updating a secret."""
 
-    description: Optional[str] = None
-    known_by: Optional[list[str]] = None
-    unknown_to: Optional[list[str]] = None
-    secrecy_level: Optional[str] = None
-    debt: Optional[int] = None
+    description: Optional[str] = Field(default=None, description="秘密内容描述")
+    known_by: Optional[list[str]] = Field(default=None, description="已知该秘密的角色列表")
+    unknown_to: Optional[list[str]] = Field(default=None, description="未知该秘密的角色列表")
+    secrecy_level: Optional[str] = Field(default=None, description="保密等级")
+    debt: Optional[int] = Field(default=None, description="秘密债值（未揭示的秘密计数）")
 
 
 class SecretItemUpdate(BaseModel):
     """A secret item in the update request."""
 
-    id: Optional[int] = None
-    content: Optional[str] = None
-    related_characters: Optional[list[str]] = None
-    confidence: Optional[float] = None
-    secrecy_level: Optional[str] = None
+    id: Optional[int] = Field(default=None, description="密钥项 ID")
+    content: Optional[str] = Field(default=None, description="秘密内容")
+    related_characters: Optional[list[str]] = Field(default=None, description="关联角色列表")
+    confidence: Optional[float] = Field(default=None, description="置信度")
+    secrecy_level: Optional[str] = Field(default=None, description="保密等级")
 
 
 class UpdateSecretsByCharacterReq(BaseModel):
     """Request body for updating secrets by character."""
 
-    character_id: int
-    character_name: str
-    secrets: list[SecretItemUpdate]
+    character_id: int = Field(description="角色 ID")
+    character_name: str = Field(description="角色名称")
+    secrets: list[SecretItemUpdate] = Field(description="要更新的秘密列表")
