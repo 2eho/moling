@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.dao import user_dao
@@ -142,12 +143,12 @@ async def logout(access_token: str, refresh_token: str) -> dict:
 # Sync versions (for Windows + aiosslite workaround)
 # ---------------------------------------------------------------------------
 
-def register_sync(db, req: RegisterReq) -> TokenResp:
+def register_sync(db: Session, req: RegisterReq) -> TokenResp:
     """Register a new user and return tokens (sync version)."""
     return _get_auth_service().register_sync(db, req)
 
 
-def login_sync(db, req: LoginReq) -> TokenResp:
+def login_sync(db: Session, req: LoginReq) -> TokenResp:
     """Login with email + password, return tokens (sync version)."""
     return _get_auth_service().login_sync(db, req)
 
@@ -269,7 +270,7 @@ class AuthService:
     # Sync versions (for Windows + aiosslite workaround)
     # ------------------------------------------------------------------
 
-    def register_sync(self, db, req: RegisterReq) -> TokenResp:
+    def register_sync(self, db: Session, req: RegisterReq) -> TokenResp:
         """Sync version — use with get_sync_db()."""
         from sqlalchemy.orm import Session as SyncSession  # noqa: F811 — Windows compatibility
         dao = user_dao
@@ -313,7 +314,7 @@ class AuthService:
             user=UserResp.model_validate(user),
         )
 
-    def login_sync(self, db, req: LoginReq) -> TokenResp:
+    def login_sync(self, db: Session, req: LoginReq) -> TokenResp:
         """Sync version — use with get_sync_db()."""
         from sqlalchemy.orm import Session as SyncSession  # noqa: F811 — Windows compatibility
         dao = user_dao

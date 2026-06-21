@@ -3,6 +3,8 @@
 Business logic for the Four Databases (四库): Characters, Timeline, Plot Promises, World Building.
 """
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import vault_dao, project_dao, chapter_dao
@@ -35,7 +37,7 @@ class VaultService:
         db: AsyncSession,
         user_id: str,
         project_id: int,
-        character_data: dict,
+        character_data: dict[str, Any],
     ) -> CharacterResp:
         """Create a new character in the vault."""
         # Verify project exists and belongs to user
@@ -59,7 +61,7 @@ class VaultService:
         user_id: str,
         project_id: int,
         character_id: int,
-        character_data: dict,
+        character_data: dict[str, Any],
     ) -> CharacterResp:
         """Update a character in the vault."""
         # Verify project exists and belongs to user

@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from "./client";
+import { API_ENDPOINTS } from "@/lib/constants";
 import type {
   HealthCheckResp,
   Phase4Task,
@@ -14,24 +15,24 @@ import type {
 
 // ============ 健康监控 API ============
 export function getProjectHealth(projectId: string): Promise<HealthCheckResp> {
-  return apiGet<HealthCheckResp>(`/projects/${projectId}/health`);
+  return apiGet<HealthCheckResp>(API_ENDPOINTS.PROJECTS.HEALTH(projectId));
 }
 
 export function refreshProjectHealth(projectId: string): Promise<HealthCheckResp> {
-  return apiPost<HealthCheckResp>(`/projects/${projectId}/health/refresh`);
+  return apiPost<HealthCheckResp>(API_ENDPOINTS.PROJECTS.HEALTH_REFRESH(projectId));
 }
 
 // ============ Phase 4 任务 API ============
 export function getProjectPhase4Tasks(projectId: string): Promise<Phase4Task[]> {
-  return apiGet<Phase4Task[]>(`/phase4/projects/${projectId}/tasks`);
+  return apiGet<Phase4Task[]>(API_ENDPOINTS.PHASE4.PROJECT_TASKS(projectId));
 }
 
 export function getPhase4Task(taskId: string): Promise<Phase4Task> {
-  return apiGet<Phase4Task>(`/phase4/tasks/${taskId}`);
+  return apiGet<Phase4Task>(API_ENDPOINTS.PHASE4.TASK_DETAIL(taskId));
 }
 
 export function getChapterPhase4Tasks(chapterId: string): Promise<Phase4Task[]> {
-  return apiGet<Phase4Task[]>(`/phase4/chapters/${chapterId}/tasks`);
+  return apiGet<Phase4Task[]>(API_ENDPOINTS.PHASE4.CHAPTER_TASKS(chapterId));
 }
 
 // ============ Vault 四库 API ============
@@ -45,7 +46,7 @@ export function getVaultCharacters(
   if (params?.search) searchParams.set("search", params.search);
   const qs = searchParams.toString();
   return apiGet<PaginatedResponse<VaultCharacter>>(
-    `/projects/${projectId}/vault/characters${qs ? `?${qs}` : ""}`
+    `${API_ENDPOINTS.VAULT.CHARACTERS(projectId)}${qs ? `?${qs}` : ""}`
   );
 }
 
@@ -58,7 +59,7 @@ export function getVaultTimeline(
   if (params?.page_size) searchParams.set("page_size", String(params.page_size));
   const qs = searchParams.toString();
   return apiGet<PaginatedResponse<VaultTimeline>>(
-    `/projects/${projectId}/vault/timeline${qs ? `?${qs}` : ""}`
+    `${API_ENDPOINTS.VAULT.TIMELINE(projectId)}${qs ? `?${qs}` : ""}`
   );
 }
 
@@ -72,7 +73,7 @@ export function getVaultForeshadowing(
   if (params?.status) searchParams.set("status", params.status);
   const qs = searchParams.toString();
   return apiGet<PaginatedResponse<VaultForeshadowing>>(
-    `/projects/${projectId}/vault/foreshadowing${qs ? `?${qs}` : ""}`
+    `${API_ENDPOINTS.VAULT.FORESHADOWING(projectId)}${qs ? `?${qs}` : ""}`
   );
 }
 
@@ -86,12 +87,12 @@ export function getVaultWorldview(
   if (params?.category) searchParams.set("category", params.category);
   const qs = searchParams.toString();
   return apiGet<PaginatedResponse<VaultWorldview>>(
-    `/projects/${projectId}/vault/worldview${qs ? `?${qs}` : ""}`
+    `${API_ENDPOINTS.VAULT.WORLDVIEW(projectId)}${qs ? `?${qs}` : ""}`
   );
 }
 
 export function getVaultSummary(projectId: string): Promise<VaultSummary> {
-  return apiGet<VaultSummary>(`/projects/${projectId}/vault/summary`);
+  return apiGet<VaultSummary>(API_ENDPOINTS.VAULT.SUMMARY(projectId));
 }
 
 // ============ Card Pool API ============
@@ -105,10 +106,10 @@ export function getCardPool(
   if (params?.retired) searchParams.set("retired", params.retired);
   const qs = searchParams.toString();
   return apiGet<PaginatedResponse<CardPoolItem>>(
-    `/projects/${projectId}/cards${qs ? `?${qs}` : ""}`
+    `${API_ENDPOINTS.CARDS.LIST(projectId)}${qs ? `?${qs}` : ""}`
   );
 }
 
 export function retireCard(projectId: string, cardId: string, reason: string): Promise<CardPoolItem> {
-  return apiPost<CardPoolItem>(`/projects/${projectId}/cards/${cardId}/retire`, { reason });
+  return apiPost<CardPoolItem>(API_ENDPOINTS.CARDS.RETIRE(projectId, cardId), { reason });
 }
