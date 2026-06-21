@@ -122,8 +122,8 @@ class Phase3Committer:
                 failed_steps["card_pool"] = str(e)
 
         except Exception as e:
-            logger.exception("Phase 3 事务提交失败，执行全局回滚")
-            await self.db.rollback()
+            # 内层 savepoint 已处理各自子步骤的回滚，外层不再重复 rollback
+            logger.exception("Phase 3 事务提交失败（外层异常）")
             return {
                 **imported_counts,
                 "status": "failed",
