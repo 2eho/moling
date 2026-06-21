@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeInitializer } from "@/components/vibe/ThemeInitializer";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import { ToastContainer } from "@/components/ToastContainer";
 import { QueryProvider } from "@/components/QueryProvider";
 import "./globals.css";
 
@@ -18,8 +20,9 @@ export default function RootLayout({
       <body>
         <ThemeInitializer />
         <QueryProvider>
-          {children}
+          <GlobalErrorBoundary>{children}</GlobalErrorBoundary>
         </QueryProvider>
+        <ToastContainer />
       </body>
     </html>
   );

@@ -85,9 +85,8 @@ export function AgentPanel({ onClose, width = 260 }: AgentPanelProps) {
     });
   };
 
-  const rerunAgent = (id: string) => {
-    // TODO: 对接真实 API 触发单个 Agent
-    console.log(`[AgentPanel] Rerun agent: ${id}`);
+  const rerunAgent = (_id: string) => {
+    // 对接真实 API 后触发单个 Agent 重跑
   };
 
   return (
