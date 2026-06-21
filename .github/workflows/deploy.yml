@@ -153,7 +153,7 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || !github.event.inputs.skip_tests }}
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass
@@ -191,6 +191,13 @@ jobs:
           cd moling-server
           pip install ".[dev]"
           pip install pytest pytest-asyncio httpx pytest-cov
+
+      - name: 运行数据库迁移
+        env:
+          DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test
+        run: |
+          cd moling-server
+          alembic upgrade head
 
       - name: 运行后端测试
         env:
