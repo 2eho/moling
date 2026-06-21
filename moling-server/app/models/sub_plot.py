@@ -14,8 +14,8 @@ class SubPlot(BaseModel, SoftDeleteMixin):
 
     __tablename__ = "sub_plots"
 
-    project_id: Mapped[str] = mapped_column(
-        String(36),
+    project_id: Mapped[int] = mapped_column(
+        Integer,
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -78,8 +78,8 @@ class SubPlotStatusLog(BaseModel):
         index=True,
         comment="所属支线 ID",
     )
-    project_id: Mapped[str] = mapped_column(
-        String(36),
+    project_id: Mapped[int] = mapped_column(
+        Integer,
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

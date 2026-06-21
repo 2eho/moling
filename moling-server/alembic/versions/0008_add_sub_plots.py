@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), primary_key=True, comment="主键 UUID"),
         sa.Column(
             "project_id",
-            sa.String(36),
+            sa.Integer,
             sa.ForeignKey("projects.id", ondelete="CASCADE"),
             nullable=False,
             index=True,
@@ -94,7 +94,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "project_id",
-            sa.String(36),
+            sa.Integer,
             sa.ForeignKey("projects.id", ondelete="CASCADE"),
             nullable=False,
             index=True,
