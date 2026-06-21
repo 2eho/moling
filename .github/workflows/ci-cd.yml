@@ -178,7 +178,36 @@ jobs:
           path: moling-web/.next/
 
   # ==========================================================================
-  # Job 4: 构建 Docker 镜像（仅手动触发时运行）
+  # Job 4: OpenAPI 规范校验
+  # ==========================================================================
+  openapi-validate:
+    name: OpenAPI 校验
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 生成 OpenAPI 规范
+        run: |
+          cd moling-server
+          python scripts/generate_openapi_from_doc.py
+
+      - name: 校验 JSON 格式
+        run: python -m json.tool openapi.json > /dev/null
+
+      - name: 上传规范文件
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: openapi.json
+
+  # ==========================================================================
+  # Job 5: 构建 Docker 镜像（仅手动触发时运行）
   # ==========================================================================
   build:
     name: 构建 Docker 镜像

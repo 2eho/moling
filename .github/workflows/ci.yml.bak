@@ -77,6 +77,13 @@ jobs:
           pip install ".[dev]"
           pip install pytest pytest-asyncio httpx pytest-cov
 
+      - name: 运行数据库迁移
+        env:
+          DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test
+        run: |
+          cd moling-server
+          alembic upgrade head
+
       - name: 运行后端测试
         env:
           DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/moling_test
