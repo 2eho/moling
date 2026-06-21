@@ -235,6 +235,14 @@ services:
     networks:
       - moling-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
 
   # ==========================================================================
   # Grafana — 可视化仪表板（可选，按需启动）
@@ -256,6 +264,20 @@ services:
     networks:
       - moling-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
     depends_on:
       - prometheus
 
