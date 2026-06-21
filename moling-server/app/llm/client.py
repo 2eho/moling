@@ -362,7 +362,8 @@ _RETRY_DECORATOR = retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=10),
     retry=retry_if_exception_type(
-        (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError, HTTPStatusError)
+        (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError,
+         httpx.ReadError, httpx.WriteError, HTTPStatusError)
     ),
     before_sleep=before_sleep_log(logger, 20),
     reraise=True,
