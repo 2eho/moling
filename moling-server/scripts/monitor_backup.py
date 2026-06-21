@@ -262,10 +262,10 @@ def main():
     backup_dir = Path(args.backup_dir) if args.backup_dir else Path(
         os.environ.get("BACKUP_DIR", PROJECT_ROOT / "backups")
     )
-    max_age_hours = args.max_age_hours or float(
+    max_age_hours = args.max_age_hours if args.max_age_hours is not None else float(
         os.environ.get("MAX_BACKUP_AGE_HOURS", "24")
     )
-    min_size_mb = args.min_size_mb or float(
+    min_size_mb = args.min_size_mb if args.min_size_mb is not None else float(
         os.environ.get("MIN_BACKUP_SIZE_MB", "1")
     )
 
