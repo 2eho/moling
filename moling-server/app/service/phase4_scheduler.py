@@ -15,9 +15,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao import phase4_dao, vault_dao
+from app.errors import AppError, ErrorCode
 from app.models.phase4_task import Phase4State, Phase4Task
 from app.models.vault_character import VaultCharacter
 from app.service.phase4_service import phase4_service
@@ -295,8 +297,13 @@ class Phase4Scheduler:
                         ]
                         task.retry_at = datetime.now(timezone.utc) + timedelta(seconds=backoff)
                 await db.flush()
-            except Exception:
-                logger.exception("更新任务状态时出错")
+            except (SQLAlchemyError, ConnectionError) as e:
+                logger.error("更新任务状态失败: %s", e)
+                raise AppError(
+                    status_code=500,
+                    error_code=ErrorCode.INTERNAL_ERROR,
+                    detail=f"更新任务状态失败: {e}",
+                )
 
             # 调用现有失败处理 (更新 consecutive_failures + fallback_queue)
             await self._handle_failure(db, project_id, chapter_id, nonce, exc)
@@ -581,8 +588,8 @@ class Phase4Scheduler:
                 task.error_message = error_msg
                 task.completed_at = datetime.now(timezone.utc)
                 await db.commit()
-        except Exception:
-            logger.exception("更新 Phase4Task 失败状态时出错")
+        except (SQLAlchemyError, ConnectionError) as e:
+            logger.error("更新 Phase4Task 失败状态时出错: %s", e)
 
         # 根据连续失败次数采取不同措施
         if failures == 1:
@@ -805,8 +812,21 @@ class Phase4Scheduler:
                     sim = await self._fuzzy_match(source_text, segment)
                     if sim > best_similarity:
                         best_similarity = sim
+            except ImportError:
+                # RapidFuzz 库未安装 → 降级为 warn
+                logger.warning(
+                    "RapidFuzz 未安装 (name=%s), 跳过模糊匹配", name,
+                )
+                warnings.append(f"角色 '{name}' 模糊匹配跳过（依赖缺失），已降级为通过")
+                details.append({
+                    "name": name,
+                    "passed": False,
+                    "reason": "RapidFuzz 依赖缺失",
+                    "similarity": 0,
+                })
+                continue
             except Exception:
-                # RapidFuzz 异常 → 降级为 warn
+                # RapidFuzz 运行时异常 → 降级为 warn
                 logger.warning(
                     "RapidFuzz 匹配异常 (name=%s, source=%s), 降级为 warn",
                     name, source_text[:50],
@@ -828,37 +848,38 @@ class Phase4Scheduler:
                     "similarity": round(best_similarity, 2),
                     "source_text": source_text,
                 })
-            else:
-                # 相似度 < 85% → 调用 LLM-as-Judge 二次确认
-                try:
-                    verdict = await self._llm_judge(source_text, chapter_text)
-                except Exception:
-                    # LLM Judge 故障 → 信任 RapidFuzz 结果（保守策略）
-                    logger.warning(
-                        "LLM Judge 调用失败 (name=%s), 信任 RapidFuzz 结果",
-                        name,
-                    )
-                    verdict = "pass"
+                continue
 
-                if verdict == "fail":
-                    skipped_items.append(
-                        f"角色 '{name}' source_text 不匹配原文 "
-                        f"(相似度={best_similarity:.1f}%, LLM裁决=FAIL)",
-                    )
-                    details.append({
-                        "name": name,
-                        "passed": False,
-                        "reason": "LLM裁决不通过",
-                        "similarity": round(best_similarity, 2),
-                    })
-                else:
-                    passed_items += 1
-                    details.append({
-                        "name": name,
-                        "passed": True,
-                        "reason": "LLM裁决通过",
-                        "similarity": round(best_similarity, 2),
-                    })
+            # 相似度 < 阈值 → 调用 LLM-as-Judge 二次确认
+            try:
+                verdict = await self._llm_judge(source_text, chapter_text)
+            except Exception:
+                # LLM Judge 故障 → 信任 RapidFuzz 结果（保守策略）
+                logger.warning(
+                    "LLM Judge 调用失败 (name=%s), 信任 RapidFuzz 结果",
+                    name,
+                )
+                verdict = "pass"
+
+            if verdict == "fail":
+                skipped_items.append(
+                    f"角色 '{name}' source_text 不匹配原文 "
+                    f"(相似度={best_similarity:.1f}%, LLM裁决=FAIL)",
+                )
+                details.append({
+                    "name": name,
+                    "passed": False,
+                    "reason": "LLM裁决不通过",
+                    "similarity": round(best_similarity, 2),
+                })
+            else:
+                passed_items += 1
+                details.append({
+                    "name": name,
+                    "passed": True,
+                    "reason": "LLM裁决通过",
+                    "similarity": round(best_similarity, 2),
+                })
 
         passed = len(skipped_items) == 0
         return {
