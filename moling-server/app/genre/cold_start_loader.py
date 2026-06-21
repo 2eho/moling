@@ -617,6 +617,53 @@ class ColdStartLoader:
             logger.error("B1: 异步分析失败 [genre=%s, error=%s]", genre, e)
 
     # ------------------------------------------------------------------
+    # LLM call helper（带 retry + timeout）
+    # ------------------------------------------------------------------
+
+    async def _chat_with_retry(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+        retry_limit: int = 3,
+        rate_per_second: float = 2.0,
+        timeout: float = 120.0,
+    ) -> str:
+        """带重试和速率限制的 LLM 调用，模仿 scheduler.py 模式"""
+        min_interval = 1.0 / rate_per_second
+        last_error = None
+
+        for attempt in range(retry_limit):
+            try:
+                # 速率限制
+                if attempt > 0:
+                    now = asyncio.get_event_loop().time()
+                    elapsed = now - (getattr(self, '_last_chat_time', 0))
+                    if elapsed < min_interval:
+                        await asyncio.sleep(min_interval - elapsed)
+
+                self._last_chat_time = asyncio.get_event_loop().time()
+
+                resp = await self._llm.chat(
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    pool="pro",
+                )
+                return resp["choices"][0]["message"]["content"]
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "LLM 调用失败 (尝试 %d/%d): %s",
+                    attempt + 1, retry_limit, e,
+                )
+                if attempt < retry_limit - 1:
+                    wait = 2 ** attempt
+                    await asyncio.sleep(wait)
+
+        raise RuntimeError(f"LLM 调用全部重试失败: {last_error}")
+
+    # ------------------------------------------------------------------
     # B2: 预填四库
     # ------------------------------------------------------------------
 
@@ -661,13 +708,11 @@ class ColdStartLoader:
         if self._llm is not None:
             try:
                 prompt = _PROMPT_CHARACTER_GEN.format(genre=genre, synopsis=synopsis[:500])
-                resp = await self._llm.chat(
+                content = await self._chat_with_retry(
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.8,
                     max_tokens=1024,
-                    pool="pro",
                 )
-                content = resp["choices"][0]["message"]["content"]
                 parsed = json.loads(content)
                 if isinstance(parsed, list):
                     return parsed
@@ -700,13 +745,11 @@ class ColdStartLoader:
         if self._llm is not None:
             try:
                 prompt = _PROMPT_TIMELINE_SKELETON.format(genre=genre, synopsis=synopsis[:500])
-                resp = await self._llm.chat(
+                content = await self._chat_with_retry(
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.7,
                     max_tokens=2048,
-                    pool="pro",
                 )
-                content = resp["choices"][0]["message"]["content"]
                 parsed = json.loads(content)
                 if isinstance(parsed, list):
                     return parsed
@@ -1146,13 +1189,11 @@ class ColdStartLoader:
         if self._llm is not None:
             try:
                 prompt = _PROMPT_OPENING_DIRECTIONS.format(genre=genre, synopsis=synopsis[:500])
-                resp = await self._llm.chat(
+                content = await self._chat_with_retry(
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.8,
                     max_tokens=512,
-                    pool="pro",
                 )
-                content = resp["choices"][0]["message"]["content"]
                 parsed = json.loads(content)
                 if isinstance(parsed, list) and len(parsed) >= 3:
                     return parsed[:3]
