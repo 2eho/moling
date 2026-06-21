@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from pydantic import BaseModel
@@ -11,6 +12,8 @@ from sqlalchemy.orm import Session as SyncSession
 
 from app.dao.base_dao import BaseDAO
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 
 class UserDAO(BaseDAO[User]):
@@ -59,9 +62,13 @@ class UserDAO(BaseDAO[User]):
         email: str,
     ) -> Optional[User]:
         """Sync version — use with get_sync_db()."""
-        stmt = select(User).where(User.email == email, User.is_deleted == False)
-        result = db.execute(stmt)
-        return result.scalar_one_or_none()
+        try:
+            stmt = select(User).where(User.email == email, User.is_deleted == False)
+            result = db.execute(stmt)
+            return result.scalar_one_or_none()
+        except Exception:
+            logger.error("get_by_email_sync failed for email=%s", email, exc_info=True)
+            raise
 
     def get_by_username_sync(
         self,
@@ -69,9 +76,13 @@ class UserDAO(BaseDAO[User]):
         username: str,
     ) -> Optional[User]:
         """Sync version — use with get_sync_db()."""
-        stmt = select(User).where(User.username == username, User.is_deleted == False)
-        result = db.execute(stmt)
-        return result.scalar_one_or_none()
+        try:
+            stmt = select(User).where(User.username == username, User.is_deleted == False)
+            result = db.execute(stmt)
+            return result.scalar_one_or_none()
+        except Exception:
+            logger.error("get_by_username_sync failed for username=%s", username, exc_info=True)
+            raise
 
     def create_sync(
         self,
@@ -82,11 +93,15 @@ class UserDAO(BaseDAO[User]):
         
         Note: caller is responsible for committing the transaction.
         """
-        if isinstance(obj_in, dict):
-            instance = self.model_class(**obj_in)
-        else:
-            instance = self.model_class(**obj_in.model_dump())
-        db.add(instance)
-        db.flush()
-        db.refresh(instance)
-        return instance
+        try:
+            if isinstance(obj_in, dict):
+                instance = self.model_class(**obj_in)
+            else:
+                instance = self.model_class(**obj_in.model_dump())
+            db.add(instance)
+            db.flush()
+            db.refresh(instance)
+            return instance
+        except Exception:
+            logger.error("create_sync failed for model=%s", self.model_class.__name__, exc_info=True)
+            raise

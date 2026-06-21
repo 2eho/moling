@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from sqlalchemy import func, select
@@ -11,6 +12,8 @@ from sqlalchemy.orm import Session as SyncSession
 from app.dao.base_dao import BaseDAO
 from app.models.card_pool import CardPool
 from app.models.draw_history import DrawHistory as DrawRecord
+
+logger = logging.getLogger(__name__)
 
 
 class CardDAO(BaseDAO[CardPool]):
@@ -184,17 +187,21 @@ class CardDAO(BaseDAO[CardPool]):
         project_id: int,
     ) -> list[CardPool]:
         """Synchronous: list all active cards for a project."""
-        stmt = (
-            select(CardPool)
-            .where(
-                CardPool.project_id == project_id,
-                CardPool.is_active == True,
-                CardPool.is_deleted == False,
+        try:
+            stmt = (
+                select(CardPool)
+                .where(
+                    CardPool.project_id == project_id,
+                    CardPool.is_active == True,
+                    CardPool.is_deleted == False,
+                )
+                .order_by(CardPool.rarity.desc(), CardPool.id.asc())
             )
-            .order_by(CardPool.rarity.desc(), CardPool.id.asc())
-        )
-        result = db.execute(stmt)
-        return list(result.scalars().all())
+            result = db.execute(stmt)
+            return list(result.scalars().all())
+        except Exception:
+            logger.error("list_active_by_project_sync failed for project_id=%s", project_id, exc_info=True)
+            raise
 
     def get_active_cards_sync(
         self,
@@ -203,24 +210,28 @@ class CardDAO(BaseDAO[CardPool]):
         count: int = 20,
     ) -> list[CardPool]:
         """Synchronous: get active cards for a project."""
-        rarity_order = func.case(
-            (CardPool.rarity == "legendary", 0),
-            (CardPool.rarity == "epic", 1),
-            (CardPool.rarity == "rare", 2),
-            else_=3,
-        )
-        stmt = (
-            select(CardPool)
-            .where(
-                CardPool.project_id == project_id,
-                CardPool.status == "active",
-                CardPool.is_deleted == False,
+        try:
+            rarity_order = func.case(
+                (CardPool.rarity == "legendary", 0),
+                (CardPool.rarity == "epic", 1),
+                (CardPool.rarity == "rare", 2),
+                else_=3,
             )
-            .order_by(rarity_order, func.random())
-            .limit(count)
-        )
-        result = db.execute(stmt)
-        return list(result.scalars().all())
+            stmt = (
+                select(CardPool)
+                .where(
+                    CardPool.project_id == project_id,
+                    CardPool.status == "active",
+                    CardPool.is_deleted == False,
+                )
+                .order_by(rarity_order, func.random())
+                .limit(count)
+            )
+            result = db.execute(stmt)
+            return list(result.scalars().all())
+        except Exception:
+            logger.error("get_active_cards_sync failed for project_id=%s", project_id, exc_info=True)
+            raise
 
     def list_by_project_sync(
         self,
@@ -228,16 +239,20 @@ class CardDAO(BaseDAO[CardPool]):
         project_id: int,
     ) -> list[CardPool]:
         """Synchronous: list all cards for a project."""
-        stmt = (
-            select(CardPool)
-            .where(
-                CardPool.project_id == project_id,
-                CardPool.is_deleted == False,
+        try:
+            stmt = (
+                select(CardPool)
+                .where(
+                    CardPool.project_id == project_id,
+                    CardPool.is_deleted == False,
+                )
+                .order_by(CardPool.id.asc())
             )
-            .order_by(CardPool.id.asc())
-        )
-        result = db.execute(stmt)
-        return list(result.scalars().all())
+            result = db.execute(stmt)
+            return list(result.scalars().all())
+        except Exception:
+            logger.error("list_by_project_sync failed for project_id=%s", project_id, exc_info=True)
+            raise
 
     def get_by_ids_sync(
         self,
@@ -246,16 +261,20 @@ class CardDAO(BaseDAO[CardPool]):
         card_ids: list[int],
     ) -> list[CardPool]:
         """Synchronous: get cards by their IDs within a project."""
-        stmt = (
-            select(CardPool)
-            .where(
-                CardPool.project_id == project_id,
-                CardPool.id.in_(card_ids),
-                CardPool.is_deleted == False,
+        try:
+            stmt = (
+                select(CardPool)
+                .where(
+                    CardPool.project_id == project_id,
+                    CardPool.id.in_(card_ids),
+                    CardPool.is_deleted == False,
+                )
             )
-        )
-        result = db.execute(stmt)
-        return list(result.scalars().all())
+            result = db.execute(stmt)
+            return list(result.scalars().all())
+        except Exception:
+            logger.error("get_by_ids_sync failed for project_id=%s card_ids=%s", project_id, card_ids, exc_info=True)
+            raise
 
     def batch_update_is_active_sync(
         self,
@@ -268,15 +287,19 @@ class CardDAO(BaseDAO[CardPool]):
         
         Note: caller is responsible for committing the transaction.
         """
-        from sqlalchemy import update
-        stmt = (
-            update(CardPool)
-            .where(
-                CardPool.project_id == project_id,
-                CardPool.id.in_(card_ids),
+        try:
+            from sqlalchemy import update
+            stmt = (
+                update(CardPool)
+                .where(
+                    CardPool.project_id == project_id,
+                    CardPool.id.in_(card_ids),
+                )
+                .values(is_active=is_active)
             )
-            .values(is_active=is_active)
-        )
-        result = db.execute(stmt)
-        db.flush()
-        return result.rowcount
+            result = db.execute(stmt)
+            db.flush()
+            return result.rowcount
+        except Exception:
+            logger.error("batch_update_is_active_sync failed for project_id=%s card_ids=%s", project_id, card_ids, exc_info=True)
+            raise
