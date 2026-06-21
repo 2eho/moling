@@ -44,7 +44,11 @@ class VaultService:
         # Create character
         character_data["project_id"] = project_id
         character = await vault_dao.create_character(db, character_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(character)
 
         return CharacterResp.model_validate(character)
@@ -71,7 +75,11 @@ class VaultService:
 
         # Update character
         character = await vault_dao.update_character(db, character, character_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(character)
 
         return CharacterResp.model_validate(character)
@@ -89,7 +97,11 @@ class VaultService:
 
         # Delete character
         await vault_dao.delete_character(db, character_id)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
 
     async def get_character(
         self,
@@ -141,7 +153,11 @@ class VaultService:
         # Create event
         event_data["project_id"] = project_id
         event = await vault_dao.create_timeline_event(db, event_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(event)
 
         return TimelineResp.model_validate(event)
@@ -189,7 +205,11 @@ class VaultService:
 
         # Update event
         event = await vault_dao.update_timeline_event(db, event, event_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(event)
 
         return TimelineResp.model_validate(event)
@@ -207,7 +227,11 @@ class VaultService:
 
         # Delete event
         await vault_dao.delete_timeline_event(db, event_id)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
 
     # ============ Plot Promises ============
 
@@ -238,7 +262,11 @@ class VaultService:
         # Create promise
         promise_data["project_id"] = project_id
         promise = await vault_dao.create_plot_promise(db, promise_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(promise)
 
         return PlotPromiseResp.model_validate(promise)
@@ -286,7 +314,11 @@ class VaultService:
 
         # Update promise
         promise = await vault_dao.update_plot_promise(db, promise, promise_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(promise)
 
         return PlotPromiseResp.model_validate(promise)
@@ -304,7 +336,11 @@ class VaultService:
 
         # Delete promise
         await vault_dao.delete_plot_promise(db, promise_id)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
 
     # ============ World Building ============
 
@@ -335,7 +371,11 @@ class VaultService:
         # Create entry
         entry_data["project_id"] = project_id
         entry = await vault_dao.create_world_entry(db, entry_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(entry)
 
         return WorldResp.model_validate(entry)
@@ -383,7 +423,11 @@ class VaultService:
 
         # Update entry
         entry = await vault_dao.update_world_entry(db, entry, entry_data)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
         await db.refresh(entry)
 
         return WorldResp.model_validate(entry)
@@ -401,7 +445,11 @@ class VaultService:
 
         # Delete entry
         await vault_dao.delete_world_entry(db, entry_id)
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
 
     async def update_from_chapter(
         self,
@@ -563,7 +611,11 @@ class VaultService:
                 )
                 created_count += 1
 
-        await db.commit()
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise
 
         return {
             "project_id": project_id,
