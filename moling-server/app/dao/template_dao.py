@@ -26,7 +26,10 @@ class TemplateDAO(BaseDAO[Template]):
         """Get templates by genre."""
         stmt = (
             select(Template)
-            .where(Template.genre == genre)
+            .where(
+                Template.genre == genre,
+                Template.is_deleted == False,
+            )
             .order_by(Template.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -40,7 +43,10 @@ class TemplateDAO(BaseDAO[Template]):
         genre: str,
     ) -> int:
         """Count templates by genre."""
-        stmt = select(func.count()).select_from(Template).where(Template.genre == genre)
+        stmt = select(func.count()).select_from(Template).where(
+            Template.genre == genre,
+            Template.is_deleted == False,
+        )
         result = await db.execute(stmt)
         return result.scalar_one()
 
