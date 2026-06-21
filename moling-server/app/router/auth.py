@@ -8,11 +8,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from app.config import get_settings
-from app.dependencies import get_current_user, get_db, get_sync_db
+from app.dependencies import get_current_user, get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.auth import LoginReq, LogoutReq, PasswordResetReq, PasswordResetRequestReq, RefreshReq, RegisterReq, TokenResp, UpdateProfileReq, UserResp
 from app.service import auth_service
-from sqlalchemy.orm import Session as SyncSession
 
 router = APIRouter()
 
@@ -30,10 +29,10 @@ from app.limiter import limiter
 async def register(
     request: Request,
     req: RegisterReq,
-    db: SyncSession = Depends(get_sync_db),
+    db: AsyncSession = Depends(get_db),
 ) -> TokenResp:
     """注册新用户并返回令牌。"""
-    return auth_service.register_sync(db, req)
+    return await auth_service.register(db, req)
 
 
 @router.post("/login", response_model=TokenResp)
@@ -41,10 +40,10 @@ async def register(
 async def login(
     request: Request,
     req: LoginReq,
-    db: SyncSession = Depends(get_sync_db),
+    db: AsyncSession = Depends(get_db),
 ) -> TokenResp:
     """使用邮箱和密码登录并返回令牌。"""
-    return auth_service.login_sync(db, req)
+    return await auth_service.login(db, req)
 
 
 @router.post("/refresh", response_model=TokenResp)
