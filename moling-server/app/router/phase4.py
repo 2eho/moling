@@ -10,7 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_current_user, require_admin
 from app.errors import NotFoundError, ForbiddenError
 from app.service.phase4_service import phase4_service
-from app.schemas.phase4 import Phase4SuggestionResp, ApplyPhase4Req, Phase4TaskResp, RejectReviewReq
+from app.schemas.phase4 import (
+    ApplyPhase4Req,
+    ApplyPhase4Resp,
+    ApproveReviewResp,
+    PendingReviewsResp,
+    Phase4SuggestionResp,
+    Phase4TaskResp,
+    RejectReviewReq,
+    RejectReviewResp,
+    RetryTaskResp,
+)
 from app.models.phase4_task import Phase4State
 from app.dao.phase4_dao import phase4_dao
 from app.dao import project_dao
@@ -44,7 +54,7 @@ async def get_suggestions_deprecated(
     return result
 
 
-@router.post("/apply", status_code=200)
+@router.post("/apply", response_model=ApplyPhase4Resp, status_code=200)
 async def apply_suggestions(
     req: ApplyPhase4Req,
     db: AsyncSession = Depends(get_db),
@@ -88,7 +98,7 @@ async def list_project_tasks(
     return result
 
 
-@router.get("/pending-reviews", status_code=200)
+@router.get("/pending-reviews", response_model=PendingReviewsResp, status_code=200)
 async def get_pending_reviews(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
@@ -133,7 +143,7 @@ async def get_pending_reviews(
     }
 
 
-@router.post("/reviews/{review_id}/approve", status_code=200)
+@router.post("/reviews/{review_id}/approve", response_model=ApproveReviewResp, status_code=200)
 async def approve_review(
     review_id: int,
     db: AsyncSession = Depends(get_db),
@@ -151,18 +161,17 @@ async def approve_review(
     if project is None:
         raise NotFoundError(detail="Project not found")
 
-    task.status = "approved"
     task.state = Phase4State.DONE.value
     await db.commit()
 
     return {
         "approved": True,
         "review_id": review_id,
-        "status": task.status,
+        "state": task.state,
     }
 
 
-@router.post("/reviews/{review_id}/reject", status_code=200)
+@router.post("/reviews/{review_id}/reject", response_model=RejectReviewResp, status_code=200)
 async def reject_review(
     review_id: int,
     req: RejectReviewReq,
@@ -182,7 +191,6 @@ async def reject_review(
     if project is None:
         raise NotFoundError(detail="Project not found")
 
-    task.status = "rejected"
     task.state = Phase4State.FAILED.value
     task.error_message = reason or "Review rejected"
     task.last_error = reason or "Review rejected"
@@ -192,11 +200,11 @@ async def reject_review(
         "rejected": True,
         "review_id": review_id,
         "reason": reason,
-        "status": task.status,
+        "state": task.state,
     }
 
 
-@router.post("/tasks/{task_id}/retry", status_code=200)
+@router.post("/tasks/{task_id}/retry", response_model=RetryTaskResp, status_code=200)
 async def retry_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
@@ -209,7 +217,6 @@ async def retry_task(
     if not task:
         raise NotFoundError(detail=f"Task {task_id} not found")
 
-    task.status = "queued"
     task.state = Phase4State.QUEUED.value
     task.error_message = None
     task.last_error = None
@@ -218,6 +225,5 @@ async def retry_task(
     return {
         "success": True,
         "task_id": task_id,
-        "status": task.status,
         "state": task.state,
     }

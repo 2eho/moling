@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
 from app.service.weave_service import weave_service
-from app.schemas.weave import WeaveSuggestionResp, ApplyWeaveReq, WeaveAnalysisResp
+from app.schemas.weave import WeaveSuggestionResp, ApplyWeaveReq, WeaveAnalysisResp, ApplyWeaveResp
 from app.models.user import User
 
 router = APIRouter()
@@ -43,7 +43,7 @@ async def get_suggestions(
     return result
 
 
-@router.post("/apply", status_code=200)
+@router.post("/apply", response_model=ApplyWeaveResp, status_code=200)
 async def apply_suggestions(
     req: ApplyWeaveReq,
     db: AsyncSession = Depends(get_db),
