@@ -12,7 +12,7 @@
 #   docker compose -f docker-compose.prod.yml ps      # 查看运行状态
 #
 # 服务清单:
-#   - frontend: Nginx（前端静态文件 + API 反向代理）
+#   - frontend: Next.js standalone（前端服务）
 #   - app:      FastAPI 后端应用（可横向扩展）
 #   - worker:   Celery 异步任务 worker
 #   - db:       PostgreSQL 17 + pgvector 扩展
@@ -23,13 +23,13 @@
 
 services:
   # ==========================================================================
-  # Frontend — Nginx 静态文件服务 + API 反向代理
+  # Frontend — Next.js standalone（监听 3000 端口）
   # ==========================================================================
   frontend:
     image: ghcr.io/${GITHUB_REPOSITORY:-2eho/moling}/moling-frontend:latest
     container_name: moling-frontend
     ports:
-      - "80:80"
+      - "3000:3000"
     volumes:
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
@@ -44,7 +44,7 @@ services:
         max-size: "50m"
         max-file: "5"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
