@@ -297,7 +297,7 @@ jobs:
         run: |
           cd moling-server
           python scripts/disaster_recovery_drill.py \
-            --db-url "postgresql+psycopg://testuser:testpass@localhost:5432/moling_test" \
+            --db-url "postgresql://testuser:testpass@localhost:5432/moling_test" \
             --target-db moling_drill_test \
             --no-cleanup \
             --report-file drill_report.txt
