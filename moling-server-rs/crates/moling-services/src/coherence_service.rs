@@ -159,14 +159,11 @@ impl CoherenceService {
 
         // Get previous chapter
         let previous_chapter = if chapter_number > 1 {
-            match self
-                .chapter_dao
+            self.chapter_dao
                 .find_by_number(db, project_id, chapter_number - 1)
                 .await
-            {
-                Ok(prev) => prev,
-                Err(_) => None,
-            }
+                .ok()
+                .flatten()
         } else {
             None
         };

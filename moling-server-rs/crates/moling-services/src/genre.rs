@@ -395,7 +395,7 @@ impl GenreService {
     fn compute_initial_rhythm(&self, chapters: &[String]) -> Vec<A1RhythmPoint> {
         chapters.iter().enumerate().map(|(i, ch)| {
             let chars = ch.chars().count();
-            let dialogue_chars = ch.chars().filter(|c| *c == '"' || *c == '"' || *c == '\u{201c}' || *c == '\u{201d}' || *c == '\u{300c}' || *c == '\u{300d}').count();
+            let dialogue_chars = ch.chars().filter(|c| *c == '"' || *c == '\u{201c}' || *c == '\u{201d}' || *c == '\u{300c}' || *c == '\u{300d}').count();
             let dialogue_ratio = if chars > 0 { dialogue_chars as f64 / chars as f64 } else { 0.0 };
             let conflict_count = HIGH_CONFLICT_RE.find_iter(ch).count() as f64;
             let conflict_density = if chars > 0 { conflict_count / chars as f64 * 1000.0 } else { 0.0 };
