@@ -338,6 +338,22 @@ export const useWritingStore = create<WritingStore>()(
         activeProjectId: state.activeProjectId,
         expandedProjectId: state.expandedProjectId,
       }),
+      onRehydrateStorage: () => {
+        return (state, error) => {
+          if (error || !state) return;
+          // Derive `project` and `expandedProjectId` from stored data so the
+          // workspace loading spinner doesn't spin forever after rehydration.
+          if (!state.project && state.projects.length > 0) {
+            state.project =
+              state.projects.find((p) => p.id === state.activeProjectId) ??
+              state.projects[0] ??
+              null;
+          }
+          if (!state.expandedProjectId && state.activeProjectId) {
+            state.expandedProjectId = state.activeProjectId;
+          }
+        };
+      },
     },
   ),
 );

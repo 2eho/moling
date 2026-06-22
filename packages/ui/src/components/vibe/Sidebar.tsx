@@ -175,13 +175,35 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
 
         {/* Tablet narrow icon bar + hover expand */}
         <aside
-          className="hidden md:flex lg:hidden shrink-0 flex-col items-center gap-3 pt-3 border-r transition-all duration-300 border-th-border-subtle bg-th-card relative"
+          className="hidden md:flex lg:hidden shrink-0 flex-col items-center gap-2 pt-3 pb-3 border-r transition-all duration-300 border-th-border-subtle bg-th-card relative"
           style={{ width: 44 }}
           onMouseEnter={() => setTabletHovered(true)}
         >
           <button className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3" aria-label="菜单">
             <Menu size={18} />
           </button>
+
+          {/* Project icons when collapsed */}
+          <div className="flex-1 flex flex-col items-center gap-1.5 overflow-y-auto px-1 w-full">
+            {projects.map((proj) => {
+              const isActive = proj.id === activeProjectId;
+              return (
+                <button
+                  key={proj.id}
+                  onClick={() => handleProjectClick(proj.id)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all shrink-0"
+                  style={{
+                    color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)",
+                    background: isActive ? "var(--th-accent-dim)" : "transparent",
+                  }}
+                  title={proj.title}
+                >
+                  {proj.title.charAt(0)}
+                </button>
+              );
+            })}
+          </div>
+
           {tabletHovered && (
             <>
               <div
@@ -203,7 +225,7 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
 
         {/* Desktop narrow icon bar */}
         <aside
-          className="hidden lg:flex shrink-0 flex-col items-center gap-3 pt-3 border-r transition-all duration-300 border-th-border-subtle bg-th-card"
+          className="hidden lg:flex shrink-0 flex-col items-center gap-2 pt-3 pb-3 border-r transition-all duration-300 border-th-border-subtle bg-th-card"
           style={{ width: 44 }}
         >
           <button
@@ -212,6 +234,39 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
             aria-label="展开侧栏"
           >
             <PanelLeft size={18} />
+          </button>
+
+          {/* Project icons for quick nav when collapsed */}
+          <div className="flex-1 flex flex-col items-center gap-1.5 overflow-y-auto px-1 w-full">
+            {projects.map((proj) => {
+              const isActive = proj.id === activeProjectId;
+              return (
+                <button
+                  key={proj.id}
+                  onClick={() => handleProjectClick(proj.id)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all shrink-0"
+                  style={{
+                    color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)",
+                    background: isActive ? "var(--th-accent-dim)" : "transparent",
+                  }}
+                  title={proj.title}
+                >
+                  {proj.title.charAt(0)}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom controls */}
+          <button
+            onClick={() => {
+              router.push("/projects");
+            }}
+            className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3"
+            aria-label="项目列表"
+            title="项目列表"
+          >
+            <Menu size={16} />
           </button>
         </aside>
       </>

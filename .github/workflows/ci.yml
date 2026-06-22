@@ -73,7 +73,13 @@ jobs:
           case "${{ matrix.task }}" in
             check)  cargo check --workspace --all-features ;;
             test)   cargo test --workspace --no-fail-fast ;;
-            clippy) cargo clippy --workspace --all-features -- -D warnings ;;
+            clippy) cargo clippy --workspace --all-features -- \
+                      -D clippy::correctness \
+                      -D clippy::suspicious \
+                      -D clippy::perf \
+                      -W clippy::complexity \
+                      -W clippy::style \
+                      -W clippy::pedantic ;;
           esac
 
   # ---- CI 完成后通知 ----

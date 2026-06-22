@@ -76,7 +76,7 @@ async fn setup_app() -> (Router, DatabaseConnection, Uuid, i32) {
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT,
             project_id INTEGER NOT NULL, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
-            category TEXT NOT NULL DEFAULT 'general', constraint TEXT, source_chapter INTEGER
+            category TEXT NOT NULL DEFAULT 'general', "constraint" TEXT, source_chapter INTEGER
         )",
         "CREATE TABLE IF NOT EXISTS vault_changelogs (
             id TEXT PRIMARY KEY,

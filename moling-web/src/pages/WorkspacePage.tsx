@@ -35,6 +35,7 @@ export function WorkspacePage() {
   const setActiveProject = useWritingStore((s) => s.setActiveProject);
   const setActiveChapter = useWritingStore((s) => s.setActiveChapter);
   const completeChapter = useWritingStore((s) => s.completeChapter);
+  const toggleProjectExpand = useWritingStore((s) => s.toggleProjectExpand);
   const { theme, setTheme } = useTheme();
   const { addToast } = useToast();
 
@@ -140,11 +141,14 @@ export function WorkspacePage() {
 
   useEffect(() => {
     if (projects.length === 0) loadProjects(MOCK_PROJECTS);
-    if (projectId && project?.id !== projectId) setActiveProject(projectId);
+    if (projectId && project?.id !== projectId) {
+      setActiveProject(projectId);
+      toggleProjectExpand(projectId);
+    }
     if (activeChapterId === null && project && project.chapters.length > 0) {
       setActiveChapter(project.chapters.length);
     }
-  }, [loadProjects, setActiveProject, setActiveChapter, projectId, project?.id, projects.length, activeChapterId, project]);
+  }, [loadProjects, setActiveProject, setActiveChapter, toggleProjectExpand, projectId, project?.id, projects.length, activeChapterId, project]);
 
   // Ctrl+Shift+T → cycle theme
   useEffect(() => {
