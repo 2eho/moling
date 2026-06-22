@@ -92,6 +92,7 @@ moling-server-rs/target-check/
 # Archived / deprecated
 moling-web-nextjs-old/
 moling-server-old/
+moling-full/
 temp_test/
 architecture-scoring.md
 
