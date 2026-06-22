@@ -1,5 +1,9 @@
 # Rust build artifacts
 target/
+target-check/
+debug/
+*.pdb
+*.dSYM/
 
 # Environment files
 .env

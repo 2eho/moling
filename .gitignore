@@ -78,7 +78,9 @@ moling-web/src-tauri/icons/README.md
 
 # Rust
 moling-server-rs/target/
+moling-server-rs/target-check/
 **/*.rs.bk
 *.pdb
+*.dSYM/
 
 nul
