@@ -333,17 +333,24 @@ export const useWritingStore = create<WritingStore>()(
     }),
     {
       name: "vibe-writing-store",
+      // Do NOT strip `project` from partialize — zustand's rehydration
+      // flow applies a `set()` that can reset stripped fields to their
+      // initial null value, causing the workspace spinner to spin forever.
       partialize: (state: WritingStore) => ({
-        projects: state.projects,
-        activeProjectId: state.activeProjectId,
-        expandedProjectId: state.expandedProjectId,
+        ...state,
+        options: [],
+        selectedOption: null,
+        customInput: "",
+        history: [],
+        isGenerating: false,
+        agents: state.agents,
       }),
+      // Keep onRehydrateStorage as a safety net — reconstruct `project`
+      // from `projects` + `activeProjectId` in case persisted data is stale.
       onRehydrateStorage: () => {
         return (state, error) => {
           if (error || !state) return;
-          // Derive `project` and `expandedProjectId` from stored data so the
-          // workspace loading spinner doesn't spin forever after rehydration.
-          if (!state.project && state.projects.length > 0) {
+          if (state.projects.length > 0) {
             state.project =
               state.projects.find((p) => p.id === state.activeProjectId) ??
               state.projects[0] ??

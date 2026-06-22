@@ -26,9 +26,9 @@ import {
 import { MOCK_PROJECTS } from "@/mock/data/workspace";
 
 export function WorkspacePage() {
-  const { projectId } = useParams<{ projectId: string }>();
+  const projectId = useParams<{ projectId: string }>().projectId;
 
-  const project = useWritingStore((s) => s.project);
+  const activeProjectId = useWritingStore((s) => s.activeProjectId);
   const activeChapterId = useWritingStore((s) => s.activeChapterId);
   const projects = useWritingStore((s) => s.projects);
   const loadProjects = useWritingStore((s) => s.loadProjects);
@@ -36,6 +36,22 @@ export function WorkspacePage() {
   const setActiveChapter = useWritingStore((s) => s.setActiveChapter);
   const completeChapter = useWritingStore((s) => s.completeChapter);
   const toggleProjectExpand = useWritingStore((s) => s.toggleProjectExpand);
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  // Derive `project` solely from `projects` + `activeProjectId`.
+  // Never rely on the store's `project` field — it can be stale
+  // after zustand persist rehydration.
+  const project = activeProjectId
+    ? projects.find((p) => p.id === activeProjectId) ?? null
+    : projects[0] ?? null;
+
+  // Wait for zustand persist rehydration before showing content.
+  useEffect(() => {
+    if (projects.length === 0) {
+      loadProjects(MOCK_PROJECTS);
+    }
+    setHasHydrated(true);
+  }, []);
   const { theme, setTheme } = useTheme();
   const { addToast } = useToast();
 
@@ -139,8 +155,8 @@ export function WorkspacePage() {
     [setActiveChapter],
   );
 
+  // Sync active project/chapter from URL params
   useEffect(() => {
-    if (projects.length === 0) loadProjects(MOCK_PROJECTS);
     if (projectId && project?.id !== projectId) {
       setActiveProject(projectId);
       toggleProjectExpand(projectId);
@@ -148,7 +164,7 @@ export function WorkspacePage() {
     if (activeChapterId === null && project && project.chapters.length > 0) {
       setActiveChapter(project.chapters.length);
     }
-  }, [loadProjects, setActiveProject, setActiveChapter, toggleProjectExpand, projectId, project?.id, projects.length, activeChapterId, project]);
+  }, [setActiveProject, setActiveChapter, toggleProjectExpand, projectId, project?.id, activeChapterId, project]);
 
   // Ctrl+Shift+T → cycle theme
   useEffect(() => {
@@ -165,8 +181,8 @@ export function WorkspacePage() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [theme, setTheme, addToast]);
 
-  // --- Loading ---
-  if (!project) {
+  // --- Loading (wait for hydration + project derivation) ---
+  if (!hasHydrated || !project) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 bg-th-bg">
         <div className="w-8 h-8 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
@@ -191,16 +207,6 @@ export function WorkspacePage() {
     );
   }
 
-  // --- Completed project banner ---
-  const CompletedBanner = isProjectCompleted ? (
-    <div className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-[var(--th-success)]/10 border-b border-[var(--th-success)]/20">
-      <CheckCircle2 size={14} className="text-[var(--th-success)]" />
-      <span className="text-xs font-medium text-[var(--th-success)]">
-        本项目已完结 · 共 {project.chapters.length} 章
-      </span>
-    </div>
-  ) : null;
-
   return (
     <div className="h-screen flex overflow-hidden bg-th-bg text-th-text">
       {/* ── Left: Sidebar ── */}
@@ -219,21 +225,19 @@ export function WorkspacePage() {
 
       {/* ── Center: Content ── */}
       <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-        {CompletedBanner}
-
         {/* Toolbar */}
-        <div className="shrink-0 flex items-center gap-3 px-4 md:px-6 py-3 border-b border-th-border-subtle bg-th-bg/60 backdrop-blur">
+        <div className="shrink-0 flex items-center gap-2 md:gap-3 px-3 md:px-6 py-2.5 md:py-3 border-b border-th-border-subtle bg-th-bg/60 backdrop-blur">
           {/* Chapter info */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 md:gap-2">
               {currentChapter.status === "completed" ? (
-                <CheckCircle2 size={14} className="text-[var(--th-success)]" />
+                <CheckCircle2 size={14} className="text-[var(--th-success)] shrink-0" />
               ) : isEditable ? (
-                <Edit3 size={14} className="text-th-accent-text" />
+                <Edit3 size={14} className="text-th-accent-text shrink-0" />
               ) : (
-                <Eye size={14} className="text-th-text-3" />
+                <Eye size={14} className="text-th-text-3 shrink-0" />
               )}
-              <span className="text-sm font-semibold text-th-text truncate">
+              <span className="text-[13px] md:text-sm font-semibold text-th-text truncate">
                 {currentChapter.title}
               </span>
             </div>
@@ -286,13 +290,13 @@ export function WorkspacePage() {
 
         {/* Chapter content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-6 md:px-12 py-8 md:py-12">
+          <div className="reading-container max-w-3xl mx-auto px-5 md:px-12 py-6 md:py-12">
             {currentChapter.content ? (
               <>
                 {/* Chapter header */}
                 <div className="mb-8 pb-6 border-b border-th-border-subtle">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="text-xs font-medium text-th-accent-text bg-th-accent-dim px-2.5 py-1 rounded-md">
+                    <span className="chapter-badge text-xs font-medium text-th-accent-text bg-th-accent-dim px-2.5 py-1 rounded-md">
                       第 {currentChapter.id} 章
                     </span>
                     <span className="text-xs text-th-text-4 flex items-center gap-1">
@@ -300,11 +304,11 @@ export function WorkspacePage() {
                       {currentChapter.status === "completed" ? "已完成" : "草稿"}
                     </span>
                   </div>
-                  <h1 className="text-2xl font-bold text-th-text">{currentChapter.title}</h1>
+                  <h1 className="prose-title text-th-text">{currentChapter.title}</h1>
                 </div>
 
                 {/* Content reading view */}
-                <article className="text-[15px] leading-[1.9] text-th-text-2 whitespace-pre-wrap font-[var(--font-serif,serif)]">
+                <article className="prose-reading whitespace-pre-wrap">
                   {currentChapter.content}
                 </article>
 
