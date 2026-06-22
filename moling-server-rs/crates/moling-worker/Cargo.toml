@@ -1,0 +1,21 @@
+[package]
+name = "moling-worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+moling-core = { path = "../moling-core" }
+moling-db = { path = "../moling-db" }
+moling-llm = { path = "../moling-llm" }
+moling-services = { path = "../moling-services" }
+
+# workspace-managed
+redis = { workspace = true, features = ["tokio-comp", "connection-manager"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "signal"] }
+sea-orm = { workspace = true }

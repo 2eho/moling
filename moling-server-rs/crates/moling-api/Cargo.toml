@@ -1,0 +1,32 @@
+[package]
+name = "moling-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+moling-core = { path = "../moling-core" }
+moling-db = { path = "../moling-db" }
+moling-auth = { path = "../moling-auth" }
+moling-services = { path = "../moling-services" }
+moling-llm = { path = "../moling-llm" }
+
+# workspace-managed
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+sea-orm = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+sentry = { version = "0.36", default-features = false, features = ["backtrace", "contexts", "panic", "transport", "reqwest"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+axum-test = "15"
+serde_json = { workspace = true }

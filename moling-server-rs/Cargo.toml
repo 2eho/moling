@@ -1,0 +1,57 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/moling-core",
+    "crates/moling-db",
+    "crates/moling-auth",
+    "crates/moling-api",
+    "crates/moling-services",
+    "crates/moling-llm",
+    "crates/moling-worker",
+    "crates/moling-server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+# async runtime
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "limit", "request-id"] }
+
+# database
+sea-orm = { version = "1.1", features = ["sqlx-postgres", "sqlx-sqlite", "runtime-tokio", "macros", "with-chrono", "with-uuid"] }
+
+# serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# config
+figment = { version = "0.10", features = ["env", "toml"] }
+
+# redis — version 0.27 to match bb8-redis 0.17's dependency
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+bb8 = "0.8"
+bb8-redis = "0.17"
+
+# auth
+jsonwebtoken = "9"
+bcrypt = "0.16"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# http client (LLM calls)
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# misc
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+thiserror = "2"
+anyhow = "1"
+dotenvy = "0.15"
+async-trait = "0.1"
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }

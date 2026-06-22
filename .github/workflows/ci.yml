@@ -1,0 +1,93 @@
+# ======================================================================
+# Moling CI — Pull Request 检查
+# ======================================================================
+# 触发: PR 到 main / self-hosted runner 推送
+# 检查: cargo check + cargo test + cargo clippy
+# ======================================================================
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'moling-server-rs/**'
+      - '.github/workflows/ci.yml'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Cargo Check + Test + Clippy
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [check, test, clippy]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.85'
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: cargo-index-${{ hashFiles('moling-server-rs/Cargo.lock') }}
+          restore-keys: cargo-index-
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: moling-server-rs/target/
+          key: cargo-target-${{ matrix.task }}-${{ hashFiles('moling-server-rs/Cargo.lock') }}
+          restore-keys: cargo-target-${{ matrix.task }}-
+
+      - name: Configure USTC mirror
+        working-directory: moling-server-rs
+        run: |
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+          [source.crates-io]
+          replace-with = 'ustc'
+
+          [source.ustc]
+          registry = "sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/"
+          EOF
+
+      - name: Cargo ${{ matrix.task }}
+        working-directory: moling-server-rs
+        run: |
+          case "${{ matrix.task }}" in
+            check)  cargo check --workspace --all-features ;;
+            test)   cargo test --workspace --no-fail-fast ;;
+            clippy) cargo clippy --workspace --all-features -- -D warnings ;;
+          esac
+
+  # ---- CI 完成后通知 ----
+  ci-status:
+    name: CI Status
+    needs: [check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check status
+        run: |
+          if [ "${{ needs.check.result }}" = "success" ]; then
+            echo "✅ All CI checks passed"
+          else
+            echo "❌ CI checks failed"
+            exit 1
+          fi

@@ -1,0 +1,24 @@
+[package]
+name = "moling-llm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+moling-core = { path = "../moling-core" }
+
+# workspace-managed
+reqwest = { workspace = true, features = ["json", "stream"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+
+# retry jitter
+rand = "0.8"
+
+# streaming
+futures = "0.3"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }

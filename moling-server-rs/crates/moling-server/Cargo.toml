@@ -1,0 +1,29 @@
+[package]
+name = "moling-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "moling-server"
+path = "src/main.rs"
+
+[dependencies]
+moling-core = { path = "../moling-core" }
+moling-db = { path = "../moling-db" }
+moling-auth = { path = "../moling-auth" }
+moling-api = { path = "../moling-api" }
+moling-llm = { path = "../moling-llm" }
+moling-worker = { path = "../moling-worker" }
+
+# workspace-managed
+axum = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+dotenvy = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+sea-orm = { workspace = true }

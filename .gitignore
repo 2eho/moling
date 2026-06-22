@@ -67,4 +67,18 @@ moling-server/*.pyc
 Thumbs.db
 Desktop.ini
 
+# Tauri
+moling-web/src-tauri/target/
+moling-web/src-tauri/gen/
+moling-web/src-tauri/icons/README.md
+*.dmg
+*.AppImage
+*.msi
+*.deb
+
+# Rust
+moling-server-rs/target/
+**/*.rs.bk
+*.pdb
+
 nul

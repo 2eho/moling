@@ -29,7 +29,7 @@ help:
 	@echo "  make health      运行全面健康检查"
 	@echo "  make status      查看所有容器状态"
 	@echo "  make logs        查看所有服务日志（tail -f）"
-	@echo "  make logs-app    只看后端日志"
+	@echo "  make logs-server 只看后端日志"
 	@echo ""
 	@echo "  make backup      备份数据库"
 	@echo "  make restart     重启所有服务"
@@ -43,7 +43,7 @@ dev:
 	docker compose -f docker-compose.yml up -d --build
 	@echo "✅ 开发环境已启动"
 	@echo "   前端: http://localhost:3000/moling"
-	@echo "   后端: http://localhost:8000/api/v1/docs"
+	@echo "   后端: http://localhost:8000/health"
 
 prod:
 	@echo "🚀 启动生产环境（GHCR 镜像）..."
@@ -81,8 +81,8 @@ status:
 logs:
 	cd docker && docker compose -f docker-compose.prod.yml logs -f --tail=100 2>/dev/null || docker compose -f docker-compose.yml logs -f --tail=100
 
-logs-app:
-	docker logs -f --tail=100 moling-api 2>/dev/null || docker logs -f --tail=100 moling-app
+logs-server:
+	docker logs -f --tail=100 moling-server 2>/dev/null
 
 logs-frontend:
 	docker logs -f --tail=100 moling-frontend 2>/dev/null || docker logs -f --tail=100 moling-web

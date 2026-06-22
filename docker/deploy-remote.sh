@@ -89,54 +89,35 @@ main() {
 
     # ---- Step 3: 拉取新镜像 ----
     step "拉取新镜像"
-    docker compose -f "${COMPOSE_FILE}" pull app frontend worker 2>&1
+    docker compose -f "${COMPOSE_FILE}" pull server frontend 2>&1
     log "镜像拉取完成"
 
     # ---- Step 4: 数据库迁移 ----
-    step "数据库迁移"
-    # 确保数据库服务运行
+    step "数据库启动"
+    # 确保基础服务运行
     docker compose -f "${COMPOSE_FILE}" up -d db redis 2>&1
     sleep 3
-
-    # 运行迁移
-    docker compose -f "${COMPOSE_FILE}" run --rm \
-        -e DATABASE_URL="${DATABASE_URL:-sqlite+aiosqlite:///app/data/moling.db}" \
-        app alembic upgrade head 2>&1 || {
-        error "数据库迁移失败"
-        exit 1
-    }
-    log "数据库迁移完成"
+    # Rust 后端内嵌迁移，无需手动 alembic upgrade
+    log "数据库服务就绪"
 
     # ---- Step 5: 滚动更新 ----
     step "滚动更新服务"
 
-    # 5a. 先更新后端（可横向扩展）
-    CURRENT_APP_COUNT=$(docker compose -f "${COMPOSE_FILE}" ps -q app 2>/dev/null | wc -l)
-    NEW_APP_COUNT=$((CURRENT_APP_COUNT > 0 ? CURRENT_APP_COUNT * 2 : 2))
-
-    log "扩展后端实例: ${CURRENT_APP_COUNT} → ${NEW_APP_COUNT}"
-    docker compose -f "${COMPOSE_FILE}" up -d \
-        --no-deps --scale app="${NEW_APP_COUNT}" app 2>&1
+    # 更新后端（Rust 单体，内置 Worker）
+    docker compose -f "${COMPOSE_FILE}" up -d --no-deps server 2>&1
 
     # 健康检查
-    if ! health_check "后端应用" "http://localhost:8000/api/v1/health" 30; then
+    if ! health_check "后端服务" "http://localhost:8000/health" 30; then
         error "后端健康检查失败，开始回滚..."
         rollback
         exit 1
     fi
 
-    # 缩容回原实例数
-    docker compose -f "${COMPOSE_FILE}" up -d \
-        --no-deps --scale app="${CURRENT_APP_COUNT:-1}" app 2>&1
-
-    # 5b. 更新 Worker
-    docker compose -f "${COMPOSE_FILE}" up -d --no-deps worker 2>&1
-
-    # 5c. 更新前端
+    # 更新前端
     docker compose -f "${COMPOSE_FILE}" up -d --no-deps frontend 2>&1
 
     # 前端健康检查
-    health_check "前端服务" "http://localhost:80/health" 15 || warn "前端健康检查未通过"
+    health_check "前端服务" "http://localhost:3000/health" 15 || warn "前端健康检查未通过"
 
     # ---- Step 6: 清理 ----
     step "清理旧资源"
@@ -163,7 +144,7 @@ rollback() {
 
     # 尝试重启服务
     log "重启当前服务..."
-    docker compose -f "${COMPOSE_FILE}" restart app frontend worker 2>&1 || true
+    docker compose -f "${COMPOSE_FILE}" restart server frontend 2>&1 || true
 
     # 从备份恢复
     local latest_backup=$(ls -t "${BACKUP_DIR}"/state_pre_*.json 2>/dev/null | head -1)

@@ -1,0 +1,28 @@
+[package]
+name = "moling-services"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+moling-core = { path = "../moling-core" }
+moling-db = { path = "../moling-db" }
+moling-llm = { path = "../moling-llm" }
+
+# workspace-managed
+uuid = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+sea-orm = { workspace = true }
+bcrypt = { workspace = true }
+regex-lite = "0.1"
+regex = "1"
+lru = "0.12"
+tokio = { workspace = true }
+libc = "0.2"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

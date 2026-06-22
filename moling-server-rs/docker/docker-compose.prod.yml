@@ -1,0 +1,129 @@
+# ==========================================================================
+# 墨灵 (Moling) — Production Docker Compose (Server)
+# ==========================================================================
+# Deployed to /opt/moling/docker-compose.prod.yml
+# Images pulled from ghcr.io/2eho/moling/* (built by GitHub Actions)
+#
+# Services:
+#   - moling-app  : Rust API server (port 8000)
+#   - moling-web  : Next.js frontend (port 3000)
+#   - postgres    : PostgreSQL 16
+#   - redis       : Redis 7 (Alpine)
+#   - nginx       : Reverse proxy (port 80)
+
+services:
+  # ── Rust API Server ────────────────────────────────────────────────────
+  moling-app:
+    image: ghcr.io/2eho/moling/moling-server:latest
+    container_name: moling-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MOLING_DATABASE_URL=postgres://moling:moling_secret@postgres:5432/moling
+      - MOLING_REDIS_URL=redis://redis:6379/0
+      - MOLING_SECRET_KEY=${MOLING_SECRET_KEY:-change-me-in-production}
+      - MOLING_ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - MOLING_REFRESH_TOKEN_EXPIRE_DAYS=7
+      - MOLING_LOG_LEVEL=INFO
+      - MOLING_CORS_ORIGINS=*
+      - MOLING_LLM_API_BASE=https://api.deepseek.com
+      - MOLING_LLM_API_KEY=${MOLING_LLM_API_KEY:-sk-placeholder}
+      - RUST_LOG=info,moling_server=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - moling-net
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Frontend Next.js ───────────────────────────────────────────────────
+  moling-web:
+    image: ghcr.io/2eho/moling/moling-frontend:latest
+    container_name: moling-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - moling-app
+    networks:
+      - moling-net
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: moling-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moling
+      POSTGRES_PASSWORD: moling_secret
+      POSTGRES_DB: moling
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - moling-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moling -d moling"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: moling-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - moling-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Nginx Reverse Proxy ────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: moling-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/moling.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - moling-app
+    networks:
+      - moling-net
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# ── Volumes ──────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# ── Networks ─────────────────────────────────────────────────────────────
+networks:
+  moling-net:
+    driver: bridge

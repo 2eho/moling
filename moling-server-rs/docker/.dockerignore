@@ -1,0 +1,10 @@
+target/
+.git/
+.github/
+*.md
+LICENSE
+.env.local
+.env.production
+*.log
+docker-compose*.yml
+Makefile

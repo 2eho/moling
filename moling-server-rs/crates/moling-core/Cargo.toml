@@ -1,0 +1,31 @@
+[package]
+name = "moling-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+figment = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+axum = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tower-http = { workspace = true }
+dotenvy = { workspace = true }
+redis = { workspace = true }
+bb8 = { workspace = true }
+bb8-redis = { workspace = true }
+tokio = { workspace = true }
+
+# Sentry — error monitoring
+sentry = { version = "0.36", default-features = false, features = ["backtrace", "contexts", "panic", "transport", "reqwest"] }
+sentry-tracing = "0.36"
+
+# OpenTelemetry
+opentelemetry = { version = "0.27", features = ["trace"] }
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio", "trace"] }
+opentelemetry-otlp = { version = "0.27", features = ["tonic", "reqwest-client", "http-proto"] }
+tracing-opentelemetry = "0.28"
