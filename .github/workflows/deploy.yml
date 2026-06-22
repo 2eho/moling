@@ -1,14 +1,9 @@
-# ======================================================================
-# Moling Deploy — 构建 → 推送 → 部署
-# ======================================================================
-# 触发: push main 分支的 deploy/* / moling-server-rs/** / moling-web/**
-# 也可以手动触发 (workflow_dispatch)
-#
-# 流程:
-#   1. Build — 并行构建前端 + 后端 Docker 镜像
-#   2. Push  — 推送到 GHCR (ghcr.io/2eho/moling)
-#   3. Deploy — 服务器 self-hosted runner 拉取并重启
-# ======================================================================
+# ==============================================================================
+# Moling Deploy — Build → Push → Deploy
+# ==============================================================================
+# 触发: push main 分支的 deploy/ / moling-server-rs/ / moling-web/
+# 流程: Docker 构建 → GHCR 推送 → 服务器 self-hosted runner 部署
+# ==============================================================================
 
 name: Deploy
 
@@ -16,8 +11,13 @@ on:
   push:
     branches: [main]
     paths:
+      - 'deploy/**'
       - 'moling-server-rs/**'
-      - 'moling-web/**'
+      - 'moling-web/Dockerfile'
+      - 'moling-web/vite.config.ts'
+      - 'moling-web/tsconfig.json'
+      - 'moling-web/package.json'
+      - 'packages/ui/**'
   workflow_dispatch:
     inputs:
       deploy_frontend:
@@ -38,9 +38,9 @@ env:
   GHCR_USER: ${{ github.repository_owner }}
 
 jobs:
-  # ====================================================================
-  # Job 1: 构建并推送后端镜像
-  # ====================================================================
+  # ==========================================================================
+  # Job 1: 构建并推送后端镜像 (Rust)
+  # ==========================================================================
   build-backend:
     name: Build Backend (Rust)
     runs-on: ubuntu-latest
@@ -82,53 +82,51 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-# ======================================================================
-# Job 2: 构建并推送前端镜像
-# ======================================================================
-build-frontend:
-  name: Build Frontend (Vite + React)
-  runs-on: ubuntu-latest
-  if: github.event_name != 'workflow_dispatch' || inputs.deploy_frontend
+  # ==========================================================================
+  # Job 2: 构建并推送前端镜像 (Vite + Nginx)
+  # ==========================================================================
+  build-frontend:
+    name: Build Frontend (Vite + React)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.deploy_frontend
 
-  steps:
-    - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Login to GHCR
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.GHCR_REGISTRY }}
-        username: ${{ env.GHCR_USER }}
-        password: ${{ secrets.GHCR_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ env.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
-    - name: Docker metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.GHCR_REGISTRY }}/${{ github.repository }}/moling-frontend
-        tags: |
-          type=sha,format=short
-          type=ref,event=branch
-          latest
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.GHCR_REGISTRY }}/${{ github.repository }}/moling-frontend
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            latest
 
-    - name: Build and push
-      uses: docker/build-push-action@v6
-      with:
-        context: moling-web
-        file: moling-web/Dockerfile
-        build-args: |
-          VITE_API_BASE_URL=/api/v1
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: moling-web/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  # ====================================================================
-  # Job 3: 服务器部署（self-hosted runner）
-  # ====================================================================
+  # ==========================================================================
+  # Job 3: 服务器部署 (self-hosted runner)
+  # ==========================================================================
   deploy:
     name: Deploy to Server
     needs: [build-backend, build-frontend]
@@ -154,17 +152,17 @@ build-frontend:
 
       - name: Health check
         run: |
-          echo "Checking backend health..."
-          curl -sf --max-time 10 http://localhost:8000/health && echo "✅ Backend OK" || echo "⚠️  Backend health check failed"
-          echo "Checking frontend health..."
-          curl -sf --max-time 10 http://localhost:3000/health && echo "✅ Frontend OK" || echo "⚠️  Frontend health check failed"
+          echo "Checking backend..."
+          curl -sf --max-time 10 http://localhost:8000/health && echo "OK" || echo "WARN: backend health check failed"
+          echo "Checking frontend..."
+          curl -sf --max-time 10 http://localhost:3000/health && echo "OK" || echo "WARN: frontend health check failed"
 
       - name: Prune old images
         run: docker image prune -af --filter "until=72h" || true
 
-  # ====================================================================
+  # ==========================================================================
   # 通知
-  # ====================================================================
+  # ==========================================================================
   notify:
     name: Notify
     needs: [deploy]
@@ -174,7 +172,7 @@ build-frontend:
       - name: Status
         run: |
           if [ "${{ needs.deploy.result }}" = "success" ]; then
-            echo "🎉 Deployment succeeded!"
+            echo "Deploy succeeded"
           else
-            echo "💥 Deployment failed! Check logs."
+            echo "Deploy failed — check logs"
           fi

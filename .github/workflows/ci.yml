@@ -1,9 +1,8 @@
-# ======================================================================
-# Moling CI — Pull Request 检查
-# ======================================================================
-# 触发: PR 到 main / self-hosted runner 推送
-# 检查: cargo check + cargo test + cargo clippy
-# ======================================================================
+# ==============================================================================
+# Moling CI — 快速 PR 检查 (Rust backend only)
+# ==============================================================================
+# 触发: PR → main, push → main (仅 backend 路径)
+# ==============================================================================
 
 name: CI
 
@@ -82,7 +81,6 @@ jobs:
                       -W clippy::pedantic ;;
           esac
 
-  # ---- CI 完成后通知 ----
   ci-status:
     name: CI Status
     needs: [check]
@@ -92,8 +90,8 @@ jobs:
       - name: Check status
         run: |
           if [ "${{ needs.check.result }}" = "success" ]; then
-            echo "✅ All CI checks passed"
+            echo "PASS all CI checks"
           else
-            echo "❌ CI checks failed"
+            echo "FAIL — CI checks failed"
             exit 1
           fi

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "@/lib/navigation";
-import { PanelLeft, Menu, X, Plus, Settings, Library, Package } from "lucide-react";
+import { PanelLeft, PanelLeftClose, Menu, X, Plus, Settings, Library, Package, Home } from "lucide-react";
 import { useWritingStore } from "@/stores/useWritingStore";
 import { ProjectList } from "./ProjectList";
 
@@ -23,7 +23,6 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
   const toggleProjectExpand = useWritingStore((s) => s.toggleProjectExpand);
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [tabletHovered, setTabletHovered] = useState(false);
 
   const handleProjectClick = (projId: string) => {
     setActiveProject(projId);
@@ -38,52 +37,37 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
     setMobileOpen(false);
   };
 
-  // Extracted content reused across mobile overlay, tablet hover, desktop full
-  const renderSidebarContent = (isMobileOrTablet: boolean) => (
+  // ── Full sidebar content ──
+  const fullSidebar = (
     <div className="flex flex-col h-full">
-      {/* Top: collapse / close + new project */}
+      {/* Header */}
       <div className="shrink-0 flex items-center gap-2 px-3 py-3">
-        {isMobileOrTablet ? (
-          <button
-            onClick={() => {
-              setMobileOpen(false);
-              setTabletHovered(false);
-            }}
-            className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3"
-            aria-label="关闭侧栏"
-          >
-            <X size={18} />
-          </button>
-        ) : (
-          <button
-            onClick={onToggle}
-            className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3"
-            aria-label="折叠侧栏"
-          >
-            <PanelLeft size={18} />
-          </button>
-        )}
-
-        <div className="flex-1" />
-
         <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors bg-th-accent-dim text-th-accent-text"
+          onClick={onToggle}
+          className="p-1.5 rounded-lg transition-colors text-th-text-3 hover:text-th-text hover:bg-th-hover"
+          aria-label="折叠侧栏"
+          title="折叠侧栏"
+        >
+          <PanelLeftClose size={18} />
+        </button>
+        <div className="flex-1" />
+        <button
           onClick={() => {
             router.push("/projects/new");
             setMobileOpen(false);
-            setTabletHovered(false);
           }}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-th-accent-dim text-th-accent-text hover:brightness-110 transition-all"
         >
           <Plus size={13} />
           <span>新建</span>
         </button>
       </div>
 
-      {/* Middle: project list */}
+      {/* Project list */}
       {projects.length === 0 ? (
         <div className="flex-1 flex items-center justify-center px-4">
           <p className="text-xs text-center text-th-text-4">
-            暂无项目，点击上方 &ldquo;新建&rdquo; 开始
+            暂无项目，点击上方「新建」开始
           </p>
         </div>
       ) : (
@@ -97,10 +81,10 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
         />
       )}
 
-      {/* Bottom: 知识中心 | 插件市场 | 用户设置 */}
+      {/* Footer */}
       <div className="shrink-0 border-t border-th-border-subtle">
         <button
-          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs transition-colors hover:opacity-80 text-th-text-2"
+          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-th-text-2 hover:bg-th-hover transition-colors"
           title="功能开发中"
         >
           <Library size={14} className="text-th-text-3" />
@@ -111,7 +95,7 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
         </button>
 
         <button
-          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs transition-colors hover:opacity-80 text-th-text-2"
+          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-th-text-2 hover:bg-th-hover transition-colors"
           title="功能开发中"
         >
           <Package size={14} className="text-th-text-3" />
@@ -129,12 +113,8 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
             <span className="text-xs truncate text-th-text-2">用户</span>
           </div>
           <button
-            onClick={() => {
-              router.push("/settings");
-              setMobileOpen(false);
-              setTabletHovered(false);
-            }}
-            className="p-1 rounded transition-colors hover:opacity-80 text-th-text-3"
+            onClick={() => router.push("/settings")}
+            className="p-1 rounded transition-colors text-th-text-3 hover:text-th-text hover:bg-th-hover"
             aria-label="设置"
           >
             <Settings size={14} />
@@ -144,197 +124,111 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
     </div>
   );
 
-  // Desktop collapsed: narrow icon bar
-  if (collapsed) {
-    return (
-      <>
-        {/* Mobile hamburger */}
-        <button
-          className="fixed top-2.5 left-3 z-30 md:hidden p-1.5 rounded-lg bg-th-card border border-th-border-subtle text-th-text-3"
-          onClick={() => setMobileOpen(true)}
-          aria-label="打开菜单"
-        >
-          <Menu size={20} />
-        </button>
+  // ── Collapsed narrow bar ──
+  const narrowBar = (
+    <aside
+      className="shrink-0 flex flex-col items-center gap-2 py-3 border-r bg-th-card border-th-border-subtle"
+      style={{ width: 44 }}
+    >
+      <button
+        onClick={onToggle}
+        className="p-1.5 rounded-lg text-th-text-3 hover:text-th-text hover:bg-th-hover transition-colors"
+        aria-label="展开侧栏"
+        title="展开侧栏"
+      >
+        <PanelLeft size={18} />
+      </button>
 
-        {/* Mobile overlay */}
-        {mobileOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40 md:hidden bg-th-overlay"
-              onClick={() => setMobileOpen(false)}
-            />
-            <div
-              className="fixed inset-y-0 left-0 z-50 md:hidden animate-slide-in-left bg-th-card"
-              style={{ width: "80vw", boxShadow: "var(--th-shadow-panel)" }}
+      {/* Project quick-nav icons */}
+      <div className="flex-1 flex flex-col items-center gap-1.5 overflow-y-auto px-1 w-full">
+        {projects.map((proj) => {
+          const isActive = proj.id === activeProjectId;
+          return (
+            <button
+              key={proj.id}
+              onClick={() => handleProjectClick(proj.id)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all shrink-0 hover:scale-105"
+              style={{
+                color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)",
+                background: isActive ? "var(--th-accent-dim)" : "transparent",
+              }}
+              title={proj.title}
             >
-              {renderSidebarContent(true)}
-            </div>
-          </>
-        )}
+              {proj.title.charAt(0)}
+            </button>
+          );
+        })}
+      </div>
 
-        {/* Tablet narrow icon bar + hover expand */}
-        <aside
-          className="hidden md:flex lg:hidden shrink-0 flex-col items-center gap-2 pt-3 pb-3 border-r transition-all duration-300 border-th-border-subtle bg-th-card relative"
-          style={{ width: 44 }}
-          onMouseEnter={() => setTabletHovered(true)}
-        >
-          <button className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3" aria-label="菜单">
-            <Menu size={18} />
-          </button>
-
-          {/* Project icons when collapsed */}
-          <div className="flex-1 flex flex-col items-center gap-1.5 overflow-y-auto px-1 w-full">
-            {projects.map((proj) => {
-              const isActive = proj.id === activeProjectId;
-              return (
-                <button
-                  key={proj.id}
-                  onClick={() => handleProjectClick(proj.id)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all shrink-0"
-                  style={{
-                    color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)",
-                    background: isActive ? "var(--th-accent-dim)" : "transparent",
-                  }}
-                  title={proj.title}
-                >
-                  {proj.title.charAt(0)}
-                </button>
-              );
-            })}
-          </div>
-
-          {tabletHovered && (
-            <>
-              <div
-                className="fixed inset-0 z-30"
-                onClick={() => setTabletHovered(false)}
-              />
-              <div
-                className="absolute left-full top-0 z-40 animate-slide-in-left bg-th-card border border-th-border-subtle rounded-r-xl shadow-xl"
-                style={{ width: 240, maxHeight: "calc(100vh - 1rem)" }}
-                onMouseLeave={() => setTabletHovered(false)}
-              >
-                <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 1rem)" }}>
-                  {renderSidebarContent(true)}
-                </div>
-              </div>
-            </>
-          )}
-        </aside>
-
-        {/* Desktop narrow icon bar */}
-        <aside
-          className="hidden lg:flex shrink-0 flex-col items-center gap-2 pt-3 pb-3 border-r transition-all duration-300 border-th-border-subtle bg-th-card"
-          style={{ width: 44 }}
-        >
-          <button
-            onClick={onToggle}
-            className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3"
-            aria-label="展开侧栏"
-          >
-            <PanelLeft size={18} />
-          </button>
-
-          {/* Project icons for quick nav when collapsed */}
-          <div className="flex-1 flex flex-col items-center gap-1.5 overflow-y-auto px-1 w-full">
-            {projects.map((proj) => {
-              const isActive = proj.id === activeProjectId;
-              return (
-                <button
-                  key={proj.id}
-                  onClick={() => handleProjectClick(proj.id)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all shrink-0"
-                  style={{
-                    color: isActive ? "var(--th-accent-text)" : "var(--th-text-3)",
-                    background: isActive ? "var(--th-accent-dim)" : "transparent",
-                  }}
-                  title={proj.title}
-                >
-                  {proj.title.charAt(0)}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Bottom controls */}
-          <button
-            onClick={() => {
-              router.push("/projects");
-            }}
-            className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3"
-            aria-label="项目列表"
-            title="项目列表"
-          >
-            <Menu size={16} />
-          </button>
-        </aside>
-      </>
-    );
-  }
+      <button
+        onClick={() => router.push("/projects")}
+        className="p-1.5 rounded-lg text-th-text-3 hover:text-th-text hover:bg-th-hover transition-colors"
+        aria-label="项目列表"
+        title="项目列表"
+      >
+        <Home size={16} />
+      </button>
+    </aside>
+  );
 
   return (
     <>
-      {/* Mobile hamburger */}
+      {/* ── Mobile hamburger (always visible on small screens) ── */}
       <button
-        className="fixed top-2.5 left-3 z-30 md:hidden p-1.5 rounded-lg bg-th-card border border-th-border-subtle text-th-text-3"
+        className="fixed top-2.5 left-3 z-30 p-1.5 rounded-lg bg-th-card border border-th-border-subtle text-th-text-3 md:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="打开菜单"
       >
         <Menu size={20} />
       </button>
 
-      {/* Mobile overlay */}
+      {/* ── Mobile fullscreen overlay ── */}
       {mobileOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 md:hidden bg-th-overlay"
+            className="fixed inset-0 z-40 md:hidden bg-black/40 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
           <div
             className="fixed inset-y-0 left-0 z-50 md:hidden animate-slide-in-left bg-th-card"
-            style={{ width: "80vw", boxShadow: "4px 0 24px rgba(0,0,0,0.3)" }}
+            style={{ width: "80vw", boxShadow: "4px 0 24px rgba(0,0,0,0.25)" }}
           >
-            {renderSidebarContent(true)}
+            {/* Mobile header: close + new */}
+            <div className="flex items-center gap-2 px-3 py-3 border-b border-th-border-subtle">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-1.5 rounded-lg text-th-text-3"
+              >
+                <X size={18} />
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={() => {
+                  router.push("/projects/new");
+                  setMobileOpen(false);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-th-accent-dim text-th-accent-text"
+              >
+                <Plus size={13} />
+                <span>新建</span>
+              </button>
+            </div>
+            {fullSidebar}
           </div>
         </>
       )}
 
-      {/* Tablet narrow icon bar + hover expand */}
-      <aside
-        className="hidden md:flex lg:hidden shrink-0 flex-col items-center gap-3 pt-3 border-r transition-all duration-300 border-th-border-subtle bg-th-card relative"
-        style={{ width: 44 }}
-        onMouseEnter={() => setTabletHovered(true)}
-      >
-        <button className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3" aria-label="菜单">
-          <Menu size={18} />
-        </button>
-        {tabletHovered && (
-          <>
-            <div
-              className="fixed inset-0 z-30"
-              onClick={() => setTabletHovered(false)}
-            />
-            <div
-              className="absolute left-full top-0 z-40 animate-slide-in-left bg-th-card border border-th-border-subtle rounded-r-xl shadow-xl"
-              style={{ width: 240, maxHeight: "calc(100vh - 1rem)" }}
-              onMouseLeave={() => setTabletHovered(false)}
-            >
-              <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 1rem)" }}>
-                {renderSidebarContent(true)}
-              </div>
-            </div>
-          </>
-        )}
-      </aside>
-
-      {/* Desktop full sidebar */}
-      <aside
-        className="hidden lg:flex shrink-0 flex-col h-full transition-all duration-300 border-r overflow-hidden border-th-border-subtle bg-th-card"
-        style={{ width }}
-      >
-        {renderSidebarContent(false)}
-      </aside>
+      {/* ── Desktop: collapsed or expanded (md+) ── */}
+      {collapsed ? (
+        narrowBar
+      ) : (
+        <aside
+          className="shrink-0 hidden md:flex flex-col h-full border-r overflow-hidden bg-th-card border-th-border-subtle transition-all duration-300"
+          style={{ width }}
+        >
+          {fullSidebar}
+        </aside>
+      )}
     </>
   );
 }
