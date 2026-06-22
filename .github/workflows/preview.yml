@@ -1,0 +1,194 @@
+# ==============================================================================
+# Moling Preview — PR 预览环境部署
+# ==============================================================================
+# 触发条件: PR 创建 / 更新时
+#
+# 流水线:
+#   1. docker-build → 构建 Docker 镜像（PR 标签）
+#   2. preview → 部署到服务器预览端口
+#   3. comment → 在 PR 中评论预览地址
+#
+# 需要的 GitHub Secrets:
+#   SSH_HOST         — 服务器地址 (124.222.163.79)
+#   SSH_USER         — SSH 用户名 (root)
+#   SSH_PRIVATE_KEY  — SSH 私钥
+# ==============================================================================
+
+name: Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+
+concurrency:
+  group: preview-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ==========================================================================
+  # Job 1: Docker 镜像构建 + 推送
+  # ==========================================================================
+  docker-build:
+    name: Build Preview Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成 PR 标签
+        id: pr
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PR_SHA="${{ github.event.pull_request.head.sha }}"
+          SHORT_SHA="${PR_SHA::7}"
+          echo "tag=pr-${PR_NUM}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "pr_num=${PR_NUM}" >> $GITHUB_OUTPUT
+
+      - name: 构建并推送预览镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: ./moling-web
+          file: ./moling-web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/moling-frontend:preview
+            ${{ env.REGISTRY }}/${{ github.repository }}/moling-frontend:${{ steps.pr.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================================================
+  # Job 2: 部署预览到服务器
+  # ==========================================================================
+  preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: docker-build
+    steps:
+      - name: 配置 SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 添加服务器主机密钥
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 部署预览容器
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PREVIEW_PORT=$((13000 + PR_NUM))
+
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} bash -s << DEPLOY_EOF
+            set -e
+
+            PR_NUM="${PR_NUM}"
+            PREVIEW_PORT="${PREVIEW_PORT}"
+            IMAGE="ghcr.io/${{ github.repository }}/moling-frontend:preview"
+            CONTAINER="moling-preview-pr-\${PR_NUM}"
+
+            echo "========================================="
+            echo "  PR #\${PR_NUM} 预览部署"
+            echo "  端口: \${PREVIEW_PORT}"
+            echo "========================================="
+
+            docker login ghcr.io -u "${{ github.actor }}" --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}" 2>/dev/null || true
+            docker pull "\${IMAGE}"
+
+            # 停止并移除旧的预览容器
+            docker rm -f "\${CONTAINER}" 2>/dev/null || true
+
+            # 启动预览容器
+            docker run -d \
+              --name "\${CONTAINER}" \
+              --network moling-network \
+              -p "\${PREVIEW_PORT}:3000" \
+              -e NODE_ENV=production \
+              --restart no \
+              "\${IMAGE}"
+
+            echo "预览容器已启动: \${CONTAINER}"
+
+            # 等待服务就绪
+            for i in \$(seq 1 30); do
+              if curl -sf --max-time 5 "http://localhost:\${PREVIEW_PORT}" > /dev/null 2>&1; then
+                echo "预览服务就绪"
+                break
+              fi
+              sleep 2
+            done
+          DEPLOY_EOF
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+
+  # ==========================================================================
+  # Job 3: PR 评论
+  # ==========================================================================
+  comment:
+    name: Comment on PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: preview
+    if: always()
+    permissions:
+      pull-requests: write
+    steps:
+      - name: 设置评论内容
+        id: comment-body
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PREVIEW_PORT=$((13000 + PR_NUM))
+          echo "PREVIEW_URL=http://124.222.163.79:${PREVIEW_PORT}" >> $GITHUB_ENV
+
+          if [ "${{ needs.preview.result }}" = "success" ]; then
+            STATUS="已部署"
+          else
+            STATUS="部署失败"
+          fi
+
+          COMMENT=$(cat << EOF
+          ## 预览环境
+
+          | 项目 | 信息 |
+          |------|------|
+          | 状态 | ${STATUS} |
+          | 端口 | ${PREVIEW_PORT} |
+          | 地址 | http://124.222.163.79:${PREVIEW_PORT} |
+
+          镜像: \`ghcr.io/${{ github.repository }}/moling-frontend:preview\`
+          EOF
+          )
+          echo "comment<<COMMENT_EOF" >> $GITHUB_ENV
+          echo "$COMMENT" >> $GITHUB_ENV
+          echo "COMMENT_EOF" >> $GITHUB_ENV
+
+      - name: 评论 PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = process.env.comment;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

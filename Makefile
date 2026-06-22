@@ -1,11 +1,13 @@
 # ==============================================================================
-# 墨灵 Moling — 运维 Makefile
+# 墨灵 Moling — 运维 Makefile（Rust 后端）
 # ==============================================================================
-# 提供常用运维操作的快捷命令，本地开发和生产服务器通用。
+# 后端: Rust (Axum + SeaORM + JWT)，单体二进制，内置 Worker
+# 前端: Next.js standalone
+# 生产 Compose: docker/docker-compose.prod.yml
 #
 # 用法:
 #   make help          — 显示所有可用命令
-#   make dev           — 启动开发环境
+#   make dev           — 启动开发环境（Rust 后端 + 前端 + DB + Redis）
 #   make prod          — 启动生产环境
 #   make deploy        — 从 GHCR 拉取并部署
 #   make health        — 运行健康检查
@@ -15,13 +17,15 @@
 
 .PHONY: help dev prod deploy health backup logs clean restart status
 
+PROD_COMPOSE = docker/docker-compose.prod.yml
+
 # ---- 默认目标 ----
 help:
 	@echo "========================================="
-	@echo "  Moling 运维命令"
+	@echo "  Moling 运维命令 (Rust 后端)"
 	@echo "========================================="
 	@echo ""
-	@echo "  make dev         启动开发环境（含端口映射）"
+	@echo "  make dev         启动开发环境"
 	@echo "  make prod        启动生产环境（从 GHCR 拉取）"
 	@echo "  make prod-build  本地构建并启动生产环境"
 	@echo "  make deploy      拉取最新镜像并滚动更新"
@@ -40,25 +44,25 @@ help:
 # ---- 环境启动 ----
 dev:
 	@echo "🚀 启动开发环境..."
-	docker compose -f docker-compose.yml up -d --build
+	cd docker && docker compose -f $(PROD_COMPOSE) up -d
 	@echo "✅ 开发环境已启动"
 	@echo "   前端: http://localhost:3000/moling"
 	@echo "   后端: http://localhost:8000/health"
 
 prod:
 	@echo "🚀 启动生产环境（GHCR 镜像）..."
-	cd docker && docker compose -f docker-compose.prod.yml pull
-	cd docker && docker compose -f docker-compose.prod.yml up -d
+	cd docker && docker compose -f $(PROD_COMPOSE) pull
+	cd docker && docker compose -f $(PROD_COMPOSE) up -d
 	@echo "✅ 生产环境已启动"
 
 prod-build:
 	@echo "🔨 本地构建并启动生产环境..."
-	cd docker && docker compose -f docker-compose.yml up -d --build
+	cd docker && docker compose -f $(PROD_COMPOSE) up -d --build
 	@echo "✅ 生产环境已启动（本地构建）"
 
 prod-monitoring:
 	@echo "📊 启动生产环境 + 监控栈..."
-	cd docker && docker compose -f docker-compose.prod.yml --profile monitoring up -d
+	cd docker && docker compose -f $(PROD_COMPOSE) --profile monitoring up -d
 	@echo "✅ 全部服务已启动"
 	@echo "   Prometheus: http://localhost:9090"
 	@echo "   Grafana:    http://localhost:3001"
@@ -66,8 +70,8 @@ prod-monitoring:
 # ---- 部署 ----
 deploy:
 	@echo "📦 拉取最新镜像并滚动更新..."
-	cd docker && docker compose -f docker-compose.prod.yml pull app frontend worker
-	cd docker && docker compose -f docker-compose.prod.yml up -d --no-deps app frontend worker
+	cd docker && docker compose -f $(PROD_COMPOSE) pull server frontend
+	cd docker && docker compose -f $(PROD_COMPOSE) up -d --no-deps server frontend
 	@echo "✅ 滚动更新完成"
 
 # ---- 监控和状态 ----
@@ -76,16 +80,16 @@ health:
 
 status:
 	@echo "📋 容器状态:"
-	@cd docker && docker compose -f docker-compose.prod.yml ps 2>/dev/null || docker compose -f docker-compose.yml ps
+	@cd docker && docker compose -f $(PROD_COMPOSE) ps
 
 logs:
-	cd docker && docker compose -f docker-compose.prod.yml logs -f --tail=100 2>/dev/null || docker compose -f docker-compose.yml logs -f --tail=100
+	cd docker && docker compose -f $(PROD_COMPOSE) logs -f --tail=100
 
 logs-server:
-	docker logs -f --tail=100 moling-server 2>/dev/null
+	docker logs -f --tail=100 moling-server
 
 logs-frontend:
-	docker logs -f --tail=100 moling-frontend 2>/dev/null || docker logs -f --tail=100 moling-web
+	docker logs -f --tail=100 moling-frontend
 
 # ---- 备份 ----
 backup:
@@ -98,36 +102,20 @@ backup:
 # ---- 运维 ----
 restart:
 	@echo "🔄 重启所有服务..."
-	cd docker && docker compose -f docker-compose.prod.yml restart 2>/dev/null \
-		|| docker compose -f docker-compose.yml restart
+	cd docker && docker compose -f $(PROD_COMPOSE) restart
 	@echo "✅ 重启完成"
 
 clean:
 	@echo "🧹 停止并清理容器..."
-	cd docker && docker compose -f docker-compose.prod.yml down 2>/dev/null \
-		|| docker compose -f docker-compose.yml down
+	cd docker && docker compose -f $(PROD_COMPOSE) down
 	@echo "✅ 清理完成"
 
 clean-all:
 	@echo "⚠️  彻底清理（含数据卷）..."
-	cd docker && docker compose -f docker-compose.prod.yml down -v --remove-orphans 2>/dev/null \
-		|| docker compose -f docker-compose.yml down -v --remove-orphans
+	cd docker && docker compose -f $(PROD_COMPOSE) down -v --remove-orphans
 	@echo "✅ 彻底清理完成"
 
 prune:
 	@echo "🗑️  清理未使用的 Docker 资源..."
 	docker system prune -af --filter "until=72h"
 	@echo "✅ 清理完成"
-
-# ---- 数据库迁移 ----
-migrate:
-	@echo "🔧 运行数据库迁移..."
-	cd docker && docker compose -f docker-compose.prod.yml run --rm app alembic upgrade head 2>/dev/null \
-		|| docker compose -f docker-compose.yml run --rm app alembic upgrade head
-	@echo "✅ 迁移完成"
-
-migrate-rollback:
-	@echo "⏪ 回滚数据库迁移..."
-	cd docker && docker compose -f docker-compose.prod.yml run --rm app alembic downgrade -1 2>/dev/null \
-		|| docker compose -f docker-compose.yml run --rm app alembic downgrade -1
-	@echo "✅ 回滚完成"

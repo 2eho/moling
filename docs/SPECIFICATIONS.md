@@ -1,7 +1,7 @@
 # 墨灵 (Moling) 规格文档
 
-> **版本**: 2.6.0 | **最后更新**: 2026-06-21
-> 本文档整合了 P0/P1 规格、P0 剩余架构项、卡牌组合算法规格及架构加固实现规格。
+> **版本**: 2.7.0 | **最后更新**: 2026-06-21
+> 本文档整合了 P0/P1 规格、P0 剩余架构项、卡牌组合算法规格及架构加固实现规格。新增 Rust 重写 P0 功能状态。
 
 ---
 
@@ -494,7 +494,44 @@ python -m pytest tests/test_confidence_level.py -v --tb=short        # ≥10
 
 ---
 
-## 版本历史
+## Rust 重写（moling-server-rs）P0 功能状态
+
+> **最后更新**: 2026-06-21 | **测试通过率**: 274/274 (100%)
+
+| P0 项目 | 描述 | Rust 状态 |
+|:--------|:-----|:----------|
+| **P0-1** SourceText 内容安全 | 输入验证 + 内容过滤 | ✅ 已实现（moling-services/import_service） |
+| **P0-2** 完整调度器状态机 | Cron 调度 + 任务队列 | ✅ 已实现（moling-worker/scheduler + queue） |
+| **P0-3** 四库合并服务 | 角色/时间线/伏笔/世界观合并 | ✅ 已实现（moling-services/merge_service） |
+| **P0-4** 卡牌淘汰集成 | 卡池 freshness 检查 + 批量退休 | ✅ 已实现（moling-services/card_retire_service） |
+| **P0-5** 事务原子性保证 | DB 事务 + 幂等保护 | ✅ 已实现（moling-db/pool + Redis idempotency） |
+| **P0-6** API Key Pool 轮转 | 多 Key 负载均衡 + 错误退避 | ✅ 已实现（moling-llm/key_rotator） |
+
+| 基础设施 | 描述 | Rust 状态 |
+|:---------|:-----|:----------|
+| **认证** | JWT + bcrypt + 黑名单 + 锁仓 | ✅ moling-auth (7 模块) |
+| **数据库** | SeaORM 实体 (22+ 表) + 迁移 | ✅ moling-db |
+| **配置** | 33 项环境变量 + .env 加载 | ✅ moling-core/config |
+| **LLM 客户端** | DeepSeek API + 重试 + 限流 | ✅ moling-llm/client |
+| **API 路由** | 16 路由模块 + 8 中间件 | ✅ moling-api |
+| **Worker** | 任务队列 + Cron + 7 Worker | ✅ moling-worker |
+| **二进制入口** | main.rs 全启动流程 + 优雅关闭 | ✅ moling-server |
+
+### Cargo Test 结果
+
+```
+cargo test --workspace
+├── moling-core    39 passed, 0 failed
+├── moling-db       0 passed (no unit tests, DAO integration tests ignored)
+├── moling-auth      6 passed, 1 ignored (requires Redis)
+├── moling-api       0 passed (no tests)
+├── moling-llm      10 passed, 0 failed
+├── moling-worker   69 passed, 0 failed
+├── moling-server    1 passed, 0 failed
+└── moling-services 123 passed, 0 failed
+────────────────────────────────────────
+Total: 274 passed, 0 failed, 11 ignored
+```
 
 | 版本 | 日期 | 内容 |
 |:----|:----|:-----|

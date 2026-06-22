@@ -1,37 +1,103 @@
 sequenceDiagram
-    participant U as 用户
-    participant F as 前端页面
-    participant C as apiClient
-    participant B as 后端API
-    participant DB as 数据库
+    actor User
+    participant API as moling-api
+    participant GenSvc as GenerationService
+    participant AlgoSvc as AlgorithmService
+    participant VaultFlt as VaultFilterService
+    participant Conflict as ConflictDetectionService
+    participant DirScore as DirectionScoringService
+    participant WeaveSch as WeavingSchemeService
+    participant PromptSvc as PromptService
+    participant LLM as DeepSeekClient
+    participant Coherence as CoherenceService
+    participant SecretSvc as SecretService
+    participant MergeSvc as MergeService
+    participant Phase4 as Phase4Service
+    participant CardSvc as CardService
+    participant DB as PostgreSQL
+    participant Redis
 
-    U->>F: 输入邮箱+密码，点击登录
-    F->>C: 调用 login(email, password)
-    C->>B: POST /api/v1/auth/login
-    B->>DB: 查询用户，验证密码
-    DB-->>B: user 信息
-    B->>B: 生成 access_token(15min) + refresh_token(7d)
-    B-->>C: {access_token, refresh_token, user}
-    C->>C: localStorage 存储 token
-    C-->>F: 登录成功
-    F->>F: 跳转 /projects
+    User->>API: POST /generation/start
+    API->>GenSvc: start_generation(project_id, chapter_id, req)
+    GenSvc->>DB: 验证项目归属 + 章节存在
+    GenSvc->>DB: 创建 GenerationTask (status=pending)
+    GenSvc-->>API: { task_id, status }
+    API-->>User: 202 Accepted
 
-    Note over C,B: ─── 后续请求自动注入 Token ───
-    C->>B: GET /api/v1/projects (Authorization: Bearer xxx)
-    alt Token 有效
-        B-->>C: 200 {data: [...]}
-    else Token 过期 (401)
-        B-->>C: 401 Unauthorized
-        C->>C: 检查 refresh_token 是否存在
-        C->>B: POST /api/v1/auth/refresh {refresh_token}
-        alt Refresh 有效
-            B-->>C: {access_token, refresh_token}
-            C->>C: 更新 localStorage
-            C->>B: 重试原请求 GET /api/v1/projects
-            B-->>C: 200 {data: [...]}
-        else Refresh 也过期
-            B-->>C: 401
-            C->>C: 清除 token
-            C-->>F: 跳转 /auth
-        end
+    Note over GenSvc: Worker 异步执行 12-Step Pipeline
+
+    GenSvc->>DB: 更新 status=running, progress=10%
+
+    rect rgb(240, 248, 255)
+        Note over GenSvc,AlgoSvc: Step 1-6: 算法编排
+        GenSvc->>AlgoSvc: step1_weight_allocation(cards, user_weights)
+        AlgoSvc-->>GenSvc: weight_map
+
+        GenSvc->>VaultFlt: step2_vault_filter(cards)
+        VaultFlt->>DB: 查询四库数据（角色/时间线/伏笔/世界观）
+        VaultFlt-->>GenSvc: filtered_vault (含压缩层级)
+
+        GenSvc->>Conflict: step3_conflict_detection(cards, weight_map)
+        Conflict->>DB: 获取动态层 + 秘密矩阵
+        Conflict-->>GenSvc: conflict_results (含U曲线置信度)
+
+        GenSvc->>DirScore: step4_direction_scoring(cards, weight_map)
+        DirScore-->>GenSvc: direction_scores (含相容性评分)
+
+        GenSvc->>WeaveSch: step5_match_weaving_scheme(cards, weight_map)
+        WeaveSch-->>GenSvc: weaving_scheme (模式+大纲+指令)
+
+        GenSvc->>AlgoSvc: step6_fill_outline(scheme, context)
+        AlgoSvc-->>GenSvc: filled_outline
     end
+
+    rect rgb(255, 248, 240)
+        Note over GenSvc,LLM: Step 7-8: Prompt组装 + LLM调用
+        GenSvc->>PromptSvc: build_full_prompt(Layer 0-4 context)
+        PromptSvc-->>GenSvc: final_prompt
+
+        GenSvc->>LLM: chat(messages, model, temperature, max_tokens)
+        LLM-->>GenSvc: generated_content
+    end
+
+    rect rgb(240, 255, 240)
+        Note over GenSvc,MergeSvc: Step 9-12: 后处理
+        GenSvc->>SecretSvc: extract_secrets_from_content(content)
+        SecretSvc->>LLM: 秘密提取 prompt
+        SecretSvc->>DB: 保存提取的秘密
+        SecretSvc-->>GenSvc: extracted_secrets
+
+        GenSvc->>Coherence: validate_post_generation(content)
+        Coherence->>DB: 获取四库 + 动态层上下文
+        Coherence->>LLM: 3组分组一致性检查
+        Coherence-->>GenSvc: validation_result
+
+        GenSvc->>MergeSvc: auto_merge(HIGH/MEDIUM confidence)
+        MergeSvc->>DB: 四库合并写入
+        MergeSvc-->>GenSvc: merge_results
+
+        GenSvc->>DB: 更新动态层状态
+        GenSvc->>CardSvc: refresh_card_pool(chapter_id)
+        CardSvc->>DB: 从四库变更生成新卡牌
+    end
+
+    GenSvc->>DB: 更新 status=completed, progress=100%
+
+    Note over Phase4: 用户确认章节后触发 Phase4 收纳
+
+    User->>API: POST /phase4/confirm
+    API->>Phase4: confirm_storage(project_id, chapter_id, nonce)
+    Phase4->>Redis: 检查 nonce (幂等)
+    Phase4->>DB: 创建 Phase4Task (status=queued)
+    Phase4-->>API: { task_id, status }
+    API-->>User: 202 Accepted
+
+    Phase4->>LLM: 四库变更提取 (EXTRACTION_SCHEMA)
+    LLM-->>Phase4: extraction_result
+    Phase4->>Phase4: SourceText Grounding (编辑距离验证)
+    Phase4->>MergeSvc: apply_merges(extraction_result)
+    MergeSvc->>DB: 角色/时间线/伏笔/世界观四库写入
+    Phase4->>DB: 更新动态层
+    Phase4->>CardSvc: refresh_card_pool()
+    Phase4->>CardSvc: check_and_retire()
+    Phase4->>Redis: 标记 nonce 已处理

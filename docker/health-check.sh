@@ -2,12 +2,12 @@
 # ==============================================================================
 # 墨灵 Moling — 服务器端健康检查脚本
 # ==============================================================================
-# 用途: 全面检查墨灵所有服务的健康状态
+# 用途: 全面检查墨灵所有服务的健康状态（Rust 后端）
 # 调用: ./health-check.sh [--verbose] [--json]
 #
 # 检查项:
 #   1. Docker 守护进程状态
-#   2. 容器运行状态 (app / frontend / worker / db / redis)
+#   2. 容器运行状态 (server / frontend / db / redis)
 #   3. 后端 API 健康端点
 #   4. 前端页面可达性
 #   5. 数据库连接
@@ -71,7 +71,7 @@ fi
 
 # ---- 2. 容器状态 ----
 echo "├─ 容器状态 ─────────────────────────────┤"
-for svc in moling-db moling-redis moling-api moling-worker moling-frontend; do
+for svc in moling-db moling-redis moling-server moling-frontend; do
     STATUS=$(docker inspect -f '{{.State.Status}}' "${svc}" 2>/dev/null || echo "missing")
     HEALTH=$(docker inspect -f '{{.State.Health.Status}}' "${svc}" 2>/dev/null || echo "N/A")
     case "${STATUS}" in

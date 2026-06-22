@@ -147,10 +147,18 @@ impl UserDao {
         db: &DatabaseConnection,
         model: user::ActiveModel,
     ) -> AppResult<UserModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Database error creating user: {e}");
-            AppError::internal("Database insert failed")
-        })
+        let id = model.id.clone().unwrap();
+        match model.insert(db).await {
+            Ok(inserted) => Ok(inserted),
+            Err(e) => {
+                // SeaORM may fail to re-select after insert (RecordNotFound)
+                // with non-auto-increment PKs on SQLite. Fall back to manual lookup.
+                tracing::debug!("Insert-return failed, looking up by id: {e}");
+                self.find_by_id(db, &id).await?.ok_or_else(|| {
+                    AppError::internal("Database insert failed — record not found after insert")
+                })
+            }
+        }
     }
 
     /// Update an existing user.

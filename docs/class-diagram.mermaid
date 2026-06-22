@@ -1,218 +1,343 @@
 classDiagram
-    %% ═══════════════════════════════════════════
-    %% 核心基础模型
-    %% ═══════════════════════════════════════════
-    class User {
-        +int id
-        +string email
-        +string username
-        +string password_hash
-        +string avatar_url
-        +string status  "active/disabled"
-        +datetime created_at
-        +datetime updated_at
+    %% ===== moling-core =====
+    class AppError {
+        +ErrorCode code
+        +String message
+        +u16 status
+    }
+    class RedisPool {
+        +get_conn() Option~Connection~
+        +is_available() bool
+    }
+    class AppConfig {
+        +String database_url
+        +String redis_url
+        +String secret_key
     }
 
+    %% ===== moling-db Entities =====
     class Project {
-        +int id
-        +int user_id
-        +string title
-        +string author
-        +string genre
-        +array~string~ tags
-        +string synopsis
-        +string worldview
-        +string protagonist
-        +array~object~ supporting_chars
-        +int word_count
-        +int target_words
-        +string frequency
-        +string style
-        +string status  "draft/active/archived"
-        +string creation_mode  "from_scratch/from_template"
-        +int template_id
-        +datetime created_at
-        +datetime updated_at
+        +String id
+        +String user_id
+        +String title
+        +String author
+        +String genre
+        +Option~String~ synopsis
+        +Option~String~ worldview
+        +Option~String~ protagonist
+        +Option~String~ style
+        +Option~i32~ target_words
+        +String status
+        +String creation_mode
     }
-
     class Chapter {
-        +int id
-        +int project_id
-        +string title
-        +text content
-        +int chapter_number
-        +string status  "draft/completed"
-        +string phase4_status  "none/pending/running/done/failed"
-        +jsonb dynamic_layer
-        +int word_count
-        +datetime created_at
-        +datetime updated_at
+        +String id
+        +i32 project_id
+        +String title
+        +i32 chapter_number
+        +Option~String~ content
+        +i32 word_count
+        +String status
+        +String phase4_status
+        +Option~DateTime~ confirmed_at
     }
-
-    class GenerationTask {
-        +uuid id
-        +int project_id
-        +int chapter_id
-        +int user_id
-        +string task_type  "generate/phase4"
-        +string status  "pending/running/done/failed/cancelled"
-        +jsonb input_params
-        +jsonb output_data
-        +string progress_stage  "preprocessing/generating/validating"
-        +int progress_percent
-        +string error_message
-        +datetime created_at
-        +datetime updated_at
-    }
-
-    %% ═══════════════════════════════════════════
-    %% 卡牌系统
-    %% ═══════════════════════════════════════════
     class CardPool {
-        +int id
-        +int project_id
-        +string name
-        +string description
-        +string rarity  "common/rare/epic/legendary"
-        +string direction_type  "稳妥/有趣/惊艳/神之一手"
-        +string direction_text
-        +string status  "active/retired/archived"
-        +int freshness_chapter
-        +int draw_count
-        +int remaining_lifetime
-        +vector~float~ embedding
-        +datetime created_at
-    }
-
-    class DrawRecord {
-        +int id
-        +int project_id
-        +int chapter_id
-        +int user_id
-        +array~int~ card_ids
-        +array~float~ weights
-        +string mode  "none/single/dual/all/hybrid"
-        +int draw_round
-        +int remaining_redraws
-        +datetime drawn_at
-    }
-
-    class CardPoolHistory {
-        +int id
-        +int card_id
-        +int project_id
-        +string action  "draw/retire/replenish"
-        +int chapter_id
-        +jsonb details
-        +datetime created_at
-    }
-
-    %% ═══════════════════════════════════════════
-    %% 四库模型
-    %% ═══════════════════════════════════════════
-    class VaultCharacter {
-        +int id
-        +int project_id
-        +string name
-        +string role  "protagonist/ally/neutral/opponent/antagonist"
-        +string faction
-        +string status  "active/inactive/deceased"
-        +string emotion
-        +array~string~ traits
-        +text description
-        +text background
-        +jsonb relationships
-        +jsonb state_machine
-        +int chapter_count
-        +vector~float~ embedding
-        +datetime created_at
-        +datetime updated_at
-    }
-
-    class VaultTimeline {
-        +int id
-        +int project_id
-        +int chapter_number
-        +string event
-        +text description
-        +bool is_key_event
-        +string impact
-        +array~string~ characters_involved
-        +datetime created_at
-    }
-
-    class VaultPlotPromise {
-        +int id
-        +int project_id
-        +string description
-        +string type
-        +string status  "dormant/active/advancing/resolved/abandoned"
-        +int urgency
-        +array~string~ related_characters
-        +int planted_chapter
-        +jsonb advancement_log
-        +string event_type
-        +datetime created_at
-        +datetime updated_at
-    }
-
-    class VaultWorld {
-        +int id
-        +int project_id
-        +string term
-        +text description
-        +string category
-        +string change_type
-        +jsonb rules
-        +array~int~ reference_chapters
-        +datetime created_at
-    }
-
-    class DynamicLayer {
-        +int id
-        +int project_id
-        +int chapter_id
-        +text summary
-        +jsonb anchors  "pov/location/time"
-        +jsonb coherence_baseline  "must_hold/must_not"
-        +jsonb unresolved_hooks
-        +jsonb recent_changes
-        +jsonb secret_matrix
-        +float feasibility_score
-        +datetime created_at
-        +datetime updated_at
-    }
-
-    %% ═══════════════════════════════════════════
-    %% 健康告警
-    %% ═══════════════════════════════════════════
-    class HealthAlert {
-        +int id
-        +int project_id
-        +string rule
-        +string title
-        +text detail
-        +string severity  "info/warning/critical"
+        +String id
+        +i32 project_id
+        +String name
+        +String description
+        +String rarity
+        +String direction_type
+        +String direction_text
+        +Option~i32~ freshness_chapter
+        +Option~i32~ draw_count
         +bool is_active
-        +datetime checked_at
-        +datetime created_at
+    }
+    class VaultCharacter {
+        +String id
+        +i32 project_id
+        +String name
+        +String role
+        +Option~String~ description
+        +Option~Json~ traits
+        +String status
+    }
+    class VaultTimeline {
+        +String id
+        +i32 project_id
+        +String event
+        +Option~i32~ day
+        +Option~i32~ chapter
+        +Option~Json~ participants
+        +String importance
+    }
+    class VaultPlotPromise {
+        +String id
+        +i32 project_id
+        +String title
+        +String type
+        +String status
+        +Option~i32~ last_advance_chapter
+    }
+    class VaultWorld {
+        +String id
+        +i32 project_id
+        +String name
+        +String category
+        +String content
+    }
+    class DynamicLayer {
+        +String id
+        +i32 project_id
+        +Option~Json~ must_hold
+        +Option~Json~ must_not
+        +Option~Json~ hooks
+        +Option~String~ pov_character
+        +Option~String~ location
+        +Option~String~ time_period
+    }
+    class Secret {
+        +String id
+        +i32 project_id
+        +String description
+        +Json known_by
+        +Json unknown_to
+        +String secrecy_level
+        +i32 debt
+        +Option~i32~ created_chapter
+    }
+    class GenerationTask {
+        +String id
+        +i32 project_id
+        +Option~String~ chapter_id
+        +String user_id
+        +String task_type
+        +String status
+        +Json input_params
+        +i32 progress_percent
+        +String progress_stage
+        +Option~Json~ output_data
+    }
+    class Phase4Task {
+        +i32 id
+        +i32 project_id
+        +i32 chapter_id
+        +String nonce
+        +String status
     }
 
-    %% ═══════════════════════════════════════════
-    %% 关系定义
-    %% ═══════════════════════════════════════════
-    User "1" --> "*" Project : 拥有
-    Project "1" --> "*" Chapter : 包含
-    Project "1" --> "*" CardPool : 拥有卡牌池
-    Project "1" --> "*" DrawRecord : 抽卡记录
-    Project "1" --> "*" VaultCharacter : 角色库
-    Project "1" --> "*" VaultTimeline : 时间线库
-    Project "1" --> "*" VaultPlotPromise : 剧情承诺库
-    Project "1" --> "*" VaultWorld : 世界观库
-    Project "1" --> "*" DynamicLayer : 动态层
-    Project "1" --> "*" HealthAlert : 健康告警
-    Project "1" --> "*" GenerationTask : 生成任务
-    Chapter "1" --> "*" DrawRecord : 关联抽卡
-    Chapter "1" --> "1" DynamicLayer : 关联动态层
-    CardPoolHistory --> CardPool : 记录操作
-    GenerationTask --> Chapter : 关联章节
+    %% ===== moling-services =====
+    class GenerationService {
+        +GenerationDao gen_dao
+        +ProjectDao project_dao
+        +start_generation(db, user_id, project_id, chapter_id, req) GenTask
+        +execute_generation_pipeline(db, task_id) Result
+        +job_status(db, job_id) GenTask
+        +cancel(db, job_id) GenTask
+        +history(db, status, limit) Vec~GenTask~
+    }
+    class AlgorithmService {
+        +step1_weight_allocation(cards, user_weights) Map~i32,f64~
+        +step2_vault_filter(db, project_id, cards) Map
+        +step3_conflict_detection(db, project_id, cards, weight_map) Map
+        +step4_direction_scoring(cards, weight_map) Map
+        +step5_weaving_scheme(cards, weight_map, mode) Map
+        +step6_outline_fill(scheme, context) Map
+    }
+    class VaultFilterService {
+        +VaultDao dao
+        +filter_by_cards(db, project_id, cards, chapter_number) Map
+        +filter_all(db, project_id, chapter_number, max) Map
+        -compress_characters(chars, level) Vec
+        -compress_timeline(timeline, chapter, window) Vec
+        -estimate_tokens(data) i32
+    }
+    class ConflictDetectionService {
+        +detect_conflicts(db, project_id, chapter_id, cards, weight_map) Map
+        -check_baseline_conflict(card, dynamic_layer) ConflictResult
+        -check_secret_matrix(card, secrets) ConflictResult
+        -check_state_machine(card, vault_characters) ConflictResult
+        -compute_confidence(conflict_score) f64
+    }
+    class DirectionScoringService {
+        +score_direction_conflicts(cards, weight_map) Map
+        -direction_compatibility_matrix() Matrix
+        -entity_conflict_detect(cards) Vec
+        -tone_conflict_detect(cards) Vec
+    }
+    class WeavingSchemeService {
+        +match_scheme(cards, weight_map, req_mode) Map
+        -rule_engine_select(cards, weight_map) WeavingPattern
+        -llm_fallback_select(cards, weight_map) WeavingPattern
+    }
+    class CoherenceService {
+        +validate_post_generation(db, project_id, chapter_id, content) Map
+        -build_coherence_context(db, project, chapter, content) Context
+        -check_group_narrative_consistency(ctx) GroupResult
+        -check_group_writing_quality(ctx) GroupResult
+        -check_group_continuity(ctx) GroupResult
+    }
+    class ValidationService {
+        +pre_check_character_consistency(db, project_id, cards) CheckResult
+        +pre_check_timeline_continuity(db, project_id) CheckResult
+        +pre_check_secret_matrix(db, project_id, cards) CheckResult
+        +post_check_character_behavior(db, content, vault) CheckResult
+        +post_check_plot_advancement(db, promises) CheckResult
+        +post_check_world_rules(db, world, content) CheckResult
+    }
+    class Phase4Service {
+        +Phase4Dao dao
+        +confirm_storage(db, user_id, project_id, chapter_id, nonce) Map
+        +run_phase4(db, task) Result
+        -call_llm_for_extraction(content, characters) Json
+        -parse_extraction_result(llm_response) ExtractionResult
+        -verify_source_text(original, extracted) bool
+        -normalize_entity_names(entities, vault) Vec
+        -apply_merges(db, extraction, project_id) MergeResults
+        -update_dynamic_layer(db, project_id, chapter_id) void
+        -refresh_card_pool(db, project_id, chapter_id) void
+        -check_card_retire(db, project_id, chapter) RetireResult
+    }
+    class Phase4Scheduler {
+        +Phase4Store store
+        +SchedulerState state
+        +enqueue(task) void
+        +process_loop() void
+        -acquire_lock(project_id) bool
+        -release_lock(project_id) void
+        -check_nonce(nonce) bool
+        -retry_with_backoff(task) Result
+    }
+    class MergeService {
+        +merge_characters(db, incoming, existing) MergeResult
+        +merge_timeline(db, incoming, existing) MergeResult
+        +merge_plot_promises(db, incoming, existing) MergeResult
+        +merge_world(db, incoming, existing) MergeResult
+        -evaluate_confidence(score) ConfidenceLevel
+        -should_auto_apply(level) bool
+    }
+    class CardService {
+        +CardDao card_dao
+        +ProjectDao project_dao
+        +draw_cards(db, user_id, project_id, req, max_retries) DrawCardResp
+        -calculate_card_weight(card, draw_history) f64
+        +list_cards(db, user_id, project_id) CardPoolListResp
+        +create(db, user_id, project_id, ...) CardModel
+        +retire(db, user_id, project_id, card_id) void
+    }
+    class CardRetireService {
+        +check_and_retire(db, project_id, current_chapter) RetireResult
+        -calc_freshness(card) f64
+    }
+    class SecretService {
+        +SecretDao secret_dao
+        +ProjectDao project_dao
+        +extract_secrets_from_content(db, project_id, chapter_id, content) Vec
+        +propagate_secrets(db, secret_id, to_characters) void
+        +expose_secrets(db, secret_id) void
+        +calculate_debt(db, project_id) i32
+        +list(db, user_id, project_id) Vec~SecretModel~
+    }
+    class HealthService {
+        +run_health_check(db, user_id, project_id) Map
+        -check_r1_character_consistency(db, project) Map
+        -check_r2_timeline_continuity(db, project) Map
+        -check_r3_plot_promise_debt(db, project) Map
+    }
+    class HealthMonitorService {
+        +check_health(db, project_id, current_chapter) Map
+        -check_r1_stale(promise, current_chapter) Alert
+        -check_r2_repetitive(promise) Alert
+        -check_r3_silent(promise, current_chapter) Alert
+    }
+    class ImportService {
+        +IngestDao ingest_dao
+        +file_import(db, user_id, project_id, source_type, url, title) IngestJob
+        +phase1_extract(db, job_id) void
+        +phase2_analyze(db, job_id) void
+        +phase3_commit(db, job_id) void
+        +full_import(db, ...) IngestJob
+    }
+    class BookAnalysisService {
+        +analyze_characters(db, project_id) Map
+        +analyze_plot(db, project_id) Map
+        +detect_style(db, project_id) Map
+    }
+    class PromptService {
+        +build_full_prompt(context) String
+        -build_layer0(chapter_number) String
+        -build_layer1(project, chapter, dynamic_layer) String
+        -build_layer2(vault_filter_result) String
+        -build_layer3(cards, weights, scheme) String
+        -build_layer4(style_config) String
+    }
+
+    %% ===== moling-llm =====
+    class DeepSeekClient {
+        +String base_url
+        +ReqwestClient client
+        +chat(messages, api_key, model, temp, max_tokens) String
+        +chat_stream(messages, api_key, model) Stream
+    }
+    class KeyRotator {
+        +Map~String,KeyHealth~ pro_pool
+        +Map~String,KeyHealth~ flash_pool
+        +next(pool) String
+        -select_least_used(pool) String
+        -mark_error(key, error_type) void
+        -is_healthy(key) bool
+    }
+    class TokenBudget {
+        +check(prompt, model, max_output_tokens) BudgetResult
+        -truncate_layer4(prompt, available) String
+        -truncate_layer3(prompt, available) String
+        -truncate_layer2(prompt, available) String
+    }
+
+    %% ===== moling-worker =====
+    class TaskQueue {
+        +RedisClient redis
+        +push(queue, task) bool
+        +pop(queue, timeout) Option~String~
+        +acknowledge(queue, task) bool
+        +dead_letter(queue, task, error) bool
+        +retry_dead_letter(queue, task) bool
+    }
+    class CronScheduler {
+        +Vec~ScheduledTask~ tasks
+        +add_task(name, cron_expr, handler) void
+        +start() void
+        +stop() void
+    }
+
+    %% ===== Relationships =====
+    GenerationService --> AlgorithmService : delegates steps 1-6
+    GenerationService --> PromptService : builds prompts
+    GenerationService --> DeepSeekClient : calls LLM
+    GenerationService --> CoherenceService : validates output
+    GenerationService --> SecretService : extracts secrets
+    GenerationService --> MergeService : auto-merges
+    GenerationService --> CardService : refreshes pool
+
+    AlgorithmService --> VaultFilterService : step 2
+    AlgorithmService --> ConflictDetectionService : step 3
+    AlgorithmService --> DirectionScoringService : step 4
+    AlgorithmService --> WeavingSchemeService : step 5
+
+    Phase4Service --> DeepSeekClient : LLM extraction
+    Phase4Service --> MergeService : apply merges
+    Phase4Service --> CardService : refresh pool
+    Phase4Service --> CardRetireService : check retire
+
+    Phase4Scheduler --> Phase4Service : executes tasks
+    Phase4Scheduler --> RedisPool : distributed locks
+
+    HealthService --> DeepSeekClient : LLM health checks
+    HealthMonitorService --> VaultPlotPromise : checks promises
+
+    ImportService --> DeepSeekClient : style analysis
+
+    SecretService --> DeepSeekClient : extract secrets
+
+    TaskQueue --> RedisPool : queue operations
+    CronScheduler --> TaskQueue : periodic dispatch

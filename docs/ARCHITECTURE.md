@@ -1,7 +1,7 @@
 # 墨灵(Moling) 系统架构说明
 
-> **文档版本**: 1.11.0  
-> **最后更新**: 2026-06-21  
+> **文档版本**: 1.13.0  
+> **最后更新**: 2026-06-22  
 > **维护者**: Moling Team  
 > **适用人员**: 开发人员、运维人员、架构师
 
@@ -208,6 +208,82 @@ sequenceDiagram
 | **prometheus-fastapi-instrumentator** | >= 7.0.0 | 指标收集 | 暴露 Prometheus 指标 |
 | **sentry-sdk** | >= 2.0.0 | 错误追踪 | 实时监控和错误上报 |
 | **slowapi** | >= 0.1.9 | 限流 | API 速率限制 |
+
+### Rust 重写（moling-server-rs）
+
+| 技术 | 版本 | 用途 | 说明 |
+|------|------|------|------|
+| **Rust** | 1.85+ (edition 2024) | 编程语言 | 高性能后端替代实现 |
+| **Axum** | 0.8 | Web 框架 | 异步 HTTP 框架，替代 FastAPI |
+| **Tokio** | 1 | 异步运行时 | 全异步 I/O |
+| **SeaORM** | 1.1 | ORM | 异步数据库操作（SQLite/PostgreSQL） |
+| **Tower-HTTP** | 0.6 | 中间件 | CORS、限流、追踪、请求 ID |
+| **Reqwest** | 0.12 | HTTP 客户端 | 调用 DeepSeek LLM API |
+| **BB8-Redis** | 0.17 | Redis 连接池 | 异步 Redis 连接池管理 |
+| **Figment** | 0.10 | 配置管理 | 环境变量 + .env 加载 |
+| **JSON Web Token** | 9 | JWT | 用户认证与令牌轮换 |
+| **bcrypt** | 0.16 | 密码哈希 | 用户密码安全存储 |
+| **Tracing** | 0.3 | 结构化日志 | JSON 格式日志输出 |
+| **Utoipa** | 5 | OpenAPI | API 文档自动生成 |
+
+#### Rust Crate 架构（8 crates）
+
+```
+moling-server-rs/
+├── crates/
+│   ├── moling-core/        # 配置、错误类型、Redis 客户端、日志
+│   ├── moling-db/          # SeaORM 实体（22+ 表）、DAO 层、迁移脚本
+│   ├── moling-auth/        # JWT 令牌、密码哈希、黑名单、锁仓、鉴权中间件
+│   ├── moling-api/         # Axum 路由（20 模块）、中间件栈、AppState
+│   ├── moling-services/    # 业务逻辑（31 服务模块）
+│   ├── moling-llm/         # DeepSeek 客户端、Key 轮换器、RateLimitTracker、Prompt 构建
+│   ├── moling-worker/      # Redis 任务队列、Cron 调度器、7 个 Worker
+│   └── moling-server/      # 二进制入口（main.rs）—— 串联所有 crate
+├── Cargo.toml              # Workspace 定义
+├── Cargo.lock
+└── Makefile
+```
+
+#### Worker 架构（10 Workers）
+
+| Worker | 触发方式 | 说明 |
+|--------|---------|------|
+| **Generation** | 任务队列 (BRPOPLPUSH) | AI 续写生成——P0 核心路径 |
+| **Phase4** | 任务队列 (post-confirm) | Phase 4 四库自动收纳 |
+| **Coherence** | Cron / 手动 (批量扫描) | 全局连贯性检查 |
+| **Vault Reanalyze** | Cron / 手动触发 | 伏笔库重新分析 |
+| **Card Retire** | Cron (每日) | 过期卡牌自动退役 |
+| **Health Notify** | Cron (每 10min) | 子情节健康度告警 |
+| **Import** | 任务队列 (分阶段) | 外部文本导入 |
+| **Analysis** | 任务队列 (按需) | 文本结构分析 |
+| **Notification** | 任务队列 (异步投递) | 用户通知推送 |
+
+**队列语义**: BRPOPLPUSH — 弹出任务 → 处理中列表 → 完成确认/死信队列
+**优先级**: 高/中/低 三级 Redis 列表
+**重试**: 最大 3 次，24h TTL
+
+#### Docker 构建与部署
+
+```bash
+# 构建镜像
+cd moling-server-rs
+docker build -t moling-rs:latest -f docker/Dockerfile .
+
+# 运行（SQLite 模式）
+docker run -d --name moling-rs -p 8000:8000 \
+  -v moling-data:/data \
+  -e MOLING_DATABASE_URL=sqlite:///data/moling.db?mode=rwc \
+  moling-rs:latest
+
+# 运行（PostgreSQL 模式）
+docker run -d --name moling-rs -p 8000:8000 \
+  -e MOLING_DATABASE_URL=postgres://user:pass@host:5432/moling \
+  -e MOLING_REDIS_URL=redis://host:6379 \
+  moling-rs:latest
+
+# 集成测试
+docker compose -f docker/docker-compose.test.yml up --build --abort-on-container-exit
+```
 
 ### 前端技术栈
 
@@ -504,6 +580,20 @@ MolingProject/
 │   ├── Dockerfile             # 后端 Dockerfile
 │   ├── pyproject.toml        # Python 项目配置
 │   └── README.md              # 后端说明文档
+├── moling-server-rs/           # 后端项目 (Rust/Axum) — 8 crate workspace
+│   ├── crates/                # Rust workspace crates
+│   │   ├── moling-core/       # 核心：配置、错误、Redis、日志
+│   │   ├── moling-db/         # 数据库：SeaORM 实体(22+表)、DAO、迁移
+│   │   ├── moling-auth/       # 认证：JWT、密码、黑名单、中间件
+│   │   ├── moling-api/        # API：路由(16模块)、中间件栈
+│   │   ├── moling-services/   # 服务：28个业务逻辑模块
+│   │   ├── moling-llm/        # LLM：DeepSeek客户端、Key轮换
+│   │   ├── moling-worker/     # Worker：任务队列、Cron调度(7 worker)
+│   │   └── moling-server/     # 入口：main.rs 集成启动
+│   ├── Cargo.toml             # Workspace 依赖管理
+│   ├── Cargo.lock
+│   ├── .env.example           # 环境变量模板
+│   └── Makefile               # 构建/测试/运行命令
 ├── moling-web/                # 前端项目
 │   ├── src/                   # 源代码
 │   │   ├── app/               # Next.js App Router
@@ -608,6 +698,42 @@ IDLE → QUEUED → LOCKING → EXTRACTING → VERIFYING → MERGING → COMMITT
 | 第 4 次 | 120s |
 | 第 5 次 | 300s |
 | 超过 5 次 | 标记 FAILED，通知用户 |
+
+### Phase4 调度器与存储（2026-06-22 新增）
+
+#### Phase4Scheduler（Actor 模式）
+
+独立 tokio task，通过 mpsc channel 接收 Phase4Task：
+
+```text
+Phase4Scheduler (独立 tokio task)
+  ├── mpsc::Receiver<Phase4Task>  — 输入通道
+  ├── Phase4Store                — nonce 去重 + 分布式锁
+  ├── tokio::sync::Semaphore     — 并发限制（默认 3）
+  ├── 指数退避重试               — [10, 30, 60, 120, 300]s，最多 5 次
+  └── SourceText Grounding       — 编辑距离验证（阈值 85%）
+```
+
+#### Phase4Store（双模后端）
+
+Redis 优先（跨 Worker 耐久协调），内存回退（单 Worker 开发）：
+
+| 操作 | Redis 后端 | 内存后端 |
+|------|-----------|---------|
+| Nonce 去重 | SADD / SISMEMBER | Vec<String> + LRU 缓存 |
+| 分布式锁 | SET NX EX + owner 验证 | RwLock<HashMap> |
+| 任务状态 | SETEX（TTL 1h） | HashMap |
+
+#### Genre 服务（拆书引擎）
+
+从 Python `app/genre/` 移植的 A1→A5 分析管线：
+
+- **A1** Opening: 黄金三章模式识别（冲突/日常/倒叙/设定），4 种评分
+- **A2** Characters: 滑动窗口 n-gram 中文姓名提取 + 频率聚类
+- **A3** Hooks: 钩子密度量化（hook 标记 + cliffhanger 检测）
+- **A4** Rhythm: 节奏曲线拟合（fast_paced / balanced / slow_burn）
+- **A5** Profile: 套路归纳 → GenreProfile（含卡牌充实 + 动态层种子）
+- **ColdStartLoader**: 6 种预置体裁原型（fantasy/wuxia/xianxia/urban/scifi/romance）
 
 ### 事务边界
 
@@ -1173,9 +1299,12 @@ celery -A app.worker.celery_app inspect conf | grep beat_schedule
 #### Docker 部署（生产）
 
 ```bash
+# Python 后端
 docker compose -f docker/docker-compose.yml up -d --build
 docker compose -f docker/docker-compose.yml ps
 docker compose -f docker/docker-compose.yml logs -f app worker
+
+# Rust 后端 (moling-server-rs) — 详见上方「Rust 重写」节 Docker 构建与部署
 ```
 
 #### 数据库备份

@@ -52,16 +52,42 @@ impl RedisPool {
         // attempt below, or embed it in the URL).
         let _ = password; // password is embedded in URL by caller
 
-        match bb8::Pool::builder()
-            .connection_timeout(std::time::Duration::from_secs(3))
+        let pool = match bb8::Pool::builder()
+            .connection_timeout(std::time::Duration::from_secs(1))
             .build(manager)
             .await
         {
-            Ok(pool) => Self { pool: Some(pool) },
+            Ok(p) => p,
             Err(e) => {
-                tracing::warn!("Failed to build Redis connection pool (Redis may be down): {e}");
-                Self { pool: None }
+                tracing::info!("Redis unavailable — running without Redis: {e}");
+                return Self { pool: None };
             }
+        };
+
+        // Actually try to connect — if Redis is unreachable, degrade gracefully
+        let ping_ok = {
+            match pool.get().await {
+                Ok(mut conn) => {
+                    match redis::cmd("PING").query_async::<String>(&mut *conn).await {
+                        Ok(_) => true,
+                        Err(e) => {
+                            tracing::info!("Redis PING failed — running without Redis: {e}");
+                            false
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::info!("Redis connection test failed — running without Redis: {e}");
+                    false
+                }
+            }
+        };
+
+        if ping_ok {
+            tracing::info!("Redis connected successfully (url={url})");
+            Self { pool: Some(pool) }
+        } else {
+            Self { pool: None }
         }
     }
 
@@ -74,7 +100,7 @@ impl RedisPool {
         match pool.get().await {
             Ok(conn) => Some(conn),
             Err(e) => {
-                tracing::warn!("Failed to acquire Redis connection: {e}");
+                tracing::debug!("Redis connection pool exhausted or Redis unreachable: {e}");
                 None
             }
         }
