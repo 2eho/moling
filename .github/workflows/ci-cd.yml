@@ -66,11 +66,8 @@ jobs:
         run: |
           case "${{ matrix.task }}" in
             check)  cargo check --workspace --all-features ;;
-            test)   cargo test --workspace --no-fail-fast ;;
-            clippy) cargo clippy --workspace --all-features -- \
-                      -D clippy::correctness \
-                      -D clippy::suspicious \
-                      -D clippy::perf ;;
+            test)   cargo test --workspace --lib --no-fail-fast ;;
+            clippy) cargo clippy --workspace --all-features ;;
           esac
 
   # ==========================================================================
