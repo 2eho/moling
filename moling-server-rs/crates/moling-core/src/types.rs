@@ -84,7 +84,7 @@ impl MolingDateTime {
     }
 
     /// Parse an RFC 3339 / ISO 8601 string into a [`MolingDateTime`].
-    pub fn from_str(s: &str) -> Result<Self, chrono::ParseError> {
+    pub fn parse_rfc3339(s: &str) -> Result<Self, chrono::ParseError> {
         DateTime::parse_from_rfc3339(s).map(|dt| Self(dt.with_timezone(&Utc)))
     }
 
@@ -203,7 +203,7 @@ impl<T: Serialize> PaginatedResult<T> {
         let total_pages = if effective_page_size == 0 {
             0
         } else {
-            ((total + effective_page_size as u64 - 1) / effective_page_size as u64) as u32
+            total.div_ceil(effective_page_size as u64) as u32
         };
         Self {
             items,

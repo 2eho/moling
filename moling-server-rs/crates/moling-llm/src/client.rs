@@ -33,9 +33,11 @@ pub const DEFAULT_MODEL: &str = "deepseek-chat";
 const MAX_RETRIES: u32 = 3;
 
 /// Minimum backoff duration between retries.
+#[allow(dead_code)]
 const RETRY_MIN_BACKOFF_SECS: u64 = 1;
 
 /// Maximum backoff duration between retries.
+#[allow(dead_code)]
 const RETRY_MAX_BACKOFF_SECS: u64 = 10;
 
 // ---------------------------------------------------------------------------

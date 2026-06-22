@@ -210,6 +210,7 @@ impl Settings {
     /// 1. Struct-level `#[serde(default)]` fallbacks
     /// 2. `.env` file (loaded via `dotenvy`)
     /// 3. `MOLING_`-prefixed environment variables
+    #[allow(clippy::result_large_err)]
     pub fn new() -> Result<Self, figment::Error> {
         // Load .env file if present (non-fatal if missing)
         let _ = dotenvy::dotenv();
@@ -263,12 +264,12 @@ pub fn clear_override(key: &str) {
     }
 }
 
-/// Resolve a key: override > environment > static settings.
+    /// Resolve a key: override > environment > static settings.
 fn resolve_override(_settings: &Settings, key: &str, fallback: &str) -> String {
-    if let Ok(map) = OVERRIDES.read() {
-        if let Some(v) = map.get(key) {
-            return v.clone();
-        }
+    if let Ok(map) = OVERRIDES.read()
+        && let Some(v) = map.get(key)
+    {
+        return v.clone();
     }
     fallback.to_owned()
 }

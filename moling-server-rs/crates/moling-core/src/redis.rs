@@ -8,11 +8,10 @@
 //!
 //! Every operation returns `Result<Option<T>>`:
 //! - `Ok(Some(v))` — Redis was available and the operation succeeded.
-//! - `Ok(None)`    — Redis is unavailable (pool is `None` or connection
-//!                   acquisition failed). The caller should fall back to a
-//!                   degraded mode.
-//! - `Err(e)`      — Redis was reachable but the operation itself failed
-//!                   (e.g. protocol error). This is a real error.
+//! - `Ok(None)` — Redis is unavailable (pool is `None` or connection
+//!   acquisition failed). The caller should fall back to a degraded mode.
+//! - `Err(e)` — Redis was reachable but the operation itself failed
+//!   (e.g. protocol error). This is a real error.
 
 use bb8::PooledConnection;
 use bb8_redis::RedisConnectionManager;
