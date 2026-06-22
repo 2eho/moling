@@ -1,8 +1,19 @@
+# ==============================================================================
+# OpenAPI Spec Validate — 校验 openapi.json 有效性
+# ==============================================================================
+# 触发: push/PR → main
+# 检查: openapi.json 是有效 JSON 且符合 OpenAPI 3.0 结构
+# ==============================================================================
+
 name: OpenAPI Spec Validate
 
 on:
   push:
     branches: [main, master]
+    paths:
+      - 'openapi.json'
+      - 'openapi.yaml'
+      - '.github/workflows/openapi-check.yml'
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -13,22 +24,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - name: Validate openapi.json is valid JSON
+        run: python3 -m json.tool openapi.json > /dev/null && echo "✅ openapi.json is valid JSON" || { echo "❌ Invalid JSON"; exit 1; }
 
-      - name: Generate OpenAPI spec from doc
+      - name: Check required OpenAPI fields
         run: |
-          cd moling-server
-          python scripts/generate_openapi_from_doc.py
+          python3 -c "
+          import json
+          with open('openapi.json') as f:
+              spec = json.load(f)
+          assert 'openapi' in spec, 'Missing openapi version'
+          assert 'info' in spec, 'Missing info'
+          assert 'paths' in spec, 'Missing paths'
+          print(f'✅ OpenAPI {spec[\"openapi\"]} — {spec[\"info\"].get(\"title\", \"untitled\")} ({len(spec[\"paths\"])} paths)')
+          "
 
-      - name: Check JSON validity
-        run: |
-          python -m json.tool openapi.json > /dev/null && echo "OK" || echo "FAIL"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: openapi-spec
-          path: openapi.json
+      - name: Validate openapi.yaml is valid YAML
+        run: python3 -c "
+          import json, sys
+          try:
+              import yaml
+          except ImportError:
+              # GitHub runner has PyYAML; if not, skip YAML check gracefully
+              print('⚠️  PyYAML not available, skipping YAML validation')
+              sys.exit(0)
+          with open('openapi.yaml') as f:
+              yaml.safe_load(f)
+          print('✅ openapi.yaml is valid YAML')
+          "

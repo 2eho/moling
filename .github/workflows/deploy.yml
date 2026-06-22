@@ -83,47 +83,49 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ====================================================================
-  # Job 2: 构建并推送前端镜像
-  # ====================================================================
-  build-frontend:
-    name: Build Frontend (Next.js)
-    runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || inputs.deploy_frontend
+# ======================================================================
+# Job 2: 构建并推送前端镜像
+# ======================================================================
+build-frontend:
+  name: Build Frontend (Vite + React)
+  runs-on: ubuntu-latest
+  if: github.event_name != 'workflow_dispatch' || inputs.deploy_frontend
 
-    steps:
-      - uses: actions/checkout@v4
+  steps:
+    - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_REGISTRY }}
-          username: ${{ env.GHCR_USER }}
-          password: ${{ secrets.GHCR_TOKEN }}
+    - name: Login to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.GHCR_REGISTRY }}
+        username: ${{ env.GHCR_USER }}
+        password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.GHCR_REGISTRY }}/${{ github.repository }}/moling-frontend
-          tags: |
-            type=sha,format=short
-            type=ref,event=branch
-            latest
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.GHCR_REGISTRY }}/${{ github.repository }}/moling-frontend
+        tags: |
+          type=sha,format=short
+          type=ref,event=branch
+          latest
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: moling-web
-          file: moling-web/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: moling-web
+        file: moling-web/Dockerfile
+        build-args: |
+          VITE_API_BASE_URL=/api/v1
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
   # ====================================================================
   # Job 3: 服务器部署（self-hosted runner）

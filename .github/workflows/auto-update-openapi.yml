@@ -1,10 +1,19 @@
+# ==============================================================================
+# Auto Update OpenAPI Spec — 检测 Rust 后端 API 变更后更新 spec
+# ==============================================================================
+# 触发: push → main，Rust 后端路由/Schema 变更
+# TODO: 添加 cargo run -- --export-openapi 命令从 utoipa 导出
+# ==============================================================================
+
 name: Auto Update OpenAPI Spec
 
 on:
   push:
     paths:
-      - 'moling-server/**'
-      - '015_前后端接口映射.md'
+      - 'moling-server-rs/crates/moling-api/src/routes/**'
+      - 'moling-server-rs/crates/moling-api/src/types.rs'
+      - 'moling-server-rs/crates/moling-api/src/schemas/**'
+      - 'openapi.json'
     branches:
       - main
 
@@ -18,39 +27,49 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@master
         with:
-          python-version: '3.13'
-      
-      - name: Generate OpenAPI spec from doc (no deps needed)
+          toolchain: stable
+
+      - name: Verify Rust backend compiles
+        working-directory: moling-server-rs
+        run: cargo check --workspace --all-features
+
+      - name: Validate openapi.json
         run: |
-          cd moling-server
-          python scripts/generate_openapi_from_doc.py
-        continue-on-error: false
-      
+          python3 -c "
+          import json
+          with open('openapi.json') as f:
+              spec = json.load(f)
+          assert 'openapi' in spec and 'paths' in spec
+          print(f'✅ openapi.json valid — {len(spec[\"paths\"])} paths')
+          "
+
       - name: Check if openapi.json changed
         id: check_changes
         run: |
           if git diff --quiet openapi.json 2>/dev/null; then
             echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No spec changes detected"
           else
             echo "changed=true" >> $GITHUB_OUTPUT
+            echo "🔄 Spec changes detected"
           fi
-      
-      - name: Commit and push if changed
+
+      - name: Commit spec changes if needed
         if: steps.check_changes.outputs.changed == 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add openapi.json
-          git commit -m "auto: 自动更新 OpenAPI 规范 [skip ci]"
+          git add openapi.json openapi.yaml
+          git commit -m "auto: OpenAPI spec updated [skip ci]"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Comment on commit (if failed)
+
+      - name: Comment on failure
         if: failure()
         uses: actions/github-script@v6
         with:
@@ -59,5 +78,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha,
-              body: '⚠️ OpenAPI 规范自动更新失败，请检查 GitHub Actions 日志'
+              body: '⚠️ OpenAPI spec auto-update failed. Run `cargo run -p moling-server -- --export-openapi > openapi.json` locally and commit.'
             })
