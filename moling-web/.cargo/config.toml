@@ -1,0 +1,14 @@
+# 墨灵 Tauri 项目 cargo 配置
+# 继承全局镜像源配置 (D:\DevTools\.cargo\config.toml)
+
+[alias]
+# 增量构建（默认）：cargo build
+# 清理重建：cargo clean-build —— 删除 target/ 后全量构建，释放上次构建的残余
+clean-build = ["clean", "build"]
+
+# 清理旧的 build script 缓存（target/debug/build/ 下残留的多版本产物）
+clean-build-cache = "run --manifest-path .cargo/CleanBuildCache.toml"
+
+[build]
+# 减少增量编译的中间产物堆积
+incremental = true

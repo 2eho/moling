@@ -13,6 +13,7 @@ pub mod secret;
 pub mod sub_plot;
 pub mod sub_plot_status_log;
 pub mod system_config;
+pub mod system_config_audit;
 pub mod template;
 pub mod user;
 pub mod user_subscription;

@@ -21,22 +21,11 @@ export function ChapterItem({
 }: ChapterItemProps) {
   const isCompleted = chapter.status === "completed";
 
-  const dotBg = isCompleted
-    ? "var(--th-accent-dim)"
-    : isActive
-      ? "var(--th-accent-text)"
-      : "var(--th-hover)";
-  const dotColor = isCompleted
-    ? "var(--th-accent-text)"
-    : isActive
-      ? "#fff"
-      : "var(--th-text-3)";
-
   return (
     <button
       disabled={isDisabled}
       onClick={onClick}
-      className="w-full flex items-center text-left rounded-r-lg transition-colors disabled:cursor-not-allowed"
+      className="w-full flex items-center text-left rounded-lg transition-colors disabled:cursor-not-allowed border-l-[3px] border-transparent relative"
       style={{
         color: isActive
           ? "var(--th-accent-text)"
@@ -45,20 +34,31 @@ export function ChapterItem({
             : "var(--th-text-2)",
         background: isActive ? "var(--th-accent-dim)" : "transparent",
         opacity: isDisabled ? 0.7 : 1,
+        borderRadius: 8,
       }}
     >
+      {/* Active pill */}
+      {isActive && (
+        <div
+          className="absolute left-0.5 top-1.5 bottom-1.5 w-[5px] z-10"
+          style={{ background: "var(--th-accent-text)", borderRadius: 9999 }}
+        />
+      )}
+      {/* 5px spacer */}
+      <span className="inline-block w-[5px] shrink-0 overflow-hidden">&nbsp;</span>
       {/* 标题 — 左对齐，主信息 */}
       <span className="truncate text-[13px] py-2.5 md:py-2 leading-snug">
         {chapter.title}
       </span>
 
-      {/* 圆点 — 右对齐，编号为辅助信息 */}
+      {/* 编号 — 右对齐，样式与标题同步 */}
       <span
-        className="chapter-badge w-[18px] h-[18px] rounded-full text-[10px] flex items-center justify-center shrink-0 font-semibold leading-none ml-auto"
-        style={{ background: dotBg, color: dotColor }}
+        className="text-[13px] py-2.5 md:py-2 leading-snug shrink-0 font-semibold ml-auto"
       >
         {chapter.id}
       </span>
+      {/* 右侧间距 */}
+      <span className="inline-block w-[5px] shrink-0 overflow-hidden">&nbsp;</span>
     </button>
   );
 }

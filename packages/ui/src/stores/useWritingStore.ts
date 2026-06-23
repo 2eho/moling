@@ -67,6 +67,12 @@ export interface WritingProject {
   foreshadowing: Foreshadowing[];
   worldRules: string;
   styleNotes: string;
+  /** 项目状态：draft=连载中, completed=已完结 */
+  status: "draft" | "completed";
+  /** 创建日期 (YYYY-MM-DD) */
+  createdAt: string;
+  /** 最后修改日期 (YYYY-MM-DD) */
+  updatedAt: string;
 }
 
 /** 写作 Store */

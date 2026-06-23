@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Pin, Ellipsis } from "lucide-react";
 import type { WritingProject } from "@/stores/useWritingStore";
 import { ChapterItem } from "./ChapterItem";
 
@@ -16,15 +16,13 @@ interface ProjectCardProps {
 /**
  * 项目卡片
  *
- * 连载中 vs 已完结：左边框色条 + 字重区分
- * 章节列表：CSS Grid [20px gutter + 1fr]
- *   gutter 列 center = 箭头中心，竖线天生对齐，无需像素计算
+ * 尺寸铁律：gutter 20px = border(3) + padding(10) + chevron半宽(7)
+ *   border-l 必须是 3px，严禁改动，否则竖线对不准箭头中心。
  *
- *   ▎▼ 剑道巅峰
- *    │
- *    ├── ③ 章节
- *    ├── ② 章节
- *    └── ① 章节
+ * 选中态：3px 左边线 accent 色（未选中透明）+ accent 背景
+ * 已完结：字重 400 + 文字色淡化，无额外色条
+ *
+ * 右侧操作按钮：绝对定位覆盖，不影响行内布局
  */
 export function ProjectCard({
   project,
@@ -40,43 +38,55 @@ export function ProjectCard({
 
   const reversedChapters = [...project.chapters].reverse();
 
-  const accentBorder = isCompleted
-    ? "var(--th-border-subtle)"
-    : "var(--th-accent-text)";
-
   return (
     <div>
       {/* ── Project row ── */}
-      <button
-        onClick={onProjectClick}
-        className="w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-r-lg text-left transition-colors border-l-[3px]"
-        style={{
-          borderLeftColor: accentBorder,
-          color: isActive
-            ? "var(--th-accent-text)"
-            : isCompleted
-              ? "var(--th-text-3)"
-              : "var(--th-text-2)",
-          background: isActive ? "var(--th-accent-dim)" : "transparent",
-        }}
-      >
-        {/* Chevron — left 7px to align with tree-line center */}
-        <span
-          className="shrink-0 transition-transform duration-200"
-          style={{ transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)", marginLeft: -6 }}
+      <div className="group/project relative">
+        <button
+          onClick={onProjectClick}
+          className="w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-left transition-colors border-l-[3px] border-transparent relative"
+          style={{
+            color: isCompleted ? "var(--th-text-3)" : "var(--th-text-2)",
+            background: "transparent",
+            borderRadius: 8,
+          }}
         >
-          <ChevronDown size={14} />
-        </span>
+        
+          <span
+            className="shrink-0 transition-transform duration-200"
+            style={{ transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)", marginLeft: -6 }}
+          >
+            <ChevronDown size={14} />
+          </span>
 
-        {/* Title */}
-        <span
-          className="flex-1 truncate text-[14px] leading-snug"
-          style={{ fontWeight: isCompleted ? 400 : 600 }}
-        >
-          {project.title}
-        </span>
+          {/* Title */}
+          <span
+            className="flex-1 truncate text-[14px] leading-snug"
+            style={{ fontWeight: isCompleted ? 400 : 600 }}
+          >
+            {project.title}
+          </span>
 
-      </button>
+          {/* Pin */}
+          <button
+            className="p-1 rounded transition-all hover:bg-th-hover shrink-0"
+            style={{ color: "var(--th-text-3)" }}
+            title="置顶"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Pin size={12} />
+          </button>
+          {/* More */}
+          <button
+            className="p-1 rounded transition-all hover:bg-th-hover shrink-0"
+            style={{ color: "var(--th-text-3)" }}
+            title="更多"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Ellipsis size={13} />
+          </button>
+        </button>
+      </div>
 
       {/* ── Chapters in Grid ──
           gutter 20px = border(3) + padding(10) + chevron半宽(7)

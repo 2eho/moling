@@ -129,7 +129,7 @@ export function ProjectList({
   };
 
   return (
-    <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2">
+    <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 relative z-10">
       {/* 连载中 — 青色竖线，活跃标签 */}
       <ProjectGroup
         label="连载中"

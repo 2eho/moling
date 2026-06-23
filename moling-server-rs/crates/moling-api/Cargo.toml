@@ -21,6 +21,7 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
+reqwest = { workspace = true }
 sea-orm = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

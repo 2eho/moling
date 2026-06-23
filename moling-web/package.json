@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "tauri:dev": "cargo tauri dev && bash scripts/clean-old-cargo-builds.sh",
+    "tauri:build": "cargo tauri build && bash scripts/clean-old-cargo-builds.sh",
+    "clean:build": "bash scripts/clean-old-cargo-builds.sh"
   },
   "dependencies": {
     "@moling/ui": "workspace:*",

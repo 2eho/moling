@@ -12,6 +12,10 @@ pub struct Model {
 
     pub description: Option<String>,
 
+    /// Optimistic lock version — increments on every update.
+    #[sea_orm(default_value = 1)]
+    pub version: i32,
+
     #[sea_orm(default_expr = "Expr::current_timestamp()")]
     pub created_at: DateTimeUtc,
 

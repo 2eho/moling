@@ -9,7 +9,7 @@ interface SidebarHeaderProps {
 
 export function SidebarHeader({ onCollapse, onNewProject }: SidebarHeaderProps) {
   return (
-    <div className="shrink-0 flex items-center gap-2 px-3 py-3">
+    <div className="shrink-0 flex items-center gap-2 px-3 py-3 relative z-10">
       <button
         onClick={onCollapse}
         className="p-1.5 rounded-lg transition-colors text-th-text-3 hover:text-th-text hover:bg-th-hover"

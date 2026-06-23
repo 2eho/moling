@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, Plus, BookOpen, Clock, ChevronRight } from "lucide-react";
-import { MOCK_PROJECTS } from "@/mock/data/projects";
+import { useWritingStore } from "@/stores/useWritingStore";
 
 const PHASE_CN: Record<string, string> = {
   ideation: "构思中",
@@ -13,7 +12,7 @@ const PHASE_CN: Record<string, string> = {
 };
 
 export function ProjectsPage() {
-  const [projects] = useState(MOCK_PROJECTS);
+  const projects = useWritingStore((s) => s.projects);
 
   return (
     <div className="min-h-screen flex flex-col bg-th-bg text-th-text">
@@ -79,7 +78,7 @@ export function ProjectsPage() {
                     <span className="text-th-text-4">·</span>
                     <span>{PHASE_CN[p.phase] ?? p.phase}</span>
                     <span className="text-th-text-4">·</span>
-                    <span>{p.chapter}/{p.totalChapters} 章</span>
+                    <span>{p.currentChapter}/{p.totalChapters} 章</span>
                   </div>
                 </div>
 

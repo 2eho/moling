@@ -35,6 +35,8 @@ export { HealthDashboard } from "./components/health/HealthDashboard";
 export { usePanelResize } from "./hooks/usePanelResize";
 
 // ── Stores ──
+export { useLLMSettings, LLM_MODELS } from "./stores/useLLMSettings";
+export type { LLMSettings, LLMModelId } from "./stores/useLLMSettings";
 export { useTheme, THEMES, isDarkTheme, detectSystemTheme } from "./stores/useTheme";
 export type { ThemeId } from "./stores/useTheme";
 export { useToast, type ToastType } from "./stores/useToast";

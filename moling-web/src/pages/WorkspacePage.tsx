@@ -9,6 +9,7 @@ import { OptionsPanel } from "@/components/vibe/OptionsPanel";
 import { ThemeSwitcher } from "@/components/vibe/ThemeSwitcher";
 import { AgentPanel } from "@/components/vibe/AgentPanel";
 import { usePanelResize } from "@/hooks/usePanelResize";
+import { restoreFromDB } from "@/db/sync";
 import {
   PanelRight,
   BookOpen,
@@ -23,7 +24,6 @@ import {
   ArrowRight,
   Clock,
 } from "lucide-react";
-import { MOCK_PROJECTS } from "@/mock/data/workspace";
 
 export function WorkspacePage() {
   const projectId = useParams<{ projectId: string }>().projectId;
@@ -31,7 +31,6 @@ export function WorkspacePage() {
   const activeProjectId = useWritingStore((s) => s.activeProjectId);
   const activeChapterId = useWritingStore((s) => s.activeChapterId);
   const projects = useWritingStore((s) => s.projects);
-  const loadProjects = useWritingStore((s) => s.loadProjects);
   const setActiveProject = useWritingStore((s) => s.setActiveProject);
   const setActiveChapter = useWritingStore((s) => s.setActiveChapter);
   const completeChapter = useWritingStore((s) => s.completeChapter);
@@ -45,12 +44,13 @@ export function WorkspacePage() {
     ? projects.find((p) => p.id === activeProjectId) ?? null
     : projects[0] ?? null;
 
-  // Wait for zustand persist rehydration before showing content.
+  // Initialize: restore from SQLite, then mark hydrated.
   useEffect(() => {
-    if (projects.length === 0) {
-      loadProjects(MOCK_PROJECTS);
-    }
-    setHasHydrated(true);
+    const load = async () => {
+      await restoreFromDB(useWritingStore.getState() as any);
+      setHasHydrated(true);
+    };
+    load();
   }, []);
   const { theme, setTheme } = useTheme();
   const { addToast } = useToast();

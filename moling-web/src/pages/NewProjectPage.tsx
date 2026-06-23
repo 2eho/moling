@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Sparkles, ArrowLeft, BookOpen, Swords, FlaskConical, Globe } from "lucide-react";
+import { useWritingStore, type WritingProject } from "@/stores/useWritingStore";
+import { persistProject } from "@/db/sync";
 
 const GENRES = [
   { id: "xuanhuan", label: "玄幻修仙", icon: <Swords size={24} /> },
@@ -11,6 +13,7 @@ const GENRES = [
 
 export function NewProjectPage() {
   const navigate = useNavigate();
+  const addProject = useWritingStore((s) => s.addProject);
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
   const [summary, setSummary] = useState("");
@@ -18,7 +21,28 @@ export function NewProjectPage() {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    navigate("/workspace/new-novel");
+
+    const project: WritingProject = {
+      id: `novel-${Date.now()}`,
+      title: title.trim(),
+      genre: genre || "other",
+      phase: "ideation",
+      chapters: [],
+      currentChapter: 0,
+      totalChapters: 0,
+      summary: summary.trim(),
+      status: "draft",
+      createdAt: new Date().toISOString().split("T")[0],
+      updatedAt: new Date().toISOString().split("T")[0],
+      characters: [],
+      foreshadowing: [],
+      worldRules: "",
+      styleNotes: "",
+    };
+
+    addProject(project);
+    persistProject(project); // durable save to SQLite
+    navigate(`/workspace/${project.id}`);
   };
 
   return (

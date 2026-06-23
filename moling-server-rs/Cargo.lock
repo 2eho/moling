@@ -1883,6 +1883,7 @@ dependencies = [
  "moling-db",
  "moling-llm",
  "moling-services",
+ "reqwest",
  "sea-orm",
  "sentry",
  "serde",
