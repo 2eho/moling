@@ -235,23 +235,18 @@ impl KeyRotator {
         let health = self.health.read().unwrap_or_else(|e| e.into_inner());
         let now = std::time::Instant::now();
 
-        // Auto-recover keys whose cooldown has expired
+        // Auto-recover keys whose cooldown has expired;
+        // exclude keys still on active cooldown
         let healthy_keys: Vec<&String> = keys
             .iter()
             .filter(|k| {
-                if let Some(h) = health.get(*k) {
-                    // Check if cooldown expired
-                    if !h.is_healthy
-                        && let Some(cooldown) = h.cooling_until
-                        && now >= cooldown
-                    {
-                        // Key should be recovered — but we can't mutate here with read lock
-                        // Return true optimistically; recovery happens in select
-                        return true;
+                match health.get(*k) {
+                    Some(h) if !h.is_healthy => {
+                        // Unhealthy: include only if cooldown has expired
+                        h.cooling_until.map_or(false, |c| now >= c)
                     }
-                    true
-                } else {
-                    false
+                    Some(_) => true, // healthy
+                    None => false,
                 }
             })
             .collect();
