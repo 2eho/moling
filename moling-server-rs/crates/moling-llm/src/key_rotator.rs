@@ -243,7 +243,7 @@ impl KeyRotator {
                 match health.get(*k) {
                     Some(h) if !h.is_healthy => {
                         // Unhealthy: include only if cooldown has expired
-                        h.cooling_until.map_or(false, |c| now >= c)
+                        h.cooling_until.is_some_and(|c| now >= c)
                     }
                     Some(_) => true, // healthy
                     None => false,
