@@ -9,7 +9,7 @@
     "includes": [
       "**/moling-web/src/**",
       "**/packages/ui/src/**",
-      "!**/__tests__/**",
+      "!**/__tests__",
       "!**/*.test.ts",
       "!**/*.test.tsx",
       "!**/node_modules",

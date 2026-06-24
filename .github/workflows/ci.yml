@@ -155,16 +155,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # NOTE: Replace with `pnpm biome check` once @biomejs/biome is added
-      # to devDependencies. Currently falls back to existing eslint setup.
       - name: Biome check (frontend)
-        run: |
-          if pnpm biome check moling-web/ 2>/dev/null; then
-            echo "✓ Biome check passed"
-          else
-            echo "⚠ biome not installed — running eslint as fallback"
-            cd moling-web && pnpm run lint || true
-          fi
+        run: pnpm biome check --write
 
   # ==========================================================================
   # Stage 3 — Test: cargo test (exclude Redis-dependent) + vitest
