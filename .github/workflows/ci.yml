@@ -70,7 +70,7 @@ jobs:
       - run: cargo test --workspace --lib --exclude moling-worker
         working-directory: moling-server-rs
         env:
-          DATABASE_URL: sqlite::memory:
+          DATABASE_URL: "sqlite::memory:"
           RUST_LOG: info
       - uses: actions/setup-node@v4
         with:
