@@ -1,21 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useWritingStore } from "@/stores/useWritingStore";
-import { cn } from "@/lib/cn";
-import { MOCK_OUTPUTS } from "@/mock/data/agent-outputs";
 import {
   Brain,
+  ChevronDown,
   GitBranch,
-  Users,
+  Globe,
   MessageSquare,
   PenTool,
-  Globe,
-  Sparkles,
   RefreshCw,
-  ChevronDown,
   Settings,
+  Sparkles,
+  Users,
 } from "lucide-react";
+import { useState } from "react";
+import { MOCK_OUTPUTS } from "@/mock/data/agent-outputs";
+import { useWritingStore } from "@/stores/useWritingStore";
 
 const AGENT_META: Record<
   string,
@@ -58,7 +57,7 @@ interface AgentPanelProps {
   width?: number;
 }
 
-export function AgentPanel({ onClose, width = 260 }: AgentPanelProps) {
+export function AgentPanel({ onClose: _onClose, width = 260 }: AgentPanelProps) {
   const agents = useWritingStore((s) => s.agents);
   const isGenerating = useWritingStore((s) => s.isGenerating);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
@@ -95,9 +94,7 @@ export function AgentPanel({ onClose, width = 260 }: AgentPanelProps) {
       <div className="relative shrink-0 flex items-center justify-between px-3 py-3 border-b border-th-border-subtle z-10">
         <div className="flex items-center gap-2 min-w-0">
           <Brain size={15} className="shrink-0 text-th-accent-text" />
-          <span className="text-[13px] font-semibold text-th-text-2">
-            Agent 调度中心
-          </span>
+          <span className="text-[13px] font-semibold text-th-text-2">Agent 调度中心</span>
           {activeCount > 0 && (
             <span className="text-[10px] font-medium text-th-text-4 tabular-nums ml-1">
               {activeCount}/{visibleAgents.length}
@@ -106,6 +103,7 @@ export function AgentPanel({ onClose, width = 260 }: AgentPanelProps) {
         </div>
         <div className="flex items-center gap-0.5">
           <button
+            type="button"
             onClick={() => setShowSettings((v) => !v)}
             className={`p-1 rounded transition-colors ${showSettings ? "text-th-accent-text bg-th-accent-dim" : "text-th-text-3 hover:bg-th-hover"}`}
             aria-label="Agent 设置"
@@ -129,17 +127,18 @@ export function AgentPanel({ onClose, width = 260 }: AgentPanelProps) {
         {/* 设置面板 — 折叠区域 */}
         {showSettings && (
           <div className="mx-1 rounded-lg p-3 bg-th-bg border border-th-border-subtle">
-            <div className="text-[10px] font-semibold text-th-text-4 mb-2">
-              代理开关
-            </div>
+            <div className="text-[10px] font-semibold text-th-text-4 mb-2">代理开关</div>
             {agents.map((agent) => {
               const isDisabled = disabledAgents.has(agent.id);
               return (
                 <div key={agent.id} className="flex items-center justify-between py-1">
-                  <span className={`text-[11px] ${isDisabled ? "text-th-text-4" : "text-th-text-2"}`}>
+                  <span
+                    className={`text-[11px] ${isDisabled ? "text-th-text-4" : "text-th-text-2"}`}
+                  >
                     {agent.label}
                   </span>
                   <button
+                    type="button"
                     onClick={() => toggleAgent(agent.id)}
                     className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${isDisabled ? "bg-th-hover text-th-text-4" : "bg-th-accent-dim text-th-accent-text"}`}
                   >
@@ -165,9 +164,7 @@ export function AgentPanel({ onClose, width = 260 }: AgentPanelProps) {
             agent={agent}
             isDisabled={disabledAgents.has(agent.id)}
             isExpanded={expandedAgent === agent.id}
-            onToggleExpand={() =>
-              setExpandedAgent(expandedAgent === agent.id ? null : agent.id)
-            }
+            onToggleExpand={() => setExpandedAgent(expandedAgent === agent.id ? null : agent.id)}
             onRerun={() => rerunAgent(agent.id)}
           />
         ))}
@@ -236,6 +233,7 @@ function AgentItem({
     <div>
       {/* Agent row — 参考 ChapterItem 风格 */}
       <button
+        type="button"
         onClick={onToggleExpand}
         disabled={isDisabled}
         className="w-full flex items-center text-left rounded-lg transition-colors disabled:cursor-not-allowed border-l-[3px] border-transparent relative"
@@ -274,11 +272,7 @@ function AgentItem({
 
         {/* 状态指示 */}
         <span className="flex items-center gap-1.5 shrink-0 mr-[8px]">
-          {!isDisabled && (
-            <span className="text-[10px] text-th-text-4">
-              {statusLabel}
-            </span>
-          )}
+          {!isDisabled && <span className="text-[10px] text-th-text-4">{statusLabel}</span>}
           <div
             className={`w-1.5 h-1.5 rounded-full shrink-0 ${agent.status === "thinking" && !isDisabled ? "animate-pulse" : ""} ${statusDotBg}`}
             style={statusGlow ? { boxShadow: statusGlow } : undefined}
@@ -317,6 +311,7 @@ function AgentItem({
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-th-text-4">{agent.name}</span>
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onRerun();

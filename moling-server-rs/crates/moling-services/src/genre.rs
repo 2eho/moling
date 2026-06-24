@@ -433,11 +433,10 @@ impl GenreService {
             for len in [2, 3, 4] {
                 for window in chars.windows(len) {
                     let s: String = window.iter().collect();
-                    if s.chars().all(|c| ('\u{4e00}'..='\u{9fff}').contains(&c) || c == '·') {
-                        if !stop_names.contains(&s.as_str()) {
+                    if s.chars().all(|c| ('\u{4e00}'..='\u{9fff}').contains(&c) || c == '·')
+                        && !stop_names.contains(&s.as_str()) {
                             *name_counts.entry(s).or_insert(0) += 1;
                         }
-                    }
                 }
             }
         }

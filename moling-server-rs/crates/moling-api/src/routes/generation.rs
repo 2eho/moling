@@ -52,7 +52,7 @@ pub async fn generate(
         id: job.id.to_string(), project_id: job.project_id,
         chapter_id: job.chapter_id, task_type: job.task_type,
         status: job.status, progress_percent: job.progress_percent,
-        created_at: job.created_at.into(),
+        created_at: job.created_at,
     }))
 }
 
@@ -79,7 +79,7 @@ pub async fn get_job(
         id: job.id.to_string(), project_id: job.project_id,
         chapter_id: job.chapter_id, task_type: job.task_type,
         status: job.status, progress_percent: job.progress_percent,
-        created_at: job.created_at.into(),
+        created_at: job.created_at,
     }))
 }
 
@@ -109,7 +109,7 @@ async fn get_history(
         id: j.id.to_string(), project_id: j.project_id,
         chapter_id: j.chapter_id, task_type: j.task_type,
         status: j.status, progress_percent: j.progress_percent,
-        created_at: j.created_at.into(),
+        created_at: j.created_at,
     }).collect();
     Ok(Json(list))
 }

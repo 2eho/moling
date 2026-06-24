@@ -1,13 +1,13 @@
 "use client";
 
+import { Menu, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "@/lib/navigation";
-import { Menu, X, Plus } from "lucide-react";
 import { useWritingStore } from "@/stores/useWritingStore";
-import { SidebarHeader } from "./SidebarHeader";
-import { SidebarFooter } from "./SidebarFooter";
-import { SidebarCollapsed } from "./SidebarCollapsed";
 import { ProjectList } from "./ProjectList";
+import { SidebarCollapsed } from "./SidebarCollapsed";
+import { SidebarFooter } from "./SidebarFooter";
+import { SidebarHeader } from "./SidebarHeader";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -57,6 +57,7 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
     <>
       {/* Mobile hamburger */}
       <button
+        type="button"
         className="fixed top-2.5 left-3 z-30 p-1.5 rounded-lg bg-th-card border border-th-border-subtle text-th-text-3 md:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="打开菜单"
@@ -72,12 +73,13 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
             onClick={() => setMobileOpen(false)}
           />
           <div
-            className="fixed inset-y-0 left-0 z-50 md:hidden flex flex-col animate-slide-in-left bg-th-card"
-            style={{ width: "80vw", boxShadow: "4px 0 24px rgba(0,0,0,0.25)" }}
+            className="fixed inset-y-0 left-0 z-50 md:hidden flex flex-col animate-slide-in-left bg-th-card shadow-[var(--th-shadow-panel)]"
+            style={{ width: "80vw" }}
           >
             {/* Override: close button instead of collapse */}
             <div className="shrink-0 flex items-center gap-2 px-3 py-3">
               <button
+                type="button"
                 onClick={() => setMobileOpen(false)}
                 className="p-1.5 rounded-lg text-th-text-3"
                 aria-label="关闭侧栏"
@@ -86,6 +88,7 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
               </button>
               <div className="flex-1" />
               <button
+                type="button"
                 onClick={handleNewProject}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-th-accent-dim text-th-accent-text"
               >
@@ -96,9 +99,7 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
 
             {projects.length === 0 ? (
               <div className="flex-1 min-h-0 flex items-center justify-center px-4">
-                <p className="text-xs text-center text-th-text-4">
-                  暂无项目，点击上方「新建」开始
-                </p>
+                <p className="text-xs text-center text-th-text-4">暂无项目，点击上方「新建」开始</p>
               </div>
             ) : (
               <ProjectList
@@ -132,28 +133,26 @@ export function Sidebar({ collapsed, onToggle, width = 240 }: SidebarProps) {
           className="shrink-0 flex max-md:hidden flex-col h-full border-r overflow-hidden bg-th-card border-th-border-subtle transition-all duration-300 relative"
           style={{ width }}
         >
-            {/* 5% 灰度遮罩 */}
-            <div className="absolute inset-0 bg-black/5 pointer-events-none" />
-            <SidebarHeader onCollapse={onToggle} onNewProject={handleNewProject} />
-            {projects.length === 0 ? (
-              <div className="flex-1 min-h-0 flex items-center justify-center px-4">
-                <p className="text-xs text-center text-th-text-4">
-                  暂无项目，点击上方「新建」开始
-                </p>
-              </div>
-            ) : (
-              <ProjectList
-                projects={projects}
-                activeProjectId={activeProjectId}
-                expandedProjectId={expandedProjectId}
-                activeChapterId={activeChapterId}
-                onProjectClick={handleProjectClick}
-                onChapterClick={handleChapterClick}
-              />
-            )}
-            <SidebarFooter onSettings={handleSettings} />
-          </aside>
-        )}
+          {/* 5% 灰度遮罩 */}
+          <div className="absolute inset-0 bg-black/5 pointer-events-none" />
+          <SidebarHeader onCollapse={onToggle} onNewProject={handleNewProject} />
+          {projects.length === 0 ? (
+            <div className="flex-1 min-h-0 flex items-center justify-center px-4">
+              <p className="text-xs text-center text-th-text-4">暂无项目，点击上方「新建」开始</p>
+            </div>
+          ) : (
+            <ProjectList
+              projects={projects}
+              activeProjectId={activeProjectId}
+              expandedProjectId={expandedProjectId}
+              activeChapterId={activeChapterId}
+              onProjectClick={handleProjectClick}
+              onChapterClick={handleChapterClick}
+            />
+          )}
+          <SidebarFooter onSettings={handleSettings} />
+        </aside>
+      )}
     </>
   );
 }

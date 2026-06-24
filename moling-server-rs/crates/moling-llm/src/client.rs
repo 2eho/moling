@@ -238,12 +238,12 @@ impl RateLimitTracker {
         }
 
         let reqs = self.requests.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(timestamps) = reqs.get(key) {
-            if let Some(oldest) = timestamps.iter().min() {
-                let elapsed = oldest.elapsed().as_secs_f64();
-                let wait = 60.0 - elapsed;
-                return f64::max(wait, 0.1);
-            }
+        if let Some(timestamps) = reqs.get(key)
+            && let Some(oldest) = timestamps.iter().min()
+        {
+            let elapsed = oldest.elapsed().as_secs_f64();
+            let wait = 60.0 - elapsed;
+            return f64::max(wait, 0.1);
         }
         0.1
     }
@@ -493,15 +493,15 @@ impl DeepSeekClient {
                     );
 
                     // On 429, try rotating the API key
-                    if error.code == moling_core::error::ErrorCode::RateLimitExceeded {
-                        if let Some(next_key) = self.rotate_key(&current_key).await {
-                            tracing::info!(
-                                old_key = %mask_key(&current_key),
-                                new_key = %mask_key(&next_key),
-                                "Switched API key after rate limit"
-                            );
-                            current_key = next_key;
-                        }
+                    if error.code == moling_core::error::ErrorCode::RateLimitExceeded
+                        && let Some(next_key) = self.rotate_key(&current_key).await
+                    {
+                        tracing::info!(
+                            old_key = %mask_key(&current_key),
+                            new_key = %mask_key(&next_key),
+                            "Switched API key after rate limit"
+                        );
+                        current_key = next_key;
                     }
 
                     // Use Retry-After from server if available for backoff
@@ -572,10 +572,10 @@ impl DeepSeekClient {
                     );
 
                     // On 429, try rotating the API key
-                    if error.code == moling_core::error::ErrorCode::RateLimitExceeded {
-                        if let Some(next_key) = self.rotate_key(&current_key).await {
-                            current_key = next_key;
-                        }
+                    if error.code == moling_core::error::ErrorCode::RateLimitExceeded
+                        && let Some(next_key) = self.rotate_key(&current_key).await
+                    {
+                        current_key = next_key;
                     }
 
                     // Use Retry-After from server if available
@@ -709,14 +709,12 @@ impl DeepSeekClient {
                         if data == "[DONE]" {
                             continue;
                         }
-                        if let Ok(resp) = serde_json::from_str::<ChatResponse>(data) {
-                            if let Some(delta) =
+                        if let Ok(resp) = serde_json::from_str::<ChatResponse>(data)
+                            && let Some(delta) =
                                 resp.choices.first().and_then(|c| c.delta.as_ref())
-                            {
-                                if let Some(c) = &delta.content {
-                                    content.push_str(c);
-                                }
-                            }
+                            && let Some(c) = &delta.content
+                        {
+                            content.push_str(c);
                         }
                     }
                 }

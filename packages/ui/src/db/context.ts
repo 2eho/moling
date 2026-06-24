@@ -5,8 +5,8 @@
  * In Tauri builds: createTauriAdapter()  (native SQLite)
  */
 
-import { createSqlJsAdapter } from "./adapter-sqljs";
 import type { DBAdapter } from "./adapter";
+import { createSqlJsAdapter } from "./adapter-sqljs";
 
 let _adapter: DBAdapter | null = null;
 let _initPromise: Promise<void> | null = null;

@@ -99,16 +99,16 @@ impl RetryPolicy {
     /// * `attempt` — Zero-based retry attempt number (0 = first retry).
     /// * `retry_after` — Optional duration in seconds from server.
     pub fn backoff(&self, attempt: u32, retry_after: Option<u64>) -> Duration {
-        if let Some(secs) = retry_after {
-            if secs > 0 {
-                let d = Duration::from_secs(secs);
-                tracing::debug!(
-                    attempt,
-                    retry_after_secs = secs,
-                    "Using server-specified Retry-After"
-                );
-                return d;
-            }
+        if let Some(secs) = retry_after
+            && secs > 0
+        {
+            let d = Duration::from_secs(secs);
+            tracing::debug!(
+                attempt,
+                retry_after_secs = secs,
+                "Using server-specified Retry-After"
+            );
+            return d;
         }
 
         let base = self.min_backoff * 2u32.pow(attempt);

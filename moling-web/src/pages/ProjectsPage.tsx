@@ -1,5 +1,5 @@
+import { BookOpen, ChevronRight, Clock, Plus, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Sparkles, Plus, BookOpen, Clock, ChevronRight } from "lucide-react";
 import { useWritingStore } from "@/stores/useWritingStore";
 
 const PHASE_CN: Record<string, string> = {
@@ -27,6 +27,7 @@ export function ProjectsPage() {
         <Link
           to="/settings"
           className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-th-accent-dim text-th-accent-text hover:scale-105 transition-transform"
+          aria-label="设置"
         >
           U
         </Link>
@@ -47,10 +48,12 @@ export function ProjectsPage() {
           </Link>
         </div>
 
+        {/* 📭 Empty state */}
         {projects.length === 0 ? (
           <div className="text-center py-20">
             <BookOpen size={48} className="mx-auto mb-4 text-th-text-4/20" />
-            <p className="text-sm mb-4 text-th-text-3">还没有项目</p>
+            <p className="text-sm mb-1 text-th-text-2">还没有项目</p>
+            <p className="text-xs mb-4 text-th-text-3">创建你的第一本网文，开始用 AI 辅助创作</p>
             <Link
               to="/projects/new"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-th-accent-dim text-th-accent-text hover:scale-[1.02] transition-all"
@@ -78,7 +81,9 @@ export function ProjectsPage() {
                     <span className="text-th-text-4">·</span>
                     <span>{PHASE_CN[p.phase] ?? p.phase}</span>
                     <span className="text-th-text-4">·</span>
-                    <span>{p.currentChapter}/{p.totalChapters} 章</span>
+                    <span>
+                      {p.currentChapter}/{p.totalChapters} 章
+                    </span>
                   </div>
                 </div>
 

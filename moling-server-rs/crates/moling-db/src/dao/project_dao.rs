@@ -130,60 +130,46 @@ impl ProjectDao {
     }
 
     /// Return aggregated project statistics for a user (total, active, draft, words).
+    /// Executes all count queries in parallel via tokio::try_join! to reduce latency.
     pub async fn get_stats(
         &self,
         db: &DatabaseConnection,
         user_id: &str,
     ) -> AppResult<ProjectStats> {
-        // Total count
-        let total: u64 = Project::find()
+        let total_fut = Project::find()
             .filter(project::Column::UserId.eq(user_id))
             .filter(project::Column::IsDeleted.eq(false))
-            .count(db)
-            .await
-            .map_err(|e| {
-                tracing::error!(user_id, "Database error counting projects: {e}");
-                AppError::internal("Database query failed")
-            })?;
+            .count(db);
 
-        // Active count
-        let active_count: u64 = Project::find()
+        let active_fut = Project::find()
             .filter(project::Column::UserId.eq(user_id))
             .filter(project::Column::Status.eq("active"))
             .filter(project::Column::IsDeleted.eq(false))
-            .count(db)
-            .await
-            .map_err(|e| {
-                tracing::error!(user_id, "Database error counting active projects: {e}");
-                AppError::internal("Database query failed")
-            })?;
+            .count(db);
 
-        // Draft count
-        let draft_count: u64 = Project::find()
+        let draft_fut = Project::find()
             .filter(project::Column::UserId.eq(user_id))
             .filter(project::Column::Status.eq("draft"))
             .filter(project::Column::IsDeleted.eq(false))
-            .count(db)
-            .await
-            .map_err(|e| {
-                tracing::error!(user_id, "Database error counting draft projects: {e}");
-                AppError::internal("Database query failed")
-            })?;
+            .count(db);
 
-        // Total words
-        let total_words: i64 = Project::find()
+        let words_fut = Project::find()
             .filter(project::Column::UserId.eq(user_id))
             .filter(project::Column::IsDeleted.eq(false))
             .select_only()
             .column_as(project::Column::WordCount.sum(), "total_words")
             .into_tuple::<(Option<i64>,)>()
-            .one(db)
-            .await
-            .map(|r| r.and_then(|(v,)| v).unwrap_or(0))
-            .map_err(|e| {
-                tracing::error!(user_id, "Database error summing words: {e}");
-                AppError::internal("Database query failed")
-            })?;
+            .one(db);
+
+        let (total, active_count, draft_count, total_words) = tokio::try_join!(
+            total_fut, active_fut, draft_fut, words_fut
+        )
+        .map_err(|e| {
+            tracing::error!(user_id, "Database error computing stats: {e}");
+            AppError::internal("Database query failed")
+        })?;
+
+        let total_words = total_words.and_then(|(v,)| v).unwrap_or(0);
 
         Ok(ProjectStats {
             total_projects: total,
@@ -256,7 +242,7 @@ impl ProjectDao {
 mod tests {
     use super::*;
     use moling_core::types::Pagination;
-    use sea_orm::{ActiveModelTrait, ConnectionTrait, Database, DatabaseConnection, DbBackend, Set, Statement};
+    use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, Set, Statement};
 
     async fn setup_db() -> DatabaseConnection {
         let db = Database::connect("sqlite::memory:").await.unwrap();

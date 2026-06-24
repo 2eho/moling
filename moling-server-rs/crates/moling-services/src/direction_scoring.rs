@@ -7,12 +7,12 @@
 //!
 //! Score ∈ [0, 1]:
 //!   > 0.7  → High confidence → adopt directly
-//!   [0.3, 0.7] → Medium confidence → mark "suggested", still adopt
-//!   < 0.3  → Low confidence → fallback to LLM
+//! > [0.3, 0.7] → Medium confidence → mark "suggested", still adopt
+//! > < 0.3  → Low confidence → fallback to LLM
 //!
 //! Weave selection score ∈ [0, 1]:
 //!   > 0.8  → Adopt rule engine result directly
-//!   ≤ 0.8  → Fallback to LLM for weave mode selection
+//! > ≤ 0.8  → Fallback to LLM for weave mode selection
 //!
 //! Ported from Python `app/service/direction_scoring.py`.
 
@@ -443,7 +443,7 @@ impl DirectionScoringService {
                 let dir_a = &cards[i].direction_type;
                 let dir_b = &cards[j].direction_type;
 
-                let mut pair = vec![dir_a.clone(), dir_b.clone()];
+                let mut pair = [dir_a.clone(), dir_b.clone()];
                 pair.sort();
                 let pair_key = (pair[0].clone(), pair[1].clone());
 
@@ -716,17 +716,15 @@ impl DirectionScoringService {
         tone_conflicts: &[String],
         fallback_result: Option<&str>,
     ) -> Option<String> {
-        if let Some(fr) = fallback_result {
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(fr) {
-                if let Some(s) = parsed
+        if let Some(fr) = fallback_result
+            && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(fr)
+                && let Some(s) = parsed
                     .get("suggestion")
                     .or_else(|| parsed.get("recommended_fix"))
                     .and_then(|v| v.as_str())
                 {
                     return Some(s.to_string());
                 }
-            }
-        }
 
         if conflict_score < 0.3 {
             return None;

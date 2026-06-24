@@ -102,15 +102,13 @@ pub async fn optional_auth(
     next: Next,
 ) -> Response {
     // Try to extract and verify — silently skip on failure
-    if let Ok(token) = extract_bearer_token(request.headers()) {
-        if let Ok(claims) = jwt::verify_token(&token, &config.secret) {
-            if let Ok(user_id) = Uuid::parse_str(&claims.sub) {
+    if let Ok(token) = extract_bearer_token(request.headers())
+        && let Ok(claims) = jwt::verify_token(&token, &config.secret)
+            && let Ok(user_id) = Uuid::parse_str(&claims.sub) {
                 request
                     .extensions_mut()
                     .insert(CurrentUser::new(user_id, claims.email, claims.role));
             }
-        }
-    }
 
     next.run(request).await
 }

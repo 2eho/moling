@@ -1,5 +1,5 @@
+import { ArrowRight, BookOpen, Brain, GitBranch, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Sparkles, ArrowRight, Brain, GitBranch, Users, BookOpen, Zap } from "lucide-react";
 
 const features = [
   {
@@ -72,7 +72,10 @@ export function LandingPage() {
         >
           <Sparkles size={18} />
           开始创作
-          <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
+          <ArrowRight
+            size={18}
+            className="group-hover:translate-x-1 transition-transform duration-300"
+          />
         </Link>
 
         {/* Feature Cards */}

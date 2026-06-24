@@ -274,10 +274,10 @@ impl CardDao {
         active.draw_count = Set(current_draw + 1);
         active.last_drawn_chapter = Set(Some(current_chapter));
         // Decrease remaining lifetime by 1 if set
-        if let Some(remaining) = current_remaining {
-            if remaining > 0 {
-                active.remaining_lifetime = Set(Some(remaining - 1));
-            }
+        if let Some(remaining) = current_remaining
+            && remaining > 0
+        {
+            active.remaining_lifetime = Set(Some(remaining - 1));
         }
         active.update(db).await.map_err(|e| {
             tracing::error!(%id, "Card: error updating freshness: {e}");

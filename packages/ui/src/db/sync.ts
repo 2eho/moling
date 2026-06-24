@@ -5,15 +5,15 @@
  * On store change: write projects/chapters to SQLite
  */
 
+import type { Chapter, Character, WritingProject } from "../stores/useWritingStore";
 import { getDB } from "./context";
-import type { WritingProject, Chapter, Character } from "../stores/useWritingStore";
-import type { ProjectRow, ChapterRow } from "./schema";
+import type { ChapterRow, ProjectRow } from "./schema";
 
-type WritingStore = {
+interface WritingStoreSnapshot {
   projects: WritingProject[];
   loadProjects: (projects: WritingProject[]) => void;
   loadProject: (project: WritingProject) => void;
-};
+}
 
 function toProjectRow(p: WritingProject): ProjectRow {
   return {
@@ -41,7 +41,7 @@ function toChapterRow(ch: Chapter, projectId: string, idx: number): ChapterRow {
 }
 
 /** Restore all projects from SQLite into the zustand store. */
-export async function restoreFromDB(store: WritingStore): Promise<void> {
+export async function restoreFromDB(store: WritingStoreSnapshot): Promise<void> {
   try {
     const db = await getDB();
     const projects = await db.listProjects();

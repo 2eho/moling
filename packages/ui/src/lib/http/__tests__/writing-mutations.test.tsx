@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useWritingStore } from "@/stores/useWritingStore";
 import {
+  useGenerateOptionsMutation,
   useSelectOptionMutation,
   useSubmitCustomMutation,
-  useGenerateOptionsMutation,
 } from "../writing-mutations";
 
 // Mock env to enable mock mode
@@ -24,11 +24,7 @@ function createWrapper() {
     },
   });
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -68,7 +64,9 @@ describe("writing-mutations", () => {
       let data: unknown;
       act(() => {
         result.current.mutate("opt-a", {
-          onSuccess: (d) => { data = d; },
+          onSuccess: (d) => {
+            data = d;
+          },
         });
       });
 
@@ -121,7 +119,9 @@ describe("writing-mutations", () => {
       let data: unknown;
       act(() => {
         result.current.mutate("用户自定义内容", {
-          onSuccess: (d) => { data = d; },
+          onSuccess: (d) => {
+            data = d;
+          },
         });
       });
 
@@ -173,7 +173,9 @@ describe("writing-mutations", () => {
       let data: unknown;
       act(() => {
         result.current.mutate(undefined, {
-          onSuccess: (d) => { data = d; },
+          onSuccess: (d) => {
+            data = d;
+          },
         });
       });
 

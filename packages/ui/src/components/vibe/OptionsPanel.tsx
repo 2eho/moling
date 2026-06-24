@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, RefreshCw } from "lucide-react";
-import type { WritingProject, Option } from "@/stores/useWritingStore";
+import { RefreshCw, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { MOCK_OPTIONS } from "@/mock/data/workspace";
+import type { Option, WritingProject } from "@/stores/useWritingStore";
 
 interface OptionsPanelProps {
   project: WritingProject;
@@ -52,6 +52,7 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
         <div className="flex items-center justify-between mb-2.5 md:mb-3">
           <div className="flex items-center gap-0.5 md:gap-1">
             <button
+              type="button"
               onClick={() => setMode("options")}
               className={`px-2.5 py-1.5 md:py-1 rounded text-[11px] font-medium transition-colors ${
                 mode === "options" ? "bg-th-accent-dim text-th-accent-text" : "text-th-text-3"
@@ -60,6 +61,7 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
               选项
             </button>
             <button
+              type="button"
               onClick={() => setMode("custom")}
               className={`px-2.5 py-1.5 md:py-1 rounded text-[11px] font-medium transition-colors ${
                 mode === "custom" ? "bg-th-accent-dim text-th-accent-text" : "text-th-text-3"
@@ -69,6 +71,7 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
             </button>
           </div>
           <button
+            type="button"
             onClick={handleRegenerate}
             disabled={isGenerating}
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors hover:opacity-80 disabled:opacity-50 text-th-text-4"
@@ -84,6 +87,7 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
               const isSelected = selectedOption === opt.id;
               return (
                 <button
+                  type="button"
                   key={opt.id}
                   onClick={() => handleSelect(opt.id)}
                   className={`w-full text-left px-2.5 md:px-3 py-2.5 rounded-lg border transition-all ${
@@ -103,25 +107,12 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-semibold text-th-text">
-                          {opt.title}
-                        </span>
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded"
-                          style={{
-                            background: `hsl(${opt.confidence * 120}, 40%, 90%)`,
-                            color: `hsl(${opt.confidence * 120}, 50%, 30%)`,
-                          }}
-                        >
-                          {Math.round(opt.confidence * 100)}%
-                        </span>
+                        <span className="text-xs font-semibold text-th-text">{opt.title}</span>
                       </div>
                       <p className="text-[11px] leading-relaxed mb-1 text-th-text-3">
                         {opt.description}
                       </p>
-                      <p className="text-[10px] italic text-th-text-4">
-                        {opt.preview}
-                      </p>
+                      <p className="text-[10px] italic text-th-text-4">{opt.preview}</p>
                     </div>
                   </div>
                 </button>
@@ -129,23 +120,16 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
             })}
 
             <button
+              type="button"
               onClick={handleConfirm}
               disabled={!selectedOption || isGenerating}
               className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-40 ${
                 selectedOption ? "bg-th-accent-text text-white" : "bg-th-hover text-th-text-4"
               }`}
             >
-              {isGenerating ? (
-                <RefreshCw size={13} className="animate-spin" />
-              ) : (
-                <Send size={13} />
-              )}
+              {isGenerating ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
               <span>
-                {isGenerating
-                  ? "生成中..."
-                  : selectedOption
-                    ? "确认选择"
-                    : "请先选择一个选项"}
+                {isGenerating ? "生成中..." : selectedOption ? "确认选择" : "请先选择一个选项"}
               </span>
             </button>
           </div>
@@ -158,6 +142,7 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
               className="w-full h-20 rounded-lg px-3 py-2 text-xs resize-none transition-colors bg-th-card border border-th-border-subtle text-th-text-2"
             />
             <button
+              type="button"
               onClick={() => {
                 if (!customInput.trim()) return;
                 setIsGenerating(true);
@@ -173,11 +158,7 @@ export function OptionsPanel({ project: _project, onDraftStep }: OptionsPanelPro
                 customInput.trim() ? "bg-th-accent-text text-white" : "bg-th-hover text-th-text-4"
               }`}
             >
-              {isGenerating ? (
-                <RefreshCw size={13} className="animate-spin" />
-              ) : (
-                <Send size={13} />
-              )}
+              {isGenerating ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
               <span>{isGenerating ? "提交中..." : "提交"}</span>
             </button>
           </div>

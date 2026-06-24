@@ -90,7 +90,7 @@ impl TaskStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "pending" => Some(Self::Pending),
             "running" => Some(Self::Running),
@@ -418,7 +418,7 @@ impl TaskQueue {
     pub async fn get_task_status(&self, queue: &str, task_id: &str) -> AppResult<Option<TaskStatus>> {
         let status_key = format!("{STATUS_PREFIX}{queue}:{task_id}");
         match self.redis.get(&status_key).await {
-            Ok(Some(s)) => Ok(TaskStatus::from_str(&s)),
+            Ok(Some(s)) => Ok(TaskStatus::parse(&s)),
             Ok(None) => Ok(None),
             Err(_) => Ok(None),
         }
@@ -665,11 +665,11 @@ mod tests {
 
     #[test]
     fn test_task_status_conversion() {
-        assert_eq!(TaskStatus::from_str("pending"), Some(TaskStatus::Pending));
-        assert_eq!(TaskStatus::from_str("running"), Some(TaskStatus::Running));
-        assert_eq!(TaskStatus::from_str("completed"), Some(TaskStatus::Completed));
-        assert_eq!(TaskStatus::from_str("failed"), Some(TaskStatus::Failed));
-        assert_eq!(TaskStatus::from_str("unknown"), None);
+        assert_eq!(TaskStatus::parse("pending"), Some(TaskStatus::Pending));
+        assert_eq!(TaskStatus::parse("running"), Some(TaskStatus::Running));
+        assert_eq!(TaskStatus::parse("completed"), Some(TaskStatus::Completed));
+        assert_eq!(TaskStatus::parse("failed"), Some(TaskStatus::Failed));
+        assert_eq!(TaskStatus::parse("unknown"), None);
 
         assert_eq!(TaskStatus::Pending.as_str(), "pending");
         assert_eq!(TaskStatus::Completed.as_str(), "completed");

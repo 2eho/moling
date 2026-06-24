@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Pin, Ellipsis } from "lucide-react";
+import { ChevronDown, Ellipsis, Pin } from "lucide-react";
 import type { WritingProject } from "@/stores/useWritingStore";
 import { ChapterItem } from "./ChapterItem";
 
@@ -33,8 +33,7 @@ export function ProjectCard({
   onChapterClick,
 }: ProjectCardProps) {
   const isCompleted =
-    project.chapters.length > 0 &&
-    project.chapters.every((ch) => ch.status === "completed");
+    project.chapters.length > 0 && project.chapters.every((ch) => ch.status === "completed");
 
   const reversedChapters = [...project.chapters].reverse();
 
@@ -43,34 +42,33 @@ export function ProjectCard({
       {/* ── Project row ── */}
       <div className="group/project relative">
         <button
+          type="button"
           onClick={onProjectClick}
-          className="w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-left transition-colors border-l-[3px] border-transparent relative"
-          style={{
-            color: isCompleted ? "var(--th-text-3)" : "var(--th-text-2)",
-            background: "transparent",
-            borderRadius: 8,
-          }}
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-left transition-colors border-l-[3px] border-transparent relative ${
+            isCompleted ? "text-th-text-3" : "text-th-text-2"
+          }`}
         >
-        
           <span
-            className="shrink-0 transition-transform duration-200"
-            style={{ transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)", marginLeft: -6 }}
+            className={`shrink-0 transition-transform duration-200 -ml-1.5 ${
+              isExpanded ? "rotate-0" : "-rotate-90"
+            }`}
           >
             <ChevronDown size={14} />
           </span>
 
           {/* Title */}
           <span
-            className="flex-1 truncate text-[14px] leading-snug"
-            style={{ fontWeight: isCompleted ? 400 : 600 }}
+            className={`flex-1 truncate text-[14px] leading-snug ${
+              isCompleted ? "font-normal" : "font-semibold"
+            }`}
           >
             {project.title}
           </span>
 
           {/* Pin */}
           <button
-            className="p-1 rounded transition-all hover:bg-th-hover shrink-0"
-            style={{ color: "var(--th-text-3)" }}
+            type="button"
+            className="p-1 rounded transition-all hover:bg-th-hover shrink-0 text-th-text-3"
             title="置顶"
             onClick={(e) => e.stopPropagation()}
           >
@@ -78,8 +76,8 @@ export function ProjectCard({
           </button>
           {/* More */}
           <button
-            className="p-1 rounded transition-all hover:bg-th-hover shrink-0"
-            style={{ color: "var(--th-text-3)" }}
+            type="button"
+            className="p-1 rounded transition-all hover:bg-th-hover shrink-0 text-th-text-3"
             title="更多"
             onClick={(e) => e.stopPropagation()}
           >
@@ -102,9 +100,7 @@ export function ProjectCard({
             const isCurrent = ch.id === activeChapterId && isActive;
             const isTreeEnd = idx === reversedChapters.length - 1;
             const isDisabled = !isActive;
-            const lineColor = isCurrent
-              ? "var(--th-accent-text)"
-              : "var(--th-border)";
+            const lineColor = isCurrent ? "var(--th-accent-text)" : "var(--th-border)";
 
             return (
               <div key={ch.id} style={{ display: "contents" }}>

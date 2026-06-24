@@ -21,9 +21,12 @@ alerting:
         - targets:
           - alertmanager:9093
 
-# 告警规则（飞书消息的数据源头）
+# 告警规则
+#   - alert_rules.yml: 通用告警（服务可用性、延迟、资源等）
+#   - rules/moling-alerts.yml: Rust 后端专用告警（P99 延迟、错误率、连接池等）
 rule_files:
   - "/etc/prometheus/alert_rules.yml"
+  - "/etc/prometheus/rules/moling-alerts.yml"
 
 # 抓取配置
 scrape_configs:
@@ -38,15 +41,14 @@ scrape_configs:
   #   static_configs:
   #     - targets: ['node-exporter:9100']
 
-  # ---- FastAPI 后端应用 ----
-  # 需要在后端应用中添加 /metrics 端点 (使用 prometheus-fastapi-instrumentator)
+  # ---- Rust 后端 (Axum) ----
+  # 指标由 metrics-exporter-prometheus 暴露于 /metrics
   - job_name: 'moling-backend'
     static_configs:
-      - targets: ['app:8000']
+      - targets: ['server:8000']
     metrics_path: '/metrics'
-    # 如果后端还没有 /metrics 端点，可以暂时禁用
-    # 取消注释以下行以启用
-    # enabled: false
+    # 指标采集频率保持全局默认 15s
+    # 如后端负载高可上调 scrape_interval
 
   # ---- Redis 监控 ----
   # 需要添加 redis_exporter

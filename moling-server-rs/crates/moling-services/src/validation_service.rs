@@ -122,14 +122,13 @@ impl ValidationService {
         let mut missing: Vec<String> = Vec::new();
         for card in cards {
             for char_ref in &card.characters {
-                if let Some(ref name) = char_ref.name {
-                    if !vault_names.contains(name.as_str()) {
+                if let Some(ref name) = char_ref.name
+                    && !vault_names.contains(name.as_str()) {
                         missing.push(format!(
                             "卡片「{}」引用了 vault 中不存在的角色「{name}」",
                             card.name
                         ));
                     }
-                }
             }
         }
 
@@ -856,10 +855,10 @@ mod tests {
     #[test]
     fn test_aggregate_all_passed() {
         let svc = ValidationService::new(
-            VaultDao::default(),
-            CardDao::default(),
-            DynamicLayerDao::default(),
-            SecretDao::default(),
+            VaultDao,
+            CardDao,
+            DynamicLayerDao,
+            SecretDao,
         );
         let checks = vec![CheckResult {
             passed: true,
@@ -876,10 +875,10 @@ mod tests {
     #[test]
     fn test_aggregate_with_warning() {
         let svc = ValidationService::new(
-            VaultDao::default(),
-            CardDao::default(),
-            DynamicLayerDao::default(),
-            SecretDao::default(),
+            VaultDao,
+            CardDao,
+            DynamicLayerDao,
+            SecretDao,
         );
         let checks = vec![
             CheckResult {

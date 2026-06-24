@@ -147,7 +147,11 @@ impl UserDao {
         db: &DatabaseConnection,
         model: user::ActiveModel,
     ) -> AppResult<UserModel> {
-        let id = model.id.clone().unwrap();
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.clone(),
+            sea_orm::ActiveValue::Unchanged(v) => v.clone(),
+            _ => return Err(AppError::internal("User id must be set".to_owned())),
+        };
         match model.insert(db).await {
             Ok(inserted) => Ok(inserted),
             Err(e) => {
@@ -339,7 +343,7 @@ mod tests {
         let dao = UserDao::new();
 
         // Create 3 users
-        for (i, name) in ["alpha", "beta", "gamma"].iter().enumerate() {
+        for name in ["alpha", "beta", "gamma"].iter() {
             let email = format!("{name}@test.com");
             let id = uuid::Uuid::new_v4().to_string();
             dao.create(&db, make_user(&id, &email, name)).await.unwrap();

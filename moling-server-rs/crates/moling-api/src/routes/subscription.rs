@@ -32,7 +32,7 @@ async fn list_plans(
     State(state): State<AppState>,
 ) -> AppResult<Json<serde_json::Value>> {
     let plans = PlanDao.list_active_plans(&state.db).await?;
-    Ok(Json(serde_json::to_value(plans).unwrap()))
+    Ok(Json(serde_json::to_value(plans)?))
 }
 
 /// POST /subscriptions/create-checkout — create a payment checkout session.
@@ -78,11 +78,10 @@ async fn create_subscription(
     let user_id = user.user_id.to_string();
 
     // Check if user already has an active subscription
-    if let Some(existing) = UserSubscriptionDao.get_by_user(&state.db, &user_id).await? {
-        if existing.status == "active" {
+    if let Some(existing) = UserSubscriptionDao.get_by_user(&state.db, &user_id).await?
+        && existing.status == "active" {
             return Err(AppError::validation_error("您已有活跃的订阅".to_owned()));
         }
-    }
 
     // Verify plan exists
     let plan = PlanDao
@@ -104,14 +103,14 @@ async fn create_subscription(
         user_id: Set(user_id),
         plan_id: Set(req.plan_id),
         status: Set("active".to_owned()),
-        start_date: Set(now.into()),
-        end_date: Set(Some(end_date.into())),
+        start_date: Set(now),
+        end_date: Set(Some(end_date)),
         auto_renew: Set(req.auto_renew.unwrap_or(true)),
         ..Default::default()
     };
 
     let sub = UserSubscriptionDao.create(&state.db, model).await?;
-    Ok(Json(serde_json::to_value(sub).unwrap()))
+    Ok(Json(serde_json::to_value(sub)?))
 }
 
 /// GET /subscriptions/current — get current user's subscription.
@@ -132,7 +131,7 @@ async fn get_current(
         }))),
         Some(s) => Ok(Json(serde_json::json!({
             "has_subscription": true,
-            "subscription": serde_json::to_value(s).unwrap(),
+            "subscription": serde_json::to_value(s)?,
         }))),
     }
 }
@@ -147,7 +146,7 @@ async fn get_history(
     let history = UserSubscriptionDao
         .list_by_user(&state.db, &user.user_id.to_string(), 0, 20)
         .await?;
-    Ok(Json(serde_json::to_value(history).unwrap()))
+    Ok(Json(serde_json::to_value(history)?))
 }
 
 /// GET /subscriptions/payment-history — paginated payment history.
@@ -163,7 +162,7 @@ async fn get_payment_history(
         .list_by_user(&state.db, &user.user_id.to_string(), skip, pg.page_size as u64)
         .await?;
     let total: u64 = moling_db::entities::user_subscription::Entity::find()
-        .filter(moling_db::entities::user_subscription::Column::UserId.eq(&user.user_id.to_string()))
+        .filter(moling_db::entities::user_subscription::Column::UserId.eq(user.user_id.to_string()))
         .count(&state.db)
         .await
         .unwrap_or(0);

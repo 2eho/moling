@@ -1,10 +1,14 @@
 # ==============================================================================
 # Backup Test — SQLite / PostgreSQL (Rust)
 # ==============================================================================
+# STATUS: PLACEHOLDER — 等待 Rust backup CLI 实现后再启用
+#
 # 注意: Python backup/drill 测试已移除（Python 后端已删除）。
 # Rust 后端使用 SQLite（本地）/ PostgreSQL（生产），备份方案待实现。
 #
-# TODO: 添加 `cargo run --bin moling-cli -- backup` 命令
+# 待实现:
+#   - `cargo run --bin moling-cli -- backup` 命令
+#   - 自动触发: push to moling-server-rs/crates/moling-db/**
 # ==============================================================================
 
 name: Backup Test

@@ -10,13 +10,7 @@
 
 import initSqlJs from "sql.js";
 import type { DBAdapter } from "./adapter";
-import type {
-  ProjectRow,
-  ChapterRow,
-  CharacterRow,
-  ForeshadowingRow,
-  WritingProjectFull,
-} from "./schema";
+import type { ChapterRow, CharacterRow, ForeshadowingRow, ProjectRow } from "./schema";
 import { MIGRATIONS } from "./schema";
 
 const DB_FILENAME = "moling.db";
@@ -26,7 +20,11 @@ const SAVE_DEBOUNCE = 500;
 
 async function opfsAvailable(): Promise<boolean> {
   try {
-    return typeof navigator !== "undefined" && "storage" in navigator && "getDirectory" in navigator.storage;
+    return (
+      typeof navigator !== "undefined" &&
+      "storage" in navigator &&
+      "getDirectory" in navigator.storage
+    );
   } catch {
     return false;
   }
@@ -124,9 +122,7 @@ export function createSqlJsAdapter(): DBAdapter {
     const data = db.export() as Uint8Array;
     if (usingOPFS) {
       // OPFS: binary, no base64, no size ceiling
-      writeOPFS(DB_FILENAME, data).catch((e) =>
-        console.error("[moling-db] OPFS write failed:", e),
-      );
+      writeOPFS(DB_FILENAME, data).catch((e) => console.error("[moling-db] OPFS write failed:", e));
     } else {
       // localStorage fallback
       try {
@@ -155,7 +151,9 @@ export function createSqlJsAdapter(): DBAdapter {
   const runMigrations = () => {
     if (!db) return;
     for (const sql of MIGRATIONS) {
-      try { db.run(sql); } catch (e) {
+      try {
+        db.run(sql);
+      } catch (e) {
         console.warn("[moling-db] Migration:", (e as Error).message);
       }
     }
@@ -234,7 +232,9 @@ export function createSqlJsAdapter(): DBAdapter {
       const proj = db.exec("SELECT * FROM projects WHERE id = ?", [id]);
       if (!proj.length || !proj[0].values.length) return null;
 
-      const chapters = db.exec("SELECT * FROM chapters WHERE project_id = ? ORDER BY sort_order", [id]);
+      const chapters = db.exec("SELECT * FROM chapters WHERE project_id = ? ORDER BY sort_order", [
+        id,
+      ]);
       const chars = db.exec("SELECT * FROM characters WHERE project_id = ?", [id]);
       const foreshadowing = db.exec("SELECT * FROM foreshadowing WHERE project_id = ?", [id]);
       const world = db.exec("SELECT content FROM world_rules WHERE project_id = ?", [id]);
@@ -245,7 +245,9 @@ export function createSqlJsAdapter(): DBAdapter {
         const cols = result[0].columns as string[];
         return result[0].values.map((vals: unknown[]) => {
           const obj: Record<string, unknown> = {};
-          cols.forEach((c: string, i: number) => { obj[c] = vals[i]; });
+          cols.forEach((c: string, i: number) => {
+            obj[c] = vals[i];
+          });
           return mapper(obj);
         });
       }
@@ -255,14 +257,17 @@ export function createSqlJsAdapter(): DBAdapter {
         chapters: rows(chapters, chapterRow),
         characters: rows(chars, characterRow),
         foreshadowing: rows(foreshadowing, foreshadowingRow),
-        worldRules: world.length ? (world[0].values[0]?.[0] as string) ?? "" : "",
-        styleNotes: style.length ? (style[0].values[0]?.[0] as string) ?? "" : "",
+        worldRules: world.length ? ((world[0].values[0]?.[0] as string) ?? "") : "",
+        styleNotes: style.length ? ((style[0].values[0]?.[0] as string) ?? "") : "",
       };
     },
 
     async createProject(p: ProjectRow) {
       if (!db) throw new Error("DB not initialized");
-      db.run("INSERT INTO projects (id,title,genre,phase,summary,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [p.id, p.title, p.genre, p.phase, p.summary, p.status, p.created_at, p.updated_at]);
+      db.run(
+        "INSERT INTO projects (id,title,genre,phase,summary,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
+        [p.id, p.title, p.genre, p.phase, p.summary, p.status, p.created_at, p.updated_at],
+      );
       schedulePersist();
     },
 
@@ -271,7 +276,10 @@ export function createSqlJsAdapter(): DBAdapter {
       const sets: string[] = [];
       const vals: unknown[] = [];
       for (const [k, v] of Object.entries(fields)) {
-        if (v !== undefined) { sets.push(`${k} = ?`); vals.push(v); }
+        if (v !== undefined) {
+          sets.push(`${k} = ?`);
+          vals.push(v);
+        }
       }
       if (sets.length === 0) return;
       sets.push("updated_at = ?");
@@ -291,7 +299,9 @@ export function createSqlJsAdapter(): DBAdapter {
 
     async listChapters(projectId) {
       if (!db) throw new Error("DB not initialized");
-      const stmt = db.prepare("SELECT * FROM chapters WHERE project_id = ? ORDER BY sort_order", [projectId]);
+      const stmt = db.prepare("SELECT * FROM chapters WHERE project_id = ? ORDER BY sort_order", [
+        projectId,
+      ]);
       const rows: ChapterRow[] = [];
       while (stmt.step()) rows.push(chapterRow(stmt.getAsObject()));
       stmt.free();
@@ -300,14 +310,20 @@ export function createSqlJsAdapter(): DBAdapter {
 
     async getChapter(projectId, chapterId) {
       if (!db) throw new Error("DB not initialized");
-      const r = db.exec("SELECT * FROM chapters WHERE project_id = ? AND id = ?", [projectId, chapterId]);
+      const r = db.exec("SELECT * FROM chapters WHERE project_id = ? AND id = ?", [
+        projectId,
+        chapterId,
+      ]);
       if (!r.length || !r[0].values.length) return null;
       return chapterRow(rowObj(r[0].columns, r[0].values[0] as unknown[]));
     },
 
     async createChapter(ch) {
       if (!db) throw new Error("DB not initialized");
-      db.run("INSERT INTO chapters (id,project_id,title,summary,content,status,sort_order) VALUES (?,?,?,?,?,?,?)", [ch.id, ch.project_id, ch.title, ch.summary, ch.content, ch.status, ch.sort_order]);
+      db.run(
+        "INSERT INTO chapters (id,project_id,title,summary,content,status,sort_order) VALUES (?,?,?,?,?,?,?)",
+        [ch.id, ch.project_id, ch.title, ch.summary, ch.content, ch.status, ch.sort_order],
+      );
       schedulePersist();
     },
 
@@ -316,7 +332,10 @@ export function createSqlJsAdapter(): DBAdapter {
       const sets: string[] = [];
       const vals: unknown[] = [];
       for (const [k, v] of Object.entries(fields)) {
-        if (v !== undefined) { sets.push(`${k} = ?`); vals.push(v); }
+        if (v !== undefined) {
+          sets.push(`${k} = ?`);
+          vals.push(v);
+        }
       }
       if (sets.length === 0) return;
       vals.push(projectId, chapterId);
@@ -342,7 +361,10 @@ export function createSqlJsAdapter(): DBAdapter {
     },
     async createCharacter(ch) {
       if (!db) throw new Error("DB not initialized");
-      db.run("INSERT INTO characters (id,project_id,name,role,description,arc) VALUES (?,?,?,?,?,?)", [ch.id, ch.project_id, ch.name, ch.role, ch.description, ch.arc]);
+      db.run(
+        "INSERT INTO characters (id,project_id,name,role,description,arc) VALUES (?,?,?,?,?,?)",
+        [ch.id, ch.project_id, ch.name, ch.role, ch.description, ch.arc],
+      );
       schedulePersist();
     },
     async updateCharacter(id, fields) {
@@ -350,7 +372,10 @@ export function createSqlJsAdapter(): DBAdapter {
       const sets: string[] = [];
       const vals: unknown[] = [];
       for (const [k, v] of Object.entries(fields)) {
-        if (v !== undefined) { sets.push(`${k} = ?`); vals.push(v); }
+        if (v !== undefined) {
+          sets.push(`${k} = ?`);
+          vals.push(v);
+        }
       }
       if (sets.length === 0) return;
       vals.push(id);
@@ -375,7 +400,10 @@ export function createSqlJsAdapter(): DBAdapter {
     },
     async createForeshadowing(item) {
       if (!db) throw new Error("DB not initialized");
-      db.run("INSERT INTO foreshadowing (id,project_id,description,status,chapter) VALUES (?,?,?,?,?)", [item.id, item.project_id, item.description, item.status, item.chapter]);
+      db.run(
+        "INSERT INTO foreshadowing (id,project_id,description,status,chapter) VALUES (?,?,?,?,?)",
+        [item.id, item.project_id, item.description, item.status, item.chapter],
+      );
       schedulePersist();
     },
     async updateForeshadowing(id, fields) {
@@ -383,7 +411,10 @@ export function createSqlJsAdapter(): DBAdapter {
       const sets: string[] = [];
       const vals: unknown[] = [];
       for (const [k, v] of Object.entries(fields)) {
-        if (v !== undefined) { sets.push(`${k} = ?`); vals.push(v); }
+        if (v !== undefined) {
+          sets.push(`${k} = ?`);
+          vals.push(v);
+        }
       }
       if (sets.length === 0) return;
       vals.push(id);
@@ -401,21 +432,27 @@ export function createSqlJsAdapter(): DBAdapter {
     async getWorldRules(projectId) {
       if (!db) throw new Error("DB not initialized");
       const r = db.exec("SELECT content FROM world_rules WHERE project_id = ?", [projectId]);
-      return r.length ? (r[0].values[0]?.[0] as string) ?? "" : "";
+      return r.length ? ((r[0].values[0]?.[0] as string) ?? "") : "";
     },
     async setWorldRules(projectId, content) {
       if (!db) throw new Error("DB not initialized");
-      db.run("INSERT OR REPLACE INTO world_rules (project_id, content) VALUES (?,?)", [projectId, content]);
+      db.run("INSERT OR REPLACE INTO world_rules (project_id, content) VALUES (?,?)", [
+        projectId,
+        content,
+      ]);
       schedulePersist();
     },
     async getStyleNotes(projectId) {
       if (!db) throw new Error("DB not initialized");
       const r = db.exec("SELECT content FROM style_notes WHERE project_id = ?", [projectId]);
-      return r.length ? (r[0].values[0]?.[0] as string) ?? "" : "";
+      return r.length ? ((r[0].values[0]?.[0] as string) ?? "") : "";
     },
     async setStyleNotes(projectId, content) {
       if (!db) throw new Error("DB not initialized");
-      db.run("INSERT OR REPLACE INTO style_notes (project_id, content) VALUES (?,?)", [projectId, content]);
+      db.run("INSERT OR REPLACE INTO style_notes (project_id, content) VALUES (?,?)", [
+        projectId,
+        content,
+      ]);
       schedulePersist();
     },
   };
@@ -425,6 +462,8 @@ export function createSqlJsAdapter(): DBAdapter {
 
 function rowObj(cols: string[], vals: unknown[]): Record<string, unknown> {
   const obj: Record<string, unknown> = {};
-  cols.forEach((c, i) => { obj[c] = vals[i]; });
+  cols.forEach((c, i) => {
+    obj[c] = vals[i];
+  });
   return obj;
 }

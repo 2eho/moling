@@ -97,8 +97,7 @@ fn build_job_status(job: &moling_db::entities::ingest_job::Model) -> ImportJobSt
     if let Some(ref p3) = job.phase3_result {
         conflicts = p3
             .get("conflicts")
-            .and_then(|c| c.as_array())
-            .map(|a| a.clone())
+            .and_then(|c| c.as_array()).cloned()
             .unwrap_or_default();
     }
 

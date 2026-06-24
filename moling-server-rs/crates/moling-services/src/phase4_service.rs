@@ -334,15 +334,12 @@ impl Phase4Service {
         result["version"] = serde_json::Value::String(version.clone());
 
         let mut summary_parts: Vec<String> = Vec::new();
-        if let Some(created) = char_result.get("created").and_then(|v| v.as_array()) {
-            if !created.is_empty() { summary_parts.push(format!("新增角色 {} 个", created.len())); }
-        }
-        if let Some(updated) = char_result.get("updated").and_then(|v| v.as_array()) {
-            if !updated.is_empty() { summary_parts.push(format!("更新角色 {} 个", updated.len())); }
-        }
-        if let Some(sc) = char_result.get("status_changed").and_then(|v| v.as_array()) {
-            if !sc.is_empty() { summary_parts.push(format!("角色状态变更 {} 个", sc.len())); }
-        }
+        if let Some(created) = char_result.get("created").and_then(|v| v.as_array())
+            && !created.is_empty() { summary_parts.push(format!("新增角色 {} 个", created.len())); }
+        if let Some(updated) = char_result.get("updated").and_then(|v| v.as_array())
+            && !updated.is_empty() { summary_parts.push(format!("更新角色 {} 个", updated.len())); }
+        if let Some(sc) = char_result.get("status_changed").and_then(|v| v.as_array())
+            && !sc.is_empty() { summary_parts.push(format!("角色状态变更 {} 个", sc.len())); }
         if timeline_result.get("added").and_then(|v| v.as_i64()).unwrap_or(0) > 0 {
             summary_parts.push(format!("新增时间线事件 {} 个", timeline_result["added"]));
         }
@@ -397,8 +394,8 @@ impl Phase4Service {
             Ok(content) => {
                 let json_start = content.find('{');
                 let json_end = content.rfind('}').map(|i| i + 1).unwrap_or(0);
-                if let (Some(start), end) = (json_start, json_end) {
-                    if end > start {
+                if let (Some(start), end) = (json_start, json_end)
+                    && end > start {
                         let json_str = &content[start..end];
                         match serde_json::from_str::<Json>(json_str) {
                             Ok(parsed) => return parsed,
@@ -408,7 +405,6 @@ impl Phase4Service {
                             }
                         }
                     }
-                }
                 serde_json::json!({"raw_analysis": content})
             }
             Err(e) => {
@@ -696,19 +692,17 @@ impl Phase4Service {
             // Merge with existing hooks (dedup)
             let existing_hooks: Vec<Json> = dl.unresolved_hooks
                 .as_ref()
-                .and_then(|v| v.as_array())
-                .map(|a| a.clone())
+                .and_then(|v| v.as_array()).cloned()
                 .unwrap_or_default();
             let existing_descs: std::collections::HashSet<String> = existing_hooks.iter()
                 .filter_map(|h| h.get("description").and_then(|v| v.as_str()).map(|s| s.to_owned()))
                 .collect();
             let mut merged = existing_hooks.clone();
             for hook in &unresolved {
-                if let Some(desc) = hook.get("description").and_then(|v| v.as_str()) {
-                    if !existing_descs.contains(desc) {
+                if let Some(desc) = hook.get("description").and_then(|v| v.as_str())
+                    && !existing_descs.contains(desc) {
                         merged.push(hook.clone());
                     }
-                }
             }
             // Remove resolved/abandoned hooks
             let active_descs: std::collections::HashSet<String> = promises.map(|ps| {
@@ -734,8 +728,7 @@ impl Phase4Service {
             // Recent changes (keep last 3)
             let mut recent: Vec<Json> = dl.recent_changes
                 .as_ref()
-                .and_then(|v| v.as_array())
-                .map(|a| a.clone())
+                .and_then(|v| v.as_array()).cloned()
                 .unwrap_or_default();
             recent.push(serde_json::json!({
                 "chapter_id": chapter_id,
@@ -887,21 +880,19 @@ impl Phase4Service {
         let mut existing = self.vault_dao.find_promise_by_description(db, project_id, fragment).await?;
 
         // Strategy 2: type + character match
-        if existing.is_none() {
-            if let Some(chars) = related_chars {
+        if existing.is_none()
+            && let Some(chars) = related_chars {
                 let statuses = ["dormant".to_owned(), "active".to_owned(), "advancing".to_owned()];
                 for char_val in chars {
-                    if let Some(char_name) = char_val.as_str() {
-                        if let Some(p) = self.vault_dao.find_promise_by_type_and_char(
+                    if let Some(char_name) = char_val.as_str()
+                        && let Some(p) = self.vault_dao.find_promise_by_type_and_char(
                             db, project_id, promise_type, char_name, &statuses,
                         ).await? {
                             existing = Some(p);
                             break;
                         }
-                    }
                 }
             }
-        }
 
         if let Some(p) = existing {
             let mut active = p.into_active_model();
@@ -1131,7 +1122,7 @@ impl Phase4Service {
 
                         let mut state_machine = ec.state_machine.clone().unwrap_or(Json::Object(Default::default()));
                         let mut history: Vec<Json> = state_machine.get("history")
-                            .and_then(|v| v.as_array()).map(|a| a.clone()).unwrap_or_default();
+                            .and_then(|v| v.as_array()).cloned().unwrap_or_default();
                         history.push(serde_json::json!({
                             "from": old_status,
                             "to": new_status,
@@ -1182,16 +1173,14 @@ impl Phase4Service {
     fn _extract_change(changes: Option<&Vec<Json>>, key: &str, default: &str) -> String {
         if let Some(arr) = changes {
             for change in arr {
-                if let Some(obj) = change.as_object() {
-                    if let Some(val) = obj.get(key).and_then(|v| v.as_str()) {
+                if let Some(obj) = change.as_object()
+                    && let Some(val) = obj.get(key).and_then(|v| v.as_str()) {
                         return val.to_owned();
                     }
-                }
-                if let Some(s) = change.as_str() {
-                    if let Some(stripped) = s.strip_prefix(&format!("{}:", key)) {
+                if let Some(s) = change.as_str()
+                    && let Some(stripped) = s.strip_prefix(&format!("{}:", key)) {
                         return stripped.trim().to_owned();
                     }
-                }
             }
         }
         default.to_owned()
@@ -1211,13 +1200,12 @@ impl Phase4Service {
                     for (k, v) in obj {
                         map.insert(k.clone(), v.clone());
                     }
-                } else if let Some(s) = change.as_str() {
-                    if let Some(colon) = s.find(':') {
+                } else if let Some(s) = change.as_str()
+                    && let Some(colon) = s.find(':') {
                         let key = s[..colon].trim().to_owned();
                         let val = s[colon + 1..].trim().to_owned();
                         map.insert(key, Json::String(val));
                     }
-                }
             }
         }
         map
@@ -1305,22 +1293,20 @@ impl Phase4Service {
                 let event_name = update.get("event").and_then(|v| v.as_str()).unwrap_or("");
                 if event_name.is_empty() { continue; }
 
-                if let Ok(events) = self.vault_dao.find_timeline_events(db, project_id).await {
-                    if let Some(target) = events.iter().find(|e| e.event == event_name) {
+                if let Ok(events) = self.vault_dao.find_timeline_events(db, project_id).await
+                    && let Some(target) = events.iter().find(|e| e.event == event_name) {
                         let mut active = target.clone().into_active_model();
                         if let Some(day) = update.get("day").and_then(|v| v.as_i64()) {
                             active.day = Set(Some(day as i32));
                         }
-                        if action == "correct" {
-                            if let Some(desc) = update.get("description").and_then(|v| v.as_str()) {
+                        if action == "correct"
+                            && let Some(desc) = update.get("description").and_then(|v| v.as_str()) {
                                 active.description = Set(desc.to_owned());
                             }
-                        }
                         if let Err(e) = self.vault_dao.update_timeline(db, active).await {
                             tracing::warn!("Failed to {} timeline event '{}': {}", action, event_name, e);
                         }
                     }
-                }
             }
         }
 
@@ -1459,10 +1445,10 @@ impl Phase4Service {
                     tracing::info!("World entry created: {}", name);
                 }
                 "expand" | "clarify" => {
-                    if let Ok(entries) = self.vault_dao.find_world_entries(db, project_id).await {
-                        if let Some(target) = entries.iter().find(|e| e.name == name) {
+                    if let Ok(entries) = self.vault_dao.find_world_entries(db, project_id).await
+                        && let Some(target) = entries.iter().find(|e| e.name == name) {
                             let mut refs: Vec<Json> = target.reference_chapters
-                                .as_ref().and_then(|v| v.as_array()).map(|a| a.clone())
+                                .as_ref().and_then(|v| v.as_array()).cloned()
                                 .unwrap_or_default();
                             if chapter_number > 0 && !refs.iter().any(|r| r.as_i64() == Some(chapter_number as i64)) {
                                 refs.push(Json::Number(chapter_number.into()));
@@ -1482,15 +1468,14 @@ impl Phase4Service {
                             expanded += 1;
                             tracing::info!("World entry {}: {}", action, name);
                         }
-                    }
                 }
                 "connect" => {
                     let content = update.get("content").and_then(|v| v.as_str()).unwrap_or("");
                     if content.is_empty() { continue; }
-                    if let Ok(entries) = self.vault_dao.find_world_entries(db, project_id).await {
-                        if let Some(target) = entries.iter().find(|e| e.name == name) {
+                    if let Ok(entries) = self.vault_dao.find_world_entries(db, project_id).await
+                        && let Some(target) = entries.iter().find(|e| e.name == name) {
                             let mut related: Vec<Json> = target.related_entities
-                                .as_ref().and_then(|v| v.as_array()).map(|a| a.clone())
+                                .as_ref().and_then(|v| v.as_array()).cloned()
                                 .unwrap_or_default();
                             if !related.iter().any(|r| r.as_str() == Some(content)) {
                                 related.push(Json::String(content.to_owned()));
@@ -1501,7 +1486,6 @@ impl Phase4Service {
                             expanded += 1;
                             tracing::info!("World entry connected: {} <-> {}", name, content);
                         }
-                    }
                 }
                 _ => {}
             }
@@ -1607,44 +1591,40 @@ impl Phase4Service {
         }
 
         // Evaluate timeline changes (default 0.7)
-        if let Some(added) = changes.get("timeline").and_then(|t| t.get("added")).and_then(|v| v.as_i64()) {
-            if added > 0 {
+        if let Some(added) = changes.get("timeline").and_then(|t| t.get("added")).and_then(|v| v.as_i64())
+            && added > 0 {
                 let level = evaluate_confidence(0.7);
                 *level_counts.entry(level.to_owned()).or_insert(0) += added;
             }
-        }
 
         // Evaluate promise changes (default 0.8)
         if let Some(promises) = changes.get("plot_promises") {
             for key in &["created", "advanced", "redeemed"] {
-                if let Some(count) = promises.get(key).and_then(|v| v.as_i64()) {
-                    if count > 0 {
+                if let Some(count) = promises.get(key).and_then(|v| v.as_i64())
+                    && count > 0 {
                         let level = evaluate_confidence(0.8);
                         *level_counts.entry(level.to_owned()).or_insert(0) += count;
                     }
-                }
             }
         }
 
         // Evaluate world changes (default 0.7)
         if let Some(world) = changes.get("world") {
             for key in &["created", "expanded"] {
-                if let Some(count) = world.get(key).and_then(|v| v.as_i64()) {
-                    if count > 0 {
+                if let Some(count) = world.get(key).and_then(|v| v.as_i64())
+                    && count > 0 {
                         let level = evaluate_confidence(0.7);
                         *level_counts.entry(level.to_owned()).or_insert(0) += count;
                     }
-                }
             }
         }
 
         // Evaluate card changes (default 0.85)
-        if let Some(added) = changes.get("card_pool").and_then(|c| c.get("added")).and_then(|v| v.as_i64()) {
-            if added > 0 {
+        if let Some(added) = changes.get("card_pool").and_then(|c| c.get("added")).and_then(|v| v.as_i64())
+            && added > 0 {
                 let level = evaluate_confidence(0.85);
                 *level_counts.entry(level.to_owned()).or_insert(0) += added;
             }
-        }
 
         // Overall level
         let total_items: i64 = level_counts.values().sum();
@@ -1723,8 +1703,8 @@ impl Phase4Service {
         }
 
         // Timeline changes
-        if let Some(added) = changes.get("timeline").and_then(|t| t.get("added")).and_then(|v| v.as_i64()) {
-            if added > 0 {
+        if let Some(added) = changes.get("timeline").and_then(|t| t.get("added")).and_then(|v| v.as_i64())
+            && added > 0 {
                 let log = vault_changelog::ActiveModel {
                     id: Set(Uuid::new_v4().to_string()),
                     project_id: Set(project_id),
@@ -1740,13 +1720,12 @@ impl Phase4Service {
                 };
                 self.vault_dao.create_changelog(db, log).await?;
             }
-        }
 
         // Promise changes
         if let Some(promises) = changes.get("plot_promises") {
             for (action, label) in &[("created", "新增"), ("advanced", "推进"), ("redeemed", "回收")] {
-                if let Some(count) = promises.get(action).and_then(|v| v.as_i64()) {
-                    if count > 0 {
+                if let Some(count) = promises.get(action).and_then(|v| v.as_i64())
+                    && count > 0 {
                         let log = vault_changelog::ActiveModel {
                             id: Set(Uuid::new_v4().to_string()),
                             project_id: Set(project_id),
@@ -1762,15 +1741,14 @@ impl Phase4Service {
                         };
                         self.vault_dao.create_changelog(db, log).await?;
                     }
-                }
             }
         }
 
         // World changes
         if let Some(world) = changes.get("world") {
             for (action, label) in &[("created", "新增"), ("expanded", "扩展")] {
-                if let Some(count) = world.get(action).and_then(|v| v.as_i64()) {
-                    if count > 0 {
+                if let Some(count) = world.get(action).and_then(|v| v.as_i64())
+                    && count > 0 {
                         let log = vault_changelog::ActiveModel {
                             id: Set(Uuid::new_v4().to_string()),
                             project_id: Set(project_id),
@@ -1786,13 +1764,12 @@ impl Phase4Service {
                         };
                         self.vault_dao.create_changelog(db, log).await?;
                     }
-                }
             }
         }
 
         // Card pool changes
-        if let Some(added) = changes.get("card_pool").and_then(|c| c.get("added")).and_then(|v| v.as_i64()) {
-            if added > 0 {
+        if let Some(added) = changes.get("card_pool").and_then(|c| c.get("added")).and_then(|v| v.as_i64())
+            && added > 0 {
                 let log = vault_changelog::ActiveModel {
                     id: Set(Uuid::new_v4().to_string()),
                     project_id: Set(project_id),
@@ -1808,7 +1785,6 @@ impl Phase4Service {
                 };
                 self.vault_dao.create_changelog(db, log).await?;
             }
-        }
 
         tracing::info!("Changelog archived: version={}, chapter={}", version, chapter_number);
         Ok(())
@@ -2103,24 +2079,22 @@ impl Phase4Service {
 
         for card in &cards {
             // Characters from card.characters
-            if let Some(chars) = &card.characters {
-                if let Some(arr) = chars.as_array() {
+            if let Some(chars) = &card.characters
+                && let Some(arr) = chars.as_array() {
                     for char_val in arr {
                         let name = match char_val {
                             Json::Object(obj) => obj.get("name").and_then(|v| v.as_str()).unwrap_or(""),
                             _ => char_val.as_str().unwrap_or(""),
                         };
-                        if !name.is_empty() && seen_names.get_mut("characters").map(|s| s.insert(name.to_owned())).unwrap_or(false) {
-                            if let Some(arr) = entities.get_mut("characters").and_then(|v| v.as_array_mut()) {
+                        if !name.is_empty() && seen_names.get_mut("characters").map(|s| s.insert(name.to_owned())).unwrap_or(false)
+                            && let Some(arr) = entities.get_mut("characters").and_then(|v| v.as_array_mut()) {
                                 arr.push(serde_json::json!({
                                     "name": name, "source_card_id": card.id,
                                     "source_card_name": card.name, "card_rarity": card.rarity,
                                 }));
                             }
-                        }
                     }
                 }
-            }
 
             // Locations and items from text fields
             let text = format!("{} {}", card.direction_text, card.description);
@@ -2132,11 +2106,10 @@ impl Phase4Service {
                     let start = idx.saturating_sub(6);
                     let end = (idx + kw.len() + 2).min(text.len());
                     let candidate = text[start..end].trim().to_owned();
-                    if !candidate.is_empty() && seen_names.get_mut("locations").map(|s| s.insert(candidate.clone())).unwrap_or(false) {
-                        if let Some(arr) = entities.get_mut("locations").and_then(|v| v.as_array_mut()) {
+                    if !candidate.is_empty() && seen_names.get_mut("locations").map(|s| s.insert(candidate.clone())).unwrap_or(false)
+                        && let Some(arr) = entities.get_mut("locations").and_then(|v| v.as_array_mut()) {
                             arr.push(serde_json::json!({"name": candidate, "source_card_id": card.id}));
                         }
-                    }
                 }
             }
             for kw in &item_kw {
@@ -2144,33 +2117,30 @@ impl Phase4Service {
                     let start = idx.saturating_sub(4);
                     let end = (idx + kw.len() + 2).min(text.len());
                     let candidate = text[start..end].trim().to_owned();
-                    if !candidate.is_empty() && seen_names.get_mut("items").map(|s| s.insert(candidate.clone())).unwrap_or(false) {
-                        if let Some(arr) = entities.get_mut("items").and_then(|v| v.as_array_mut()) {
+                    if !candidate.is_empty() && seen_names.get_mut("items").map(|s| s.insert(candidate.clone())).unwrap_or(false)
+                        && let Some(arr) = entities.get_mut("items").and_then(|v| v.as_array_mut()) {
                             arr.push(serde_json::json!({"name": candidate, "source_card_id": card.id}));
                         }
-                    }
                 }
             }
 
             // Events from plot_promises
-            if let Some(promises) = &card.plot_promises {
-                if let Some(arr) = promises.as_array() {
+            if let Some(promises) = &card.plot_promises
+                && let Some(arr) = promises.as_array() {
                     for p in arr {
                         let event_name = match p {
                             Json::Object(obj) => obj.get("title").or(obj.get("description")).and_then(|v| v.as_str()).unwrap_or(""),
                             _ => p.as_str().unwrap_or(""),
                         };
-                        if !event_name.is_empty() && seen_names.get_mut("events").map(|s| s.insert(event_name.to_owned())).unwrap_or(false) {
-                            if let Some(arr) = entities.get_mut("events").and_then(|v| v.as_array_mut()) {
+                        if !event_name.is_empty() && seen_names.get_mut("events").map(|s| s.insert(event_name.to_owned())).unwrap_or(false)
+                            && let Some(arr) = entities.get_mut("events").and_then(|v| v.as_array_mut()) {
                                 arr.push(serde_json::json!({
                                     "name": event_name, "source_card_id": card.id,
                                     "source_card_name": card.name,
                                 }));
                             }
-                        }
                     }
                 }
-            }
         }
 
         // Compute confidence per entity
@@ -2185,12 +2155,11 @@ impl Phase4Service {
                         "rare" => 0.1,
                         _ => 0.0,
                     };
-                    if etype == "characters" {
-                        if let Some(name) = entity.get("name").and_then(|v| v.as_str()) {
+                    if etype == "characters"
+                        && let Some(name) = entity.get("name").and_then(|v| v.as_str()) {
                             let len = name.chars().count();
                             if (2..=4).contains(&len) { confidence += 0.1; }
                         }
-                    }
                     confidence = confidence.min(1.0);
                     if let Some(obj) = entity.as_object_mut() {
                         obj.insert("confidence".to_owned(), Json::Number(serde_json::Number::from_f64((confidence * 100.0).round() / 100.0).unwrap_or(0.into())));

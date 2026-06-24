@@ -123,11 +123,10 @@ async fn update_profile(
         .ok_or_else(|| AppError::not_found("用户不存在".to_owned()))?;
     let mut a = found.into_active_model();
     if let Some(ref v) = req.username {
-        if *v != *a.username.as_ref() {
-            if UserDao.username_exists(&state.db, v).await? {
+        if *v != *a.username.as_ref()
+            && UserDao.username_exists(&state.db, v).await? {
                 return Err(AppError::validation_error("该用户名已被使用".to_owned()));
             }
-        }
         a.username = Set(v.clone());
     }
     if let Some(v) = req.avatar_url {

@@ -268,21 +268,21 @@ impl MergeService {
         }
 
         avg_confidence /= result.changes.len() as f64;
-        result.confidence_level = Some(evaluate_confidence(avg_confidence));
-        result.auto_applied = should_auto_apply(result.confidence_level.unwrap());
+        let level = evaluate_confidence(avg_confidence);
+        result.confidence_level = Some(level);
+        result.auto_applied = should_auto_apply(level);
         result.items_requiring_review = items_requiring_review;
     }
 
     fn get_last_advance_chapter(promise: &VaultPlotPromise) -> i32 {
-        if let Some(ref log) = promise.advancement_log {
-            if let Some(arr) = log.as_array() {
+        if let Some(ref log) = promise.advancement_log
+            && let Some(arr) = log.as_array() {
                 return arr
                     .iter()
                     .filter_map(|entry| entry.get("chapter").and_then(|c| c.as_i64()))
                     .max()
                     .unwrap_or(promise.planted_chapter.unwrap_or(0) as i64) as i32;
             }
-        }
         promise.planted_chapter.unwrap_or(0)
     }
 

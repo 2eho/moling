@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 import type { WritingProject } from "@/stores/useWritingStore";
 import { ProjectCard } from "./ProjectCard";
 
@@ -49,17 +49,16 @@ function ProjectGroup({
     <div>
       {/* ── Group header (clickable) ── */}
       <button
+        type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 sticky top-0 z-10 transition-colors hover:brightness-95"
-        style={{ background: "var(--th-card)" }}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 sticky top-0 z-10 transition-colors hover:brightness-95 bg-th-card"
       >
         {/* Chevron */}
         <span
-          className="transition-transform duration-200 shrink-0"
-          style={{
-            transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
-            color: labelColor,
-          }}
+          className={`transition-transform duration-200 shrink-0 ${
+            collapsed ? "rotate-[-90deg]" : "rotate-0"
+          }`}
+          style={{ color: labelColor }}
         >
           <ChevronDown size={12} />
         </span>
@@ -73,17 +72,14 @@ function ProjectGroup({
         </span>
 
         {/* Count badge */}
-        <span
-          className="text-[10px] ml-auto"
-          style={{ color: labelColor }}
-        >
+        <span className="text-[10px] ml-auto" style={{ color: labelColor }}>
           {count}
         </span>
       </button>
 
       {/* ── Group body (collapsible) ── */}
       {!collapsed && (
-        <div className="space-y-0.5" style={{ marginLeft: 16, borderLeft: `2px solid ${barColor}`, paddingLeft: 8 }}>
+        <div className="space-y-0.5 ml-4 pl-2" style={{ borderLeft: `2px solid ${barColor}` }}>
           {projects.map((proj) => (
             <ProjectCard
               key={proj.id}
@@ -109,12 +105,9 @@ export function ProjectList({
   onProjectClick,
   onChapterClick,
 }: ProjectListProps) {
-  const ongoing = projects.filter((p) =>
-    p.chapters.some((ch) => ch.status !== "completed"),
-  );
+  const ongoing = projects.filter((p) => p.chapters.some((ch) => ch.status !== "completed"));
   const completed = projects.filter(
-    (p) =>
-      p.chapters.length > 0 && p.chapters.every((ch) => ch.status === "completed"),
+    (p) => p.chapters.length > 0 && p.chapters.every((ch) => ch.status === "completed"),
   );
 
   const [ongoingCollapsed, setOngoingCollapsed] = useState(false);

@@ -1,7 +1,7 @@
 "use client";
 
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
-import { useToast, type ToastType } from "@/stores/useToast";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import { type ToastType, useToast } from "@/stores/useToast";
 
 const TYPE_STYLES: Record<ToastType, { icon: React.ReactNode; bg: string; border: string }> = {
   success: {
@@ -36,19 +36,16 @@ export function ToastContainer() {
     <div
       className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none"
       aria-live="polite"
-      aria-label="通知"
+      role="status"
     >
       {toasts.map((toast) => {
         const style = TYPE_STYLES[toast.type];
         return (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg shadow-lg animate-slide-in-right"
+            className="pointer-events-auto flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg shadow-lg animate-slide-in-right bg-th-card text-th-text"
             style={{
-              background: "var(--th-card)",
               borderLeft: `3px solid ${style.border}`,
-              color: "var(--th-text)",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
             }}
           >
             <span className="shrink-0" style={{ color: style.bg }}>
@@ -56,9 +53,9 @@ export function ToastContainer() {
             </span>
             <span className="text-xs flex-1">{toast.message}</span>
             <button
+              type="button"
               onClick={() => removeToast(toast.id)}
-              className="shrink-0 p-0.5 rounded hover:opacity-70 transition-opacity"
-              style={{ color: "var(--th-text-4)" }}
+              className="shrink-0 p-0.5 rounded hover:opacity-70 transition-opacity text-th-text-4"
               aria-label="关闭"
             >
               <X size={12} />

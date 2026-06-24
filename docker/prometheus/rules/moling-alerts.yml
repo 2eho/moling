@@ -1,0 +1,325 @@
+# ==============================================================================
+# Moling — Rust 后端 Prometheus 告警规则
+# ==============================================================================
+# 说明:
+#   - 针对 Rust Axum (port 8000) 后端服务配置
+#   - 指标来源: /metrics (prometheus-client or metrics-exporter-prometheus)
+#   - 所有时间单位以秒计，duration histogram 按 Prometheus 标准格式
+#
+# 指标前缀约定 (Rust metrics crate):
+#   http_requests_total              — Counter, 含 labels: method, path, status, status_category
+#   http_request_duration_seconds    — Histogram, 含 labels: method, path, status, le
+#   http_errors_total               — Counter, 含 labels: method, path, status
+#   worker_queue_size               — Gauge, 当前队列积压任务数
+#   db_connection_pool_used         — Gauge, 活跃连接数
+#   db_connection_pool_idle         — Gauge, 空闲连接数
+#   db_connection_pool_size         — Gauge, 连接池最大连接数
+#   redis_connections               — Gauge, Redis 活跃连接数
+#   redis_idle_connections          — Gauge, Redis 空闲连接数
+#   redis_max_connections           — Gauge, Redis 连接池上限
+#   process_cpu_seconds_total       — Counter, CPU 使用时间
+#   process_resident_memory_bytes   — Gauge, 常驻内存
+# ==============================================================================
+
+groups:
+  # ── API 延迟 ─────────────────────────────────────────────────
+  - name: moling_api_latency
+    rules:
+      - alert: MolingP99HighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="moling-backend"}[5m])) by (le)
+          ) > 0.5
+        for: 3m
+        labels:
+          severity: critical
+          category: latency
+          team: moling
+        annotations:
+          summary: "🔴 P99 延迟超过 500ms"
+          description: |
+            实例 {{ $labels.instance }} 的 P99 响应延迟为 {{ $value | humanizeDuration }}，
+            已超过 500ms 阈值。
+          current_status: "P99: {{ $value | humanizeDuration }} (阈值 500ms)"
+          impact: "用户体验严重下降，可能引发客户端超时和重试风暴"
+          runbook: |
+            1. 检查是否有慢数据库查询
+            2. 检查 AI/LLM 调用耗时
+            3. 查看 CPU/内存是否饱和
+            4. 检查网络延迟 (Redis/external API)
+            Grafana: /d/moling-api
+
+      - alert: MolingP95HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="moling-backend"}[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          category: latency
+          team: moling
+        annotations:
+          summary: "🟡 P95 延迟超过 1s"
+          description: |
+            实例 {{ $labels.instance }} 的 P95 延迟为 {{ $value | humanizeDuration }}。
+          current_status: "P95: {{ $value | humanizeDuration }} (阈值 1s)"
+          impact: "大部分用户请求响应变慢"
+          runbook: |
+            1. 检查最近部署是否有性能回归
+            2. 查看数据库连接池使用率
+            3. 检查是否有缓存失效导致大量穿透
+            Grafana: /d/moling-api
+
+  # ── 错误率 ───────────────────────────────────────────────────
+  - name: moling_api_errors
+    rules:
+      - alert: MolingHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="moling-backend", status_category="5xx"}[5m]))
+          /
+          sum(rate(http_requests_total{job="moling-backend"}[5m]))
+          > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          category: errors
+          team: moling
+        annotations:
+          summary: "🔴 5xx 错误率超过 1%"
+          description: |
+            5xx 错误率: {{ $value | humanizePercentage }}，已超过 1% 阈值。
+          current_status: "5xx 错误率: {{ $value | humanizePercentage }} (阈值 1%)"
+          impact: "大量用户请求失败，核心功能不可用"
+          runbook: |
+            1. 立即查看后端日志: docker logs moling-server --tail 200
+            2. 检查数据库连接: 是否连接池耗尽
+            3. 检查 Redis 状态: 是否连接失败
+            4. 检查最近部署: 是否为部署引入的 bug
+            5. 如无法快速定位，回滚到上一版本
+            Grafana: /d/moling-api
+
+      - alert: MolingElevated4xxRate
+        expr: |
+          sum(rate(http_requests_total{job="moling-backend", status_category="4xx"}[5m]))
+          /
+          sum(rate(http_requests_total{job="moling-backend"}[5m]))
+          > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          category: errors
+          team: moling
+        annotations:
+          summary: "🟡 4xx 错误率超过 10%"
+          description: "4xx 错误率: {{ $value | humanizePercentage }}"
+          current_status: "4xx 错误率: {{ $value | humanizePercentage }} (阈值 10%)"
+          impact: "大量客户端请求被拒绝，可能为认证/限流/参数校验问题"
+          runbook: |
+            1. 检查 4xx 状态码分布: 401 (认证), 429 (限流), 422 (校验)
+            2. 查看 JWT 密钥是否过期
+            3. 检查 Rate Limiter 是否过于激进
+            Grafana: /d/moling-api
+
+  # ── 服务存活性 ──────────────────────────────────────────────
+  - name: moling_service_availability
+    rules:
+      - alert: MolingPodRestarting
+        expr: changes(process_start_time_seconds{job="moling-backend"}[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+          category: availability
+          team: moling
+        annotations:
+          summary: "🟡 服务 1 小时内重启超过 3 次"
+          description: |
+            实例 {{ $labels.instance }} 在过去 1 小时内重启了 {{ $value }} 次。
+          current_status: "重启次数 (1h): {{ $value }} (阈值 3)"
+          impact: "频繁重启可能导致请求失败和连接中断"
+          runbook: |
+            1. 检查 OOM Kill 日志: dmesg | grep -i oom
+            2. 检查内存使用趋势: Grafana /d/moling-api
+            3. 查看 panic 日志: docker logs moling-server --tail 500 | grep -i panic
+            4. 检查健康检查配置是否过于激进
+            Grafana: /d/moling-api
+
+      - alert: MolingBackendDown
+        expr: up{job="moling-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+          team: moling
+        annotations:
+          summary: "🔴 后端服务宕机"
+          description: "实例 {{ $labels.instance }} 无响应超过 1 分钟"
+          current_status: "{{ $labels.instance }} DOWN"
+          impact: "所有 API 请求失败，业务完全中断"
+          runbook: |
+            1. SSH 到服务器检查容器状态: docker ps -a | grep moling
+            2. 查看退出原因: docker inspect moling-server
+            3. 尝试重启: docker restart moling-server
+            4. 查看系统资源: free -h, df -h
+            Grafana: /d/moling-api
+
+  # ── Worker 队列 ──────────────────────────────────────────────
+  - name: moling_worker_queue
+    rules:
+      - alert: MolingWorkerQueueBacklog
+        expr: worker_queue_size{job="moling-backend"} > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: worker
+          team: moling
+        annotations:
+          summary: "🟡 Worker 队列积压超过 100"
+          description: |
+            当前积压任务数: {{ $value }}，已超过 100 阈值。
+          current_status: "队列积压: {{ $value }} (阈值 100)"
+          impact: "异步任务处理延迟严重，用户感知等待时间增加"
+          runbook: |
+            1. 检查 worker 是否存活: 查看 worker 日志
+            2. 检查是否有死任务卡住队列头
+            3. 检查 Redis 是否堆积未消费消息
+            4. 如果持续增长，考虑增加 worker 数量
+            Grafana: /d/moling-api
+
+  # ── Redis 连接池 ─────────────────────────────────────────────
+  - name: moling_redis_connections
+    rules:
+      - alert: MolingRedisConnectionHigh
+        expr: |
+          redis_connections{job="moling-backend"}
+          /
+          redis_max_connections{job="moling-backend"}
+          > 0.80
+        for: 3m
+        labels:
+          severity: warning
+          category: redis
+          team: moling
+        annotations:
+          summary: "🟡 Redis 连接数超过 80%"
+          description: |
+            Redis 连接使用率: {{ $value | humanizePercentage }}。
+          current_status: "Redis 连接使用率: {{ $value | humanizePercentage }} (阈值 80%)"
+          impact: "即将耗尽 Redis 连接，可能导致请求失败"
+          runbook: |
+            1. 检查是否有连接泄漏: 观察连接数是否持续增长
+            2. 检查 Redis 连接池配置: MOLING_REDIS_POOL_SIZE
+            3. 降低空闲连接超时时间
+            4. 如果正常高负载，考虑扩容连接池
+            Grafana: /d/moling-api
+
+      - alert: MolingRedisConnectionExhausted
+        expr: |
+          redis_connections{job="moling-backend"}
+          /
+          redis_max_connections{job="moling-backend"}
+          > 0.95
+        for: 1m
+        labels:
+          severity: critical
+          category: redis
+          team: moling
+        annotations:
+          summary: "🔴 Redis 连接池即将耗尽 (>95%)"
+          description: "Redis 连接使用率: {{ $value | humanizePercentage }}"
+          current_status: "Redis 连接使用率: {{ $value | humanizePercentage }} (阈值 95%)"
+          impact: "新请求无法获取 Redis 连接，缓存/会话/限流功能全部失效"
+          runbook: |
+            1. 紧急扩容连接池: 调整 MOLING_REDIS_POOL_SIZE
+            2. 检查是否有连接泄漏未释放
+            3. 重启 Redis: docker restart moling-redis
+            Grafana: /d/moling-api
+
+  # ── 数据库连接池 ────────────────────────────────────────────
+  - name: moling_db_connections
+    rules:
+      - alert: MolingDBPoolExhausted
+        expr: |
+          db_connection_pool_used{job="moling-backend"}
+          /
+          db_connection_pool_size{job="moling-backend"}
+          > 0.85
+        for: 2m
+        labels:
+          severity: critical
+          category: database
+          team: moling
+        annotations:
+          summary: "🔴 数据库连接池耗尽 (>85%)"
+          description: |
+            DB 连接池使用率: {{ $value | humanizePercentage }}。
+            活跃: {{ with query "db_connection_pool_used{job=\"moling-backend\"}" }}{{ . | first | value }}{{ end }}
+            最大: {{ with query "db_connection_pool_size{job=\"moling-backend\"}" }}{{ . | first | value }}{{ end }}
+          current_status: "DB 连接池: {{ $value | humanizePercentage }} (阈值 85%)"
+          impact: "新请求无法获取数据库连接，所有需要数据库的 API 返回 500"
+          runbook: |
+            1. 查看活跃连接: 在 PostgreSQL 中执行 SELECT count(*), state FROM pg_stat_activity GROUP BY state;
+            2. 杀掉 idle in transaction: SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state='idle in transaction' AND now()-state_change > interval '5 minutes';
+            3. 如果持续满载，增加连接池大小 (MOLING_DB_POOL_SIZE)
+            4. 检查是否有慢查询导致连接堆积
+            Grafana: /d/moling-api
+
+      - alert: MolingDBPoolHigh
+        expr: |
+          db_connection_pool_used{job="moling-backend"}
+          /
+          db_connection_pool_size{job="moling-backend"}
+          > 0.70
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          team: moling
+        annotations:
+          summary: "🟡 数据库连接池使用率偏高 (>70%)"
+          description: "DB 连接池使用率: {{ $value | humanizePercentage }}"
+          current_status: "DB 连接池: {{ $value | humanizePercentage }} (阈值 70%)"
+          impact: "数据库连接趋紧，需关注是否需要扩容"
+          runbook: |
+            1. 检查连接数趋势: Grafana /d/moling-api
+            2. 优化慢查询释放连接更快
+            Grafana: /d/moling-api
+
+  # ── 系统资源 ─────────────────────────────────────────────────
+  - name: moling_system_resources
+    rules:
+      - alert: MolingHighCPU
+        expr: rate(process_cpu_seconds_total{job="moling-backend"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+          team: moling
+        annotations:
+          summary: "🟡 CPU 使用率超过 80%"
+          description: "CPU 使用率: {{ $value | humanize }}%"
+          current_status: "CPU: {{ $value | humanize }}% (阈值 80%)"
+          impact: "请求处理变慢，可能触发超时"
+          runbook: |
+            1. 检查是否有计算密集型任务
+            2. 查看请求 QPS 是否突增
+            3. 考虑增加 CPU limit
+            Grafana: /d/moling-api
+
+      - alert: MolingHighMemory
+        expr: process_resident_memory_bytes{job="moling-backend"} / 1024 / 1024 / 1024 > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+          team: moling
+        annotations:
+          summary: "🟡 内存使用超过 2GB"
+          description: "内存使用: {{ $value | humanize }}GB"
+          current_status: "Memory: {{ $value | humanize }}GB (阈值 2GB)"
+          impact: "内存持续增长可能导致 OOM Kill"
+          runbook: |
+            1. 检查是否有内存泄漏趋势
+            2. 查看是否缓存了大量数据
+            3. 考虑增加 memory limit 或启用 swap
+            Grafana: /d/moling-api

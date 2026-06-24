@@ -1,75 +1,72 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getVaultForeshadowing } from "@/lib/http/api";
+import { AlertCircle, Eye, Filter } from "lucide-react";
 import { useState } from "react";
-import { Eye, AlertCircle, CheckCircle2, XCircle, Filter } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { getVaultForeshadowing } from "@/lib/http/api";
 import type { VaultForeshadowing } from "@/lib/types/domain";
 
 interface ForeshadowingLibraryProps {
   projectId: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  active: { label: "活跃", color: "var(--th-accent-text)", bg: "var(--th-accent-dim)" },
-  redeemed: { label: "已兑现", color: "var(--th-success)", bg: "rgba(52,211,153,0.12)" },
-  canceled: { label: "已取消", color: "var(--th-text-4)", bg: "var(--th-hover)" },
-  planted: { label: "已埋设", color: "var(--th-accent-text)", bg: "var(--th-accent-dim)" },
-  resolved: { label: "已回收", color: "var(--th-success)", bg: "rgba(52,211,153,0.12)" },
+/** Status → Tailwind class mapping (theme-safe across all 8 themes) */
+const STATUS_STYLES: Record<string, { label: string; text: string; bg: string }> = {
+  active: { label: "活跃", text: "text-th-accent-text", bg: "bg-th-accent-dim" },
+  redeemed: { label: "已兑现", text: "text-th-success", bg: "bg-th-success/12" },
+  canceled: { label: "已取消", text: "text-th-text-4", bg: "bg-th-hover" },
+  planted: { label: "已埋设", text: "text-th-accent-text", bg: "bg-th-accent-dim" },
+  resolved: { label: "已回收", text: "text-th-success", bg: "bg-th-success/12" },
 };
 
 function ForeshadowingCard({ item }: { item: VaultForeshadowing }) {
-  const statusConfig = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.active;
+  const statusStyles = STATUS_STYLES[item.status] ?? STATUS_STYLES.active;
 
   return (
     <div
       role="listitem"
-      className="rounded-lg p-3 border transition-all hover:translate-y-[-1px]"
-      style={{
-        background: "var(--th-card)",
-        borderColor: "var(--th-border-subtle)",
-      }}
+      className="rounded-lg p-3 border border-th-border-subtle bg-th-card transition-all hover:translate-y-[-1px]"
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Eye size={14} style={{ color: statusConfig.color }} />
+          <Eye size={14} className={statusStyles.text} />
           <span
-            className="text-[9px] px-1.5 py-0.5 rounded font-medium"
-            style={{ background: statusConfig.bg, color: statusConfig.color }}
+            className={cn(
+              "text-[9px] px-1.5 py-0.5 rounded font-medium",
+              statusStyles.bg,
+              statusStyles.text,
+            )}
           >
-            {statusConfig.label}
+            {statusStyles.label}
           </span>
         </div>
       </div>
 
-      <p className="text-[11px] leading-relaxed mb-2" style={{ color: "var(--th-text-2)" }}>
-        {item.description}
-      </p>
+      <p className="text-[11px] leading-relaxed mb-2 text-th-text-2">{item.description}</p>
 
-      <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--th-text-3)" }}>
+      <div className="flex items-center gap-3 text-[10px] text-th-text-3">
         <span>埋设于第 {item.chapter_planted} 章</span>
         {item.chapter_redeemed && <span>· 兑现于第 {item.chapter_redeemed} 章</span>}
       </div>
 
       {item.target_description && (
-        <p className="text-[10px] mt-1 italic" style={{ color: "var(--th-text-4)" }}>
-          目标：{item.target_description}
-        </p>
+        <p className="text-[10px] mt-1 italic text-th-text-4">目标：{item.target_description}</p>
       )}
     </div>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div className="h-20 rounded-lg animate-shimmer bg-gradient-to-r from-th-card via-th-hover to-th-card bg-[length:200%_100%]" />
   );
 }
 
 export function ForeshadowingLibrary({ projectId }: ForeshadowingLibraryProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["vault-foreshadowing", projectId, statusFilter],
     queryFn: () =>
       getVaultForeshadowing(projectId, {
@@ -79,34 +76,30 @@ export function ForeshadowingLibrary({ projectId }: ForeshadowingLibraryProps) {
       }),
   });
 
+  // 🔄 Loading
   if (isLoading) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="h-20 rounded-lg animate-shimmer"
-            style={{
-              background: "linear-gradient(90deg, var(--th-card) 25%, var(--th-hover) 50%, var(--th-card) 75%)",
-            }}
-          />
+          <SkeletonRow key={i} />
         ))}
       </div>
     );
   }
 
+  // ❌ Error
   if (isError) {
     return (
-      <div className="rounded-lg p-6 text-center" style={{ background: "var(--th-card)", border: "1px solid var(--th-border-subtle)" }}>
-        <AlertCircle size={28} className="mx-auto mb-2" style={{ color: "var(--th-danger)" }} />
-        <p className="text-xs font-medium mb-1" style={{ color: "var(--th-text)" }}>加载承诺库失败</p>
-        <p className="text-[10px] mb-3" style={{ color: "var(--th-text-3)" }}>
+      <div className="rounded-lg p-6 text-center bg-th-card border border-th-border-subtle">
+        <AlertCircle size={28} className="mx-auto mb-2 text-th-danger" />
+        <p className="text-xs font-medium mb-1 text-th-text">加载承诺库失败</p>
+        <p className="text-[10px] mb-3 text-th-text-3">
           {error instanceof Error ? error.message : "请稍后重试"}
         </p>
         <button
+          type="button"
           onClick={() => refetch()}
-          className="px-3 py-1.5 rounded-lg text-[10px] font-medium hover:opacity-80"
-          style={{ background: "var(--th-accent-dim)", color: "var(--th-accent-text)" }}
+          className="px-3 py-1.5 rounded-lg text-[10px] font-medium hover:opacity-80 bg-th-accent-dim text-th-accent-text transition-colors"
         >
           重试
         </button>
@@ -120,36 +113,36 @@ export function ForeshadowingLibrary({ projectId }: ForeshadowingLibraryProps) {
     <div className="space-y-3">
       {/* Status filter */}
       <div className="flex items-center gap-2">
-        <Filter size={12} style={{ color: "var(--th-text-3)" }} />
+        <Filter size={12} className="text-th-text-3" />
         {["all", "active", "redeemed", "canceled"].map((status) => {
-          const config = STATUS_CONFIG[status];
+          const config = STATUS_STYLES[status];
           const isActive = statusFilter === status;
           return (
             <button
+              type="button"
               key={status}
               onClick={() => setStatusFilter(status)}
-              className="px-2 py-1 rounded text-[10px] font-medium transition-colors"
-              style={{
-                background: isActive ? (config?.bg ?? "var(--th-accent-dim)") : "transparent",
-                color: isActive ? (config?.color ?? "var(--th-accent-text)") : "var(--th-text-3)",
-              }}
+              className={cn(
+                "px-2 py-1 rounded text-[10px] font-medium transition-colors",
+                isActive
+                  ? cn(config?.bg ?? "bg-th-accent-dim", config?.text ?? "text-th-accent-text")
+                  : "text-th-text-3",
+              )}
             >
-              {status === "all" ? "全部" : config?.label ?? status}
+              {status === "all" ? "全部" : (config?.label ?? status)}
             </button>
           );
         })}
       </div>
 
-      {/* Content */}
+      {/* 📭 Empty */}
       {items.length === 0 ? (
-        <div className="rounded-lg p-8 text-center" style={{ background: "var(--th-card)", border: "1px solid var(--th-border-subtle)" }}>
-          <Eye size={32} className="mx-auto mb-2" style={{ color: "var(--th-text-4)" }} />
-          <p className="text-xs font-medium" style={{ color: "var(--th-text)" }}>
+        <div className="rounded-lg p-8 text-center bg-th-card border border-th-border-subtle">
+          <Eye size={32} className="mx-auto mb-2 text-th-text-4" />
+          <p className="text-xs font-medium text-th-text">
             {statusFilter !== "all" ? "该筛选条件下无承诺" : "暂无情节承诺"}
           </p>
-          <p className="text-[10px] mt-1" style={{ color: "var(--th-text-3)" }}>
-            伏笔和情节承诺将在此处显示
-          </p>
+          <p className="text-[10px] mt-1 text-th-text-3">伏笔和情节承诺将在此处显示</p>
         </div>
       ) : (
         <div role="list" className="grid grid-cols-1 md:grid-cols-2 gap-2">

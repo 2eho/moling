@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useWritingStore } from "@/stores/useWritingStore";
 
 import { FreeInput } from "../FreeInput";
@@ -81,7 +81,7 @@ describe("FreeInput", () => {
 
     // The submit button should be disabled when input is empty
     const buttons = screen.getAllByRole("button");
-    const sendButton = buttons[0]; // The Send button
+    const sendButton = buttons[0] as HTMLButtonElement;
     expect(sendButton.disabled).toBe(true);
   });
 
@@ -91,7 +91,7 @@ describe("FreeInput", () => {
     render(<FreeInput />);
 
     const buttons = screen.getAllByRole("button");
-    const sendButton = buttons[0];
+    const sendButton = buttons[0] as HTMLButtonElement;
     expect(sendButton.disabled).toBe(false);
   });
 

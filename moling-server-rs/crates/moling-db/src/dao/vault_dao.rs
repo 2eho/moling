@@ -111,10 +111,22 @@ impl VaultDao {
         db: &DatabaseConnection,
         model: vault_character::ActiveModel,
     ) -> AppResult<VaultCharacterModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Vault: database error creating character: {e}");
-            AppError::internal("Database insert failed")
-        })
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.clone(),
+            sea_orm::ActiveValue::Unchanged(v) => v.clone(),
+            _ => return Err(AppError::internal("Character id must be set".to_owned())),
+        };
+        use sea_orm::EntityTrait;
+        VaultCharacter::insert(model)
+            .exec(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Vault: database error creating character: {e}");
+                AppError::internal("Database insert failed")
+            })?;
+        self.find_character_by_id(db, &id)
+            .await?
+            .ok_or_else(|| AppError::internal("Character inserted but not found".to_owned()))
     }
 
     pub async fn update_character(
@@ -226,10 +238,22 @@ impl VaultDao {
         db: &DatabaseConnection,
         model: vault_timeline::ActiveModel,
     ) -> AppResult<VaultTimelineModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Vault: error creating timeline: {e}");
-            AppError::internal("Database insert failed")
-        })
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.clone(),
+            sea_orm::ActiveValue::Unchanged(v) => v.clone(),
+            _ => return Err(AppError::internal("Timeline id must be set".to_owned())),
+        };
+        use sea_orm::EntityTrait;
+        VaultTimeline::insert(model)
+            .exec(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Vault: error creating timeline: {e}");
+                AppError::internal("Database insert failed")
+            })?;
+        self.find_timeline_by_id(db, &id)
+            .await?
+            .ok_or_else(|| AppError::internal("Timeline inserted but not found".to_owned()))
     }
 
     pub async fn update_timeline(
@@ -383,10 +407,22 @@ impl VaultDao {
         db: &DatabaseConnection,
         model: vault_plot_promise::ActiveModel,
     ) -> AppResult<VaultPlotPromiseModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Vault: error creating plot promise: {e}");
-            AppError::internal("Database insert failed")
-        })
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.clone(),
+            sea_orm::ActiveValue::Unchanged(v) => v.clone(),
+            _ => return Err(AppError::internal("Plot promise id must be set".to_owned())),
+        };
+        use sea_orm::EntityTrait;
+        VaultPlotPromise::insert(model)
+            .exec(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Vault: error creating plot promise: {e}");
+                AppError::internal("Database insert failed")
+            })?;
+        self.find_plot_promise_by_id(db, &id)
+            .await?
+            .ok_or_else(|| AppError::internal("Plot promise inserted but not found".to_owned()))
     }
 
     pub async fn update_plot_promise(
@@ -453,6 +489,31 @@ impl VaultDao {
                 tracing::error!(project_id, %status, "Vault: error counting promises by status: {e}");
                 AppError::internal("Database query failed")
             })
+    }
+
+    /// Count plot promises grouped by status in a single query (avoids N+1).
+    /// Returns a map of status → count.
+    pub async fn count_plot_promises_by_status_batch(
+        &self,
+        db: &DatabaseConnection,
+        project_id: i32,
+    ) -> AppResult<std::collections::HashMap<String, u64>> {
+        use vault_plot_promise::Column;
+        let rows: Vec<(String, i64)> = VaultPlotPromise::find()
+            .select_only()
+            .column(Column::Status)
+            .column_as(Column::Id.count(), "cnt")
+            .filter(Column::ProjectId.eq(project_id))
+            .filter(Column::IsDeleted.eq(false))
+            .group_by(Column::Status)
+            .into_tuple::<(String, i64)>()
+            .all(db)
+            .await
+            .map_err(|e| {
+                tracing::error!(project_id, "Vault: error batch counting promises: {e}");
+                AppError::internal("Database query failed")
+            })?;
+        Ok(rows.into_iter().map(|(s, c)| (s, c as u64)).collect())
     }
 }
 
@@ -540,10 +601,22 @@ impl VaultDao {
         db: &DatabaseConnection,
         model: vault_world::ActiveModel,
     ) -> AppResult<VaultWorldModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Vault: error creating world entry: {e}");
-            AppError::internal("Database insert failed")
-        })
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.clone(),
+            sea_orm::ActiveValue::Unchanged(v) => v.clone(),
+            _ => return Err(AppError::internal("World id must be set".to_owned())),
+        };
+        use sea_orm::EntityTrait;
+        VaultWorld::insert(model)
+            .exec(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Vault: error creating world entry: {e}");
+                AppError::internal("Database insert failed")
+            })?;
+        self.find_world_by_id(db, &id)
+            .await?
+            .ok_or_else(|| AppError::internal("World inserted but not found".to_owned()))
     }
 
     pub async fn update_world(
@@ -630,10 +703,22 @@ impl VaultDao {
         db: &DatabaseConnection,
         model: vault_changelog::ActiveModel,
     ) -> AppResult<VaultChangelogModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Vault: error creating changelog: {e}");
-            AppError::internal("Database insert failed")
-        })
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.clone(),
+            sea_orm::ActiveValue::Unchanged(v) => v.clone(),
+            _ => return Err(AppError::internal("Changelog id must be set".to_owned())),
+        };
+        use sea_orm::EntityTrait;
+        VaultChangelog::insert(model)
+            .exec(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Vault: error creating changelog: {e}");
+                AppError::internal("Database insert failed")
+            })?;
+        self.find_changelog_by_id(db, &id)
+            .await?
+            .ok_or_else(|| AppError::internal("Changelog inserted but not found".to_owned()))
     }
 
     pub async fn count_changelogs(

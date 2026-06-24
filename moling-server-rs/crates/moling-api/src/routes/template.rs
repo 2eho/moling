@@ -49,7 +49,7 @@ async fn create_template(
         ..Default::default()
     };
     let t = dao.create(&state.db, model).await?;
-    Ok(Json(serde_json::to_value(t).unwrap()))
+    Ok(Json(serde_json::to_value(t)?))
 }
 
 /// GET /templates/ — list templates with pagination and optional genre filter.
@@ -79,7 +79,7 @@ async fn get_template(
     Path(id): Path<String>,
 ) -> AppResult<Json<serde_json::Value>> {
     let t = TemplateDao.find_by_id(&state.db, &id).await?.ok_or_else(|| AppError::not_found("模板不存在".to_owned()))?;
-    Ok(Json(serde_json::to_value(t).unwrap()))
+    Ok(Json(serde_json::to_value(t)?))
 }
 
 /// PUT /templates/{id} — update a template.
@@ -97,7 +97,7 @@ async fn update_template(
     if let Some(v) = req.genre { a.genre = Set(v); }
     if let Some(v) = req.structure { a.structure = Set(Some(v)); }
     let u = a.update(&state.db).await.map_err(|_| AppError::internal("更新模板失败".to_owned()))?;
-    Ok(Json(serde_json::to_value(u).unwrap()))
+    Ok(Json(serde_json::to_value(u)?))
 }
 
 /// DELETE /templates/{id} — delete a template.
@@ -133,7 +133,7 @@ async fn create_project_from_template(
         ..Default::default()
     };
     let p = dao.create(&state.db, model).await?;
-    Ok(Json(serde_json::to_value(p).unwrap()))
+    Ok(Json(serde_json::to_value(p)?))
 }
 
 /// Query for create-project-from-template.

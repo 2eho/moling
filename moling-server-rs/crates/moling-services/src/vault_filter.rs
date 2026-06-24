@@ -142,15 +142,15 @@ impl VaultFilterService {
         let compressed_characters = Self::compress_characters(&characters, compression_level);
         let serialized_timeline: Vec<serde_json::Value> = timeline
             .iter()
-            .map(|e| Self::serialize_timeline_event(e))
+            .map(Self::serialize_timeline_event)
             .collect();
         let serialized_promises: Vec<serde_json::Value> = promises
             .iter()
-            .map(|p| Self::serialize_promise(p))
+            .map(Self::serialize_promise)
             .collect();
         let serialized_world: Vec<serde_json::Value> = world
             .iter()
-            .map(|w| Self::serialize_world_entry(w))
+            .map(Self::serialize_world_entry)
             .collect();
 
         let token_estimate = Self::estimate_tokens(
@@ -227,9 +227,9 @@ impl VaultFilterService {
 
         let result = VaultFilterResult {
             characters: compressed_characters,
-            timeline: timeline.iter().map(|e| Self::serialize_timeline_event(e)).collect(),
-            plot_promises: promises.iter().map(|p| Self::serialize_promise(p)).collect(),
-            world: world.iter().map(|w| Self::serialize_world_entry(w)).collect(),
+            timeline: timeline.iter().map(Self::serialize_timeline_event).collect(),
+            plot_promises: promises.iter().map(Self::serialize_promise).collect(),
+            world: world.iter().map(Self::serialize_world_entry).collect(),
             compression_level,
             token_estimate,
         };

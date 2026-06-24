@@ -160,7 +160,7 @@ async fn test_list_chapters() {
         &format!("/api/v1/projects/{project_id}/chapters"), &user).await;
 
     assert_eq!(status, StatusCode::OK, "List chapters should return 200: {json:?}");
-    assert!(json.as_array().map_or(false, |a| a.len() >= 2), "Should have at least 2 chapters");
+    assert!(json.as_array().is_some_and(|a| a.len() >= 2), "Should have at least 2 chapters");
 }
 
 #[tokio::test]
@@ -182,7 +182,7 @@ async fn test_create_chapter_without_auth() {
     let body_str = serde_json::json!({"title": "Unauth Chapter"}).to_string();
     let request = Request::builder()
         .method("POST")
-        .uri(&format!("/api/v1/projects/{project_id}/chapters"))
+        .uri(format!("/api/v1/projects/{project_id}/chapters"))
         .header("content-type", "application/json")
         .body(Body::from(body_str))
         .unwrap();

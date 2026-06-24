@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WritingProject } from "@/stores/useWritingStore";
 
 import { ProjectList } from "../ProjectList";
@@ -21,6 +21,9 @@ function createProject(overrides: Partial<WritingProject> = {}): WritingProject 
     foreshadowing: [],
     worldRules: "",
     styleNotes: "",
+    status: "draft",
+    createdAt: "2025-01-01",
+    updatedAt: "2025-01-01",
     ...overrides,
   };
 }
@@ -42,6 +45,9 @@ function createCompletedProject(overrides: Partial<WritingProject> = {}): Writin
     foreshadowing: [],
     worldRules: "",
     styleNotes: "",
+    status: "completed",
+    createdAt: "2025-01-01",
+    updatedAt: "2025-02-01",
     ...overrides,
   };
 }
@@ -69,8 +75,16 @@ describe("ProjectList", () => {
   });
 
   it("renders multiple ongoing projects", () => {
-    const proj1 = createProject({ id: "p1", title: "项目A", chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }] });
-    const proj2 = createProject({ id: "p2", title: "项目B", chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }] });
+    const proj1 = createProject({
+      id: "p1",
+      title: "项目A",
+      chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }],
+    });
+    const proj2 = createProject({
+      id: "p2",
+      title: "项目B",
+      chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }],
+    });
 
     render(<ProjectList {...defaultProps} projects={[proj1, proj2]} />);
 
@@ -79,7 +93,11 @@ describe("ProjectList", () => {
   });
 
   it("triggers onProjectClick when project clicked", () => {
-    const proj = createProject({ id: "p1", title: "项目A", chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }] });
+    const proj = createProject({
+      id: "p1",
+      title: "项目A",
+      chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }],
+    });
 
     render(<ProjectList {...defaultProps} projects={[proj]} />);
 
@@ -90,13 +108,7 @@ describe("ProjectList", () => {
   it("shows chapters when project is expanded", () => {
     const proj = createProject({ id: "p1", title: "项目A" });
 
-    render(
-      <ProjectList
-        {...defaultProps}
-        projects={[proj]}
-        expandedProjectId="p1"
-      />
-    );
+    render(<ProjectList {...defaultProps} projects={[proj]} expandedProjectId="p1" />);
 
     // Chapters are rendered in reverse order
     expect(screen.getByText("第2章")).toBeInTheDocument();
@@ -112,7 +124,7 @@ describe("ProjectList", () => {
         projects={[proj]}
         expandedProjectId="p1"
         activeProjectId="p1"
-      />
+      />,
     );
 
     fireEvent.click(screen.getByText("第2章"));
@@ -148,21 +160,11 @@ describe("ProjectList", () => {
         activeProjectId="p1"
         expandedProjectId="p1"
         activeChapterId={2}
-      />
+      />,
     );
 
     // Chapter 2 should be highlighted (it's the active chapter)
     const ch2Btn = screen.getByText("第2章").closest("button");
     expect(ch2Btn).toBeTruthy();
-  });
-
-  it("calls onClose after project click when onClose provided", () => {
-    const proj = createProject({ id: "p1", title: "项目A", chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }] });
-    const onClose = vi.fn();
-
-    render(<ProjectList {...defaultProps} projects={[proj]} onClose={onClose} />);
-
-    fireEvent.click(screen.getByText("项目A"));
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

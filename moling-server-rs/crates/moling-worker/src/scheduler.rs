@@ -115,7 +115,7 @@ fn parse_cron_field(s: &str, min: u32, max: u32) -> Result<CronField, String> {
 fn matches_field(field: &CronField, value: u32) -> bool {
     match field {
         CronField::Wildcard => true,
-        CronField::Step(step) => value % step == 0,
+        CronField::Step(step) => value.is_multiple_of(*step),
         CronField::Values(vals) => vals.contains(&value),
     }
 }

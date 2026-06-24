@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { setTauriTitlebarTheme, setWindowBackgroundColor } from "../lib/tauri-theme";
 
 export type ThemeId =
   | "moling"
@@ -25,10 +26,25 @@ export const THEMES: Theme[] = [
   { id: "nord", name: "Nord", icon: "❄️", description: "极地冷蓝 · 低饱和 · 长写不刺眼" },
   { id: "onedark", name: "One Dark", icon: "🔵", description: "Atom 传承 · 钢蓝灰 · 柔和层次" },
   { id: "dracula", name: "Dracula", icon: "🧛", description: "暗紫霓虹 · 高对比 · 神秘深邃" },
-  { id: "solarized-dark", name: "Solarized Dark", icon: "🌙", description: "色彩科学 · 青绿底 · 学术基准" },
-  { id: "solarized-light", name: "Solarized Light", icon: "☀️", description: "暖纸白 · 蓝灰字 · 全天候通用" },
+  {
+    id: "solarized-dark",
+    name: "Solarized Dark",
+    icon: "🌙",
+    description: "色彩科学 · 青绿底 · 学术基准",
+  },
+  {
+    id: "solarized-light",
+    name: "Solarized Light",
+    icon: "☀️",
+    description: "暖纸白 · 蓝灰字 · 全天候通用",
+  },
   { id: "paper", name: "Paper", icon: "📄", description: "纸张质感 · 暖米色 · 沉浸式写作" },
-  { id: "github-light", name: "GitHub Light", icon: "⬜", description: "纯白底 · 蓝强调 · 结构化编辑" },
+  {
+    id: "github-light",
+    name: "GitHub Light",
+    icon: "⬜",
+    description: "纯白底 · 蓝强调 · 结构化编辑",
+  },
 ];
 
 const DARK_THEMES: ThemeId[] = ["moling", "nord", "onedark", "dracula", "solarized-dark"];
@@ -44,9 +60,7 @@ export function isDarkTheme(id: ThemeId): boolean {
  */
 export function detectSystemTheme(): ThemeId {
   if (typeof window === "undefined") return "moling";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "moling"
-    : "solarized-light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "moling" : "solarized-light";
 }
 
 interface ThemeStore {
@@ -69,6 +83,10 @@ export const useTheme = create<ThemeStore>()(
         if (typeof window !== "undefined") {
           document.documentElement.setAttribute("data-theme", id);
         }
+        // Sync native title bar color in Tauri
+        setTauriTitlebarTheme(id);
+        // Sync window background colour in Tauri
+        setWindowBackgroundColor(id);
         // 用户手动切换 → 锁定选择，不再跟随系统
         set({ theme: id, autoFollow: false });
       },
@@ -86,6 +104,8 @@ export const useTheme = create<ThemeStore>()(
         if (typeof window !== "undefined") {
           document.documentElement.setAttribute("data-theme", systemTheme);
         }
+        setTauriTitlebarTheme(systemTheme);
+        setWindowBackgroundColor(systemTheme);
         set({ theme: systemTheme, autoFollow: true });
       },
     }),
@@ -124,7 +144,9 @@ export const useTheme = create<ThemeStore>()(
         }
 
         document.documentElement.setAttribute("data-theme", state.theme);
+        setTauriTitlebarTheme(state.theme);
+        setWindowBackgroundColor(state.theme);
       },
-    }
-  )
+    },
+  ),
 );

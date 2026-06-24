@@ -61,6 +61,7 @@ impl ChapterService {
             .max_chapter_number(db, project_id)
             .await?
             .unwrap_or(0);
+        let now = Utc::now();
         let model = chapter::ActiveModel {
             id: Set(uuid::Uuid::new_v4().to_string()),
             project_id: Set(project_id),
@@ -69,6 +70,8 @@ impl ChapterService {
             status: Set("draft".to_owned()),
             phase4_status: Set("pending".to_owned()),
             word_count: Set(0),
+            created_at: Set(now),
+            updated_at: Set(now),
             ..Default::default()
         };
         self.chapter_dao.create(db, model).await

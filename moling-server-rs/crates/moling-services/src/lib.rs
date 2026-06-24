@@ -3,6 +3,14 @@
 //! Each service module encapsulates domain-specific business rules,
 //! delegating data access to the moling-db DAO layer.
 
+#![allow(
+    clippy::too_many_arguments,
+    clippy::needless_range_loop,
+    clippy::large_enum_variant,
+    clippy::unnecessary_sort_by,
+    clippy::manual_clamp
+)]
+
 pub mod algorithm_service;
 pub mod book_analysis_service;
 pub mod card_pool_service;

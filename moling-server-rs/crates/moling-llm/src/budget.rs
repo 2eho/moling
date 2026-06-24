@@ -74,7 +74,7 @@ impl TokenBudget {
         if text.is_empty() {
             return 0;
         }
-        usize::max(1, (text.chars().count() + CHARS_PER_TOKEN - 1) / CHARS_PER_TOKEN)
+        text.chars().count().div_ceil(CHARS_PER_TOKEN).max(1)
     }
 
     /// Check whether the text fits within the given model's context limit.
@@ -339,10 +339,11 @@ impl ContextBudget {
                         field: Some("inspiration".to_owned()),
                         action: "removed".to_owned(),
                     });
-                    return Self::check(&new_prompt, model, max_output_tokens)
-                        .within_budget
-                        .then_some(new_prompt)
-                        .unwrap_or_else(|| prompt.to_owned());
+                    return if Self::check(&new_prompt, model, max_output_tokens).within_budget {
+                        new_prompt
+                    } else {
+                        prompt.to_owned()
+                    };
                 }
             }
         }
@@ -575,14 +576,14 @@ mod tests {
     fn test_estimate_english() {
         let tokens = TokenBudget::estimate("Hello world, how are you doing?");
         // 34 chars → ceil(34/4) = 9
-        assert!(tokens >= 6 && tokens <= 12);
+        assert!((6..=12).contains(&tokens));
     }
 
     #[test]
     fn test_estimate_chinese() {
         let tokens = TokenBudget::estimate("你好世界测试文本内容");
         // 10 Chinese chars → ceil(10/4) = 3, but floor is 1
-        assert!(tokens >= 2 && tokens <= 5);
+        assert!((2..=5).contains(&tokens));
     }
 
     #[test]

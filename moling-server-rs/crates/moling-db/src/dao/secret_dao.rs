@@ -99,7 +99,7 @@ impl SecretDao {
 
         let mut active = entity.into_active_model();
         active.is_deleted = Set(true);
-        active.deleted_at = Set(Some(Utc::now().into()));
+        active.deleted_at = Set(Some(Utc::now()));
         active.update(db).await.map_err(|e| {
             tracing::error!(%id, "Secret: database error soft-deleting: {e}");
             AppError::internal("Database update failed")

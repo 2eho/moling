@@ -887,23 +887,15 @@ impl VaultService {
     }
 
     /// Get status breakdown for plot promises.
+    /// Uses a single GROUP BY query instead of N per-status queries.
     pub async fn get_promise_status_breakdown(
         &self,
         db: &DatabaseConnection,
         project_id: i32,
     ) -> AppResult<HashMap<String, u64>> {
-        let statuses = ["dormant", "active", "fulfilled", "broken"];
-        let mut breakdown: HashMap<String, u64> = HashMap::new();
-
-        for status in &statuses {
-            let count = self
-                .vault_dao
-                .count_plot_promises_by_status(db, project_id, status)
-                .await?;
-            breakdown.insert(status.to_string(), count);
-        }
-
-        Ok(breakdown)
+        self.vault_dao
+            .count_plot_promises_by_status_batch(db, project_id)
+            .await
     }
 
     // ==================================================================
@@ -1422,21 +1414,18 @@ impl VaultService {
         let characters: Vec<Character> = all_chars
             .into_iter()
             .filter(|c| {
-                if let Some(ref name) = params.character_name {
-                    if !c.name.contains(name) {
+                if let Some(ref name) = params.character_name
+                    && !c.name.contains(name) {
                         return false;
                     }
-                }
-                if let Some(ref role) = params.character_role {
-                    if c.role != *role {
+                if let Some(ref role) = params.character_role
+                    && c.role != *role {
                         return false;
                     }
-                }
-                if let Some(ref status) = params.character_status {
-                    if c.status != *status {
+                if let Some(ref status) = params.character_status
+                    && c.status != *status {
                         return false;
                     }
-                }
                 true
             })
             .take(limit)
@@ -1446,16 +1435,14 @@ impl VaultService {
         let plot_promises: Vec<PlotPromise> = all_promises
             .into_iter()
             .filter(|p| {
-                if let Some(ref ptype) = params.promise_type {
-                    if p.r#type != *ptype {
+                if let Some(ref ptype) = params.promise_type
+                    && p.r#type != *ptype {
                         return false;
                     }
-                }
-                if let Some(ref status) = params.promise_status {
-                    if p.status != *status {
+                if let Some(ref status) = params.promise_status
+                    && p.status != *status {
                         return false;
                     }
-                }
                 true
             })
             .take(limit)
@@ -1465,16 +1452,14 @@ impl VaultService {
         let timeline: Vec<Timeline> = all_timeline
             .into_iter()
             .filter(|t| {
-                if let Some(start) = params.timeline_chapter_start {
-                    if t.chapter_number < start {
+                if let Some(start) = params.timeline_chapter_start
+                    && t.chapter_number < start {
                         return false;
                     }
-                }
-                if let Some(end) = params.timeline_chapter_end {
-                    if t.chapter_number > end {
+                if let Some(end) = params.timeline_chapter_end
+                    && t.chapter_number > end {
                         return false;
                     }
-                }
                 true
             })
             .take(limit)
@@ -1484,11 +1469,10 @@ impl VaultService {
         let world_entries: Vec<World> = all_worlds
             .into_iter()
             .filter(|w| {
-                if let Some(ref cat) = params.world_category {
-                    if w.category != *cat {
+                if let Some(ref cat) = params.world_category
+                    && w.category != *cat {
                         return false;
                     }
-                }
                 true
             })
             .take(limit)

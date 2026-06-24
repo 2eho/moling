@@ -237,7 +237,7 @@ fn to_resp(p: moling_db::entities::project::Model) -> ProjectResp {
         target_words: p.target_words,
         status: p.status,
         creation_mode: p.creation_mode,
-        created_at: p.created_at.into(),
-        updated_at: p.updated_at.into(),
+        created_at: p.created_at,
+        updated_at: p.updated_at,
     }
 }

@@ -319,8 +319,8 @@ impl CoherenceService {
                     let desc = e.description.as_str();
                     let desc_preview = if desc.len() > 150 { &desc[..150] } else { desc };
                     let mut line = format!("- [{}] {}: {}", e.category, e.name, desc_preview);
-                    if let Some(ref constraint) = e.constraint {
-                        if !constraint.is_empty() {
+                    if let Some(ref constraint) = e.constraint
+                        && !constraint.is_empty() {
                             let c = if constraint.len() > 100 {
                                 &constraint[..100]
                             } else {
@@ -328,7 +328,6 @@ impl CoherenceService {
                             };
                             line.push_str(&format!(" (约束: {c})"));
                         }
-                    }
                     line
                 })
                 .collect::<Vec<_>>()

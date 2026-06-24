@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type ResizeSide = "left" | "right";
 
@@ -13,11 +13,7 @@ interface ResizeConfig {
   rightBounds: [number, number];
 }
 
-export function usePanelResize({
-  resizeRef,
-  leftBounds,
-  rightBounds,
-}: ResizeConfig) {
+export function usePanelResize({ resizeRef, leftBounds, rightBounds }: ResizeConfig) {
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(260);
 

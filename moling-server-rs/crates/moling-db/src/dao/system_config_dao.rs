@@ -81,13 +81,13 @@ impl SystemConfigDao {
     ) -> AppResult<SystemConfigModel> {
         if let Some(existing) = self.find_by_key(db, key).await? {
             // Version check (optimistic lock)
-            if let Some(expected) = expected_version {
-                if existing.version != expected {
-                    return Err(AppError::conflict(format!(
-                        "配置 '{key}' 已被他人修改 (期望 v{expected}, 当前 v{})",
-                        existing.version
-                    )));
-                }
+            if let Some(expected) = expected_version
+                && existing.version != expected
+            {
+                return Err(AppError::conflict(format!(
+                    "配置 '{key}' 已被他人修改 (期望 v{expected}, 当前 v{})",
+                    existing.version
+                )));
             }
 
             let new_version = existing.version + 1;

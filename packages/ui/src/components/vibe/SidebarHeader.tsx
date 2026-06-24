@@ -11,6 +11,7 @@ export function SidebarHeader({ onCollapse, onNewProject }: SidebarHeaderProps) 
   return (
     <div className="shrink-0 flex items-center gap-2 px-3 py-3 relative z-10">
       <button
+        type="button"
         onClick={onCollapse}
         className="p-1.5 rounded-lg transition-colors text-th-text-3 hover:text-th-text hover:bg-th-hover"
         aria-label="折叠侧栏"
@@ -22,6 +23,7 @@ export function SidebarHeader({ onCollapse, onNewProject }: SidebarHeaderProps) 
       <div className="flex-1" />
 
       <button
+        type="button"
         onClick={onNewProject}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-th-accent-dim text-th-accent-text hover:brightness-110 transition-all"
       >

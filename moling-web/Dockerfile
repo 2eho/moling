@@ -43,4 +43,7 @@ RUN echo "ok" > /usr/share/nginx/html/health
 
 EXPOSE 3000
 
+# Run as non-root nginx user (uid=101, built into nginx:alpine)
+USER nginx
+
 CMD ["nginx", "-g", "daemon off;"]

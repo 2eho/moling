@@ -4,7 +4,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public data?: unknown
+    public data?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -37,7 +37,7 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<T> {
   const url = resolveApiUrl(path);
 
@@ -74,7 +74,7 @@ async function request<T>(
       throw new ApiError(
         response.status,
         `HTTP ${response.status}: ${response.statusText}`,
-        errorData
+        errorData,
       );
     }
 
@@ -89,24 +89,18 @@ async function request<T>(
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new ApiError(408, "请求超时");
     }
-    throw new ApiError(
-      0,
-      error instanceof Error ? error.message : "网络请求失败"
-    );
+    throw new ApiError(0, error instanceof Error ? error.message : "网络请求失败");
   }
 }
 
-export async function apiGet<T>(
-  path: string,
-  options?: RequestOptions
-): Promise<T> {
+export async function apiGet<T>(path: string, options?: RequestOptions): Promise<T> {
   return request<T>("GET", path, undefined, options);
 }
 
 export async function apiPost<T>(
   path: string,
   body?: unknown,
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<T> {
   return request<T>("POST", path, body, options);
 }
@@ -114,7 +108,7 @@ export async function apiPost<T>(
 export async function apiPut<T>(
   path: string,
   body?: unknown,
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<T> {
   return request<T>("PUT", path, body, options);
 }
@@ -122,14 +116,11 @@ export async function apiPut<T>(
 export async function apiPatch<T>(
   path: string,
   body?: unknown,
-  options?: RequestOptions
+  options?: RequestOptions,
 ): Promise<T> {
   return request<T>("PATCH", path, body, options);
 }
 
-export async function apiDelete<T>(
-  path: string,
-  options?: RequestOptions
-): Promise<T> {
+export async function apiDelete<T>(path: string, options?: RequestOptions): Promise<T> {
   return request<T>("DELETE", path, undefined, options);
 }

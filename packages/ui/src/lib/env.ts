@@ -6,8 +6,7 @@
  */
 
 // Detect Tauri runtime environment (works in both modes)
-const isTauriRuntime =
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const isTauriRuntime = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 // Detect Tauri build mode (VITE_TAURI_BUILD=true set during Tauri build)
 const isTauriBuild = import.meta.env.VITE_TAURI_BUILD === "true";

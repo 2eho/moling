@@ -1,19 +1,66 @@
-import { useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Sparkles, Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
-import { apiPost } from "@/lib/http/client";
+import { ArrowLeft, Loader2, Lock, Mail, Sparkles, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ApiError, apiPost } from "@/lib/http/client";
+
+const SAVED_CREDS_KEY = "moling_saved_creds";
+
+interface SavedCreds {
+  email: string;
+  password: string;
+}
+
+function loadSavedCreds(): SavedCreds | null {
+  try {
+    const raw = localStorage.getItem(SAVED_CREDS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SavedCreds;
+  } catch {
+    return null;
+  }
+}
+
+function saveCreds(creds: SavedCreds) {
+  localStorage.setItem(SAVED_CREDS_KEY, JSON.stringify(creds));
+}
+
+function clearSavedCreds() {
+  localStorage.removeItem(SAVED_CREDS_KEY);
+}
+
+/** Extract a human-readable message from an ApiError's data payload. */
+function apiErrorMessage(err: ApiError): string {
+  if (err.data !== null && typeof err.data === "object" && "message" in err.data) {
+    return String(err.data.message);
+  }
+  return err.message;
+}
 
 export function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<"login" | "register">(
-    searchParams.get("mode") === "register" ? "register" : "login"
+    searchParams.get("mode") === "register" ? "register" : "login",
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [remember, setRemember] = useState(false);
+
+  // Restore saved credentials on mount (login mode only)
+  useEffect(() => {
+    const currentMode = searchParams.get("mode") === "register" ? "register" : "login";
+    if (currentMode === "login") {
+      const saved = loadSavedCreds();
+      if (saved) {
+        setEmail(saved.email);
+        setPassword(saved.password);
+        setRemember(true);
+      }
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,21 +69,31 @@ export function AuthPage() {
 
     try {
       const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
-      const body = mode === "login"
-        ? { email, password }
-        : { email, password, nickname };
+      const body = mode === "login" ? { email, password } : { email, password, nickname };
 
       const res = await apiPost<{ user?: { id: string; email: string } }>(endpoint, body);
       if (!res.user) throw new Error("登录响应缺少用户信息");
+
+      // Persist or clear saved credentials
+      if (mode === "login" && remember) {
+        saveCreds({ email, password });
+      } else {
+        clearSavedCreds();
+      }
+
       navigate("/projects");
-    } catch (err: any) {
-      setError(err?.data?.message || err?.message || "网络请求失败，请确认后端已启动");
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(apiErrorMessage(err));
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("网络请求失败，请确认后端已启动");
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  const inputClass = "w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-th-input border border-th-border-subtle text-th-text placeholder:text-th-text-4 outline-none transition-all duration-200 focus:border-th-accent/50 focus:ring-2 focus:ring-th-accent-dim";
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-th-bg text-th-text">
@@ -63,7 +120,10 @@ export function AuthPage() {
             <button
               key={m}
               type="button"
-              onClick={() => { setMode(m); setError(""); }}
+              onClick={() => {
+                setMode(m);
+                setError("");
+              }}
               className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 mode === m
                   ? "bg-th-card text-th-text shadow-sm"
@@ -78,7 +138,10 @@ export function AuthPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {mode === "register" && (
             <div className="relative">
-              <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-th-text-3" />
+              <User
+                size={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-th-text-3"
+              />
               <input
                 type="text"
                 placeholder="昵称"
@@ -86,7 +149,7 @@ export function AuthPage() {
                 onChange={(e) => setNickname(e.target.value)}
                 required={mode === "register"}
                 minLength={2}
-                className={inputClass}
+                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-th-input border border-th-border-subtle text-th-text placeholder:text-th-text-4 outline-none transition-all duration-200 focus:border-th-accent/50 focus:ring-2 focus:ring-th-accent-dim"
               />
             </div>
           )}
@@ -100,7 +163,7 @@ export function AuthPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className={inputClass}
+              className="w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-th-input border border-th-border-subtle text-th-text placeholder:text-th-text-4 outline-none transition-all duration-200 focus:border-th-accent/50 focus:ring-2 focus:ring-th-accent-dim"
             />
           </div>
 
@@ -113,9 +176,21 @@ export function AuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className={inputClass}
+              className="w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-th-input border border-th-border-subtle text-th-text placeholder:text-th-text-4 outline-none transition-all duration-200 focus:border-th-accent/50 focus:ring-2 focus:ring-th-accent-dim"
             />
           </div>
+
+          {mode === "login" && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="w-4 h-4 rounded border-th-border-subtle accent-th-accent bg-th-input cursor-pointer"
+              />
+              <span className="text-xs text-th-text-3">记住账号密码</span>
+            </label>
+          )}
 
           {error && (
             <p className="text-xs text-th-danger bg-[var(--th-danger)]/8 px-3 py-2 rounded-lg">

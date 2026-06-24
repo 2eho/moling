@@ -53,8 +53,8 @@ impl SettingService {
         let mut active = u.into_active_model();
 
         // Check username uniqueness if changing
-        if let Some(new_username) = username {
-            if new_username != active.username.as_ref() {
+        if let Some(new_username) = username
+            && new_username != active.username.as_ref() {
                 if self
                     .user_dao
                     .username_exists(db, new_username)
@@ -64,7 +64,6 @@ impl SettingService {
                 }
                 active.username = Set(new_username.to_owned());
             }
-        }
         if let Some(v) = bio {
             active.bio = Set(Some(v.to_owned()));
         }

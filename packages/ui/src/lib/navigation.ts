@@ -22,7 +22,7 @@ export function useRouter(): Router {
     throw new Error(
       "setRouterHook() must be called before any component uses useRouter(). " +
         "In Next.js: import { useRouter } from 'next/navigation' and pass it. " +
-        "In Vite/Spa: import { useNavigate } from 'react-router-dom' and wrap it."
+        "In Vite/Spa: import { useNavigate } from 'react-router-dom' and wrap it.",
     );
   }
   return _routerHook();

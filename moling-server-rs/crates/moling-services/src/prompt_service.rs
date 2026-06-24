@@ -463,11 +463,10 @@ impl PromptService {
         }
 
         // Punctuation density hints
-        if let Some(excl) = fp.exclamation_density {
-            if excl > 5.0 {
+        if let Some(excl) = fp.exclamation_density
+            && excl > 5.0 {
                 lines.push("- 标点风格：情感强烈，感叹号使用偏多".to_owned());
             }
-        }
 
         if lines.len() == 1 {
             return String::new(); // Only the header, no actual constraints
@@ -1113,7 +1112,7 @@ mod tests {
             description: Some("世界中的能量源".into()),
             category: Some("魔法".into()),
         }];
-        let p = svc.build_world_building_prompt(&rules, Some("魔法学院".into()));
+        let p = svc.build_world_building_prompt(&rules, Some("魔法学院"));
         assert!(p.contains("魔力"));
         assert!(p.contains("能量源"));
         assert!(p.contains("魔法学院"));

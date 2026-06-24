@@ -21,6 +21,7 @@ async fn setup_app() -> (Router, DatabaseConnection, Uuid) {
         "CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT 'user',
+            status TEXT NOT NULL DEFAULT 'active',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT
@@ -30,11 +31,12 @@ async fn setup_app() -> (Router, DatabaseConnection, Uuid) {
             chapter_id TEXT, user_id TEXT NOT NULL DEFAULT '',
             task_type TEXT NOT NULL DEFAULT 'generate',
             status TEXT NOT NULL DEFAULT 'pending',
-            input_params TEXT, output_result TEXT, progress_percent INTEGER NOT NULL DEFAULT 0,
-            error_message TEXT, retry_count INTEGER NOT NULL DEFAULT 0,
+            input_params TEXT, output_data TEXT, progress_stage TEXT,
+            progress_percent INTEGER NOT NULL DEFAULT 0,
+            error_message TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-            is_deleted INTEGER NOT NULL DEFAULT 0
+            is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT
         )",
     ];
 

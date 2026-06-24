@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export const LLM_MODELS = [
-  { id: "deepseek-v4-pro",   label: "deepseek-v4-pro",   desc: "旗舰模型，最强综合能力" },
+  { id: "deepseek-v4-pro", label: "deepseek-v4-pro", desc: "旗舰模型，最强综合能力" },
   { id: "deepseek-v4-flash", label: "deepseek-v4-flash", desc: "极速响应，高吞吐低延迟" },
 ] as const;
 
@@ -48,10 +48,8 @@ export const useLLMSettings = create<LLMSettingsStore>()(
       setApiKey: (apiKey) => set({ apiKey }),
       setBaseUrl: (baseUrl) => set({ baseUrl }),
       setModel: (model) => set({ model }),
-      setTemperature: (temperature) =>
-        set({ temperature: Math.min(2, Math.max(0, temperature)) }),
-      setMaxTokens: (maxTokens) =>
-        set({ maxTokens: Math.min(32768, Math.max(256, maxTokens)) }),
+      setTemperature: (temperature) => set({ temperature: Math.min(2, Math.max(0, temperature)) }),
+      setMaxTokens: (maxTokens) => set({ maxTokens: Math.min(32768, Math.max(256, maxTokens)) }),
       reset: () => set(DEFAULTS),
     }),
     {

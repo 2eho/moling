@@ -1,0 +1,337 @@
+# ==============================================================================
+# 墨灵 Moling — 生产级完整编排（含监控栈）
+# ==============================================================================
+# 说明:
+#   - 后端: Rust Axum + SeaORM + JWT（单体二进制，内置 Worker）
+#   - 前端: Next.js standalone
+#   - 监控: Prometheus + Grafana + AlertManager + 飞书通知
+#   - 镜像由 GitHub Actions 自动构建并推送到 GHCR
+#
+# 使用:
+#   docker compose -f docker-compose.yml pull     # 拉取最新镜像
+#   docker compose -f docker-compose.yml up -d    # 启动全部服务
+#   docker compose -f docker-compose.yml ps       # 查看运行状态
+#
+# 访问:
+#   API:       http://localhost:8000/docs
+#   Frontend:  http://localhost:3000
+#   Prometheus: http://localhost:9090
+#   Grafana:   http://localhost:3001  (admin/admin)
+#   AlertManager: http://localhost:9093
+# ==============================================================================
+
+services:
+  # ==========================================================================
+  # Frontend — Next.js standalone（监听 3000 端口）
+  # ==========================================================================
+  frontend:
+    image: ghcr.io/2eho/moling/moling-frontend:latest
+    container_name: moling-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ==========================================================================
+  # Server — Rust 单体后端（HTTP API + 内置 Worker）
+  # ==========================================================================
+  server:
+    image: ghcr.io/2eho/moling/moling-server:latest
+    container_name: moling-server
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    environment:
+      - MOLING_HOST=0.0.0.0
+      - MOLING_PORT=8000
+      - MOLING_DATABASE_URL=${MOLING_DATABASE_URL:-sqlite:///data/moling.db?mode=rwc}
+      - MOLING_REDIS_URL=${MOLING_REDIS_URL:-redis://:moling_redis_password@redis:6379/0}
+      - MOLING_ENVIRONMENT=production
+      - MOLING_DEPLOY_VERSION=${DEPLOY_VERSION:-unknown}
+    volumes:
+      - moling-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "1G"
+        reservations:
+          cpus: "0.5"
+          memory: "256M"
+
+  # ==========================================================================
+  # DB — PostgreSQL 17 + pgvector
+  # ==========================================================================
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: moling-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-moling}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-moling}
+      POSTGRES_DB: ${POSTGRES_DB:-moling}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-moling} -d ${POSTGRES_DB:-moling}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ==========================================================================
+  # Redis 7
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: moling-redis
+    volumes:
+      - redisdata:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-moling_redis_password}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    networks:
+      - moling-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-moling_redis_password}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
+
+  # ==========================================================================
+  # Prometheus — 指标采集 + 告警规则评估
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: moling-prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheusdata:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=200h
+      - --storage.tsdb.retention.size=10GB
+      - --web.enable-lifecycle
+    networks:
+      - moling-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
+
+  # ==========================================================================
+  # AlertManager — 告警路由 → 飞书
+  # ==========================================================================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: moling-alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./feishu.tmpl:/etc/alertmanager/templates/feishu.tmpl:ro
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    networks:
+      - moling-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
+
+  # ==========================================================================
+  # 飞书告警桥接 — AlertManager webhook → 飞书卡片消息
+  # ==========================================================================
+  feishu-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.feishu-bridge
+    container_name: moling-feishu-bridge
+    ports:
+      - "127.0.0.1:9094:9094"
+    environment:
+      - FEISHU_WEBHOOK_URL=${FEISHU_WEBHOOK_URL}
+      - FEISHU_SECRET=${FEISHU_SECRET:-}
+    networks:
+      - moling-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
+
+  # ==========================================================================
+  # Grafana — 可视化仪表板
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: moling-grafana
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      # provisioning — 数据源 + 仪表板自动加载配置
+      - ./grafana/provision_ing:/etc/grafana/provisioning:ro
+      # dashboards — JSON 仪表板定义
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/moling-api.json
+      # 性能调优
+      - GF_DATABASE_WAL=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ALERTING_ENABLED=true
+    networks:
+      - moling-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+# ============================================================================
+# 网络 — 统一桥接网络
+# ============================================================================
+networks:
+  moling-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ============================================================================
+# 持久化卷
+# ============================================================================
+volumes:
+  moling-data:
+    driver: local
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  prometheusdata:
+    driver: local
+  grafanadata:
+    driver: local

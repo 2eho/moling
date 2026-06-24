@@ -208,10 +208,7 @@ impl HealthMonitorService {
             None => return None,
         };
 
-        let log_array = match log.as_array() {
-            Some(arr) => arr,
-            None => return None,
-        };
+        let log_array = log.as_array()?;
 
         if log_array.len() < R2_MIN_REPEATED {
             return None;
@@ -350,8 +347,8 @@ impl HealthMonitorService {
 
     /// Get the last chapter number where the promise was advanced.
     fn get_last_advance_chapter(&self, promise: &VaultPlotPromise) -> i32 {
-        if let Some(ref log) = promise.advancement_log {
-            if let Some(arr) = log.as_array() {
+        if let Some(ref log) = promise.advancement_log
+            && let Some(arr) = log.as_array() {
                 let max_ch = arr
                     .iter()
                     .filter_map(|entry| entry.get("chapter").and_then(|c| c.as_i64()))
@@ -359,7 +356,6 @@ impl HealthMonitorService {
                     .unwrap_or(0);
                 return max_ch as i32;
             }
-        }
         promise.planted_chapter.unwrap_or(0)
     }
 
@@ -386,15 +382,14 @@ impl HealthMonitorService {
         if !desc_keyword.is_empty() {
             keywords.push(desc_keyword.to_lowercase());
         }
-        if let Some(ref related) = promise.related_characters {
-            if let Some(arr) = related.as_array() {
+        if let Some(ref related) = promise.related_characters
+            && let Some(arr) = related.as_array() {
                 for item in arr {
                     if let Some(name) = item.as_str() {
                         keywords.push(name.to_lowercase());
                     }
                 }
             }
-        }
 
         for kw in &keywords {
             if !kw.is_empty() && content_lower.contains(kw) {
@@ -416,7 +411,7 @@ mod tests {
     use super::*;
 
     fn make_service() -> HealthMonitorService {
-        HealthMonitorService::new(VaultDao::default(), ChapterDao::default())
+        HealthMonitorService::new(VaultDao, ChapterDao)
     }
 
     #[test]

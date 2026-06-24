@@ -44,26 +44,24 @@ fn extract_chapter_title(line: &str) -> Option<String> {
     let lower = trimmed.to_lowercase();
     if lower.starts_with("chapter ") {
         let rest = &trimmed[8..];
-        if rest.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if rest.chars().next().is_some_and(|c| c.is_ascii_digit()) {
             return Some(trimmed.to_owned());
         }
     }
 
     // Pattern: Numbered headers like "1. Title", "1、Title", "1）Title"
-    if let Some(first) = trimmed.chars().next() {
-        if first.is_ascii_digit() {
+    if let Some(first) = trimmed.chars().next()
+        && first.is_ascii_digit() {
             for delim in [". ", ".\t", ". ", "、", "）", ") "] {
-                if let Some(pos) = trimmed.find(delim) {
-                    if pos > 0 && pos < 8 {
+                if let Some(pos) = trimmed.find(delim)
+                    && pos > 0 && pos < 8 {
                         // Must have content after
                         if pos + delim.len() < trimmed.len() {
                             return Some(trimmed.to_owned());
                         }
                     }
-                }
             }
         }
-    }
 
     // Pattern: 卷一 / 卷二 / 上部 / 下部 / 前篇 / 后篇
     if trimmed.starts_with('第') || matches!(trimmed.chars().next(), Some('上' | '中' | '下' | '前' | '後')) {
@@ -168,8 +166,8 @@ fn extract_metadata_from_filename(file_path: &str) -> (String, String) {
         .unwrap_or("");
 
     // Pattern: 《书名》-作者
-    if let Some(title_start) = stem.find('《') {
-        if let Some(title_end) = stem[title_start..].find('》') {
+    if let Some(title_start) = stem.find('《')
+        && let Some(title_end) = stem[title_start..].find('》') {
             let title = &stem[title_start + 3..title_start + title_end];
             let rest = &stem[title_start + title_end + 3..];
             let author = rest
@@ -177,7 +175,6 @@ fn extract_metadata_from_filename(file_path: &str) -> (String, String) {
                 .trim();
             return (title.to_owned(), author.to_owned());
         }
-    }
 
     // Pattern: 书名_作者
     for sep in ['_', '-', '—'] {
@@ -343,7 +340,7 @@ impl ImportService {
         // Style analysis
         let all_text: String = chapters.iter().map(|(_, c)| c.as_str()).collect::<Vec<_>>().join("\n");
         let sentences: Vec<&str> = all_text
-            .split(|c: char| matches!(c, '。' | '！' | '？' | '.' | '!' | '?' | '\n'))
+            .split(['。', '！', '？', '.', '!', '?', '\n'])
             .filter(|s| !s.trim().is_empty())
             .collect();
         let avg_sentence_len: f64 = if sentences.is_empty() {
@@ -638,7 +635,7 @@ impl ImportService {
     pub fn validate_format(file_path: &str) -> AppResult<&'static str> {
         Self::detect_format(file_path)
             .ok_or_else(|| AppError::validation_error(
-                format!("不支持的文件格式，支持 txt / md / docx / epub")
+                "不支持的文件格式，支持 txt / md / docx / epub".to_string()
             ))
     }
 }
@@ -700,7 +697,7 @@ mod tests {
     fn test_split_chapters_simple() {
         let text = "第1章 开篇\n这是第一章的内容。\n第2章 发展\n这是第二章的内容。";
         let chapters = split_chapters(text);
-        assert!(chapters.len() >= 1);
+        assert!(!chapters.is_empty());
     }
 
     #[test]

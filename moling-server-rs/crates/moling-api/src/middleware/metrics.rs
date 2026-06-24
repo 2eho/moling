@@ -36,6 +36,12 @@ pub static REQUEST_DURATION_MICROS_SUM: AtomicU64 = AtomicU64::new(0);
 /// Number of requests that contributed to the duration sum.
 pub static REQUEST_DURATION_COUNT: AtomicU64 = AtomicU64::new(0);
 
+/// Number of requests that passed the rate limiter.
+pub static RATE_LIMIT_ALLOWED_TOTAL: AtomicU64 = AtomicU64::new(0);
+
+/// Number of requests blocked by the rate limiter (HTTP 429).
+pub static RATE_LIMIT_BLOCKED_TOTAL: AtomicU64 = AtomicU64::new(0);
+
 // ---------------------------------------------------------------------------
 // Uptime tracking
 // ---------------------------------------------------------------------------
@@ -54,6 +60,20 @@ pub fn uptime_seconds() -> f64 {
         .get()
         .map(|t| t.elapsed().as_secs_f64())
         .unwrap_or(0.0)
+}
+
+// ---------------------------------------------------------------------------
+// Helpers for other middleware to increment rate-limit counters
+// ---------------------------------------------------------------------------
+
+/// Increment the rate-limit-allowed counter.
+pub fn increment_rate_limit_allowed() {
+    RATE_LIMIT_ALLOWED_TOTAL.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Increment the rate-limit-blocked counter.
+pub fn increment_rate_limit_blocked() {
+    RATE_LIMIT_BLOCKED_TOTAL.fetch_add(1, Ordering::Relaxed);
 }
 
 /// Approximate Unix timestamp of server start.

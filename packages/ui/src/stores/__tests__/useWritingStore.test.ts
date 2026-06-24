@@ -1,5 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useWritingStore, type WritingProject, type Chapter, type Option, type Phase } from "../useWritingStore";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  type Chapter,
+  type Option,
+  type Phase,
+  useWritingStore,
+  type WritingProject,
+} from "../useWritingStore";
 
 /** 构造测试用项目 */
 function createProject(overrides: Partial<WritingProject> = {}): WritingProject {
@@ -19,6 +25,9 @@ function createProject(overrides: Partial<WritingProject> = {}): WritingProject 
     foreshadowing: [],
     worldRules: "",
     styleNotes: "",
+    status: "draft",
+    createdAt: "2025-01-01",
+    updatedAt: "2025-01-01",
     ...overrides,
   };
 }
@@ -252,9 +261,7 @@ describe("useWritingStore", () => {
     it("应该完成指定章节", () => {
       const project = createProject({
         totalChapters: 3,
-        chapters: [
-          { id: 1, title: "第1章", summary: "", content: "", status: "draft" },
-        ],
+        chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }],
       });
       useWritingStore.setState({ projects: [project], project });
 
@@ -268,9 +275,7 @@ describe("useWritingStore", () => {
     it("完成章节后应自动创建下一章", () => {
       const project = createProject({
         totalChapters: 3,
-        chapters: [
-          { id: 1, title: "第1章", summary: "", content: "", status: "draft" },
-        ],
+        chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }],
       });
       useWritingStore.setState({ projects: [project], project });
 
@@ -288,9 +293,7 @@ describe("useWritingStore", () => {
     it("当所有章节完成时应切换到 revision 阶段", () => {
       const project = createProject({
         totalChapters: 1,
-        chapters: [
-          { id: 1, title: "第1章", summary: "", content: "", status: "draft" },
-        ],
+        chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }],
       });
       useWritingStore.setState({ projects: [project], project });
 

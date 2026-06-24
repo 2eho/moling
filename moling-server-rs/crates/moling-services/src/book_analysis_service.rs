@@ -200,7 +200,7 @@ impl BookAnalysisService {
 
         // Step 2: Build co-occurrence relationships
         let mut co_occur: HashMap<String, HashMap<String, usize>> = HashMap::new();
-        for (_ch_num, char_counter) in &chapter_characters {
+        for char_counter in chapter_characters.values() {
             let names_in_chapter: Vec<&String> = char_counter.keys().collect();
             for i in 0..names_in_chapter.len() {
                 for j in (i + 1)..names_in_chapter.len() {
@@ -239,11 +239,10 @@ impl BookAnalysisService {
             if fc > 0 {
                 aux_info.push(format!("首次出现于第{fc}章"));
             }
-            if let Some(first) = associated.first() {
-                if let Some(top_name) = first["name"].as_str() {
+            if let Some(first) = associated.first()
+                && let Some(top_name) = first["name"].as_str() {
                     aux_info.push(format!("常与「{top_name}」同场出现"));
                 }
-            }
 
             let profile = if aux_info.is_empty() {
                 format!("全书提及{total}次。")
@@ -601,9 +600,9 @@ impl BookAnalysisService {
             let ai_delta = (curr.action_intensity - prev.action_intensity).abs();
             let tone_delta = (curr.tone_score - prev.tone_score).abs();
 
-            if dr_delta > 0.15 && ai_delta > 0.15 {
-                boundaries.push(curr.chapter_number);
-            } else if tone_delta > 0.3 && (dr_delta > 0.1 || ai_delta > 0.1) {
+            if (dr_delta > 0.15 && ai_delta > 0.15)
+                || (tone_delta > 0.3 && (dr_delta > 0.1 || ai_delta > 0.1))
+            {
                 boundaries.push(curr.chapter_number);
             }
         }
@@ -831,7 +830,7 @@ impl BookAnalysisService {
             .into_iter()
             .filter(|(phrase, count)| {
                 *count >= 3
-                    && !phrase.chars().all(|c| c == phrase.chars().next().unwrap())
+                    && phrase.chars().next().is_some_and(|first| !phrase.chars().all(|c| c == first))
             })
             .take(20)
             .map(|(phrase, frequency)| {
@@ -864,7 +863,7 @@ mod tests {
     use super::*;
 
     fn make_service() -> BookAnalysisService {
-        BookAnalysisService::new(ChapterDao::default())
+        BookAnalysisService::new(ChapterDao)
     }
 
     #[test]
@@ -889,7 +888,7 @@ mod tests {
             ChapterMetrics { chapter_number: 2, chapter_title: "".into(), word_count: 200, sentence_count: 20, dialogue_ratio: 0.6, action_intensity: 2.5, tone_score: -0.5 },
             ChapterMetrics { chapter_number: 3, chapter_title: "".into(), word_count: 150, sentence_count: 15, dialogue_ratio: 0.3, action_intensity: 1.5, tone_score: 0.2 },
         ];
-        let (acts, boundaries) = svc.detect_acts(&metrics);
+        let (acts, _boundaries) = svc.detect_acts(&metrics);
         assert!(acts >= 1);
     }
 

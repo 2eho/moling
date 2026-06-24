@@ -46,7 +46,7 @@ async fn list_characters(
     Path(project_id): Path<i32>,
 ) -> AppResult<Json<serde_json::Value>> {
     let items = svc().list_characters(&state.db, &user.user_id.to_string(), project_id).await?;
-    Ok(Json(serde_json::to_value(items).unwrap()))
+    Ok(Json(serde_json::to_value(items)?))
 }
 
 async fn create_character(
@@ -68,7 +68,7 @@ async fn create_character(
         traits.as_deref(),
         None, None, None,
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn get_character(
@@ -77,7 +77,7 @@ async fn get_character(
     Path((project_id, id)): Path<(i32, String)>,
 ) -> AppResult<Json<serde_json::Value>> {
     let c = svc().get_character(&state.db, &user.user_id.to_string(), project_id, &id).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn update_character(
@@ -103,7 +103,7 @@ async fn update_character(
         req.background.as_deref(),
         req.status.as_deref(),
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn delete_character(
@@ -125,7 +125,7 @@ async fn list_plot_promises(
     Path(project_id): Path<i32>,
 ) -> AppResult<Json<serde_json::Value>> {
     let items = svc().list_plot_promises(&state.db, &user.user_id.to_string(), project_id).await?;
-    Ok(Json(serde_json::to_value(items).unwrap()))
+    Ok(Json(serde_json::to_value(items)?))
 }
 
 async fn create_plot_promise(
@@ -145,7 +145,7 @@ async fn create_plot_promise(
         related.as_deref(),
         req.planted_chapter,
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn get_plot_promise(
@@ -154,7 +154,7 @@ async fn get_plot_promise(
     Path((project_id, id)): Path<(i32, String)>,
 ) -> AppResult<Json<serde_json::Value>> {
     let c = svc().get_plot_promise(&state.db, &user.user_id.to_string(), project_id, &id).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn update_plot_promise(
@@ -175,7 +175,7 @@ async fn update_plot_promise(
         req.urgency,
         related.as_deref(),
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn delete_plot_promise(
@@ -197,7 +197,7 @@ async fn list_timeline(
     Path(project_id): Path<i32>,
 ) -> AppResult<Json<serde_json::Value>> {
     let items = svc().list_timeline(&state.db, &user.user_id.to_string(), project_id).await?;
-    Ok(Json(serde_json::to_value(items).unwrap()))
+    Ok(Json(serde_json::to_value(items)?))
 }
 
 async fn create_timeline(
@@ -219,7 +219,7 @@ async fn create_timeline(
         chars.as_deref(),
         req.importance.as_deref(),
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn get_timeline(
@@ -228,7 +228,7 @@ async fn get_timeline(
     Path((project_id, id)): Path<(i32, String)>,
 ) -> AppResult<Json<serde_json::Value>> {
     let c = svc().get_timeline_event(&state.db, &user.user_id.to_string(), project_id, &id).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn update_timeline(
@@ -249,7 +249,7 @@ async fn update_timeline(
         req.impact.as_deref(),
         req.importance.as_deref(),
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn delete_timeline(
@@ -271,7 +271,7 @@ async fn list_worlds(
     Path(project_id): Path<i32>,
 ) -> AppResult<Json<serde_json::Value>> {
     let items = svc().list_world_entries(&state.db, &user.user_id.to_string(), project_id).await?;
-    Ok(Json(serde_json::to_value(items).unwrap()))
+    Ok(Json(serde_json::to_value(items)?))
 }
 
 async fn create_world(
@@ -290,7 +290,7 @@ async fn create_world(
         req.constraint.as_deref(),
         req.source_chapter,
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn get_world(
@@ -299,7 +299,7 @@ async fn get_world(
     Path((project_id, id)): Path<(i32, String)>,
 ) -> AppResult<Json<serde_json::Value>> {
     let c = svc().get_world_entry(&state.db, &user.user_id.to_string(), project_id, &id).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn update_world(
@@ -318,7 +318,7 @@ async fn update_world(
         req.category.as_deref(),
         req.constraint.as_deref(),
     ).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn delete_world(
@@ -366,5 +366,5 @@ async fn filter_all(
     Query(params): Query<VaultFilterParams>,
 ) -> AppResult<Json<serde_json::Value>> {
     let result = svc().filter_all(&state.db, &user.user_id.to_string(), project_id, &params).await?;
-    Ok(Json(serde_json::to_value(result).unwrap()))
+    Ok(Json(serde_json::to_value(result)?))
 }

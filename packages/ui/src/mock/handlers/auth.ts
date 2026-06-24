@@ -20,12 +20,20 @@ export async function mockAuthLogin(body: { email: string; password: string }) {
   };
 }
 
-export async function mockAuthRegister(body: { email: string; password: string; username?: string }) {
+export async function mockAuthRegister(body: {
+  email: string;
+  password: string;
+  username?: string;
+}) {
   await new Promise((r) => setTimeout(r, 800));
   // 生产环境中，后端通过 Set-Cookie 设置 httpOnly Cookie（同 mockAuthLogin）
   return {
     access_token: "mock_access_token_" + Date.now(),
     refresh_token: "mock_refresh_token_" + Date.now(),
-    user: { id: "user-002", email: body.email, username: body.username || body.email.split("@")[0] },
+    user: {
+      id: "user-002",
+      email: body.email,
+      username: body.username || body.email.split("@")[0],
+    },
   };
 }

@@ -1,8 +1,10 @@
-//! Rate limiting middleware — sliding-window counter via Redis.
+//! Rate limiting middleware — sliding-window counter via Redis ZSET + Lua.
 //!
 //! When Redis is unavailable the middleware allows all requests through
-//! (graceful degradation).  Rate-limit configuration is read from the
-//! [`RateLimitConfig`] struct rather than hard-coded.
+//! (graceful degradation).  Rate-limit configuration is read from
+//! [`moling_core::config::Settings`] (environment variables
+//! `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW_SECS` or the `MOLING_`-prefixed
+//! equivalents).
 
 use axum::{
     extract::{Request, State},
@@ -10,76 +12,15 @@ use axum::{
     response::Response,
 };
 use moling_core::error::AppError;
-use moling_core::redis::RedisClient;
-use std::sync::Arc;
+use moling_core::rate_limiter::{RateLimiter, RedisRateLimiter};
 
-/// Configuration for the rate limiter.
-#[derive(Clone)]
-pub struct RateLimitConfig {
-    /// Maximum requests allowed in the window.
-    pub max_requests: u32,
-    /// Window duration in seconds.
-    pub window_seconds: u64,
-    /// Redis key prefix (e.g. "rate_limit:").
-    pub key_prefix: String,
-}
-
-impl Default for RateLimitConfig {
-    fn default() -> Self {
-        Self {
-            max_requests: 100,
-            window_seconds: 60,
-            key_prefix: "rate_limit:".into(),
-        }
-    }
-}
-
-/// Sliding-window rate limiter middleware — Redis-backed for multi-worker
-/// deployments.
-///
-/// Keyed by client IP address (derived from `x-forwarded-for` or
-/// `axum`'s `ConnectInfo`).  On the first request in a window the key is
-/// created with a TTL; subsequent requests increment the counter.
-///
-/// # Fallback
-///
-/// If Redis is unavailable (`incr` returns `None`) the request is allowed
-/// through — we never block legitimate traffic because of an infra issue.
-pub async fn rate_limit_middleware(
-    State(redis): State<Arc<RedisClient>>,
-    request: Request,
-    next: Next,
-) -> Result<Response, AppError> {
-    let config = RateLimitConfig::default();
-    let client_ip = extract_client_ip(&request);
-    let key = format!("{}{client_ip}", config.key_prefix);
-
-    // Increment and check
-    let count = match redis.incr(&key).await? {
-        Some(c) => c,
-        None => {
-            // Redis unavailable — allow through (graceful degradation)
-            return Ok(next.run(request).await);
-        }
-    };
-
-    // Set expiry on first hit in this window
-    if count == 1 {
-        let _ = redis.expire(&key, config.window_seconds as i64).await?;
-    }
-
-    if count > config.max_requests as i64 {
-        return Err(AppError::rate_limit());
-    }
-
-    Ok(next.run(request).await)
-}
+use crate::state::AppState;
 
 /// Extract the client IP from the request.
 ///
 /// Prefers `x-forwarded-for` header (taking the first IP in the chain),
 /// falls back to the socket address, and ultimately to `127.0.0.1`.
-pub(crate) fn extract_client_ip(request: &Request) -> String {
+fn extract_client_ip(request: &Request) -> String {
     // Prefer x-forwarded-for header (reverse-proxy / load-balancer)
     if let Some(fwd) = request
         .headers()
@@ -87,9 +28,11 @@ pub(crate) fn extract_client_ip(request: &Request) -> String {
         .and_then(|v| v.to_str().ok())
     {
         // Take the first IP in the chain (client origin)
-        let ip = fwd.split(',').next().unwrap_or("unknown").trim();
-        if !ip.is_empty() {
-            return ip.to_owned();
+        if let Some(ip) = fwd.split(',').next() {
+            let ip = ip.trim();
+            if !ip.is_empty() {
+                return ip.to_owned();
+            }
         }
     }
 
@@ -101,18 +44,56 @@ pub(crate) fn extract_client_ip(request: &Request) -> String {
         .unwrap_or_else(|| "127.0.0.1".into())
 }
 
+/// Sliding-window rate limiter middleware — Redis-backed for multi-worker
+/// deployments.
+///
+/// Uses a Lua script executed atomically inside Redis (ZSET-based sliding
+/// window).  Configuration is read from [`AppState::settings`]:
+///
+/// | Setting | Env var | Default |
+/// |---------|---------|---------|
+/// | `rate_limit_requests` | `RATE_LIMIT_REQUESTS` / `MOLING_RATE_LIMIT_REQUESTS` | 100 |
+/// | `rate_limit_window_secs` | `RATE_LIMIT_WINDOW_SECS` / `MOLING_RATE_LIMIT_WINDOW_SECS` | 60 |
+///
+/// # Fallback
+///
+/// If Redis is unavailable, the request is allowed through — we never block
+/// legitimate traffic because of an infrastructure issue.
+///
+/// # Metrics
+///
+/// On every check the middleware increments either
+/// [`super::metrics::RATE_LIMIT_ALLOWED_TOTAL`] or
+/// [`super::metrics::RATE_LIMIT_BLOCKED_TOTAL`].
+pub async fn rate_limit_middleware(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let limiter = RedisRateLimiter::new(state.redis.clone());
+    let client_ip = extract_client_ip(&request);
+    let key = format!("rate_limit:{client_ip}");
+
+    let max_requests = state.settings.rate_limit_requests;
+    let window_secs = state.settings.rate_limit_window_secs;
+
+    let result = limiter
+        .check_rate_limit(&key, max_requests, window_secs)
+        .await?;
+
+    if result.allowed {
+        super::metrics::increment_rate_limit_allowed();
+        Ok(next.run(request).await)
+    } else {
+        super::metrics::increment_rate_limit_blocked();
+        Err(AppError::rate_limit())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::{body::Body, http::Request};
-
-    #[test]
-    fn test_rate_limit_config_defaults() {
-        let config = RateLimitConfig::default();
-        assert_eq!(config.max_requests, 100);
-        assert_eq!(config.window_seconds, 60);
-        assert_eq!(config.key_prefix, "rate_limit:");
-    }
 
     #[test]
     fn test_extract_client_ip_from_forwarded_for() {
@@ -126,12 +107,35 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_client_ip_single_forwarded_for() {
+        let req = Request::builder()
+            .uri("/")
+            .header("x-forwarded-for", "203.0.113.42")
+            .body(Body::empty())
+            .unwrap();
+        let ip = extract_client_ip(&req);
+        assert_eq!(ip, "203.0.113.42");
+    }
+
+    #[test]
     fn test_extract_client_ip_fallback() {
         let req = Request::builder()
             .uri("/")
             .body(Body::empty())
             .unwrap();
         let ip = extract_client_ip(&req);
-        assert!(!ip.is_empty(), "Should have a fallback IP");
+        // Should fall back to 127.0.0.1 when no headers/extensions present
+        assert_eq!(ip, "127.0.0.1");
+    }
+
+    #[test]
+    fn test_extract_client_ip_empty_forwarded_for() {
+        let req = Request::builder()
+            .uri("/")
+            .header("x-forwarded-for", "")
+            .body(Body::empty())
+            .unwrap();
+        let ip = extract_client_ip(&req);
+        assert_eq!(ip, "127.0.0.1"); // falls back when empty
     }
 }

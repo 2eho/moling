@@ -176,7 +176,7 @@ impl WeaveService {
         }
 
         // Suggestion 5: Structure recommendation
-        if chapters.len() > 0 && chapters.len() < 10 {
+        if !chapters.is_empty() && chapters.len() < 10 {
             suggestions.push(serde_json::json!({
                 "id": "weave_structure",
                 "type": "structure",
@@ -418,7 +418,7 @@ impl WeaveService {
         }
 
         // Cap at 10.0
-        Ok(score.min(10.0).max(0.0))
+        Ok(score.clamp(0.0, 10.0))
     }
 }
 

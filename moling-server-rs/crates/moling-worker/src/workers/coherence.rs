@@ -170,7 +170,7 @@ pub async fn execute(
             continue;
         }
 
-        let result = run_chapter_coherence(db, &chapter, content, &groups_to_run).await;
+        let result = run_chapter_coherence(db, chapter, content, &groups_to_run).await;
         match result {
             Ok(ch_result) => chapter_results.push(ch_result),
             Err(e) => {

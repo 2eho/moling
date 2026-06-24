@@ -127,7 +127,7 @@ impl HealthAlertDao {
 
         use sea_orm::IntoActiveModel;
         let mut active = entity.into_active_model();
-        active.checked_at = Set(Some(Utc::now().into()));
+        active.checked_at = Set(Some(Utc::now()));
         active.update(db).await.map_err(|e| {
             tracing::error!(%alert_id, "HealthAlert: database error updating checked_at: {e}");
             AppError::internal("Database update failed")

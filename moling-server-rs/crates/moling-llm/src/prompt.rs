@@ -156,6 +156,7 @@ impl PromptService {
     /// ~500 chars. Includes project name, chapter title, POV/location/time
     /// anchors, previous chapter summary, coherence constraints, and
     /// unresolved hooks.
+    #[allow(clippy::too_many_arguments)]
     pub fn build_layer1(
         project_name: &str,
         chapter_title: &str,
@@ -174,20 +175,20 @@ impl PromptService {
 
         // Anchors (POV / location / time)
         let mut anchors: Vec<String> = Vec::new();
-        if let Some(pov) = pov_character {
-            if !pov.is_empty() {
-                anchors.push(format!("视点：{pov}"));
-            }
+        if let Some(pov) = pov_character
+            && !pov.is_empty()
+        {
+            anchors.push(format!("视点：{pov}"));
         }
-        if let Some(loc) = location {
-            if !loc.is_empty() {
-                anchors.push(format!("地点：{loc}"));
-            }
+        if let Some(loc) = location
+            && !loc.is_empty()
+        {
+            anchors.push(format!("地点：{loc}"));
         }
-        if let Some(time) = time_period {
-            if !time.is_empty() {
-                anchors.push(format!("时间：{time}"));
-            }
+        if let Some(time) = time_period
+            && !time.is_empty()
+        {
+            anchors.push(format!("时间：{time}"));
         }
         if !anchors.is_empty() {
             parts.push(format!("【锚点】{}", anchors.join(" | ")));
@@ -246,15 +247,15 @@ impl PromptService {
                 .iter()
                 .map(|c| {
                     let mut line = format!("- {}", c.name);
-                    if let Some(ref role) = c.role {
-                        if !role.is_empty() {
-                            line.push_str(&format!(" ({role})"));
-                        }
+                    if let Some(role) = &c.role
+                        && !role.is_empty()
+                    {
+                        line.push_str(&format!(" ({role})"));
                     }
-                    if let Some(ref desc) = c.description {
-                        if !desc.is_empty() {
-                            line.push_str(&format!("：{desc}"));
-                        }
+                    if let Some(desc) = &c.description
+                        && !desc.is_empty()
+                    {
+                        line.push_str(&format!("：{desc}"));
                     }
                     if !c.traits.is_empty() {
                         line.push_str(&format!(
@@ -262,10 +263,10 @@ impl PromptService {
                             c.traits.iter().take(3).cloned().collect::<Vec<_>>().join("、")
                         ));
                     }
-                    if let Some(ref emotion) = c.emotion {
-                        if !emotion.is_empty() {
-                            line.push_str(&format!("；情绪：{emotion}"));
-                        }
+                    if let Some(emotion) = &c.emotion
+                        && !emotion.is_empty()
+                    {
+                        line.push_str(&format!("；情绪：{emotion}"));
                     }
                     line
                 })
@@ -279,20 +280,20 @@ impl PromptService {
                 .iter()
                 .map(|p| {
                     let mut line = format!("- {}", p.description);
-                    if let Some(ref ptype) = p.promise_type {
-                        if !ptype.is_empty() {
-                            line.push_str(&format!(" [{ptype}]"));
-                        }
+                    if let Some(ptype) = &p.promise_type
+                        && !ptype.is_empty()
+                    {
+                        line.push_str(&format!(" [{ptype}]"));
                     }
-                    if let Some(ref status) = p.status {
-                        if !status.is_empty() {
-                            line.push_str(&format!(" ({status})"));
-                        }
+                    if let Some(status) = &p.status
+                        && !status.is_empty()
+                    {
+                        line.push_str(&format!(" ({status})"));
                     }
-                    if let Some(ref urgency) = p.urgency {
-                        if !urgency.is_empty() {
-                            line.push_str(&format!(" 紧迫度：{urgency}"));
-                        }
+                    if let Some(urgency) = &p.urgency
+                        && !urgency.is_empty()
+                    {
+                        line.push_str(&format!(" 紧迫度：{urgency}"));
                     }
                     line
                 })
@@ -306,18 +307,18 @@ impl PromptService {
                 .iter()
                 .map(|t| {
                     let mut line = format!("- {}", t.event);
-                    if let Some(ref tdesc) = t.description {
-                        if !tdesc.is_empty() {
-                            line.push_str(&format!("：{tdesc}"));
-                        }
+                    if let Some(tdesc) = &t.description
+                        && !tdesc.is_empty()
+                    {
+                        line.push_str(&format!("：{tdesc}"));
                     }
                     if t.is_key_event {
                         line.push_str(" ⭐（关键事件）");
                     }
-                    if let Some(ref impact) = t.impact {
-                        if !impact.is_empty() {
-                            line.push_str(&format!(" (影响：{impact})"));
-                        }
+                    if let Some(impact) = &t.impact
+                        && !impact.is_empty()
+                    {
+                        line.push_str(&format!(" (影响：{impact})"));
                     }
                     line
                 })
@@ -331,15 +332,15 @@ impl PromptService {
                 .iter()
                 .map(|w| {
                     let mut line = format!("- {}", w.term);
-                    if let Some(ref category) = w.category {
-                        if !category.is_empty() {
-                            line.push_str(&format!(" [{category}]"));
-                        }
+                    if let Some(category) = &w.category
+                        && !category.is_empty()
+                    {
+                        line.push_str(&format!(" [{category}]"));
                     }
-                    if let Some(ref wdesc) = w.description {
-                        if !wdesc.is_empty() {
-                            line.push_str(&format!("：{wdesc}"));
-                        }
+                    if let Some(wdesc) = &w.description
+                        && !wdesc.is_empty()
+                    {
+                        line.push_str(&format!("：{wdesc}"));
                     }
                     line
                 })
@@ -375,16 +376,16 @@ impl PromptService {
                 .map(|card| {
                     let weight = weight_map.get(&card.name).copied().unwrap_or(1.0);
                     let mut line = format!("- {}", card.name);
-                    if let Some(ref dtype) = card.direction_type {
-                        if !dtype.is_empty() {
-                            line.push_str(&format!(" [{dtype}]"));
-                        }
+                    if let Some(dtype) = &card.direction_type
+                        && !dtype.is_empty()
+                    {
+                        line.push_str(&format!(" [{dtype}]"));
                     }
                     line.push_str(&format!(" (权重: {weight:.2})"));
-                    if let Some(ref dtext) = card.direction_text {
-                        if !dtext.is_empty() {
-                            line.push_str(&format!("\n  方向：{dtext}"));
-                        }
+                    if let Some(dtext) = &card.direction_text
+                        && !dtext.is_empty()
+                    {
+                        line.push_str(&format!("\n  方向：{dtext}"));
                     }
                     line
                 })
@@ -394,10 +395,10 @@ impl PromptService {
 
         if let Some(scheme) = weaving_scheme {
             let mut scheme_lines: Vec<String> = Vec::new();
-            if let Some(ref desc) = scheme.description {
-                if !desc.is_empty() {
-                    scheme_lines.push(format!("方案：{desc}"));
-                }
+            if let Some(ref desc) = scheme.description
+                && !desc.is_empty()
+            {
+                scheme_lines.push(format!("方案：{desc}"));
             }
             if !scheme.order.is_empty() {
                 scheme_lines.push(format!(
@@ -405,10 +406,10 @@ impl PromptService {
                     scheme.order.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(" → ")
                 ));
             }
-            if let Some(ref emphasis) = scheme.emphasis {
-                if !emphasis.is_empty() {
-                    scheme_lines.push(format!("侧重：{emphasis}"));
-                }
+            if let Some(ref emphasis) = scheme.emphasis
+                && !emphasis.is_empty()
+            {
+                scheme_lines.push(format!("侧重：{emphasis}"));
             }
             if !scheme_lines.is_empty() {
                 parts.push(format!("【编织方案】\n{}", scheme_lines.join("\n")));
@@ -462,16 +463,16 @@ impl PromptService {
         }
 
         // POV
-        if let Some(ref pov) = fp.dominant_pov {
-            if !pov.is_empty() {
-                let pov_label = match pov.as_str() {
-                    "first" => "第一人称视角",
-                    "second" => "第二人称视角",
-                    "third" => "第三人称视角",
-                    _ => &format!("{pov}视角"),
-                };
-                lines.push(format!("- 视角偏好：{pov_label}"));
-            }
+        if let Some(ref pov) = fp.dominant_pov
+            && !pov.is_empty()
+        {
+            let pov_label = match pov.as_str() {
+                "first" => "第一人称视角",
+                "second" => "第二人称视角",
+                "third" => "第三人称视角",
+                _ => &format!("{pov}视角"),
+            };
+            lines.push(format!("- 视角偏好：{pov_label}"));
         }
 
         // Paragraph rhythm
@@ -486,10 +487,10 @@ impl PromptService {
         }
 
         // Punctuation density
-        if let Some(excl) = fp.exclamation_density {
-            if excl > 5.0 {
-                lines.push("- 标点风格：情感强烈，感叹号使用偏多".to_owned());
-            }
+        if let Some(excl) = fp.exclamation_density
+            && excl > 5.0
+        {
+            lines.push("- 标点风格：情感强烈，感叹号使用偏多".to_owned());
         }
 
         if lines.len() == 1 {
@@ -629,10 +630,10 @@ impl PromptBuilder {
             "你正在创作一部小说。\n\n【创作方向卡】\n{}\n\n请根据此方向卡，生成3个可行的具体情节发展方案（每个50-100字）：",
             ctx.card_text
         );
-        if let Some(ref context) = ctx.chapter_context {
-            if !context.is_empty() {
-                prompt.push_str(&format!("\n\n【当前上下文】\n{context}"));
-            }
+        if let Some(ref context) = ctx.chapter_context
+            && !context.is_empty()
+        {
+            prompt.push_str(&format!("\n\n【当前上下文】\n{context}"));
         }
         prompt
     }
@@ -1072,13 +1073,13 @@ impl PromptLibrary {
             )),
         ];
 
-        if let Some(rules) = existing_rules {
-            if !rules.is_empty() {
-                messages.push(super::client::ChatMessage::user(format!(
-                    "已有规则参考：{}",
-                    rules.join("、")
-                )));
-            }
+        if let Some(rules) = existing_rules
+            && !rules.is_empty()
+        {
+            messages.push(super::client::ChatMessage::user(format!(
+                "已有规则参考：{}",
+                rules.join("、")
+            )));
         }
 
         messages

@@ -262,7 +262,7 @@ impl SecretService {
         let filtered: Vec<_> = all
             .into_iter()
             .filter(|s| {
-                s.known_by.as_array().map_or(false, |arr| {
+                s.known_by.as_array().is_some_and(|arr| {
                     arr.iter().any(|v| v.as_str() == Some(character_id))
                 })
             })
@@ -509,7 +509,7 @@ impl SecretService {
             } else {
                 let base = level.weight();
                 let decay = match chapter_dist {
-                    Some(d) if d > 0 => (decay_rate.powi(d)) as f64,
+                    Some(d) if d > 0 => decay_rate.powi(d),
                     _ => 1.0,
                 };
                 let partial_factor = if matches!(level, SecrecyLevel::Medium) {
@@ -654,7 +654,7 @@ impl SecretService {
                 debt,
             };
 
-            let is_known = s.known_by.as_array().map_or(false, |arr| {
+            let is_known = s.known_by.as_array().is_some_and(|arr| {
                 arr.iter().any(|v| v.as_str() == Some(character_name))
             });
 
@@ -1272,9 +1272,8 @@ mod tests {
 
     #[test]
     fn test_secret_service_constructs() {
-        let svc = SecretService::new();
+        let _svc = SecretService::new();
         // Just ensure default construction works
-        drop(svc);
     }
 
     #[test]

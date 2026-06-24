@@ -162,7 +162,7 @@ impl Phase4Scheduler {
                 tracing::error!("Phase4Scheduler: store init failed: {e}");
             }
 
-            let nonce_cache_size = NonZeroUsize::new(NONCE_CACHE_SIZE).unwrap();
+            let nonce_cache_size = NonZeroUsize::new(NONCE_CACHE_SIZE).expect("NONCE_CACHE_SIZE must be > 0");
 
             let mut inner = SchedulerInner {
                 receiver: rx,
@@ -211,12 +211,11 @@ impl Phase4Scheduler {
 impl SchedulerInner {
     async fn handle_task(&mut self, task: Phase4Task) {
         // 1. Nonce deduplication
-        if let Some(&cached) = self.nonce_cache.get(&task.nonce) {
-            if cached {
+        if let Some(&cached) = self.nonce_cache.get(&task.nonce)
+            && cached {
                 tracing::debug!("Phase4Scheduler: duplicate nonce {}", task.nonce);
                 return;
             }
-        }
 
         match self.store.check_nonce(&task.nonce).await {
             Ok(true) => {

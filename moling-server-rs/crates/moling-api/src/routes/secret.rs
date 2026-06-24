@@ -27,17 +27,17 @@ async fn create_secret(State(state): State<AppState>, _user: CurrentUser, Path(p
         ..Default::default()
     };
     let s = dao.create(&state.db, model).await?;
-    Ok(Json(serde_json::to_value(s).unwrap()))
+    Ok(Json(serde_json::to_value(s)?))
 }
 
 async fn list_secrets(State(state): State<AppState>, _user: CurrentUser, Path(project_id): Path<i32>) -> AppResult<Json<serde_json::Value>> {
     let items = SecretDao.list_by_project(&state.db, project_id).await?;
-    Ok(Json(serde_json::to_value(items).unwrap()))
+    Ok(Json(serde_json::to_value(items)?))
 }
 
 async fn get_secret(State(state): State<AppState>, _user: CurrentUser, Path((_pid, secret_id)): Path<(i32, String)>) -> AppResult<Json<serde_json::Value>> {
     let s = SecretDao.find_by_id(&state.db, &secret_id).await?.ok_or_else(|| AppError::not_found("Secret not found".to_owned()))?;
-    Ok(Json(serde_json::to_value(s).unwrap()))
+    Ok(Json(serde_json::to_value(s)?))
 }
 
 async fn update_secret(State(state): State<AppState>, _user: CurrentUser, Path((_pid, secret_id)): Path<(i32, String)>, Json(req): Json<UpdateSecretReq>) -> AppResult<Json<serde_json::Value>> {
@@ -50,7 +50,7 @@ async fn update_secret(State(state): State<AppState>, _user: CurrentUser, Path((
     if let Some(v) = req.unknown_to { a.unknown_to = Set(v); }
     if let Some(v) = req.debt { a.debt = Set(v); }
     let u = a.update(&state.db).await.map_err(|_| AppError::internal("Update secret failed".to_owned()))?;
-    Ok(Json(serde_json::to_value(u).unwrap()))
+    Ok(Json(serde_json::to_value(u)?))
 }
 
 async fn delete_secret(State(state): State<AppState>, _user: CurrentUser, Path((_pid, secret_id)): Path<(i32, String)>) -> AppResult<axum::http::StatusCode> {
@@ -62,7 +62,7 @@ async fn delete_secret(State(state): State<AppState>, _user: CurrentUser, Path((
 async fn by_character(State(state): State<AppState>, _user: CurrentUser, Path((project_id, character_id)): Path<(i32, String)>) -> AppResult<Json<serde_json::Value>> {
     let all = SecretDao.list_by_project(&state.db, project_id).await?;
     let filtered: Vec<_> = all.into_iter().filter(|s| {
-        s.known_by.as_array().map_or(false, |arr| arr.iter().any(|v| v.as_str() == Some(&character_id)))
+        s.known_by.as_array().is_some_and(|arr| arr.iter().any(|v| v.as_str() == Some(&character_id)))
     }).collect();
-    Ok(Json(serde_json::to_value(filtered).unwrap()))
+    Ok(Json(serde_json::to_value(filtered)?))
 }

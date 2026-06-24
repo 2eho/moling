@@ -1,29 +1,29 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { useWritingStore } from "@/stores/useWritingStore";
-import { useTheme, THEMES } from "@/stores/useTheme";
-import type { ThemeId } from "@/stores/useTheme";
-import { useToast } from "@/stores/useToast";
-import { Sidebar } from "@/components/vibe/Sidebar";
-import { OptionsPanel } from "@/components/vibe/OptionsPanel";
-import { ThemeSwitcher } from "@/components/vibe/ThemeSwitcher";
-import { AgentPanel } from "@/components/vibe/AgentPanel";
-import { usePanelResize } from "@/hooks/usePanelResize";
-import { restoreFromDB } from "@/db/sync";
 import {
-  PanelRight,
-  BookOpen,
-  Edit3,
-  Eye,
-  CheckCircle2,
-  Copy,
-  X,
-  ChevronLeft,
-  ChevronRight,
   ArrowLeft,
   ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
+  Copy,
+  Edit3,
+  Eye,
+  PanelRight,
+  X,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import { AgentPanel } from "@/components/vibe/AgentPanel";
+import { OptionsPanel } from "@/components/vibe/OptionsPanel";
+import { Sidebar } from "@/components/vibe/Sidebar";
+import { ThemeSwitcher } from "@/components/vibe/ThemeSwitcher";
+import { restoreFromDB } from "@/db/sync";
+import { usePanelResize } from "@/hooks/usePanelResize";
+import type { ThemeId } from "@/stores/useTheme";
+import { THEMES, useTheme } from "@/stores/useTheme";
+import { useToast } from "@/stores/useToast";
+import { useWritingStore } from "@/stores/useWritingStore";
 
 export function WorkspacePage() {
   const projectId = useParams<{ projectId: string }>().projectId;
@@ -41,13 +41,18 @@ export function WorkspacePage() {
   // Never rely on the store's `project` field — it can be stale
   // after zustand persist rehydration.
   const project = activeProjectId
-    ? projects.find((p) => p.id === activeProjectId) ?? null
-    : projects[0] ?? null;
+    ? (projects.find((p) => p.id === activeProjectId) ?? null)
+    : (projects[0] ?? null);
 
   // Initialize: restore from SQLite, then mark hydrated.
   useEffect(() => {
     const load = async () => {
-      await restoreFromDB(useWritingStore.getState() as any);
+      const snapshot = useWritingStore.getState();
+      await restoreFromDB({
+        projects: snapshot.projects,
+        loadProjects: snapshot.loadProjects,
+        loadProject: snapshot.loadProject,
+      });
       setHasHydrated(true);
     };
     load();
@@ -63,22 +68,25 @@ export function WorkspacePage() {
 
   useEffect(() => {
     setDraftStepCount(0);
-  }, [activeChapterId]);
+  }, []);
 
   const resizeRef = useRef<{
     side: "left" | "right";
     startX: number;
     startW: number;
   } | null>(null);
-  const { leftWidth: sidebarWidth, rightWidth: rightPanelWidth, onResizeMouseDown } =
-    usePanelResize({
-      resizeRef,
-      leftBounds: [180, 420],
-      rightBounds: [220, 520],
-    });
+  const {
+    leftWidth: sidebarWidth,
+    rightWidth: rightPanelWidth,
+    onResizeMouseDown,
+  } = usePanelResize({
+    resizeRef,
+    leftBounds: [180, 420],
+    rightBounds: [220, 520],
+  });
 
   const currentChapter = activeChapterId
-    ? project?.chapters.find((c) => c.id === activeChapterId) ?? null
+    ? (project?.chapters.find((c) => c.id === activeChapterId) ?? null)
     : null;
   const lastChapter = project?.chapters[project.chapters.length - 1];
   const lastChapterId = lastChapter?.id ?? null;
@@ -150,10 +158,7 @@ export function WorkspacePage() {
     };
   }, [project, activeChapterId]);
 
-  const navigateChapter = useCallback(
-    (chId: number) => setActiveChapter(chId),
-    [setActiveChapter],
-  );
+  const navigateChapter = useCallback((chId: number) => setActiveChapter(chId), [setActiveChapter]);
 
   // Sync active project/chapter from URL params
   useEffect(() => {
@@ -164,7 +169,15 @@ export function WorkspacePage() {
     if (activeChapterId === null && project && project.chapters.length > 0) {
       setActiveChapter(project.chapters.length);
     }
-  }, [setActiveProject, setActiveChapter, toggleProjectExpand, projectId, project?.id, activeChapterId, project]);
+  }, [
+    setActiveProject,
+    setActiveChapter,
+    toggleProjectExpand,
+    projectId,
+    project?.id,
+    activeChapterId,
+    project,
+  ]);
 
   // Ctrl+Shift+T → cycle theme
   useEffect(() => {
@@ -195,13 +208,19 @@ export function WorkspacePage() {
   if (!currentChapter) {
     return (
       <div className="h-screen flex overflow-hidden bg-th-bg text-th-text">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} width={sidebarWidth} />
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((v) => !v)}
+          width={sidebarWidth}
+        />
         <main className="flex-1 flex flex-col items-center justify-center gap-4 min-w-0">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-th-accent-dim">
             <BookOpen size={28} className="text-th-accent-text/50" />
           </div>
           <p className="text-sm text-th-text-3">从左侧选择章节开始阅读或创作</p>
-          <p className="text-xs text-th-text-4">{project.title} · {project.chapters.length} 章</p>
+          <p className="text-xs text-th-text-4">
+            {project.title} · {project.chapters.length} 章
+          </p>
         </main>
       </div>
     );
@@ -258,7 +277,10 @@ export function WorkspacePage() {
             {chapterInfo && (
               <div className="hidden md:flex items-center gap-1">
                 <button
-                  onClick={() => chapterInfo.prevId !== null && navigateChapter(chapterInfo.prevId!)}
+                  type="button"
+                  onClick={() =>
+                    chapterInfo.prevId !== null && navigateChapter(chapterInfo.prevId!)
+                  }
                   disabled={!chapterInfo.canPrev}
                   className="p-1.5 rounded-lg text-th-text-3 hover:text-th-text hover:bg-th-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                   aria-label="上一章"
@@ -266,7 +288,10 @@ export function WorkspacePage() {
                   <ChevronLeft size={18} />
                 </button>
                 <button
-                  onClick={() => chapterInfo.nextId !== null && navigateChapter(chapterInfo.nextId!)}
+                  type="button"
+                  onClick={() =>
+                    chapterInfo.nextId !== null && navigateChapter(chapterInfo.nextId!)
+                  }
                   disabled={!chapterInfo.canNext}
                   className="p-1.5 rounded-lg text-th-text-3 hover:text-th-text hover:bg-th-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                   aria-label="下一章"
@@ -277,6 +302,7 @@ export function WorkspacePage() {
             )}
 
             <button
+              type="button"
               className={`p-1.5 rounded-lg transition-colors hover:opacity-80 ${
                 rightPanelOpen ? "text-th-accent-text bg-th-accent-dim" : "text-th-text-3"
               }`}
@@ -315,6 +341,7 @@ export function WorkspacePage() {
                 {/* Chapter footer — copy + nav */}
                 <div className="mt-12 pt-6 border-t border-th-border-subtle flex items-center justify-between">
                   <button
+                    type="button"
                     onClick={handleCopy}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
                       copied
@@ -329,7 +356,10 @@ export function WorkspacePage() {
                   {chapterInfo && (
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => chapterInfo.prevId !== null && navigateChapter(chapterInfo.prevId!)}
+                        type="button"
+                        onClick={() =>
+                          chapterInfo.prevId !== null && navigateChapter(chapterInfo.prevId!)
+                        }
                         disabled={!chapterInfo.canPrev}
                         className="flex items-center gap-1.5 text-xs font-medium text-th-text-3 hover:text-th-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
@@ -338,7 +368,10 @@ export function WorkspacePage() {
                       </button>
                       <span className="text-xs text-th-text-4">·</span>
                       <button
-                        onClick={() => chapterInfo.nextId !== null && navigateChapter(chapterInfo.nextId!)}
+                        type="button"
+                        onClick={() =>
+                          chapterInfo.nextId !== null && navigateChapter(chapterInfo.nextId!)
+                        }
                         disabled={!chapterInfo.canNext}
                         className="flex items-center gap-1.5 text-xs font-medium text-th-text-3 hover:text-th-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
@@ -353,6 +386,7 @@ export function WorkspacePage() {
                 {isEditable && !isProjectCompleted && draftStepCount >= 1 && (
                   <div className="mt-6">
                     <button
+                      type="button"
                       onClick={() => {
                         if (!project || !currentChapter) return;
                         completeChapter(project.id, currentChapter.id);
@@ -383,16 +417,14 @@ export function WorkspacePage() {
 
         {/* Options Panel (editable chapter) */}
         {isEditable && !isProjectCompleted && (
-          <OptionsPanel
-            project={project}
-            onDraftStep={() => setDraftStepCount((c) => c + 1)}
-          />
+          <OptionsPanel project={project} onDraftStep={() => setDraftStepCount((c) => c + 1)} />
         )}
 
         {/* Mobile bottom nav (completed chapters) */}
         {currentChapter?.status === "completed" && (
           <div className="shrink-0 md:hidden grid grid-cols-3 items-center px-3 py-3 border-t border-th-border-subtle bg-th-card safe-bottom">
             <button
+              type="button"
               onClick={() => chapterNav.prev !== null && navigateChapter(chapterNav.prev!)}
               disabled={chapterNav.prev === null}
               className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 justify-self-start text-th-text-2 bg-th-hover"
@@ -401,6 +433,7 @@ export function WorkspacePage() {
               上一章
             </button>
             <button
+              type="button"
               onClick={handleCopy}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all justify-self-center ${
                 copied
@@ -412,6 +445,7 @@ export function WorkspacePage() {
               {copied ? "已复制" : "一键复制"}
             </button>
             <button
+              type="button"
               onClick={() => chapterNav.next !== null && navigateChapter(chapterNav.next!)}
               disabled={chapterNav.next === null}
               className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 justify-self-end text-th-text-2 bg-th-hover"
@@ -447,6 +481,7 @@ export function WorkspacePage() {
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-th-border-subtle bg-th-bg/60 backdrop-blur">
               <span className="text-sm font-semibold text-th-text">Agent 调度</span>
               <button
+                type="button"
                 onClick={() => setRightPanelOpen(false)}
                 className="p-1.5 rounded-lg transition-colors text-th-text-3 hover:bg-th-hover"
               >

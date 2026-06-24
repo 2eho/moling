@@ -17,7 +17,9 @@
 
 .PHONY: help dev prod deploy health backup logs clean restart status
 
-PROD_COMPOSE = docker/docker-compose.prod.yml
+PROD_COMPOSE  = docker/docker-compose.prod.yml
+# TODO: 创建独立的 docker/docker-compose.dev.yml（目前复用 prod compose）
+DEV_COMPOSE   = docker/docker-compose.prod.yml
 
 # ---- 默认目标 ----
 help:
@@ -44,7 +46,7 @@ help:
 # ---- 环境启动 ----
 dev:
 	@echo "🚀 启动开发环境..."
-	cd docker && docker compose -f $(PROD_COMPOSE) up -d
+	cd docker && docker compose -f $(DEV_COMPOSE) up -d
 	@echo "✅ 开发环境已启动"
 	@echo "   前端: http://localhost:3000/moling"
 	@echo "   后端: http://localhost:8000/health"

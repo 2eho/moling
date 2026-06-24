@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { type ReactNode, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const PROTECTED_PATTERNS = [
   "/projects",
@@ -16,7 +16,7 @@ const PROTECTED_PATTERNS = [
 
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_PATTERNS.some(
-    (pattern) => pathname === pattern || pathname.startsWith(pattern + "/")
+    (pattern) => pathname === pattern || pathname.startsWith(pattern + "/"),
   );
 }
 
@@ -37,10 +37,7 @@ export function AuthGuard({ children, fallback = null }: AuthGuardProps) {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (
-      import.meta.env.VITE_SKIP_AUTH === "true" ||
-      import.meta.env.DEV
-    ) {
+    if (import.meta.env.VITE_SKIP_AUTH === "true" || import.meta.env.DEV) {
       setIsAuthorized(true);
       return;
     }

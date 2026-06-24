@@ -1,7 +1,7 @@
 "use client";
 
-import type { Option } from "@/stores/useWritingStore";
 import { Sparkles } from "lucide-react";
+import type { Option } from "@/stores/useWritingStore";
 
 interface Props {
   option: Option;
@@ -28,6 +28,7 @@ export function OptionCard({ option, isSelected, onSelect }: Props) {
 
   return (
     <button
+      type="button"
       onClick={() => onSelect(option.id)}
       role="option"
       aria-selected={isSelected}
@@ -49,40 +50,37 @@ export function OptionCard({ option, isSelected, onSelect }: Props) {
         >
           选项 {option.label}
         </span>
-        <span className="text-[10px] ml-auto flex items-center gap-1" style={{ color: "var(--th-text-3)" }}>
+        <span className="text-[10px] ml-auto flex items-center gap-1 text-th-text-3">
           <Sparkles size={10} />
           {AGENT_LABELS[option.agent] ?? option.agent}
         </span>
       </div>
 
       <h3 className="text-sm font-semibold leading-snug">{option.title}</h3>
-      <p className="text-[11px] leading-relaxed" style={{ color: "var(--th-text-2)" }}>
-        {option.description}
-      </p>
+      <p className="text-[11px] leading-relaxed text-th-text-2">{option.description}</p>
 
-      <div
-        className="mt-1 p-2.5 rounded-lg border"
-        style={{ background: "var(--th-input)", borderColor: "var(--th-border-subtle)" }}
-      >
-        <p className="text-[10px] leading-relaxed italic line-clamp-3" style={{ color: "var(--th-text-3)" }}>
+      <div className="mt-1 p-2.5 rounded-lg border bg-th-input border-th-border-subtle">
+        <p className="text-[10px] leading-relaxed italic line-clamp-3 text-th-text-3">
           {option.preview}
         </p>
       </div>
 
       <div className="flex items-center gap-1.5 mt-1">
-        <div className="flex-1 h-[3px] rounded-full overflow-hidden" style={{ background: "var(--th-hover)" }}>
+        <div className="flex-1 h-[3px] rounded-full overflow-hidden bg-th-hover">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${option.confidence * 100}%`,
               background:
-                option.confidence > 0.9 ? "var(--th-success)"
-                : option.confidence > 0.8 ? "var(--th-warning)"
-                : "var(--th-danger)",
+                option.confidence > 0.9
+                  ? "var(--th-success)"
+                  : option.confidence > 0.8
+                    ? "var(--th-warning)"
+                    : "var(--th-danger)",
             }}
           />
         </div>
-        <span className="text-[9px] tabular-nums" style={{ color: "var(--th-text-3)" }}>
+        <span className="text-[9px] tabular-nums text-th-text-3">
           {Math.round(option.confidence * 100)}%
         </span>
       </div>

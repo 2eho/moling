@@ -56,8 +56,8 @@ pub async fn register(
         username: sea_orm::Set(req.nickname.clone()),
         password_hash: sea_orm::Set(hashed),
         status: sea_orm::Set("active".into()),
-        created_at: sea_orm::Set(now.into()),
-        updated_at: sea_orm::Set(now.into()),
+        created_at: sea_orm::Set(now),
+        updated_at: sea_orm::Set(now),
         ..Default::default()
     };
     let user = dao.create(&state.db, model).await?;
@@ -263,7 +263,7 @@ pub async fn password_reset_request(
         let expires = chrono::Utc::now() + chrono::TimeDelta::hours(24);
         let mut active = user.into_active_model();
         active.reset_token = Set(Some(token));
-        active.reset_token_expires = Set(Some(expires.into()));
+        active.reset_token_expires = Set(Some(expires));
         let _ = active.update(&state.db).await;
     }
     Ok(Json(MessageResponse { message: "If the email exists, a reset link has been sent.".into() }))
@@ -293,7 +293,7 @@ pub async fn password_reset(
         .map_err(|_| AppError::token_invalid())?
         .ok_or_else(AppError::token_invalid)?;
 
-    if user.reset_token_expires.map_or(true, |e| e < chrono::Utc::now()) {
+    if user.reset_token_expires.is_none_or(|e| e < chrono::Utc::now()) {
         return Err(AppError::token_invalid());
     }
 
@@ -314,7 +314,7 @@ fn user_to_resp(u: &moling_db::entities::user::Model) -> UserResp {
         nickname: u.username.clone(),
         avatar_url: u.avatar_url.clone(),
         status: u.status.clone(),
-        created_at: u.created_at.into(),
-        updated_at: u.updated_at.into(),
+        created_at: u.created_at,
+        updated_at: u.updated_at,
     }
 }

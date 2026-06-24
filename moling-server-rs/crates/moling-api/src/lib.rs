@@ -155,7 +155,7 @@ pub fn build_router(state: AppState) -> Router {
                     middleware::content_length::content_length_middleware,
                 ))
                 .layer(axum::middleware::from_fn_with_state(
-                    state.redis.clone(),
+                    state.clone(),
                     middleware::rate_limit::rate_limit_middleware,
                 ))
                 .layer(tower_http::trace::TraceLayer::new_for_http())

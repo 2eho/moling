@@ -5,7 +5,13 @@ import { persist } from "zustand/middleware";
 import type { VaultCharacter } from "@/lib/types/domain";
 
 /** 写作阶段 */
-export type Phase = "ideation" | "outline" | "character" | "worldbuilding" | "drafting" | "revision";
+export type Phase =
+  | "ideation"
+  | "outline"
+  | "character"
+  | "worldbuilding"
+  | "drafting"
+  | "revision";
 
 /** 选项 */
 export interface Option {
@@ -36,10 +42,7 @@ export interface Chapter {
 }
 
 /** 人物 — 派生自 VaultCharacter，仅保留写作工作区需要的字段 */
-export type Character = Pick<
-  VaultCharacter,
-  "id" | "name" | "role" | "description" | "arc"
->;
+export type Character = Pick<VaultCharacter, "id" | "name" | "role" | "description" | "arc">;
 
 /**
  * 伏笔 — 写作工作区专用的伏笔模型。
@@ -161,6 +164,11 @@ export const getPhaseProgress = (phase: Phase): number => {
   return Math.round(((idx + 1) / PHASE_ORDER.length) * 100);
 };
 
+/** 获取项目章节总数 */
+export const getTotalChapters = (project: WritingProject): number => {
+  return project.chapters.length;
+};
+
 export const useWritingStore = create<WritingStore>()(
   persist(
     (set, get) => ({
@@ -246,7 +254,11 @@ export const useWritingStore = create<WritingStore>()(
         set((s) => ({
           history: [
             ...s.history,
-            { phase: s.project?.phase ?? "drafting", chapter: s.project?.currentChapter ?? 1, choice: option.label },
+            {
+              phase: s.project?.phase ?? "drafting",
+              chapter: s.project?.currentChapter ?? 1,
+              choice: option.label,
+            },
           ],
           selectedOption: optionId,
           isGenerating: true,
@@ -260,7 +272,11 @@ export const useWritingStore = create<WritingStore>()(
         set((s) => ({
           history: [
             ...s.history,
-            { phase: s.project?.phase ?? "drafting", chapter: s.project?.currentChapter ?? 1, choice: "D" },
+            {
+              phase: s.project?.phase ?? "drafting",
+              chapter: s.project?.currentChapter ?? 1,
+              choice: "D",
+            },
           ],
           customInput: "",
           isGenerating: true,
@@ -312,7 +328,9 @@ export const useWritingStore = create<WritingStore>()(
             const chapters = p.chapters.map((ch) =>
               ch.id === chapterId ? { ...ch, status: "completed" as const } : ch,
             );
-            const allDone = chapters.length >= p.totalChapters && chapters.every((ch) => ch.status === "completed");
+            const allDone =
+              chapters.length >= p.totalChapters &&
+              chapters.every((ch) => ch.status === "completed");
             if (allDone) {
               return { ...p, chapters, currentChapter: chapterId, phase: "revision" as Phase };
             }

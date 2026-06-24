@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { useWritingStore } from "@/stores/useWritingStore";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WritingProject } from "@/stores/useWritingStore";
+import { useWritingStore } from "@/stores/useWritingStore";
 
 // Mock useRouter before rendering
 const mockPush = vi.fn();
@@ -30,6 +30,9 @@ function createProject(overrides: Partial<WritingProject> = {}): WritingProject 
     foreshadowing: [],
     worldRules: "",
     styleNotes: "",
+    status: "draft",
+    createdAt: "2025-01-01",
+    updatedAt: "2025-01-01",
     ...overrides,
   };
 }

@@ -33,7 +33,7 @@ pub enum SelectionStrategy {
 
 impl SelectionStrategy {
     /// Parse from a string (case-insensitive).
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "round_robin" | "roundrobin" | "rr" => Self::RoundRobin,
             _ => Self::LeastUsage,
@@ -56,7 +56,7 @@ pub enum Pool {
 
 impl Pool {
     /// Parse from a string (case-insensitive).
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "pro" => Some(Self::Pro),
             "flash" => Some(Self::Flash),
@@ -241,15 +241,13 @@ impl KeyRotator {
             .filter(|k| {
                 if let Some(h) = health.get(*k) {
                     // Check if cooldown expired
-                    if !h.is_healthy {
-                        if let Some(cooldown) = h.cooling_until {
-                            if now >= cooldown {
-                                // Key should be recovered — but we can't mutate here with read lock
-                                // Return true optimistically; recovery happens in select
-                                return true;
-                            }
-                        }
-                        return false;
+                    if !h.is_healthy
+                        && let Some(cooldown) = h.cooling_until
+                        && now >= cooldown
+                    {
+                        // Key should be recovered — but we can't mutate here with read lock
+                        // Return true optimistically; recovery happens in select
+                        return true;
                     }
                     true
                 } else {
@@ -293,10 +291,10 @@ impl KeyRotator {
                 // Increment usage count
                 if let Some(ref sel) = selected {
                     drop(health);
-                    if let Ok(mut h) = self.health.write() {
-                        if let Some(state) = h.get_mut(sel) {
-                            state.usage_count += 1;
-                        }
+                    if let Ok(mut h) = self.health.write()
+                        && let Some(state) = h.get_mut(sel)
+                    {
+                        state.usage_count += 1;
                     }
                 }
                 selected
@@ -309,10 +307,10 @@ impl KeyRotator {
 
                 // Increment usage count
                 drop(health);
-                if let Ok(mut h) = self.health.write() {
-                    if let Some(state) = h.get_mut(&selected) {
-                        state.usage_count += 1;
-                    }
+                if let Ok(mut h) = self.health.write()
+                    && let Some(state) = h.get_mut(&selected)
+                {
+                    state.usage_count += 1;
                 }
                 Some(selected)
             }
@@ -337,31 +335,31 @@ impl KeyRotator {
     /// - Other errors: increment consecutive error counter; cooldown after
     ///   `MAX_CONSECUTIVE_ERRORS` consecutive failures.
     pub fn mark_error(&self, key: &str, error_type: &str) {
-        if let Ok(mut health) = self.health.write() {
-            if let Some(state) = health.get_mut(key) {
-                state.consecutive_errors += 1;
-                state.last_error_at = Some(std::time::Instant::now());
+        if let Ok(mut health) = self.health.write()
+            && let Some(state) = health.get_mut(key)
+        {
+            state.consecutive_errors += 1;
+            state.last_error_at = Some(std::time::Instant::now());
 
-                let should_cool = error_type == "rate_limit"
-                    || state.consecutive_errors >= MAX_CONSECUTIVE_ERRORS;
+            let should_cool = error_type == "rate_limit"
+                || state.consecutive_errors >= MAX_CONSECUTIVE_ERRORS;
 
-                if should_cool {
-                    let level =
-                        usize::min(state.backoff_level as usize, BACKOFF_SCHEDULE.len() - 1);
-                    let duration = Duration::from_secs(BACKOFF_SCHEDULE[level]);
-                    state.cooling_until =
-                        Some(std::time::Instant::now() + duration);
-                    state.backoff_level = (level + 1) as u32;
-                    state.is_healthy = false;
+            if should_cool {
+                let level =
+                    usize::min(state.backoff_level as usize, BACKOFF_SCHEDULE.len() - 1);
+                let duration = Duration::from_secs(BACKOFF_SCHEDULE[level]);
+                state.cooling_until =
+                    Some(std::time::Instant::now() + duration);
+                state.backoff_level = (level + 1) as u32;
+                state.is_healthy = false;
 
-                    tracing::warn!(
-                        key = %mask_key(key),
-                        backoff_level = state.backoff_level,
-                        errors = state.consecutive_errors,
-                        error_type,
-                        "API key placed on cooldown"
-                    );
-                }
+                tracing::warn!(
+                    key = %mask_key(key),
+                    backoff_level = state.backoff_level,
+                    errors = state.consecutive_errors,
+                    error_type,
+                    "API key placed on cooldown"
+                );
             }
         }
     }
@@ -370,14 +368,14 @@ impl KeyRotator {
     ///
     /// Resets error count, clears cooldown, and sets backoff level to 0.
     pub fn mark_success(&self, key: &str) {
-        if let Ok(mut health) = self.health.write() {
-            if let Some(state) = health.get_mut(key) {
-                state.consecutive_errors = 0;
-                state.last_error_at = None;
-                state.is_healthy = true;
-                state.cooling_until = None;
-                state.backoff_level = 0;
-            }
+        if let Ok(mut health) = self.health.write()
+            && let Some(state) = health.get_mut(key)
+        {
+            state.consecutive_errors = 0;
+            state.last_error_at = None;
+            state.is_healthy = true;
+            state.cooling_until = None;
+            state.backoff_level = 0;
         }
     }
 
@@ -399,7 +397,7 @@ impl KeyRotator {
             .filter(|k| {
                 health
                     .get(*k)
-                    .map(|h| h.is_healthy || h.cooling_until.map_or(false, |c| now >= c))
+                    .map(|h| h.is_healthy || h.cooling_until.is_some_and(|c| now >= c))
                     .unwrap_or(false)
             })
             .count();
@@ -408,7 +406,7 @@ impl KeyRotator {
             .filter(|k| {
                 health
                     .get(*k)
-                    .map(|h| !h.is_healthy && h.cooling_until.map_or(false, |c| now < c))
+                    .map(|h| !h.is_healthy && h.cooling_until.is_some_and(|c| now < c))
                     .unwrap_or(false)
             })
             .count();
@@ -445,7 +443,7 @@ impl KeyRotator {
             .filter(|k| {
                 health
                     .get(*k)
-                    .map(|h| h.is_healthy || h.cooling_until.map_or(false, |c| now >= c))
+                    .map(|h| h.is_healthy || h.cooling_until.is_some_and(|c| now >= c))
                     .unwrap_or(false)
             })
             .count()
@@ -634,15 +632,15 @@ mod tests {
     #[test]
     fn test_strategy_parsing() {
         assert_eq!(
-            SelectionStrategy::from_str("round_robin"),
+            SelectionStrategy::parse("round_robin"),
             SelectionStrategy::RoundRobin
         );
         assert_eq!(
-            SelectionStrategy::from_str("LEAST_USAGE"),
+            SelectionStrategy::parse("LEAST_USAGE"),
             SelectionStrategy::LeastUsage
         );
         assert_eq!(
-            SelectionStrategy::from_str("unknown"),
+            SelectionStrategy::parse("unknown"),
             SelectionStrategy::LeastUsage
         );
     }

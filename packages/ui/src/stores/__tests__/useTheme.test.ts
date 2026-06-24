@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useTheme, THEMES, isDarkTheme, detectSystemTheme, type ThemeId } from "../useTheme";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { detectSystemTheme, isDarkTheme, THEMES, type ThemeId, useTheme } from "../useTheme";
 
 describe("useTheme", () => {
   beforeEach(() => {

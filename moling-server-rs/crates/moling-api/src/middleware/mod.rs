@@ -1,13 +1,13 @@
 //! Middleware registry — assembles all middleware layers for the Axum app.
 //!
-//! The [`build_middleware_stack`] function returns a [`tower::ServiceBuilder`]
-//! that wraps the router with all middleware in the correct order (outermost first).
+//! The [`build_middleware_stack`] function returns a [`Router`] wrapped with
+//! all middleware in the correct order (outermost first).
 
 use axum::Router;
-use moling_core::redis::RedisClient;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
-use std::sync::Arc;
+
+use crate::state::AppState;
 
 pub mod audit_log;
 pub mod content_length;
@@ -28,29 +28,32 @@ pub mod sentry;
 /// 5. Audit log — request/response metadata
 /// 6. Response format — timing + logging
 /// 7. Content length — body size limit
-/// 8. Rate limit — Redis-backed counter
+/// 8. Rate limit — Redis-backed sliding window
 /// 9. Trace — tower-http tracing
 pub fn build_middleware_stack(
-    router: Router,
-    redis: Arc<RedisClient>,
-) -> Router {
+    router: Router<AppState>,
+    state: AppState,
+) -> Router<AppState> {
     let cors_layer = cors::cors_middleware("*");
 
-    router
-        .layer(
-            ServiceBuilder::new()
-                .layer(cors_layer)
-                .layer(axum::middleware::from_fn(request_id::request_id_middleware))
-                .layer(axum::middleware::from_fn(metrics::metrics_middleware))
-                .layer(axum::middleware::from_fn(sentry::sentry_middleware))
-                .layer(axum::middleware::from_fn(audit_log::audit_log_middleware))
-                .layer(axum::middleware::from_fn(response_format::response_format_middleware))
-                .layer(axum::middleware::from_fn(content_length::content_length_middleware))
-                .layer(axum::middleware::from_fn_with_state(
-                    redis,
-                    rate_limit::rate_limit_middleware,
-                ))
-                .layer(TraceLayer::new_for_http())
-                .into_inner(),
-        )
+    router.layer(
+        ServiceBuilder::new()
+            .layer(cors_layer)
+            .layer(axum::middleware::from_fn(request_id::request_id_middleware))
+            .layer(axum::middleware::from_fn(metrics::metrics_middleware))
+            .layer(axum::middleware::from_fn(sentry::sentry_middleware))
+            .layer(axum::middleware::from_fn(audit_log::audit_log_middleware))
+            .layer(axum::middleware::from_fn(
+                response_format::response_format_middleware,
+            ))
+            .layer(axum::middleware::from_fn(
+                content_length::content_length_middleware,
+            ))
+            .layer(axum::middleware::from_fn_with_state(
+                state,
+                rate_limit::rate_limit_middleware,
+            ))
+            .layer(TraceLayer::new_for_http())
+            .into_inner(),
+    )
 }

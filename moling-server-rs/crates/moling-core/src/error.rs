@@ -334,6 +334,16 @@ impl IntoResponse for AppError {
 }
 
 // ---------------------------------------------------------------------------
+// From impls for convenient error propagation
+// ---------------------------------------------------------------------------
+
+impl From<serde_json::Error> for AppError {
+    fn from(e: serde_json::Error) -> Self {
+        Self::internal(format!("JSON serialization error: {e}"))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Convenience type alias
 // ---------------------------------------------------------------------------
 

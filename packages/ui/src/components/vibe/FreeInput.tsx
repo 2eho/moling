@@ -1,8 +1,8 @@
 "use client";
 
+import { PenLine, Send } from "lucide-react";
 import { useState } from "react";
 import { useWritingStore } from "@/stores/useWritingStore";
-import { Send, PenLine } from "lucide-react";
 
 export function FreeInput() {
   const customInput = useWritingStore((s) => s.customInput);
@@ -25,22 +25,15 @@ export function FreeInput() {
 
   return (
     <div
-      className="glass-card p-3 transition-all duration-300"
-      style={{
-        boxShadow: isFocused ? "0 0 20px var(--th-accent-dim)" : undefined,
-        borderColor: isFocused ? "var(--th-accent-border)" : undefined,
-      }}
+      className={`glass-card p-3 transition-all duration-300 ${
+        isFocused ? "shadow-[0_0_20px_var(--th-accent-dim)] border-[var(--th-accent-border)]" : ""
+      }`}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span
-          className="text-[10px] font-bold px-2 py-0.5 rounded-md tracking-wider"
-          style={{ background: "var(--th-hover-strong)", color: "var(--th-text-2)" }}
-        >
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md tracking-wider bg-th-hover-strong text-th-text-2">
           自定义 D
         </span>
-        <span className="text-[10px]" style={{ color: "var(--th-text-3)" }}>
-          或输入你自己的方向...
-        </span>
+        <span className="text-[10px] text-th-text-3">或输入你自己的方向...</span>
       </div>
 
       <div className="relative">
@@ -53,28 +46,19 @@ export function FreeInput() {
           aria-label="自由输入"
           placeholder="比如：让林风在战斗中领悟新的剑意，同时柳如烟在一旁观察..."
           rows={2}
-          className="w-full rounded-xl px-3 py-2 text-[12px] resize-none transition-all duration-200 outline-none"
-          style={{
-            background: "var(--th-input)",
-            border: `1px solid ${isFocused ? "var(--th-accent)" : "var(--th-border-subtle)"}`,
-            color: "var(--th-text)",
-          }}
+          className={`w-full rounded-xl px-3 py-2 text-[12px] resize-none transition-all duration-200 outline-none bg-th-input text-th-text ${
+            isFocused ? "border-th-accent" : "border-th-border-subtle"
+          } border`}
         />
 
         <button
+          type="button"
           onClick={handleSubmit}
           disabled={!customInput.trim() || isGenerating}
-          className="absolute right-2 bottom-2 p-1.5 rounded-lg transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110 active:scale-90"
-          style={{ background: "var(--th-accent-dim)", color: "var(--th-accent-text)" }}
+          className="absolute right-2 bottom-2 p-1.5 rounded-lg transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110 active:scale-90 bg-th-accent-dim text-th-accent-text"
         >
           {isGenerating ? (
-            <span
-              className="block w-3.5 h-3.5 border-2 rounded-full animate-spin"
-              style={{
-                borderColor: "var(--th-accent-dim)",
-                borderTopColor: "var(--th-accent-text)",
-              }}
-            />
+            <span className="block w-3.5 h-3.5 border-2 rounded-full animate-spin border-th-accent-dim border-t-th-accent-text" />
           ) : (
             <Send size={14} />
           )}
@@ -82,10 +66,8 @@ export function FreeInput() {
       </div>
 
       <div className="flex items-center gap-1 mt-1.5">
-        <PenLine size={10} style={{ color: "var(--th-text-4)" }} />
-        <span className="text-[9px]" style={{ color: "var(--th-text-4)" }}>
-          Enter 发送 · Shift+Enter 换行
-        </span>
+        <PenLine size={10} className="text-th-text-4" />
+        <span className="text-[9px] text-th-text-4">Enter 发送 · Shift+Enter 换行</span>
       </div>
     </div>
   );

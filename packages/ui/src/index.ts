@@ -3,9 +3,20 @@
 
 // ── Components ──
 export { GlobalErrorBoundary } from "./components/GlobalErrorBoundary";
+// Health
+export { HealthDashboard } from "./components/health/HealthDashboard";
+export { ImportExportButtons } from "./components/ImportExportButtons";
+// Phase 4
+export { CardManager } from "./components/phase4/CardManager";
+export { CharacterLibrary } from "./components/phase4/CharacterLibrary";
+export { ForeshadowingLibrary } from "./components/phase4/ForeshadowingLibrary";
+export { Phase4TaskPanel } from "./components/phase4/Phase4TaskPanel";
+export { TimelineLibrary } from "./components/phase4/TimelineLibrary";
+export { WorldviewLibrary } from "./components/phase4/WorldviewLibrary";
 export { QueryProvider } from "./components/QueryProvider";
 export { ToastContainer } from "./components/ToastContainer";
-
+// Desktop shell
+export { UpdateNotification } from "./components/UpdateNotification";
 // Vibe Writing
 export { ActionBar } from "./components/vibe/ActionBar";
 export { AgentPanel } from "./components/vibe/AgentPanel";
@@ -20,75 +31,73 @@ export { Sidebar } from "./components/vibe/Sidebar";
 export { ThemeInitializer } from "./components/vibe/ThemeInitializer";
 export { ThemeSwitcher } from "./components/vibe/ThemeSwitcher";
 
-// Phase 4
-export { CardManager } from "./components/phase4/CardManager";
-export { CharacterLibrary } from "./components/phase4/CharacterLibrary";
-export { ForeshadowingLibrary } from "./components/phase4/ForeshadowingLibrary";
-export { Phase4TaskPanel } from "./components/phase4/Phase4TaskPanel";
-export { TimelineLibrary } from "./components/phase4/TimelineLibrary";
-export { WorldviewLibrary } from "./components/phase4/WorldviewLibrary";
-
-// Health
-export { HealthDashboard } from "./components/health/HealthDashboard";
-
 // ── Hooks ──
 export { usePanelResize } from "./hooks/usePanelResize";
-
-// ── Stores ──
-export { useLLMSettings, LLM_MODELS } from "./stores/useLLMSettings";
-export type { LLMSettings, LLMModelId } from "./stores/useLLMSettings";
-export { useTheme, THEMES, isDarkTheme, detectSystemTheme } from "./stores/useTheme";
-export type { ThemeId } from "./stores/useTheme";
-export { useToast, type ToastType } from "./stores/useToast";
-export { useWritingStore, PHASE_LABELS, PHASE_ORDER, getPhaseProgress, getTotalChapters } from "./stores/useWritingStore";
-export type {
-  Phase,
-  Option,
-  AgentStatus,
-  Chapter,
-  Character,
-  Foreshadowing,
-  WritingProject,
-} from "./stores/useWritingStore";
-
 // ── Lib ──
 export { cn } from "./lib/cn";
 export { API_ENDPOINTS } from "./lib/constants";
 export { env } from "./lib/env";
-export { formatRelativeTime, formatDuration, formatWordCount } from "./lib/format";
-export { setRouterHook, useRouter } from "./lib/navigation";
-
-// HTTP
-export { apiGet, apiPost, apiPut, apiDelete, ApiError } from "./lib/http/client";
-export { login, register, getCurrentUser } from "./lib/http/auth";
+export { formatDuration, formatRelativeTime, formatWordCount } from "./lib/format";
 export {
-  getProjectHealth,
-  refreshProjectHealth,
   getCardPool,
+  getProjectHealth,
   getProjectPhase4Tasks,
   getVaultCharacters,
-  getVaultWorldview,
   getVaultForeshadowing,
   getVaultTimeline,
+  getVaultWorldview,
+  refreshProjectHealth,
 } from "./lib/http/api";
-
+export {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  isTokenExpired,
+  refreshAccessToken,
+  setTokens,
+} from "./lib/http/auth";
+// HTTP
+export { ApiError, apiDelete, apiGet, apiPost, apiPut } from "./lib/http/client";
+export { setRouterHook, useRouter } from "./lib/navigation";
+export { setTauriTitlebarTheme, setWindowBackgroundColor } from "./lib/tauri-theme";
 // Types
 export type {
-  HealthAlert,
   AlertSeverity,
   CardPoolItem,
+  HealthAlert,
+  Phase4State,
+  Phase4Task,
   VaultCharacter,
-  VaultWorldview,
   VaultForeshadowing,
   VaultTimeline,
-  Phase4Task,
-  Phase4State,
+  VaultWorldview,
 } from "./lib/types/domain";
-
+export { MOCK_OUTPUTS } from "./mock/data/agent-outputs";
 // ── Mock ──
 export { MOCK_PROJECTS } from "./mock/data/projects";
 export { MOCK_OPTIONS } from "./mock/data/workspace";
-export { MOCK_OUTPUTS } from "./mock/data/agent-outputs";
+export type { LLMModelId, LLMSettings } from "./stores/useLLMSettings";
+// ── Stores ──
+export { LLM_MODELS, useLLMSettings } from "./stores/useLLMSettings";
+export type { ThemeId } from "./stores/useTheme";
+export { detectSystemTheme, isDarkTheme, THEMES, useTheme } from "./stores/useTheme";
+export { type ToastType, useToast } from "./stores/useToast";
+export type {
+  AgentStatus,
+  Chapter,
+  Character,
+  Foreshadowing,
+  Option,
+  Phase,
+  WritingProject,
+} from "./stores/useWritingStore";
+export {
+  getPhaseProgress,
+  getTotalChapters,
+  PHASE_LABELS,
+  PHASE_ORDER,
+  useWritingStore,
+} from "./stores/useWritingStore";
 
 // ── Navigation ──
 // setRouterHook must be called by the host app before any navigation

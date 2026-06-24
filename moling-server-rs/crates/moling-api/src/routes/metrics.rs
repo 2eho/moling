@@ -58,6 +58,12 @@ async fn build_metrics_text(state: &AppState) -> String {
     buf.push_str("# HELP moling_redis_health Redis health (1=healthy, 0=unhealthy).\n");
     buf.push_str("# TYPE moling_redis_health gauge\n");
 
+    buf.push_str("# HELP moling_rate_limit_allowed_total Rate-limit checks that passed.\n");
+    buf.push_str("# TYPE moling_rate_limit_allowed_total counter\n");
+
+    buf.push_str("# HELP moling_rate_limit_blocked_total Rate-limit checks that were blocked.\n");
+    buf.push_str("# TYPE moling_rate_limit_blocked_total counter\n");
+
     // ------------------------------------------------------------------
     // Counters — HTTP requests
     // ------------------------------------------------------------------
@@ -133,6 +139,16 @@ async fn build_metrics_text(state: &AppState) -> String {
         "moling_redis_health{{latency_ms=\"{redis_latency_ms}\"}} {}\n",
         if redis_ok { 1 } else { 0 }
     ));
+
+    // ------------------------------------------------------------------
+    // Rate-limit counters
+    // ------------------------------------------------------------------
+    let rate_limit_allowed =
+        metrics::RATE_LIMIT_ALLOWED_TOTAL.load(std::sync::atomic::Ordering::Relaxed);
+    let rate_limit_blocked =
+        metrics::RATE_LIMIT_BLOCKED_TOTAL.load(std::sync::atomic::Ordering::Relaxed);
+    buf.push_str(&format!("moling_rate_limit_allowed_total {rate_limit_allowed}\n"));
+    buf.push_str(&format!("moling_rate_limit_blocked_total {rate_limit_blocked}\n"));
 
     buf
 }

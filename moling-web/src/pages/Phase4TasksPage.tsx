@@ -1,28 +1,21 @@
-import { useParams, Link } from "react-router-dom";
-import { Phase4TaskPanel } from "@/components/phase4/Phase4TaskPanel";
 import { ArrowLeft, GitBranch } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { Phase4TaskPanel } from "@/components/phase4/Phase4TaskPanel";
 
 export function Phase4TasksPage() {
   const { projectId } = useParams<{ projectId: string }>();
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "var(--th-bg)", color: "var(--th-text)" }}
-    >
-      <header
-        className="shrink-0 flex items-center gap-3 px-4 py-3 border-b"
-        style={{ borderColor: "var(--th-border-subtle)" }}
-      >
+    <div className="min-h-screen flex flex-col bg-th-bg text-th-text">
+      <header className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-th-border-subtle">
         <Link
           to={`/workspace/${projectId}`}
-          className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-          style={{ color: "var(--th-text-3)" }}
+          className="p-1.5 rounded-lg transition-colors hover:opacity-80 text-th-text-3"
         >
           <ArrowLeft size={18} />
         </Link>
         <div className="flex items-center gap-2">
-          <GitBranch size={16} style={{ color: "var(--th-accent-text)" }} />
+          <GitBranch size={16} className="text-th-accent-text" />
           <h1 className="text-sm font-semibold">Phase 4 任务历史</h1>
         </div>
       </header>

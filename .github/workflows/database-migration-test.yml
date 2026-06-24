@@ -1,10 +1,14 @@
 # ==============================================================================
 # Database Migration Test — SeaORM (Rust)
 # ==============================================================================
+# STATUS: PLACEHOLDER — 等待 SeaORM migration CLI 就绪后再启用
+#
 # 注意: Python Alembic 迁移测试已移除（Python 后端已删除）。
 # Rust 后端使用 SeaORM migration，此 workflow 将在迁移工具就绪后重新启用。
 #
-# 触发路径: moling-server-rs/crates/moling-db/src/migrations/**
+# 待实现:
+#   - 触发: push to moling-server-rs/crates/moling-db/src/migration/**
+#   - 步骤: cargo run --bin moling-cli -- migrate up + migrate down
 # ==============================================================================
 
 name: Database Migration Test

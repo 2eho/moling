@@ -150,8 +150,8 @@ impl SubscriptionService {
             user_id: Set(user_id.to_owned()),
             plan_id: Set(plan_id.to_owned()),
             status: Set("active".to_owned()),
-            start_date: Set(now.into()),
-            end_date: Set(Some(end_date.into())),
+            start_date: Set(now),
+            end_date: Set(Some(end_date)),
             auto_renew: Set(true),
             ..Default::default()
         };

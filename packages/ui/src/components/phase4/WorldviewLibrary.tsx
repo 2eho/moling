@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getVaultWorldview } from "@/lib/http/api";
+import { AlertCircle, Filter, Globe } from "lucide-react";
 import { useState } from "react";
-import { Globe, AlertCircle, Filter } from "lucide-react";
+import { getVaultWorldview } from "@/lib/http/api";
 import type { VaultWorldview as VaultWorldviewType } from "@/lib/types/domain";
 
 interface WorldviewLibraryProps {
@@ -28,11 +28,7 @@ function WorldviewCard({ item }: { item: VaultWorldviewType }) {
   return (
     <div
       role="listitem"
-      className="rounded-lg p-3 border transition-all hover:translate-y-[-1px]"
-      style={{
-        background: "var(--th-card)",
-        borderColor: "var(--th-border-subtle)",
-      }}
+      className="rounded-lg p-3 border border-th-border-subtle bg-th-card transition-all hover:translate-y-[-1px]"
     >
       <div className="flex items-start gap-3">
         <div
@@ -44,9 +40,7 @@ function WorldviewCard({ item }: { item: VaultWorldviewType }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-xs font-semibold" style={{ color: "var(--th-text)" }}>
-              {item.name}
-            </span>
+            <span className="text-xs font-semibold text-th-text">{item.name}</span>
             <span
               className="text-[9px] px-1.5 py-0.5 rounded font-medium"
               style={{ background: catConfig.color + "15", color: catConfig.color }}
@@ -55,29 +49,25 @@ function WorldviewCard({ item }: { item: VaultWorldviewType }) {
             </span>
           </div>
 
-          <p className="text-[11px] leading-relaxed mb-1" style={{ color: "var(--th-text-2)" }}>
-            {item.description}
-          </p>
+          <p className="text-[11px] leading-relaxed mb-1 text-th-text-2">{item.description}</p>
 
-          <p className="text-[10px]" style={{ color: "var(--th-text-3)" }}>
-            {item.details}
-          </p>
+          <p className="text-[10px] text-th-text-3">{item.details}</p>
         </div>
       </div>
     </div>
   );
 }
 
+function SkeletonRow() {
+  return (
+    <div className="h-20 rounded-lg animate-shimmer bg-gradient-to-r from-th-card via-th-hover to-th-card bg-[length:200%_100%]" />
+  );
+}
+
 export function WorldviewLibrary({ projectId }: WorldviewLibraryProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["vault-worldview", projectId, categoryFilter],
     queryFn: () =>
       getVaultWorldview(projectId, {
@@ -87,34 +77,30 @@ export function WorldviewLibrary({ projectId }: WorldviewLibraryProps) {
       }),
   });
 
+  // 🔄 Loading
   if (isLoading) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="h-20 rounded-lg animate-shimmer"
-            style={{
-              background: "linear-gradient(90deg, var(--th-card) 25%, var(--th-hover) 50%, var(--th-card) 75%)",
-            }}
-          />
+          <SkeletonRow key={i} />
         ))}
       </div>
     );
   }
 
+  // ❌ Error
   if (isError) {
     return (
-      <div className="rounded-lg p-6 text-center" style={{ background: "var(--th-card)", border: "1px solid var(--th-border-subtle)" }}>
-        <AlertCircle size={28} className="mx-auto mb-2" style={{ color: "var(--th-danger)" }} />
-        <p className="text-xs font-medium mb-1" style={{ color: "var(--th-text)" }}>加载世界观库失败</p>
-        <p className="text-[10px] mb-3" style={{ color: "var(--th-text-3)" }}>
+      <div className="rounded-lg p-6 text-center bg-th-card border border-th-border-subtle">
+        <AlertCircle size={28} className="mx-auto mb-2 text-th-danger" />
+        <p className="text-xs font-medium mb-1 text-th-text">加载世界观库失败</p>
+        <p className="text-[10px] mb-3 text-th-text-3">
           {error instanceof Error ? error.message : "请稍后重试"}
         </p>
         <button
+          type="button"
           onClick={() => refetch()}
-          className="px-3 py-1.5 rounded-lg text-[10px] font-medium hover:opacity-80"
-          style={{ background: "var(--th-accent-dim)", color: "var(--th-accent-text)" }}
+          className="px-3 py-1.5 rounded-lg text-[10px] font-medium hover:opacity-80 bg-th-accent-dim text-th-accent-text transition-colors"
         >
           重试
         </button>
@@ -128,36 +114,37 @@ export function WorldviewLibrary({ projectId }: WorldviewLibraryProps) {
     <div className="space-y-3">
       {/* Category filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Filter size={12} style={{ color: "var(--th-text-3)" }} />
+        <Filter size={12} className="text-th-text-3" />
         {["all", ...Object.keys(CATEGORY_CONFIG)].map((cat) => {
           const config = CATEGORY_CONFIG[cat];
           const isActive = categoryFilter === cat;
           return (
             <button
+              type="button"
               key={cat}
               onClick={() => setCategoryFilter(cat)}
               className="px-2 py-1 rounded text-[10px] font-medium transition-colors"
               style={{
-                background: isActive ? (config?.color ?? "var(--th-accent-dim)") + "20" : "transparent",
+                background: isActive
+                  ? (config?.color ?? "var(--th-accent-text)") + "20"
+                  : "transparent",
                 color: isActive ? (config?.color ?? "var(--th-accent-text)") : "var(--th-text-3)",
               }}
             >
-              {cat === "all" ? "全部" : config?.label ?? cat}
+              {cat === "all" ? "全部" : (config?.label ?? cat)}
             </button>
           );
         })}
       </div>
 
-      {/* Content */}
+      {/* 📭 Empty */}
       {items.length === 0 ? (
-        <div className="rounded-lg p-8 text-center" style={{ background: "var(--th-card)", border: "1px solid var(--th-border-subtle)" }}>
-          <Globe size={32} className="mx-auto mb-2" style={{ color: "var(--th-text-4)" }} />
-          <p className="text-xs font-medium" style={{ color: "var(--th-text)" }}>
+        <div className="rounded-lg p-8 text-center bg-th-card border border-th-border-subtle">
+          <Globe size={32} className="mx-auto mb-2 text-th-text-4" />
+          <p className="text-xs font-medium text-th-text">
             {categoryFilter !== "all" ? "该分类下无条目" : "暂无世界观"}
           </p>
-          <p className="text-[10px] mt-1" style={{ color: "var(--th-text-3)" }}>
-            世界观信息将在此处展示
-          </p>
+          <p className="text-[10px] mt-1 text-th-text-3">世界观信息将在此处展示</p>
         </div>
       ) : (
         <div role="list" className="space-y-2">

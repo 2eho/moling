@@ -19,6 +19,7 @@ redis = { workspace = true }
 bb8 = { workspace = true }
 bb8-redis = { workspace = true }
 tokio = { workspace = true }
+async-trait = { workspace = true }
 
 # Sentry — error monitoring
 sentry = { version = "0.36", default-features = false, features = ["backtrace", "contexts", "panic", "transport", "reqwest"] }

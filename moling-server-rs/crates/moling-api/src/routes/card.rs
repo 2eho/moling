@@ -65,7 +65,7 @@ async fn create_card(
         ..Default::default()
     };
     let c = dao.create_card(&state.db, model).await?;
-    Ok(Json(serde_json::to_value(c).unwrap()))
+    Ok(Json(serde_json::to_value(c)?))
 }
 
 async fn retire_card(
@@ -84,7 +84,7 @@ async fn get_pool(
     Path(project_id): Path<i32>,
 ) -> AppResult<Json<serde_json::Value>> {
     let pool = CardDao.find_pool(&state.db, project_id).await?;
-    Ok(Json(serde_json::to_value(pool).unwrap()))
+    Ok(Json(serde_json::to_value(pool)?))
 }
 
 /// GET /projects/{project_id}/cards/history — get recent draw history.
@@ -94,7 +94,7 @@ async fn get_history(
     Path(project_id): Path<i32>,
 ) -> AppResult<Json<serde_json::Value>> {
     let history = CardDao.find_draw_history(&state.db, project_id, 50).await?;
-    Ok(Json(serde_json::to_value(history).unwrap()))
+    Ok(Json(serde_json::to_value(history)?))
 }
 
 /// GET /projects/{project_id}/cards/draw-history — paginated draw history.
@@ -125,5 +125,5 @@ async fn get_draw_history_detail(
         .await
         .map_err(|_| AppError::internal("Database query failed".to_owned()))?
         .ok_or_else(|| AppError::not_found("Draw history not found".to_owned()))?;
-    Ok(Json(serde_json::to_value(detail).unwrap()))
+    Ok(Json(serde_json::to_value(detail)?))
 }

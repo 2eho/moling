@@ -6,6 +6,9 @@
 <title>墨灵 Vibe Writing — 5 Agent × 6 Phase 展示</title>
 <style>
 /* ====== CSS Variables (moling theme default) ====== */
+/* ====== 8 主题定义 ====== */
+
+/* 1. 墨灵 (默认) — 深邃暗蓝 */
 :root, [data-theme="moling"] {
   --th-bg: #0d0f1a; --th-card: #151829; --th-card-hover: #1a1d33;
   --th-input: #111327; --th-hover: rgba(255,255,255,0.04);
@@ -19,13 +22,115 @@
   --th-scrollbar-thumb: #2d2d3f; --th-scrollbar-track: #0a0a0f;
 }
 
+/* 2. Nord — 北极冰蓝 */
+[data-theme="nord"] {
+  --th-bg: #2e3440; --th-card: #3b4252; --th-card-hover: #434c5e;
+  --th-input: #2e3440; --th-hover: rgba(255,255,255,0.04);
+  --th-hover-strong: rgba(255,255,255,0.07);
+  --th-text: #eceff4; --th-text-2: #d8dee9; --th-text-3: #81a1c1; --th-text-4: #4c566a;
+  --th-border: #4c566a; --th-border-subtle: #3b4252;
+  --th-accent: #88c0d0; --th-accent-text: #8fbcbb;
+  --th-accent-dim: rgba(136,192,208,0.12); --th-accent-glow: rgba(136,192,208,0.25);
+  --th-success: #a3be8c; --th-warning: #ebcb8b; --th-danger: #bf616a;
+  --th-logo-from: #88c0d0; --th-logo-to: #5e81ac;
+  --th-scrollbar-thumb: #4c566a; --th-scrollbar-track: #2e3440;
+}
+
+/* 3. One Dark — Atom 经典 */
+[data-theme="onedark"] {
+  --th-bg: #282c34; --th-card: #21252b; --th-card-hover: #2c313a;
+  --th-input: #1e2227; --th-hover: rgba(255,255,255,0.04);
+  --th-hover-strong: rgba(255,255,255,0.07);
+  --th-text: #abb2bf; --th-text-2: #828997; --th-text-3: #5c6370; --th-text-4: #3e4452;
+  --th-border: #3e4452; --th-border-subtle: #2c313a;
+  --th-accent: #61afef; --th-accent-text: #98c379;
+  --th-accent-dim: rgba(97,175,239,0.12); --th-accent-glow: rgba(97,175,239,0.25);
+  --th-success: #98c379; --th-warning: #e5c07b; --th-danger: #e06c75;
+  --th-logo-from: #61afef; --th-logo-to: #c678dd;
+  --th-scrollbar-thumb: #3e4452; --th-scrollbar-track: #21252b;
+}
+
+/* 4. Dracula — 紫色魅影 */
+[data-theme="dracula"] {
+  --th-bg: #282a36; --th-card: #21222c; --th-card-hover: #343746;
+  --th-input: #191a21; --th-hover: rgba(255,255,255,0.04);
+  --th-hover-strong: rgba(255,255,255,0.07);
+  --th-text: #f8f8f2; --th-text-2: #cfcfc2; --th-text-3: #6272a4; --th-text-4: #44475a;
+  --th-border: #44475a; --th-border-subtle: #343746;
+  --th-accent: #bd93f9; --th-accent-text: #ff79c6;
+  --th-accent-dim: rgba(189,147,249,0.12); --th-accent-glow: rgba(189,147,249,0.25);
+  --th-success: #50fa7b; --th-warning: #f1fa8c; --th-danger: #ff5555;
+  --th-logo-from: #bd93f9; --th-logo-to: #ff79c6;
+  --th-scrollbar-thumb: #44475a; --th-scrollbar-track: #21222c;
+}
+
+/* 5. Solarized Dark — 青墨暗调 */
+[data-theme="solarized-dark"] {
+  --th-bg: #002b36; --th-card: #073642; --th-card-hover: #0a4350;
+  --th-input: #00212b; --th-hover: rgba(255,255,255,0.04);
+  --th-hover-strong: rgba(255,255,255,0.07);
+  --th-text: #eee8d5; --th-text-2: #93a1a1; --th-text-3: #586e75; --th-text-4: #2e4952;
+  --th-border: #586e75; --th-border-subtle: #073642;
+  --th-accent: #268bd2; --th-accent-text: #2aa198;
+  --th-accent-dim: rgba(38,139,210,0.12); --th-accent-glow: rgba(38,139,210,0.25);
+  --th-success: #859900; --th-warning: #b58900; --th-danger: #dc322f;
+  --th-logo-from: #268bd2; --th-logo-to: #2aa198;
+  --th-scrollbar-thumb: #586e75; --th-scrollbar-track: #002b36;
+}
+
+/* 6. Solarized Light — 古朴暖纸 */
+[data-theme="solarized-light"] {
+  --th-bg: #fdf6e3; --th-card: #eee8d5; --th-card-hover: #e6dfc4;
+  --th-input: #fdf6e3; --th-hover: rgba(0,0,0,0.04);
+  --th-hover-strong: rgba(0,0,0,0.07);
+  --th-text: #073642; --th-text-2: #586e75; --th-text-3: #93a1a1; --th-text-4: #b6c1b9;
+  --th-border: #d6cdb6; --th-border-subtle: #e6dfc4;
+  --th-accent: #268bd2; --th-accent-text: #2aa198;
+  --th-accent-dim: rgba(38,139,210,0.10); --th-accent-glow: rgba(38,139,210,0.20);
+  --th-success: #859900; --th-warning: #b58900; --th-danger: #dc322f;
+  --th-logo-from: #268bd2; --th-logo-to: #6c71c4;
+  --th-scrollbar-thumb: #d6cdb6; --th-scrollbar-track: #fdf6e3;
+}
+
+/* 7. Paper — 纯净白纸 */
+[data-theme="paper"] {
+  --th-bg: #f8f8f8; --th-card: #ffffff; --th-card-hover: #f0f0f0;
+  --th-input: #ffffff; --th-hover: rgba(0,0,0,0.04);
+  --th-hover-strong: rgba(0,0,0,0.07);
+  --th-text: #1a1a1a; --th-text-2: #555555; --th-text-3: #888888; --th-text-4: #bbbbbb;
+  --th-border: #e0e0e0; --th-border-subtle: #f0f0f0;
+  --th-accent: #2196f3; --th-accent-text: #1976d2;
+  --th-accent-dim: rgba(33,150,243,0.10); --th-accent-glow: rgba(33,150,243,0.20);
+  --th-success: #4caf50; --th-warning: #ff9800; --th-danger: #f44336;
+  --th-logo-from: #2196f3; --th-logo-to: #9c27b0;
+  --th-scrollbar-thumb: #d0d0d0; --th-scrollbar-track: #f8f8f8;
+}
+
+/* 8. GitHub Light — 极简代码风 */
+[data-theme="github-light"] {
+  --th-bg: #ffffff; --th-card: #f6f8fa; --th-card-hover: #eaeef2;
+  --th-input: #ffffff; --th-hover: rgba(0,0,0,0.04);
+  --th-hover-strong: rgba(0,0,0,0.07);
+  --th-text: #24292e; --th-text-2: #444d56; --th-text-3: #6a737d; --th-text-4: #959da5;
+  --th-border: #d1d5da; --th-border-subtle: #e1e4e8;
+  --th-accent: #0366d6; --th-accent-text: #2188ff;
+  --th-accent-dim: rgba(3,102,214,0.08); --th-accent-glow: rgba(3,102,214,0.18);
+  --th-success: #28a745; --th-warning: #f9c513; --th-danger: #d73a49;
+  --th-logo-from: #0366d6; --th-logo-to: #28a745;
+  --th-scrollbar-thumb: #d1d5da; --th-scrollbar-track: #ffffff;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--th-bg); color: var(--th-text);
   -webkit-font-smoothing: antialiased; overflow: hidden;
   height: 100vh;
+  transition: background 0.3s, color 0.3s;
 }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--th-scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--th-scrollbar-thumb); border-radius: 3px; }
 
 /* ====== Layout ====== */
 .app { display: flex; height: 100vh; }
@@ -442,7 +547,7 @@ body {
       </div>
       <div class="spacer"></div>
       <button class="theme-btn" onclick="cycleTheme()">
-        <span style="font-size:12px">🎨</span> 主题
+        <span style="font-size:12px">🎨</span> <span id="themeLabel">墨灵</span>
       </button>
       <button class="panel-toggle" onclick="toggleAgentPanel()" style="color:var(--th-accent-text)" title="Agent 调度中心">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg>
@@ -639,10 +744,13 @@ body {
 
 <script>
 const THEMES = ['moling','nord','onedark','dracula','solarized-dark','solarized-light','paper','github-light'];
+const THEME_LABELS = { moling:'墨灵', nord:'Nord', onedark:'OneDark', dracula:'Dracula', 'solarized-dark':'Solarized暗', 'solarized-light':'Solarized亮', paper:'白纸', 'github-light':'GitHub' };
 let themeIdx = 0;
 function cycleTheme() {
   themeIdx = (themeIdx + 1) % THEMES.length;
-  document.documentElement.setAttribute('data-theme', THEMES[themeIdx]);
+  const t = THEMES[themeIdx];
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeLabel').textContent = THEME_LABELS[t];
 }
 function toggleAgentPanel() {
   const panel = document.getElementById('agentPanel');

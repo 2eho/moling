@@ -524,7 +524,7 @@ impl WeavingSchemeService {
         let mut context: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
 
-        if sorted_cards.len() >= 1 {
+        if !sorted_cards.is_empty() {
             let text = sorted_cards[0].direction_text.as_deref().unwrap_or("");
             let name = &sorted_cards[0].name;
             context.insert("card_a_direction".into(), text.to_string());
@@ -682,21 +682,18 @@ impl WeavingSchemeService {
         // Try extracting from markdown code fence
         let re = regex_lite::Regex::new(r"```(?:json)?\s*(\{.*?\})\s*```")
             .map_err(|e| e.to_string())?;
-        if let Some(caps) = re.captures(text) {
-            if let Some(m) = caps.get(1) {
-                if let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
+        if let Some(caps) = re.captures(text)
+            && let Some(m) = caps.get(1)
+                && let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
                     return Ok(v);
                 }
-            }
-        }
 
         // Try extracting first { ... }
         let brace_re = regex_lite::Regex::new(r"(\{.*\})").map_err(|e| e.to_string())?;
-        if let Some(m) = brace_re.find(text) {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
+        if let Some(m) = brace_re.find(text)
+            && let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
                 return Ok(v);
             }
-        }
 
         Err(format!("Failed to extract JSON from: {}", &text[..text.len().min(200)]))
     }

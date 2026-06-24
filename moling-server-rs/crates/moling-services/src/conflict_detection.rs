@@ -614,11 +614,10 @@ impl ConflictDetectionService {
 
         for card in cards {
             for char_entry in &card.characters {
-                if let Some(ref req) = char_entry.state_requirement {
-                    if !req.is_empty() {
+                if let Some(ref req) = char_entry.state_requirement
+                    && !req.is_empty() {
                         char_state_req.insert(char_entry.name.clone(), req.clone());
                     }
-                }
             }
         }
 
@@ -751,21 +750,18 @@ pub fn parse_llm_response(content: &str) -> Option<serde_json::Value> {
 
     // Try extracting JSON from markdown code block
     let re = regex_lite::Regex::new(r"```(?:json)?\s*\n?(.*?)\n?```").ok()?;
-    if let Some(caps) = re.captures(content) {
-        if let Some(m) = caps.get(1) {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
+    if let Some(caps) = re.captures(content)
+        && let Some(m) = caps.get(1)
+            && let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
                 return Some(v);
             }
-        }
-    }
 
     // Try finding {...} object directly
     let brace_re = regex_lite::Regex::new(r"\{.*\}").ok()?;
-    if let Some(m) = brace_re.find(content) {
-        if let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
+    if let Some(m) = brace_re.find(content)
+        && let Ok(v) = serde_json::from_str::<serde_json::Value>(m.as_str()) {
             return Some(v);
         }
-    }
 
     None
 }

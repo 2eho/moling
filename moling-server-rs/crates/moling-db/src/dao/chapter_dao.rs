@@ -160,7 +160,7 @@ impl ChapterDao {
             .ok_or_else(AppError::chapter_not_found)?;
 
         let mut active = chapter.into_active_model();
-        active.confirmed_at = Set(Some(Utc::now().into()));
+        active.confirmed_at = Set(Some(Utc::now()));
         active.status = Set("completed".to_owned());
         active.update(db).await.map_err(|e| {
             tracing::error!(%id, "Database error confirming chapter: {e}");
@@ -199,10 +199,25 @@ impl ChapterDao {
         db: &DatabaseConnection,
         model: chapter::ActiveModel,
     ) -> AppResult<ChapterModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Database error creating chapter: {e}");
-            AppError::internal("Database insert failed")
-        })
+        // Extract id before consuming model
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.clone(),
+            sea_orm::ActiveValue::Unchanged(v) => v.clone(),
+            _ => return Err(AppError::internal("Chapter id must be set".to_owned())),
+        };
+        // Use Entity::insert instead of ActiveModel::insert to avoid SQLite RETURNING issue
+        use sea_orm::EntityTrait;
+        chapter::Entity::insert(model)
+            .exec(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Database error creating chapter: {e}");
+                AppError::internal("Database insert failed")
+            })?;
+        // Retrieve the inserted model via primary key
+        self.find_by_id(db, &id)
+            .await?
+            .ok_or_else(|| AppError::internal("Chapter inserted but not found".to_owned()))
     }
 
     /// Update an existing chapter.
@@ -226,7 +241,7 @@ impl ChapterDao {
 
         let mut active = chapter.into_active_model();
         active.is_deleted = Set(true);
-        active.deleted_at = Set(Some(Utc::now().into()));
+        active.deleted_at = Set(Some(Utc::now()));
         active.update(db).await.map_err(|e| {
             tracing::error!(%id, "Database error soft-deleting chapter: {e}");
             AppError::internal("Database update failed")
@@ -268,5 +283,83 @@ impl ChapterDao {
             tracing::error!(project_id, "Database error counting chapters by status: {e}");
             AppError::internal("Database query failed")
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_orm::{ConnectionTrait, Database, DbBackend, Statement};
+
+    async fn setup() -> DatabaseConnection {
+        let db = Database::connect("sqlite::memory:").await.unwrap();
+        let sqls = [
+            "CREATE TABLE IF NOT EXISTS projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+                title TEXT NOT NULL, author TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'draft', creation_mode TEXT NOT NULL DEFAULT 'from_scratch',
+                word_count INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                is_deleted INTEGER NOT NULL DEFAULT 0
+            )",
+            "CREATE TABLE IF NOT EXISTS chapters (
+                id TEXT PRIMARY KEY, project_id INTEGER NOT NULL,
+                title TEXT NOT NULL, content TEXT, chapter_number INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'draft', phase4_status TEXT NOT NULL DEFAULT 'pending',
+                word_count INTEGER NOT NULL DEFAULT 0, confirmed_at TEXT,
+                used_card_ids TEXT, generation_mode TEXT, generation_prompt TEXT,
+                generation_weights TEXT, generation_result TEXT, error_message TEXT,
+                retry_count INTEGER NOT NULL DEFAULT 0, generation_duration INTEGER,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT
+            )",
+        ];
+        for sql in sqls {
+            db.execute(Statement::from_string(DbBackend::Sqlite, sql.to_owned()))
+                .await
+                .unwrap();
+        }
+        db
+    }
+
+    #[tokio::test]
+    async fn test_insert_chapter() {
+        let db = setup().await;
+        db.execute(Statement::from_string(DbBackend::Sqlite,
+            "INSERT INTO projects (id, user_id, title, status) VALUES (1, 'u1', 'Test', 'active')"))
+            .await.unwrap();
+
+        let now = chrono::Utc::now();
+        let model = chapter::ActiveModel {
+            id: Set("ch-test-1".into()),
+            project_id: Set(1),
+            title: Set("Chapter One".into()),
+            content: Set(None),
+            chapter_number: Set(1),
+            status: Set("draft".into()),
+            phase4_status: Set("pending".into()),
+            word_count: Set(0),
+            confirmed_at: Set(None),
+            used_card_ids: Set(None),
+            generation_mode: Set(None),
+            generation_prompt: Set(None),
+            generation_weights: Set(None),
+            generation_result: Set(None),
+            error_message: Set(None),
+            retry_count: Set(0),
+            generation_duration: Set(None),
+            created_at: Set(now),
+            updated_at: Set(now),
+            is_deleted: Set(false),
+            deleted_at: Set(None),
+        };
+
+        let created = ChapterDao.create(&db, model).await;
+        assert!(created.is_ok(), "Chapter insert failed: {:?}", created.err());
+        let ch = created.unwrap();
+        assert_eq!(ch.id, "ch-test-1");
+        assert_eq!(ch.title, "Chapter One");
     }
 }

@@ -78,10 +78,10 @@ pub struct Settings {
     pub cors_origins: String,
 
     // ---- Rate Limiting ----
-    #[serde(default = "default_rate_limit_calls")]
-    pub rate_limit_calls: u32,
-    #[serde(default = "default_rate_limit_period")]
-    pub rate_limit_period: u32,
+    #[serde(default = "default_rate_limit_requests")]
+    pub rate_limit_requests: u32,
+    #[serde(default = "default_rate_limit_window_secs")]
+    pub rate_limit_window_secs: u64,
 
     // ---- Monitoring ----
     #[serde(default)]
@@ -168,10 +168,10 @@ fn default_celery_result_backend() -> String {
 fn default_cors_origins() -> String {
     "*".into()
 }
-fn default_rate_limit_calls() -> u32 {
+fn default_rate_limit_requests() -> u32 {
     100
 }
-fn default_rate_limit_period() -> u32 {
+fn default_rate_limit_window_secs() -> u64 {
     60
 }
 fn default_log_level() -> String {

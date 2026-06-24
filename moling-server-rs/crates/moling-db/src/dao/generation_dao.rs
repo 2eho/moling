@@ -119,10 +119,22 @@ impl GenerationDao {
         db: &DatabaseConnection,
         model: ActiveModel,
     ) -> AppResult<GenerationTaskModel> {
-        model.insert(db).await.map_err(|e| {
-            tracing::error!("Generation: database error creating: {e}");
-            AppError::internal("Database insert failed")
-        })
+        let id = match &model.id {
+            sea_orm::ActiveValue::Set(v) => v.to_string(),
+            sea_orm::ActiveValue::Unchanged(v) => v.to_string(),
+            _ => return Err(AppError::internal("Generation task id must be set".to_owned())),
+        };
+        use sea_orm::EntityTrait;
+        GenerationTask::insert(model)
+            .exec(db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Generation: database error creating: {e}");
+                AppError::internal("Database insert failed")
+            })?;
+        self.find_by_id(db, &id)
+            .await?
+            .ok_or_else(|| AppError::internal("Generation task inserted but not found".to_owned()))
     }
 
     /// Update an existing generation task.
@@ -148,7 +160,7 @@ impl GenerationDao {
 
         let mut active = entity.into_active_model();
         active.is_deleted = Set(true);
-        active.deleted_at = Set(Some(Utc::now().into()));
+        active.deleted_at = Set(Some(Utc::now()));
         active.update(db).await.map_err(|e| {
             tracing::error!(%id, "Generation: database error soft-deleting: {e}");
             AppError::internal("Database update failed")

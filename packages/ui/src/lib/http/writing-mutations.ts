@@ -1,9 +1,9 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useWritingStore } from "@/stores/useWritingStore";
 import { env } from "@/lib/env";
 import { apiPost } from "@/lib/http/client";
+import { useWritingStore } from "@/stores/useWritingStore";
 
 // ============================================================
 // 墨灵 Vibe Writing — TanStack Query Mutation Hooks
@@ -60,9 +60,7 @@ export function useSubmitCustomMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: string) =>
-      env.mockEnabled
-        ? mockSubmitCustom(input)
-        : apiPost("/api/writing/submit-custom", { input }),
+      env.mockEnabled ? mockSubmitCustom(input) : apiPost("/api/writing/submit-custom", { input }),
     onSuccess: () => {
       useWritingStore.setState({ isGenerating: false });
       queryClient.invalidateQueries({ queryKey: ["writing", "generation"] });
@@ -78,9 +76,7 @@ export function useGenerateOptionsMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () =>
-      env.mockEnabled
-        ? mockGenerateOptions()
-        : apiPost("/api/writing/generate-options"),
+      env.mockEnabled ? mockGenerateOptions() : apiPost("/api/writing/generate-options"),
     onSuccess: () => {
       useWritingStore.setState({ isGenerating: false });
       queryClient.invalidateQueries({ queryKey: ["writing", "options"] });

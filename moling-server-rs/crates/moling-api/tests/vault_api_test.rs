@@ -56,34 +56,41 @@ async fn setup_app() -> (Router, DatabaseConnection, Uuid, i32) {
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT,
-            project_id INTEGER NOT NULL, event TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
-            chapter_number INTEGER NOT NULL DEFAULT 0, is_key_event INTEGER NOT NULL DEFAULT 0,
-            impact TEXT, characters_involved TEXT, importance TEXT
+            project_id INTEGER NOT NULL, day INTEGER, title TEXT, precedes TEXT, confidence REAL,
+            source_chapter INTEGER, importance TEXT, chapter_number INTEGER NOT NULL DEFAULT 0,
+            event TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+            is_key_event INTEGER NOT NULL DEFAULT 0,
+            impact TEXT, characters_involved TEXT
         )",
         "CREATE TABLE IF NOT EXISTS vault_plot_promises (
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT,
-            project_id INTEGER NOT NULL, description TEXT NOT NULL,
-            type TEXT NOT NULL DEFAULT 'foreshadowing', status TEXT NOT NULL DEFAULT 'active',
+            project_id INTEGER NOT NULL, title TEXT, redeem_window INTEGER, confidence REAL,
+            description TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'foreshadowing',
+            status TEXT NOT NULL DEFAULT 'active',
             urgency INTEGER NOT NULL DEFAULT 0, related_characters TEXT,
-            planted_chapter INTEGER, resolved_chapter INTEGER
+            planted_chapter INTEGER, advancement_log TEXT
         )",
-        "CREATE TABLE IF NOT EXISTS vault_worlds (
+        "CREATE TABLE IF NOT EXISTS vault_world (
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT,
             project_id INTEGER NOT NULL, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
-            category TEXT NOT NULL DEFAULT 'general', \"constraint\" TEXT, source_chapter INTEGER
+            category TEXT NOT NULL DEFAULT 'general', related_entities TEXT, source_chapter INTEGER,
+            \"constraint\" TEXT, reference_chapters TEXT
         )",
-        "CREATE TABLE IF NOT EXISTS vault_changelogs (
+        "CREATE TABLE IF NOT EXISTS vault_changelog (
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-            project_id INTEGER NOT NULL, entity_type TEXT NOT NULL,
-            entity_id TEXT NOT NULL, action TEXT NOT NULL, changes TEXT, user_id TEXT
+            project_id INTEGER NOT NULL, chapter_id TEXT,
+            change_type TEXT NOT NULL DEFAULT '', entity_type TEXT NOT NULL,
+            entity_id TEXT, field_name TEXT, old_value TEXT, new_value TEXT,
+            change_reason TEXT, meta_data TEXT,
+            is_deleted INTEGER NOT NULL DEFAULT 0, deleted_at TEXT
         )",
     ];
 
@@ -176,7 +183,7 @@ async fn test_list_characters() {
         &format!("/api/v1/projects/{project_id}/vault/characters"), &user).await;
 
     assert_eq!(status, StatusCode::OK, "List characters should return 200: {json:?}");
-    assert!(json.as_array().map_or(false, |a| a.len() >= 2), "Should have at least 2 characters");
+    assert!(json.as_array().is_some_and(|a| a.len() >= 2), "Should have at least 2 characters");
 }
 
 #[tokio::test]

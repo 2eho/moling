@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WritingProject } from "@/stores/useWritingStore";
 
 import { OptionsPanel } from "../OptionsPanel";
@@ -13,13 +13,14 @@ function createProject(overrides: Partial<WritingProject> = {}): WritingProject 
     currentChapter: 1,
     totalChapters: 3,
     summary: "测试",
-    chapters: [
-      { id: 1, title: "第1章", summary: "", content: "", status: "draft" },
-    ],
+    chapters: [{ id: 1, title: "第1章", summary: "", content: "", status: "draft" }],
     characters: [],
     foreshadowing: [],
     worldRules: "",
     styleNotes: "",
+    status: "draft",
+    createdAt: "2025-01-01",
+    updatedAt: "2025-01-01",
     ...overrides,
   };
 }

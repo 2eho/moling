@@ -24,8 +24,8 @@ pub fn cors_middleware(origins: &str) -> CorsLayer {
         if origins_vec.is_empty() || origins_vec.iter().any(|o| o == "*") {
             AllowOrigin::mirror_request()
         } else {
-            AllowOrigin::list(origins_vec.into_iter().map(|o| {
-                o.parse::<axum::http::HeaderValue>().unwrap()
+            AllowOrigin::list(origins_vec.into_iter().filter_map(|o| {
+                o.parse::<axum::http::HeaderValue>().ok()
             }))
         }
     };

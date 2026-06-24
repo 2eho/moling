@@ -200,7 +200,7 @@ async fn confirm(
     let ch = dao.find_by_id(&state.db, &chapter_id).await?.ok_or_else(AppError::chapter_not_found)?;
     let mut active = ch.into_active_model();
     active.status = Set("confirmed".into());
-    active.confirmed_at = Set(Some(chrono::Utc::now().into()));
+    active.confirmed_at = Set(Some(chrono::Utc::now()));
     let updated = active.update(&state.db).await.map_err(|_| AppError::internal("Confirm failed".to_owned()))?;
     Ok(Json(to_resp(updated)))
 }
@@ -254,7 +254,7 @@ fn to_resp(ch: moling_db::entities::chapter::Model) -> ChapterResp {
         chapter_number: ch.chapter_number,
         status: ch.status,
         word_count: ch.word_count,
-        created_at: ch.created_at.into(),
-        updated_at: ch.updated_at.into(),
+        created_at: ch.created_at,
+        updated_at: ch.updated_at,
     }
 }

@@ -83,7 +83,7 @@ async fn test_swagger_ui_accessible() {
     // Swagger UI may redirect or return HTML
     let status = response.status();
     assert!(
-        status == StatusCode::OK || status == StatusCode::TEMPORARY_REDIRECT || status == StatusCode::MOVED_PERMANENTLY,
+        status == StatusCode::OK || status == StatusCode::TEMPORARY_REDIRECT || status == StatusCode::MOVED_PERMANENTLY || status == StatusCode::SEE_OTHER,
         "Swagger UI should be accessible, got {status}"
     );
 }

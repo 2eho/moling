@@ -275,9 +275,7 @@ impl AlgorithmService {
         let first_count = text.matches('我').count();
         let third_count = text.matches('他').count() + text.matches('她').count();
 
-        if first_count > third_count * 2 {
-            "first".to_string()
-        } else if first_count > third_count {
+        if first_count > third_count {
             "first".to_string()
         } else {
             "third".to_string()
@@ -321,7 +319,7 @@ impl AlgorithmService {
             .into_iter()
             .filter(|(phrase, count)| {
                 *count >= min_freq
-                    && !phrase.chars().all(|c| c == phrase.chars().next().unwrap())
+                    && phrase.chars().next().is_some_and(|first| !phrase.chars().all(|c| c == first))
             })
             .take(20)
             .map(|(phrase, frequency)| PhraseFrequency { phrase, frequency })

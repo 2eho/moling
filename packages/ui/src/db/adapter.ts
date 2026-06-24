@@ -7,10 +7,10 @@
  */
 
 import type {
-  ProjectRow,
   ChapterRow,
   CharacterRow,
   ForeshadowingRow,
+  ProjectRow,
   WritingProjectFull,
 } from "./schema";
 
@@ -26,7 +26,10 @@ export interface DBAdapter {
   listProjects(): Promise<ProjectRow[]>;
   getProject(id: string): Promise<WritingProjectFull | null>;
   createProject(project: ProjectRow): Promise<void>;
-  updateProject(id: string, fields: Partial<Pick<ProjectRow, "title" | "genre" | "phase" | "status" | "summary">>): Promise<void>;
+  updateProject(
+    id: string,
+    fields: Partial<Pick<ProjectRow, "title" | "genre" | "phase" | "status" | "summary">>,
+  ): Promise<void>;
   deleteProject(id: string): Promise<void>;
 
   // ── Chapters ───────────────────────────────────────────────────────
@@ -34,21 +37,31 @@ export interface DBAdapter {
   listChapters(projectId: string): Promise<ChapterRow[]>;
   getChapter(projectId: string, chapterId: number): Promise<ChapterRow | null>;
   createChapter(chapter: ChapterRow): Promise<void>;
-  updateChapter(projectId: string, chapterId: number, fields: Partial<Pick<ChapterRow, "title" | "content" | "status" | "summary">>): Promise<void>;
+  updateChapter(
+    projectId: string,
+    chapterId: number,
+    fields: Partial<Pick<ChapterRow, "title" | "content" | "status" | "summary">>,
+  ): Promise<void>;
   deleteChapter(projectId: string, chapterId: number): Promise<void>;
 
   // ── Characters ─────────────────────────────────────────────────────
 
   listCharacters(projectId: string): Promise<CharacterRow[]>;
   createCharacter(char: CharacterRow): Promise<void>;
-  updateCharacter(id: string, fields: Partial<Pick<CharacterRow, "name" | "role" | "description" | "arc">>): Promise<void>;
+  updateCharacter(
+    id: string,
+    fields: Partial<Pick<CharacterRow, "name" | "role" | "description" | "arc">>,
+  ): Promise<void>;
   deleteCharacter(id: string): Promise<void>;
 
   // ── Foreshadowing ──────────────────────────────────────────────────
 
   listForeshadowing(projectId: string): Promise<ForeshadowingRow[]>;
   createForeshadowing(item: ForeshadowingRow): Promise<void>;
-  updateForeshadowing(id: string, fields: Partial<Pick<ForeshadowingRow, "description" | "status" | "chapter">>): Promise<void>;
+  updateForeshadowing(
+    id: string,
+    fields: Partial<Pick<ForeshadowingRow, "description" | "status" | "chapter">>,
+  ): Promise<void>;
   deleteForeshadowing(id: string): Promise<void>;
 
   // ── World Rules / Style Notes ──────────────────────────────────────
