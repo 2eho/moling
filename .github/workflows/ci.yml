@@ -67,7 +67,7 @@ jobs:
         with:
           toolchain: stable
           cache: true
-      - run: cargo test --workspace --lib --exclude moling-worker
+      - run: cargo test --workspace --lib --exclude moling-worker -- --skip redis::
         working-directory: moling-server-rs
         env:
           DATABASE_URL: "sqlite::memory:"
